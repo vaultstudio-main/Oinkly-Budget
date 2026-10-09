@@ -1,82 +1,60 @@
-//
-//  ContentView.swift
-//  Piggybank
-//
-//  Created by Donald A Stibich on 10/7/26.
-//
-
 import SwiftUI
 import SwiftData
 
+/// Mac gets the dense Quicken-style layout; iPhone and iPad get the card-based one.
+/// On iPhone and iPad a splash screen covers the first moments after launch; the Mac has its own boot window.
+/// If there are no accounts yet, the account setup screen is shown instead of an empty app.
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+
+    @Query private var allAccounts: [Account]
+    @State private var hasChecked = false
+    @State private var isSettingUp = false
+    @State private var showSplash = true
 
     var body: some View {
-        NavigationViewWrapper {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                    }
-                }
-                .onDelete(perform: deleteItems)
+        ZStack {
+            if !hasChecked {
+                Color.clear
+            } else if isSettingUp {
+                AccountSetupView { withAnimation { isSettingUp = false } }
+            } else {
+                #if os(iOS)
+                PhoneRootView()
+                #else
+                MacRootView()
+                #endif
             }
-#if os(macOS)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-#endif
-            .toolbar {
-#if os(iOS)
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-#endif
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
+
+            #if os(iOS)
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
+                    .onTapGesture { dismissSplash() }
             }
+            #endif
+        }
+        .savesChangesImmediately()
+        #if os(macOS)
+        .preferredColorScheme(.dark)
+        #endif
+        // Erasing or deleting the last account brings the setup screen back.
+        .onChange(of: allAccounts.live.count) { _, count in
+            if hasChecked && count == 0 { withAnimation { isSettingUp = true } }
+        }
+        .task {
+            #if os(iOS)
+            try? await Task.sleep(for: .seconds(2))
+            #endif
+            let count = (try? modelContext.fetchCount(FetchDescriptor<Account>())) ?? 0
+            isSettingUp = count == 0
+            hasChecked = true
+            dismissSplash()
         }
     }
 
-    private func addItem() {
-        withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
-        }
+    private func dismissSplash() {
+        withAnimation(.easeOut(duration: 0.5)) { showSplash = false }
     }
-
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
-            }
-        }
-    }
-}
-
-fileprivate struct NavigationViewWrapper<Content: View>: View {
-    let content: () -> Content
-
-    var body: some View {
-#if os(macOS)
-        NavigationSplitView {
-            content()
-        } detail: {
-            Text("Select an item")
-        }
-#else
-        NavigationStack {
-            content()
-        }
-#endif
-    }
-}
-
-#Preview {
-    ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }

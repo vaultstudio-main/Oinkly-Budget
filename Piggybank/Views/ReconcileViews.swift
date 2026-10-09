@@ -1,0 +1,56 @@
+import SwiftUI
+import SwiftData
+
+extension ReconcileState {
+    var color: Color {
+        switch self {
+        case .pending: .orange
+        case .unreconciled: .secondary
+        case .reconciled: .green
+        }
+    }
+}
+
+/// Small colored label for a transaction's state.
+struct ReconcileBadge: View {
+    let state: ReconcileState
+    var showsTitle = true
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: state.symbol)
+            if showsTitle { Text(state.title).font(.caption) }
+        }
+        .foregroundStyle(state.color)
+        .accessibilityLabel(state.title)
+    }
+}
+
+/// Click to choose Pending, Unreconciled or Reconciled.
+struct ReconcileMenu: View {
+    @Bindable var transaction: Transaction
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        Menu {
+            ForEach(ReconcileState.allCases) { state in
+                Button {
+                    withAnimation(.snappy) {
+                        transaction.state = state
+                        // Both sides of a transfer share one status.
+                        if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
+                        modelContext.saveNow()
+                    }
+                } label: {
+                    Label(state.title, systemImage: transaction.state == state ? "checkmark" : state.symbol)
+                }
+            }
+        } label: {
+            ReconcileBadge(state: transaction.state)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Pending: not final at the bank yet. Unreconciled: not matched to a statement. Reconciled: matched to a statement.")
+    }
+}
