@@ -59,6 +59,7 @@ enum ReleaseNotes {
             ("Around the App", [
                 "A side panel with every page and account, and Manage Accounts always at the bottom.",
                 "Backups saved as .pig files, with import and export in Settings.",
+                "A reminder on the Summary to save a backup once you have two years of history, and a firmer one at three.",
                 "Help and these release notes in the Help menu.",
                 "Opens at full window size.",
             ]),

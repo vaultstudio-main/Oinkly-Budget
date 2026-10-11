@@ -115,17 +115,10 @@ struct ImportExportSettingsView: View {
     // MARK: Export
 
     private func exportBackup() {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [DataBackup.fileType]
-        panel.nameFieldStringValue = "Piggybank Financial Backup \(Self.stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save a backup of everything in Piggybank Financial."
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let file = try DataBackup.make(from: modelContext)
-            try DataBackup.encode(file).write(to: url, options: .atomic)
-            report("Saved a backup with \(file.summary) to \(url.lastPathComponent).")
-        } catch {
-            report("Couldn't save the backup: \(error.localizedDescription)", error: true)
+        switch BackupExporter.exportWithPanel(from: modelContext) {
+        case .saved(let summary, let name): report("Saved a backup with \(summary) to \(name).")
+        case .failed(let reason): report("Couldn't save the backup: \(reason)", error: true)
+        case nil: break
         }
     }
 
