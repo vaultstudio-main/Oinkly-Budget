@@ -44,11 +44,22 @@ struct ThisMonthButton: View {
     @Binding var month: Date
 
     var body: some View {
-        let isCurrent = MonthFilter.isCurrent(month)
-        Button {
+        CurrentPeriodButton(title: "This Month", isCurrent: MonthFilter.isCurrent(month)) {
             withAnimation(.smooth) { month = MonthFilter.start(of: .now) }
-        } label: {
-            Label("This Month", systemImage: "calendar")
+        }
+    }
+}
+
+/// The pill used to jump back to now, on every page that has a month or a report period. It is always there, and
+/// dimmed when you are already looking at the current one, so showing or hiding it never moves anything else.
+struct CurrentPeriodButton: View {
+    let title: String
+    let isCurrent: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: "calendar")
                 .font(.callout.weight(.semibold))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
@@ -58,6 +69,6 @@ struct ThisMonthButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isCurrent)
-        .help("Back to this month")
+        .help("Back to the current period")
     }
 }

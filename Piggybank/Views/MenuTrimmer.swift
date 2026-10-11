@@ -1,5 +1,6 @@
 import AppKit
 import SwiftData
+import UserNotifications
 
 /// Keeps the Mac menu bar to the Apple menu, Piggybank, File and Help. SwiftUI adds Edit, View and Window on its own
 /// and rebuilds them from time to time, so this removes them again whenever they come back.
@@ -74,11 +75,18 @@ enum MenuTrimmer {
     }
 }
 
-final class PiggybankAppDelegate: NSObject, NSApplicationDelegate {
+final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Set by the app at launch so a backup opened from Finder can reach the data.
     nonisolated(unsafe) static var container: ModelContainer?
 
+    /// Without this, macOS holds notifications back while the app is in front. Reminders should show anyway.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
+                                            withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .list, .sound])
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
         MenuTrimmer.install()
         Task { @MainActor in await Self.refreshReminders() }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in

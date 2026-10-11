@@ -54,13 +54,9 @@ struct AccountDetailsPanel: View {
         let loan = account.loanProgress
         return Panel(title: "\(account.financingWord) Details") {
             HStack(alignment: .top, spacing: 20) {
-                if let photo = AccountPhoto.image(from: account.photoData) {
-                    photo
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 150, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
+                AccountPicture(data: account.photoData, type: account.type)
+                    .frame(width: 150, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 14) {
                     Grid(alignment: .leading, horizontalSpacing: 32, verticalSpacing: 10) {
                         GridRow {
@@ -197,13 +193,9 @@ struct AccountDetailsPanel: View {
     private var accountContent: some View {
         Panel(title: "Account Details") {
             HStack(alignment: .top, spacing: 20) {
-                if account.supportsPhoto, let photo = AccountPhoto.image(from: account.photoData) {
-                    photo
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 150, height: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
+                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                    .frame(width: 150, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 Grid(alignment: .leading, horizontalSpacing: 32, verticalSpacing: 10) {
                     GridRow {
                         item("Kind") {

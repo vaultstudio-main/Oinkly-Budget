@@ -50,6 +50,8 @@ enum Bills {
         let dueDate: Date
         let fireDate: Date
         let isImportant: Bool
+        /// True for the reminder on the day the bill is due, false for the one sent ahead of time.
+        var isDueDay = false
     }
 
     static func key(_ bill: Bill, _ date: Date) -> String {
@@ -118,18 +120,27 @@ enum Bills {
             }
     }
 
-    /// The reminders the notification system should have scheduled: one per unpaid due date coming up,
-    /// sent `remindDaysBefore` days ahead at `hour`. Reminders whose time has already passed are left out.
+    /// The reminders the notification system should have scheduled for each unpaid due date coming up: one
+    /// `remindDaysBefore` days ahead and, when that is not already the day itself, one on the due date, both at `hour`.
+    /// Reminders whose time has already passed are left out.
     static func reminders(_ bills: [Bill], horizonDays: Int = 60, hour: Int = 9, now: Date = .now, calendar: Calendar = .current) -> [Reminder] {
         let today = calendar.startOfDay(for: now)
         let end = calendar.date(byAdding: .day, value: horizonDays, to: today)!
         return occurrences(bills.live.filter(\.remindersOn), from: today, through: end, now: now, calendar: calendar)
             .filter { !$0.isPaid }
-            .compactMap { item in
+            .flatMap { item -> [Reminder] in
+                var found: [Reminder] = []
                 let ahead = calendar.date(byAdding: .day, value: -item.bill.remindDaysBefore, to: item.date)!
-                guard let fire = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: ahead) else { return nil }
-                guard fire > now else { return nil }
-                return Reminder(id: item.id, name: item.bill.name, amount: item.bill.amount, dueDate: item.date, fireDate: fire, isImportant: item.bill.isImportant)
+                if item.bill.remindDaysBefore > 0,
+                   let fire = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: ahead), fire > now {
+                    found.append(Reminder(id: item.id, name: item.bill.name, amount: item.bill.amount, dueDate: item.date,
+                                          fireDate: fire, isImportant: item.bill.isImportant))
+                }
+                if let fire = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: item.date), fire > now {
+                    found.append(Reminder(id: item.id + "-due", name: item.bill.name, amount: item.bill.amount, dueDate: item.date,
+                                          fireDate: fire, isImportant: item.bill.isImportant, isDueDay: true))
+                }
+                return found
             }
     }
 }

@@ -8,7 +8,7 @@ enum BillNotifier {
     /// UserDefaults key for the Settings switch. On unless turned off.
     static let enabledKey = "billRemindersOn"
     private static let idPrefix = "piggybank.bill."
-    /// iOS keeps at most 64 pending notifications, so stay under that.
+    /// The system keeps at most 64 pending notifications per app, so stay under that.
     private static let limit = 60
 
     static var isEnabled: Bool {
@@ -27,6 +27,30 @@ enum BillNotifier {
             return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
         @unknown default: return false
         }
+    }
+
+    enum Status { case notAsked, allowed, denied }
+
+    /// Whether macOS will let Piggybank Financial show notifications.
+    static func status() async -> Status {
+        switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+        case .authorized, .provisional, .ephemeral: .allowed
+        case .denied: .denied
+        default: .notAsked
+        }
+    }
+
+    /// Shows a notification a couple of seconds from now, so you can see that they work. Returns false when
+    /// notifications aren't allowed.
+    static func sendTest() async -> Bool {
+        guard await requestAccess() else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = "Piggybank Financial"
+        content.body = "Bill reminders will look like this."
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: "piggybank.test", content: content,
+                                            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false))
+        do { try await UNUserNotificationCenter.current().add(request); return true } catch { return false }
     }
 
     /// Replaces the planned notifications with the current set. Cheap enough to call often.
@@ -52,8 +76,13 @@ enum BillNotifier {
         for reminder in reminders {
             let content = UNMutableNotificationContent()
             let due = reminder.dueDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
-            content.title = reminder.isImportant ? "Important bill: \(reminder.name)" : "\(reminder.name) is due soon"
-            content.body = "\(reminder.amount.formatted(.appCurrency)) due \(due)."
+            if reminder.isDueDay {
+                content.title = reminder.isImportant ? "Important bill due today: \(reminder.name)" : "\(reminder.name) is due today"
+                content.body = "\(reminder.amount.formatted(.appCurrency)) is due today."
+            } else {
+                content.title = reminder.isImportant ? "Important bill: \(reminder.name)" : "\(reminder.name) is due soon"
+                content.body = "\(reminder.amount.formatted(.appCurrency)) due \(due)."
+            }
             content.sound = .default
             let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: reminder.fireDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)

@@ -7,8 +7,6 @@ enum ReleaseNotes {
         let title: String
         let sections: [(heading: String, items: [String])]
         var id: String { version }
-
-        var visibleSections: [(heading: String, items: [String])] { sections }
     }
 
     static let releases: [Release] = [
@@ -50,6 +48,7 @@ enum ReleaseNotes {
                 "Attach the PDF bill or a photo when you pay, or mark it as having no receipt.",
                 "Transfers between your own accounts, never touching debts or investments.",
                 "Photos on bills, and a loan's photo is used for its bill.",
+                "A menu bar item showing your upcoming bills. Closing the window keeps the app running so the item stays.",
             ]),
             ("Planning & Reports", [
                 "Goals for saving up or paying off debt, independent of your accounts.",
@@ -57,9 +56,8 @@ enum ReleaseNotes {
                 "Summary, Reports, Liabilities and Investments pages that show placeholders until there is data.",
                 "Top income categories over the last three months.",
             ]),
-            ("Mac", [
-                "A fixed side panel with Manage Accounts always at the bottom.",
-                "A menu bar item showing your upcoming bills. Closing the window keeps the app running so the item stays.",
+            ("Around the App", [
+                "A side panel with every page and account, and Manage Accounts always at the bottom.",
                 "Backups saved as .pig files, with import and export in Settings.",
                 "Help and these release notes in the Help menu.",
                 "Opens at full window size.",
@@ -88,7 +86,7 @@ struct ReleaseNotesWindow: View {
                 ForEach(ReleaseNotes.releases) { release in
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Version \(release.version) · \(release.title)").font(.title2.bold())
-                        ForEach(Array(release.visibleSections.enumerated()), id: \.offset) { _, section in
+                        ForEach(Array(release.sections.enumerated()), id: \.offset) { _, section in
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(section.heading).font(.headline)
                                 ForEach(Array(section.items.enumerated()), id: \.offset) { _, item in

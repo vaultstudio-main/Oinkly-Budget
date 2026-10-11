@@ -185,13 +185,14 @@ struct AccountEditView: View {
 
                 if type.group == .loans || type.group == .assets {
                     Section("Photo") {
-                        if let image = AccountPhoto.image(from: photoData) {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 180)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        AccountPicture(data: photoData, type: type)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 180)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if photoData == nil {
+                            Text("This picture is used until you choose a photo.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
                         PhotosPicker(selection: $pickedPhoto, matching: .images) {
                             Label(photoData == nil ? "Choose Photo…" : "Change Photo…", systemImage: "photo")

@@ -4,31 +4,9 @@ import SwiftData
 import SwiftUI
 
 /// Test data for trying every feature and taking screenshots. Debug builds only: none of this is in a release build.
-/// Loading it replaces whatever is in the store, so the Testing window saves a copy of your data first.
+/// Loading it replaces whatever is in the store. It is for testing only: nothing is saved first.
 @MainActor
 enum TestData {
-    // MARK: Safety copy
-
-    /// Where the copy of your data is kept before test data goes in. Inside the app's own container.
-    static var savedCopyURL: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let folder = base.appendingPathComponent("Testing", isDirectory: true)
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        return folder.appendingPathComponent("Before Test Data.pig")
-    }
-
-    static var hasSavedCopy: Bool { FileManager.default.fileExists(atPath: savedCopyURL.path) }
-
-    static func saveCopy(of context: ModelContext) throws {
-        let file = try DataBackup.make(from: context)
-        try DataBackup.encode(file).write(to: savedCopyURL, options: .atomic)
-    }
-
-    static func restoreSavedCopy(into context: ModelContext) throws {
-        let file = try DataBackup.decode(Data(contentsOf: savedCopyURL))
-        try DataBackup.restore(file, into: context)
-    }
-
     // MARK: Wipe
 
     /// Removes everything you added: accounts, transactions, bills, goals, payees, custom categories and payment methods.
@@ -60,7 +38,7 @@ enum TestData {
     static let monthsOfHistory = 26
 
     /// Small everyday purchases added for every day of the history, to make the transaction count large.
-    /// Raise this to see how many transactions the app can handle. About 4 a day gives roughly 4,000 over two years.
+    /// About 4 a day gives roughly 4,000 over two years.
     static let everydayPurchasesPerDay = 4
 
     /// A believable two-plus years of everything the app does. Dates are relative to today, so it always looks current.
@@ -137,7 +115,6 @@ enum TestData {
         auto.interestRate = 5.9
         auto.loanStartDate = cal.date(byAdding: .year, value: -3, to: today)
         auto.payoffDate = cal.date(byAdding: .year, value: 2, to: today)
-        auto.photoData = photo(symbol: "car.fill", color: Color(red: 0.78, green: 0.86, blue: 0.97))
         let mortgage = account("Home Mortgage", .mortgage, -241_000)
         mortgage.institution = "Lakeside Mortgage"
         mortgage.loanPurpose = "123 Maple Street"
@@ -146,7 +123,6 @@ enum TestData {
         mortgage.interestRate = 6.1
         mortgage.loanStartDate = cal.date(byAdding: .year, value: -4, to: today)
         mortgage.payoffDate = cal.date(byAdding: .year, value: 26, to: today)
-        mortgage.photoData = photo(symbol: "house.fill", color: Color(red: 0.86, green: 0.93, blue: 0.82))
         let student = account("Student Loan", .studentLoan, -11_200)
         student.institution = "EdFund"
         student.loanPurpose = "Bachelor's degree"
@@ -164,7 +140,6 @@ enum TestData {
         house.notes = "Estimated value."
         let car = account("Honda Civic", .vehicle, 17_500)
         car.vin = "2HGFC2F59NH512345"
-        car.photoData = photo(symbol: "car.fill", color: Color(red: 0.95, green: 0.88, blue: 0.80))
 
         // Holdings.
         for holding in [
@@ -246,7 +221,9 @@ enum TestData {
         }
 
         // Everyday purchases, every day of the history, to put real volume in the store.
-        addEverydayPurchases(today: today, accounts: (checking, card, cash), context: context, categories: categories)
+        addEverydayPurchases(today: today, context: context, categories: categories,
+                             targets: [(checking, .debitCard, 35), (card, .creditCard, 25), (cash, .cash, 15),
+                                       (storeCard, .storeCard, 15), (savings, .bankTransfer, 10)])
 
         // A few pending and unreconciled entries, a check with a number, and a receipt.
         if let pending = tx(card, day(-1), "Bookshop on Elm", "books-media", -34.20, method: .creditCard, state: .pending) {
@@ -272,7 +249,6 @@ enum TestData {
             return made
         }
         let phone = bill("Cell Phone", 85, .monthly, dueIn: 3, key: "phone-internet", important: true, note: "Family plan, 3 lines.")
-        phone.photoData = photo(symbol: "iphone", color: Color(red: 0.85, green: 0.90, blue: 0.99))
         let internet = bill("Internet", 69.99, .monthly, dueIn: -5, key: "phone-internet")
         let electric = bill("Electric", 96, .monthly, dueIn: 16, key: "utilities")
         let insurance = bill("Auto Insurance", 142, .monthly, dueIn: 9, key: "auto-insurance", important: true)
@@ -358,13 +334,14 @@ enum TestData {
         Purchase(payee: "Corner Barber", key: "salon-barber", low: 2_200, high: 3_500),
     ]
 
-    /// Adds `everydayPurchasesPerDay` small purchases for each day back to the start of the history,
-    /// spread over checking (debit), the credit card and cash. Repeatable: the same data every time.
-    private static func addEverydayPurchases(today: Date, accounts: (checking: Account, card: Account, cash: Account),
-                                             context: ModelContext, categories: [Category]) {
+    /// Adds `everydayPurchasesPerDay` small purchases for each day back to the start of the history, spread over the
+    /// accounts in `targets` by weight. Repeatable: the same data every time.
+    private static func addEverydayPurchases(today: Date, context: ModelContext, categories: [Category],
+                                             targets: [(account: Account, method: PaymentType, weight: Int)]) {
         let cal = Calendar.current
         let start = cal.date(byAdding: .month, value: -monthsOfHistory, to: today)!
         let days = cal.dateComponents([.day], from: start, to: today).day ?? 0
+        let totalWeight = targets.reduce(0) { $0 + $1.weight }
         var seed: UInt64 = 0x9E3779B97F4A7C15
         func next(_ bound: Int) -> Int {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
@@ -377,15 +354,18 @@ enum TestData {
             guard let date = cal.date(byAdding: .day, value: -offset, to: today) else { continue }
             for _ in 0..<everydayPurchasesPerDay {
                 let pick = everydayPool[next(everydayPool.count)]
-                let cents = pick.low + next(pick.high - pick.low + 1)
-                let amount = -(Decimal(cents) / 100)
-                let slot = next(10)
-                let (account, method): (Account, PaymentType) = slot < 4 ? (accounts.checking, .debitCard)
-                    : slot < 7 ? (accounts.card, .creditCard) : (accounts.cash, .cash)
+                let raw = pick.low + next(pick.high - pick.low + 1)
+                let amount = -(Decimal(raw) / 100)
+                var roll = next(totalWeight)
+                var target = targets[0]
+                for candidate in targets {
+                    if roll < candidate.weight { target = candidate; break }
+                    roll -= candidate.weight
+                }
                 let category = byKey[pick.key]
-                let made = Transaction(account: account, date: date, payee: pick.payee, category: category, memo: "",
-                                       amount: amount, paymentType: method)
-                made.state = offset < 5 ? .pending : .reconciled
+                let made = Transaction(account: target.account, date: date, payee: pick.payee, category: category, memo: "",
+                                       amount: amount, paymentType: target.method)
+                made.state = offset < 3 ? .pending : .reconciled
                 context.insert(made)
                 lastForPayee[pick.payee] = (category, amount)
             }
@@ -397,25 +377,6 @@ enum TestData {
     }
 
     // MARK: Attachments
-
-    /// A simple colored picture with a symbol, for photos on loans, bills and assets.
-    private static func photo(symbol: String, color: Color) -> Data? {
-        let art = ZStack {
-            color
-            Image(systemName: symbol)
-                .font(.system(size: 240))
-                .foregroundStyle(.black.opacity(0.3))
-        }
-        .frame(width: 900, height: 600)
-        let renderer = ImageRenderer(content: art)
-        renderer.scale = 1
-        guard let image = renderer.cgImage else { return nil }
-        let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, "public.png" as CFString, 1, nil) else { return nil }
-        CGImageDestinationAddImage(destination, image, nil)
-        guard CGImageDestinationFinalize(destination) else { return nil }
-        return AccountPhoto.compress(output as Data)
-    }
 
     /// A one-page PDF receipt.
     private static func receiptPDF(store: String, lines: [(String, Double)], total: Double) -> Data? {

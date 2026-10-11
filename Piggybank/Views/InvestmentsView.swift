@@ -100,70 +100,66 @@ struct InvestmentsView: View {
     // MARK: Returns by holding
 
     private func holdingReturns(_ report: Investments.Report) -> some View {
-        let ranked = report.holdings.filter { $0.returnRate != nil }.sorted { ($0.returnRate ?? 0) > ($1.returnRate ?? 0) }
-        return VStack(alignment: .leading, spacing: 16) {
-            if ranked.count > 1 {
-                Chart(ranked) { line in
-                    BarMark(x: .value("Return", line.returnRate ?? 0), y: .value("Holding", line.label))
-                        .foregroundStyle((line.returnRate ?? 0) >= 0 ? Theme.green : Theme.red)
-                        .cornerRadius(3)
-                        .annotation(position: .trailing) {
-                            Text(signed(line.returnRate ?? 0)).font(.caption2).foregroundStyle(.secondary)
-                        }
+        let lines = report.holdings.sorted { ($0.returnRate ?? -.infinity) > ($1.returnRate ?? -.infinity) }
+        return VStack(alignment: .leading, spacing: 10) {
+            Grid(alignment: .trailing, horizontalSpacing: 20, verticalSpacing: 0) {
+                GridRow {
+                    Text("Holding").gridColumnAlignment(.leading)
+                    Text("Value")
+                    Text("Growth")
+                    Text("Return")
                 }
-                .chartXAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                        AxisValueLabel {
-                            if let rate = value.as(Double.self) { Text(rate, format: .percent.precision(.fractionLength(0))) }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 8)
+
+                ForEach(lines) { line in
+                    Divider().gridCellUnsizedAxes(.horizontal)
+                    GridRow {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(line.name).fontWeight(.medium).lineLimit(1)
+                            Text(holdingDetail(line))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Text(line.end, format: .appCurrency).fontWeight(.semibold)
+
+                        Text(line.growth, format: .appCurrency)
+                            .foregroundStyle(line.growth == 0 ? Color.secondary : (line.growth > 0 ? Theme.green : Theme.red))
+
+                        returnPill(line.returnRate)
                     }
+                    .padding(.vertical, 9)
                 }
-                .chartXScale(range: .plotDimension(endPadding: 48))
-                .frame(height: CGFloat(ranked.count) * 34 + 30)
             }
-            ForEach(Array(report.holdings.enumerated()), id: \.element.id) { index, line in
-                if index > 0 || ranked.count > 1 { Divider() }
-                holdingRow(line)
-            }
-            Text("Growth is the price change on the shares you held at the time. Buying or selling shares counts as a contribution, so adding to a holding never looks like a gain.")
+            Text("Growth is the price change on the shares you held. Buying or selling shares counts as a contribution, so adding to a holding never looks like a gain.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
     }
 
-    private func holdingRow(_ line: Investments.HoldingLine) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(line.name).fontWeight(.medium)
-                    Text("\(line.label == line.name ? "" : "\(line.label) · ")\(line.accountName)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(line.end, format: .appCurrency).fontWeight(.semibold)
-                    if let rate = line.returnRate {
-                        Text(signed(rate))
-                            .font(.caption)
-                            .foregroundStyle(rate >= 0 ? Theme.green : Theme.red)
-                    }
-                }
-            }
-            HStack {
-                Text("Started \(line.start.formatted(.appCurrency))")
-                Spacer()
-                Text("Growth \(line.growth.formatted(.appCurrency))")
-                    .foregroundStyle(line.growth >= 0 ? Theme.green : Theme.red)
-                if line.contributions != 0 {
-                    Spacer()
-                    Text("Bought/sold \(line.contributions.formatted(.appCurrency))")
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+    private func holdingDetail(_ line: Investments.HoldingLine) -> String {
+        var parts: [String] = []
+        if line.label != line.name { parts.append(line.label) }
+        parts.append(line.accountName)
+        if line.contributions != 0 {
+            parts.append("\(line.contributions > 0 ? "bought" : "sold") \(abs(line.contributions).formatted(.appCurrency))")
         }
+        return parts.joined(separator: " · ")
+    }
+
+    private func returnPill(_ rate: Double?) -> some View {
+        let color: Color = rate.map { $0 > 0 ? Theme.green : ($0 < 0 ? Theme.red : Color.secondary) } ?? Color.secondary
+        return Text(rate.map(signed) ?? "–")
+            .font(.callout.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.14), in: Capsule())
     }
 
     // MARK: Allocation

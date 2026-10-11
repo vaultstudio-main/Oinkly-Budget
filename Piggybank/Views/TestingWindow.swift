@@ -2,9 +2,8 @@
 import SwiftUI
 import SwiftData
 
-/// Piggybank ▸ Testing… on the Mac. Fills the app with test data, wipes it,
-/// or brings your own data back.
-/// Debug builds only. Every change saves a copy of what was there first.
+/// Piggybank ▸ Testing… on the Mac. Fills the app with test data or wipes it.
+/// Debug builds only, for testing: it replaces whatever is in the app, with no way back.
 struct TestingWindow: View {
     @Environment(\.modelContext) private var modelContext
     @State private var working = false
@@ -12,25 +11,31 @@ struct TestingWindow: View {
     @State private var confirming: Action?
 
     private enum Action: Identifiable {
-        case load, wipe, restore
+        case load, wipe
         var id: Self { self }
 
         var title: String {
             switch self {
             case .load: "Fill with test data?"
             case .wipe: "Wipe everything?"
-            case .restore: "Bring back your data?"
             }
         }
 
         var detail: String {
             switch self {
-            case .load: "Everything currently in the app is replaced with made-up accounts, transactions, bills and goals. A copy of what's there now is saved first."
-            case .wipe: "Every account, transaction, bill, goal, custom category and payment method is removed. Cash on Hand and the built-in categories stay. A copy of what's there now is saved first."
-            case .restore: "Replaces what's in the app with the copy saved before test data was last loaded or wiped."
+            case .load: "Everything currently in the app is replaced with made-up accounts, transactions, bills and goals."
+            case .wipe: "Every account, transaction, bill, goal, custom category and payment method is removed. Cash on Hand and the built-in categories stay."
             }
         }
     }
+
+    /// One account type for each drawn picture, plus the bill picture, so they can all be checked at a glance.
+    private static let artworkSamples: [(title: String, type: AccountType?)] = [
+        ("Bank", .checking), ("Savings", .savings), ("Wallet", .cash), ("Card", .creditCard), ("Medical", .healthSavings),
+        ("House", .mortgage), ("Car", .autoLoan), ("Boat", .vehicleLoan), ("Graduation", .studentLoan), ("Loan", .personalLoan),
+        ("Business", .businessLoan), ("Chart", .brokerage), ("Retirement", .retirement401k), ("Crypto", .crypto),
+        ("Valuables", .valuables), ("Other asset", .asset), ("Bill", nil),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -41,12 +46,24 @@ struct TestingWindow: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                row("Fill with Test Data", "Made-up accounts, four months of transactions, bills, goals, holdings and a receipt, so every screen has something to show.", .load)
+                row("Fill with Test Data", "Made-up accounts, over two years of transactions (thousands of them), bills, goals, holdings and a receipt, so every screen has something to show.", .load)
                 row("Wipe Everything", "Empties the app. Cash on Hand and built-in categories stay.", .wipe)
-                row("Bring Back My Data", TestData.hasSavedCopy
-                    ? "Restores the copy saved before test data was last loaded or wiped."
-                    : "Nothing saved yet. A copy is saved the first time you fill or wipe.", .restore)
-                    .disabled(!TestData.hasSavedCopy)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Default pictures").font(.headline)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
+                    ForEach(Self.artworkSamples, id: \.title) { sample in
+                        VStack(spacing: 3) {
+                            Group {
+                                if let type = sample.type { AccountArtwork(type: type) } else { AccountArtwork() }
+                            }
+                            .aspectRatio(3 / 2, contentMode: .fit)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            Text(sample.title).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                        }
+                    }
+                }
             }
 
             if let message {
@@ -55,11 +72,11 @@ struct TestingWindow: View {
             Spacer(minLength: 0)
         }
         .padding(24)
-        .frame(width: 520, height: 380)
+        .frame(width: 560, height: 600)
         .disabled(working)
         .confirmationDialog(confirming?.title ?? "", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
                             titleVisibility: .visible, presenting: confirming) { action in
-            Button(action == .restore ? "Restore" : (action == .wipe ? "Wipe" : "Fill"), role: action == .wipe ? .destructive : nil) { run(action) }
+            Button(action == .wipe ? "Wipe" : "Fill", role: action == .wipe ? .destructive : nil) { run(action) }
             Button("Cancel", role: .cancel) {}
         } message: { action in
             Text(action.detail)
@@ -82,16 +99,11 @@ struct TestingWindow: View {
             do {
                 switch action {
                 case .load:
-                    try TestData.saveCopy(of: modelContext)
                     try TestData.load(into: modelContext)
                     message = "Test data loaded."
                 case .wipe:
-                    try TestData.saveCopy(of: modelContext)
                     try TestData.wipe(in: modelContext)
                     message = "Everything wiped."
-                case .restore:
-                    try TestData.restoreSavedCopy(into: modelContext)
-                    message = "Your data is back."
                 }
                 modelContext.saveNow()
             } catch {

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The period tabs, previous/next arrows and "Current" button shared by every report.
+/// The period tabs, previous/next arrows and the "Current" button (at the side) shared by every report.
 struct PeriodControls: View {
     let periods: [ReportPeriod]
     @Binding var period: ReportPeriod
@@ -27,12 +27,15 @@ struct PeriodControls: View {
                     .contentTransition(.numericText())
                 Button { step(1) } label: { Image(systemName: "chevron.right") }
                     .disabled(range.end > .now)
-                if !(range.start <= .now && range.end > .now) {
-                    Button("Current") { withAnimation(.smooth) { anchor = .now } }
-                        .font(.caption)
-                }
             }
             .buttonStyle(.borderless)
+            .frame(maxWidth: .infinity)
+            // To the side, so it never pushes the arrows and the label around.
+            .overlay(alignment: .trailing) {
+                CurrentPeriodButton(title: "Current", isCurrent: range.start <= .now && range.end > .now) {
+                    withAnimation(.smooth) { anchor = .now }
+                }
+            }
         }
         .padding(.top, 4)
     }

@@ -4,11 +4,41 @@ import Charts
 
 /// Monthly, quarterly, 6-month and yearly reports.
 struct ReportsView: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var period: ReportPeriod = .monthly
+    @State private var anchor = Date.now
+
+    /// The date of the oldest transaction: one row, not a pass over everything.
+    private var earliest: Date? {
+        var oldest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date)])
+        oldest.fetchLimit = 1
+        return (try? modelContext.fetch(oldest))?.first?.date
+    }
+
+    var body: some View {
+        ReportsContent(period: $period, anchor: $anchor, earliest: earliest)
+    }
+}
+
+/// The report itself. It only loads the transactions of the period being shown and the one before it (for the
+/// "vs previous" changes), so it stays quick with a lot of history.
+private struct ReportsContent: View {
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
 
-    @State private var period: ReportPeriod = .monthly
-    @State private var anchor = Date.now
+    @Binding var period: ReportPeriod
+    @Binding var anchor: Date
+    let earliest: Date?
+
+    init(period: Binding<ReportPeriod>, anchor: Binding<Date>, earliest: Date?) {
+        _period = period
+        _anchor = anchor
+        self.earliest = earliest
+        let range = Reports.range(period.wrappedValue, anchor: anchor.wrappedValue)
+        let from = Reports.previous(of: range, period: period.wrappedValue).start
+        let to = range.end
+        _allTransactions = Query(filter: #Predicate<Transaction> { $0.date >= from && $0.date < to })
+    }
 
     var body: some View {
         let range = Reports.range(period, anchor: anchor)
@@ -39,8 +69,6 @@ struct ReportsView: View {
     }
 
     // MARK: Controls
-
-    private var earliest: Date? { transactions.map(\.date).min() }
 
     private func controls(range: ReportRange) -> some View {
         PeriodControls(periods: ReportPeriod.allCases, period: $period, anchor: $anchor, earliest: earliest)

@@ -193,13 +193,9 @@ private struct BillRow: View {
 
                 Button(action: onEdit) {
                     HStack {
-                        if let thumb = AccountPhoto.thumbnail(from: item.bill.displayPhotoData) {
-                            thumb
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 36, height: 36)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                        }
+                        AccountPicture(data: item.bill.displayPhotoData, type: item.bill.loan?.isLive == true ? item.bill.loan?.type : nil)
+                            .frame(width: 36, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 4) {
                                 Text(item.bill.name).font(.body).strikethrough(item.isPaid)
@@ -428,14 +424,10 @@ struct BillEditView: View {
                     Text("Choose how many days ahead you want to be reminded. Reminders are planned for 9 AM.")
                 }
                 Section("Photo") {
-                    if let image = AccountPhoto.image(from: photoData ?? inheritedPhoto) {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 160)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
+                    AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     if photoData == nil, inheritedPhoto != nil, let loan = bill?.loan {
                         Text("Using the photo from \(loan.name). Choose a different one to replace it for this bill.")
                             .font(.footnote)
