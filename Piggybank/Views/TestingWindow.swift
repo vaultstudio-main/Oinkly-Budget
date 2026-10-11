@@ -47,7 +47,7 @@ struct TestingWindow: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 row("Fill with Test Data", "Made-up accounts, over two years of transactions (thousands of them), bills, goals, holdings and a receipt, so every screen has something to show.", .load)
-                row("Wipe Everything", "Empties the app. Cash on Hand and built-in categories stay.", .wipe)
+                row("Wipe Everything", "Deletes the whole database, however big, and quits. Open the app again and it starts empty.", .wipe)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -102,8 +102,9 @@ struct TestingWindow: View {
                     try TestData.load(into: modelContext)
                     message = "Test data loaded."
                 case .wipe:
-                    try TestData.wipe(in: modelContext)
-                    message = "Everything wiped."
+                    // Removing the database files is instant; deleting 30,000 rows one by one is not.
+                    StoreReset.requestAndQuit()
+                    message = "Starting over. Open the app again."
                 }
                 modelContext.saveNow()
             } catch {

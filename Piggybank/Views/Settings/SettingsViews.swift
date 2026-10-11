@@ -432,6 +432,7 @@ struct DataSettingsView: View {
     private var payees: [Payee] { allPayees.live }
 
     @State private var confirmingErase = false
+    @State private var confirmingReset = false
     @State private var eraseError: String?
 
     private var version: String {
@@ -456,6 +457,13 @@ struct DataSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            Section {
+                Button("Reset Database and Quit…", role: .destructive) { confirmingReset = true }
+                Text("Starts over from an empty database in one step, however much data there is, then quits. Open Piggybank Financial again afterwards. Use this if Erase All Data is slow.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("About") {
                 LabeledContent("Version", value: version)
             }
@@ -466,6 +474,12 @@ struct DataSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This can't be undone.")
+        }
+        .confirmationDialog("Delete everything and quit?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Reset and Quit", role: .destructive) { StoreReset.requestAndQuit() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The whole database is removed, including budget amounts, and the app quits. This can't be undone.")
         }
         .alert("Couldn't erase your data", isPresented: Binding(get: { eraseError != nil }, set: { if !$0 { eraseError = nil } })) {
             Button("OK", role: .cancel) {}
@@ -481,7 +495,7 @@ struct DataSettingsView: View {
 
     private func performErase() {
         do {
-            for transaction in try modelContext.fetch(FetchDescriptor<Transaction>()) { modelContext.delete(transaction) }
+            try modelContext.deleteAllTransactions()
             // Cash on Hand stays, emptied out. Its transactions went with the loop above.
             for account in try modelContext.fetch(FetchDescriptor<Account>()) {
                 if account.isDefault {

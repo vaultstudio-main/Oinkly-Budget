@@ -310,7 +310,7 @@ enum DataBackup {
     @MainActor
     static func restore(_ file: BackupFile, into context: ModelContext) throws {
         // Clear out the current data. Objects are deleted one at a time; a batch delete fails on the links between them.
-        for item in try context.fetch(FetchDescriptor<Transaction>()) { context.delete(item) }
+        try context.deleteAllTransactions()
         for item in try context.fetch(FetchDescriptor<Account>()) { context.delete(item) }   // takes holdings with it
         for item in try context.fetch(FetchDescriptor<Payee>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }

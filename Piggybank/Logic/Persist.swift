@@ -5,6 +5,25 @@ import SwiftUI
 /// That left a gap of a few seconds where a posted, edited or deleted transaction wasn't reflected everywhere.
 /// These make it immediate.
 extension ModelContext {
+    /// Removes every transaction as quickly as possible. Tens of thousands of them make deleting one by one very slow,
+    /// so this asks the store to do it in one go and only falls back to deleting in chunks if that is refused.
+    func deleteAllTransactions() throws {
+        do {
+            try delete(model: Transaction.self)
+            try save()
+        } catch {
+            rollback()
+            while true {
+                var chunk = FetchDescriptor<Transaction>()
+                chunk.fetchLimit = 2_000
+                let batch = try fetch(chunk)
+                if batch.isEmpty { break }
+                for transaction in batch { delete(transaction) }
+                try save()
+            }
+        }
+    }
+
     /// Saves right now if anything changed.
     func saveNow() {
         guard hasChanges else { return }

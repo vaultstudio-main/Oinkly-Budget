@@ -12,7 +12,7 @@ enum TestData {
     /// Removes everything you added: accounts, transactions, bills, goals, payees, custom categories and payment methods.
     /// Cash on Hand and the built-in categories stay, emptied out.
     static func wipe(in context: ModelContext) throws {
-        for item in try context.fetch(FetchDescriptor<Transaction>()) { context.delete(item) }
+        try context.deleteAllTransactions()
         for account in try context.fetch(FetchDescriptor<Account>()) {
             if account.isDefault {
                 account.openingBalance = 0
