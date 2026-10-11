@@ -5,8 +5,19 @@ import Charts
 struct SummaryView: View {
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
+    /// Only the last 13 months: everything on this page looks back a year at most.
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
+    /// The newest few, however old, for the "Last 15 Transactions" panel.
+    @Query private var newest: [Transaction]
+
+    init() {
+        let cutoff = Calendar.current.date(byAdding: .month, value: -13, to: .now) ?? .distantPast
+        _allTransactions = Query(filter: #Predicate<Transaction> { $0.date >= cutoff })
+        var latest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        latest.fetchLimit = 60
+        _newest = Query(latest)
+    }
 
     private static let groupColors: KeyValuePairs<String, Color> = [
         AccountGroup.checkingSavings.title: Theme.green,
@@ -30,7 +41,7 @@ struct SummaryView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 LoansProgressCard(accounts: accounts)
                 GoalsProgressCard()
-                Panel(title: "Last 15 Transactions (All Accounts)") { RecentTransactionsPanel(transactions: transactions) }
+                Panel(title: "Last 15 Transactions (All Accounts)") { RecentTransactionsPanel(transactions: newest) }
                 Panel(title: "Income / Spending Summary") {
                     HStack(alignment: .top, spacing: 24) {
                         flowChart

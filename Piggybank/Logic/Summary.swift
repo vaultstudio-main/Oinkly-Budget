@@ -37,23 +37,52 @@ enum Summary {
         accounts.live.reduce(0) { $0 + $1.balance }
     }
 
+    /// Each group's total at the end of each of the last `months` months. One pass over each account's transactions,
+    /// not one per month, so it stays quick with years of history.
     static func netWorthSeries(accounts: [Account], months: Int = 12, now: Date = .now, calendar: Calendar = .current) -> [NetWorthPoint] {
-        monthStarts(count: months, now: now, calendar: calendar).flatMap { start -> [NetWorthPoint] in
-            let monthEnd = calendar.dateInterval(of: .month, for: start)?.end ?? start
-            let cutoff = min(monthEnd, now)
-            return AccountGroup.allCases.map { group in
-                NetWorthPoint(month: start, group: group, value: total(of: accounts, in: [group], asOf: cutoff).doubleValue)
+        let starts = monthStarts(count: months, now: now, calendar: calendar)
+        let cutoffs = starts.map { min(calendar.dateInterval(of: .month, for: $0)?.end ?? $0, now) }
+        let groups = AccountGroup.allCases
+        // totals[group][month]
+        var totals = Array(repeating: Array(repeating: Decimal(0), count: cutoffs.count), count: groups.count)
+
+        for account in accounts.live {
+            guard let groupIndex = groups.firstIndex(of: account.type.group) else { continue }
+            // Money landing in each month's slot: everything up to the first cutoff, then each month after it.
+            var slots = Array(repeating: Decimal(0), count: cutoffs.count)
+            for transaction in account.transactions where transaction.isLive {
+                let date = transaction.date
+                guard let slot = cutoffs.firstIndex(where: { date <= $0 }) else { continue }   // after the last cutoff
+                slots[slot] += transaction.amount
+            }
+            var running = account.openingBalance
+            for index in cutoffs.indices {
+                running += slots[index]
+                totals[groupIndex][index] += running
+            }
+        }
+
+        return starts.indices.flatMap { month in
+            groups.indices.map { group in
+                NetWorthPoint(month: starts[month], group: groups[group], value: totals[group][month].doubleValue)
             }
         }
     }
 
     static func flowSeries(transactions: [Transaction], months: Int = 12, now: Date = .now, calendar: Calendar = .current) -> [FlowPoint] {
-        monthStarts(count: months, now: now, calendar: calendar).flatMap { start -> [FlowPoint] in
-            let end = calendar.dateInterval(of: .month, for: start)?.end ?? start
-            let flow = flow(transactions, from: start, to: end)
-            return [
-                FlowPoint(month: start, kind: "Income", value: flow.income.doubleValue),
-                FlowPoint(month: start, kind: "Spending", value: -flow.spending.doubleValue),
+        let starts = monthStarts(count: months, now: now, calendar: calendar)
+        let ends = starts.map { calendar.dateInterval(of: .month, for: $0)?.end ?? $0 }
+        var flows = Array(repeating: Flow(), count: starts.count)
+        guard let first = starts.first else { return [] }
+        for transaction in transactions where !transaction.isTransfer {
+            let date = transaction.date
+            guard date >= first, let index = ends.firstIndex(where: { date < $0 }) else { continue }
+            if transaction.amount > 0 { flows[index].income += transaction.amount } else { flows[index].spending -= transaction.amount }
+        }
+        return starts.indices.flatMap { index in
+            [
+                FlowPoint(month: starts[index], kind: "Income", value: flows[index].income.doubleValue),
+                FlowPoint(month: starts[index], kind: "Spending", value: -flows[index].spending.doubleValue),
             ]
         }
     }

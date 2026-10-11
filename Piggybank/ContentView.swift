@@ -28,6 +28,9 @@ struct ContentView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { Task { await BillNotifier.refresh(in: modelContext) } }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankDataLoaded)) { _ in
+            isSettingUp = false
+        }
         // Erasing or deleting the last account brings the setup screen back.
         .onChange(of: allAccounts.live.addedByUser.count) { _, count in
             if hasChecked && count == 0 { withAnimation { isSettingUp = true } }

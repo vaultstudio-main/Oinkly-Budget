@@ -15,6 +15,8 @@ extension Sequence where Element: PersistentModel {
 extension Notification.Name {
     /// Posted just before accounts are deleted, so screens showing one can move away first.
     static let piggybankWillDeleteAccounts = Notification.Name("piggybankWillDeleteAccounts")
+    /// Posted when a whole set of accounts has been put in place at once (test data), so the setup screen can step aside.
+    static let piggybankDataLoaded = Notification.Name("piggybankDataLoaded")
 }
 
 enum DataDeletion {

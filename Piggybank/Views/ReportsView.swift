@@ -5,7 +5,8 @@ import Charts
 /// Monthly, quarterly, 6-month and yearly reports.
 struct ReportsView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var period: ReportPeriod = .monthly
+    // Opens on the current year. The tabs still go down to a single month.
+    @State private var period: ReportPeriod = .yearly
     @State private var anchor = Date.now
 
     /// The date of the oldest transaction: one row, not a pass over everything.
