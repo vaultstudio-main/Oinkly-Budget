@@ -5,15 +5,14 @@ import Charts
 /// Every credit card, mortgage and loan in one place: what is owed, how much is paid off, and how
 /// leveraged you are.
 struct LiabilitiesView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
     @State private var period: ReportPeriod = .quarterly
     @State private var anchor = Date.now
 
-    private var earliest: Date? {
-        accounts.flatMap(\.transactions).filter(\.isLive).map(\.date).min()
-    }
+    private var earliest: Date? { modelContext.earliestTransactionDate() }
 
     var body: some View {
         let range = Reports.range(period, anchor: anchor)

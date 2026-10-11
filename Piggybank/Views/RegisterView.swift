@@ -7,29 +7,58 @@ private struct RegisterRow: Identifiable {
     var id: PersistentIdentifier { transaction.persistentModelID }
 }
 
+/// The register for one account. It owns the month being looked at; the table itself loads only that month.
 struct RegisterView: View {
     let account: Account
 
+    @State private var month = MonthFilter.start(of: .now)
+
+    var body: some View {
+        // The account can be deleted from Settings while its register is still on screen.
+        if account.isLive { RegisterContent(account: account, month: $month) }
+    }
+}
+
+private struct RegisterContent: View {
+    let account: Account
+    @Binding var month: Date
+
     @Environment(\.modelContext) private var modelContext
+    @Query private var monthTransactions: [Transaction]
     @Query(sort: \Category.name) private var allCategories: [Category]
     private var categories: [Category] { allCategories.live }
     @State private var selection = Set<PersistentIdentifier>()
     @State private var isEditingDetails = false
     @State private var confirmingDelete = false
-    @State private var month = MonthFilter.start(of: .now)
     @State private var limitMessage: String?
     @State private var editingDate: Transaction?
 
-    /// The running balance counts every transaction, so it stays correct when only one month is shown.
+    init(account: Account, month: Binding<Date>) {
+        self.account = account
+        _month = month
+        let id = account.persistentModelID
+        let start = month.wrappedValue
+        let end = Calendar.current.date(byAdding: .month, value: 1, to: start) ?? start
+        if account.isLoan {
+            // A loan shows its whole history, which is short.
+            _monthTransactions = Query(filter: #Predicate<Transaction> { $0.account?.persistentModelID == id })
+        } else {
+            _monthTransactions = Query(filter: #Predicate<Transaction> {
+                $0.account?.persistentModelID == id && $0.date >= start && $0.date < end
+            })
+        }
+    }
+
+    /// The running balance counts every transaction before the month too, so it stays correct when only one month is
+    /// shown: it starts from the balance at the start of the month.
     private var rows: [RegisterRow] {
-        var balance = account.openingBalance
-        return account.transactions.live
+        var balance = account.isLoan ? account.openingBalance : account.balance(asOf: month.addingTimeInterval(-0.001))
+        return monthTransactions.filter(\.isLive)
             .sorted { ($0.date, $0.createdAt) < ($1.date, $1.createdAt) }
             .map { transaction in
                 balance += transaction.amount
                 return RegisterRow(transaction: transaction, balance: balance)
             }
-            .filter { account.isLoan || MonthFilter.contains(month, $0.transaction.date) }
     }
 
     private func amountColor(_ amount: Decimal) -> Color {
@@ -41,20 +70,22 @@ struct RegisterView: View {
             Text(account.name).font(.largeTitle.bold())
             Spacer()
             if !account.isLoan {
-                MonthSelector(month: $month, range: MonthFilter.range(for: account.transactions.live))
+                MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
                 Spacer()
             }
         }
     }
 
+    private var dateRange: (first: Date?, last: Date?) { modelContext.transactionDateRange(of: account) }
+
     var body: some View {
-        // The account can be deleted from Settings while its register is still on screen.
         if account.isLive { content }
     }
 
     private var content: some View {
         // Work these out once per redraw. Doing it inside every row and every check made big registers crawl.
         let rows = rows
+        let hasAny = modelContext.transactionCount(of: account) > 0
         return VStack(spacing: 12) {
             header
             AccountDetailsPanel(account: account, month: month) { isEditingDetails = true }
@@ -140,7 +171,7 @@ struct RegisterView: View {
                 }
             }
             .overlay {
-                if account.transactions.isEmpty {
+                if !hasAny {
                     ContentUnavailableView("No Transactions", systemImage: "list.bullet.rectangle", description: Text(account.isCreditCard ? "Use File ▸ New Credit Card Charge to add a charge, or Pay a Bill to pay the card." : (account.isLoan ? "Use File ▸ Pay a Bill to make a payment." : (account.isCashOnHand ? "Use File ▸ New Cash Transaction to record cash, or ATM Withdrawal to put cash here." : "Use File ▸ New Transaction to add one."))))
                 } else if rows.isEmpty {
                     ContentUnavailableView("No Transactions in \(month.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
@@ -150,7 +181,7 @@ struct RegisterView: View {
             .background(Theme.panel)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .contextMenu(forSelectionType: PersistentIdentifier.self) { ids in
-                if ids.count == 1, let id = ids.first, let transaction = account.transactions.live.first(where: { $0.persistentModelID == id }) {
+                if ids.count == 1, let id = ids.first, let transaction = monthTransactions.first(where: { $0.persistentModelID == id }) {
                     Button("Edit Transaction…", systemImage: "pencil") { editingDate = transaction }
                 }
                 if !ids.isEmpty {
@@ -191,7 +222,7 @@ struct RegisterView: View {
     }
 
     private func deleteSelected() {
-        for transaction in account.transactions.live where selection.contains(transaction.persistentModelID) {
+        for transaction in monthTransactions.filter(\.isLive) where selection.contains(transaction.persistentModelID) {
             Transfers.delete(transaction, in: modelContext)
         }
         selection.removeAll()

@@ -5,6 +5,7 @@ import Charts
 /// Retirement, brokerage and other investment accounts: value, growth and contributions over a quarter,
 /// six months or a year.
 struct InvestmentsView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
@@ -13,9 +14,7 @@ struct InvestmentsView: View {
 
     private var investmentAccounts: [Account] { accounts.filter { $0.type.group == .investments } }
 
-    private var earliest: Date? {
-        investmentAccounts.flatMap(\.transactions).filter(\.isLive).map(\.date).min()
-    }
+    private var earliest: Date? { modelContext.earliestTransactionDate(in: investmentAccounts) }
 
     var body: some View {
         let range = Reports.range(period, anchor: anchor)

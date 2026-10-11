@@ -312,7 +312,20 @@ final class Account {
 
     var balance: Decimal { balance(asOf: .distantFuture) }
 
+    /// The balance at the end of `date`. With thousands of transactions this would be slow to add up every time a
+    /// page asks, so a sorted running total is kept per account and reused until something is saved.
     func balance(asOf date: Date) -> Decimal {
-        transactions.live.reduce(openingBalance) { $1.date <= date ? $0 + $1.amount : $0 }
+        guard isLive else { return 0 }
+        if LedgerIndex.shared.preferLatest, let snapshot = LedgerIndex.shared.latest {
+            return openingBalance + snapshot.total(for: persistentModelID, asOf: date)
+        }
+        // Unsaved edits are not in the cache, so while there are any, add everything up directly.
+        guard let context = modelContext, !context.hasChanges else {
+            return transactions.live.reduce(openingBalance) { $1.date <= date ? $0 + $1.amount : $0 }
+        }
+        if let snapshot = LedgerIndex.shared.fresh {
+            return openingBalance + snapshot.total(for: persistentModelID, asOf: date)
+        }
+        return openingBalance + BalanceCache.total(for: self, asOf: date)
     }
 }

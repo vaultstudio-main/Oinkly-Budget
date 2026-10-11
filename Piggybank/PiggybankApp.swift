@@ -22,6 +22,8 @@ struct PiggybankApp: App {
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
         PiggybankAppDelegate.container = container
+        BalanceCache.install()
+        LedgerIndex.shared.start(container: container)
     }
 
     var body: some Scene {

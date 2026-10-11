@@ -23,6 +23,14 @@ enum MonthFilter {
         return lower...upper
     }
 
+    /// The same range from just the first and last dates.
+    static func range(first: Date?, last: Date?, now: Date = .now, calendar: Calendar = .current) -> ClosedRange<Date> {
+        let current = start(of: now, calendar: calendar)
+        let lower = first.map { min(start(of: $0, calendar: calendar), current) } ?? current
+        let upper = last.map { max(start(of: $0, calendar: calendar), current) } ?? current
+        return lower...upper
+    }
+
     static func isCurrent(_ month: Date, now: Date = .now, calendar: Calendar = .current) -> Bool {
         contains(month, now, calendar: calendar)
     }

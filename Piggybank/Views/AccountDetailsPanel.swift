@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// Account facts shown above the register: kind, bank details and this month's activity.
 struct AccountDetailsPanel: View {
@@ -6,34 +7,62 @@ struct AccountDetailsPanel: View {
     let month: Date
     let onEdit: () -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @State private var showAccountNumber = false
 
+    /// This account's totals from the ledger snapshot, when there is one. With a lot of transactions, adding them up
+    /// here every time the panel redraws would be slow.
+    private var ledger: LedgerSnapshot.Series? { LedgerIndex.shared.latest?.accounts[account.persistentModelID] }
+
+    /// Only this month's transactions are loaded.
     private var monthTransactions: [Transaction] {
-        MonthFilter.transactions(account.transactions.live, in: month)
+        let id = account.persistentModelID
+        let start = month
+        let end = Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month
+        let descriptor = FetchDescriptor<Transaction>(
+            predicate: #Predicate<Transaction> { $0.account?.persistentModelID == id && $0.date >= start && $0.date < end })
+        return ((try? modelContext.fetch(descriptor)) ?? []).filter(\.isLive)
     }
 
     /// Opening balance plus everything already matched to a statement.
     private var reconciledBalance: Decimal {
-        account.transactions.live.filter(\.isReconciled).reduce(account.openingBalance) { $0 + $1.amount }
+        if let ledger { return account.openingBalance + ledger.reconciledSum }
+        return account.transactions.live.filter(\.isReconciled).reduce(account.openingBalance) { $0 + $1.amount }
     }
 
     private var unreconciled: some View {
-        let open = account.transactions.live.filter { $0.state == .unreconciled }
-        let total = open.reduce(Decimal(0)) { $0 + $1.amount }
+        let count: Int
+        let total: Decimal
+        if let ledger {
+            count = ledger.unreconciledCount
+            total = ledger.unreconciledSum
+        } else {
+            let open = account.transactions.live.filter { $0.state == .unreconciled }
+            count = open.count
+            total = open.reduce(Decimal(0)) { $0 + $1.amount }
+        }
         return HStack(spacing: 4) {
-            Text("\(open.count) transaction\(open.count == 1 ? "" : "s")")
+            Text("\(count) transaction\(count == 1 ? "" : "s")")
             Text("·").foregroundStyle(.secondary)
-            Text(total, format: .appCurrency).foregroundStyle(open.isEmpty ? Color.secondary : (total < 0 ? Theme.red : Theme.green))
+            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : (total < 0 ? Theme.red : Theme.green))
         }
     }
 
     private var pendingSummary: some View {
-        let pending = account.transactions.live.filter { $0.state == .pending }
-        let total = pending.reduce(Decimal(0)) { $0 + $1.amount }
+        let count: Int
+        let total: Decimal
+        if let ledger {
+            count = ledger.pendingCount
+            total = ledger.pendingSum
+        } else {
+            let pending = account.transactions.live.filter { $0.state == .pending }
+            count = pending.count
+            total = pending.reduce(Decimal(0)) { $0 + $1.amount }
+        }
         return HStack(spacing: 4) {
-            Text("\(pending.count) transaction\(pending.count == 1 ? "" : "s")")
+            Text("\(count) transaction\(count == 1 ? "" : "s")")
             Text("·").foregroundStyle(.secondary)
-            Text(total, format: .appCurrency).foregroundStyle(pending.isEmpty ? Color.secondary : .orange)
+            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : .orange)
         }
     }
 

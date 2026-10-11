@@ -5,14 +5,15 @@ import Charts
 struct SummaryView: View {
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
-    /// Only the last 13 months: everything on this page looks back a year at most.
+    /// Only the last few months. Everything longer comes from the ledger snapshot.
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
     /// The newest few, however old, for the "Last 15 Transactions" panel.
     @Query private var newest: [Transaction]
 
     init() {
-        let cutoff = Calendar.current.date(byAdding: .month, value: -13, to: .now) ?? .distantPast
+        // Three months covers the spending lists and the month's cards. The yearly charts come from the ledger snapshot.
+        let cutoff = Calendar.current.date(byAdding: .month, value: -3, to: Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now) ?? .distantPast
         _allTransactions = Query(filter: #Predicate<Transaction> { $0.date >= cutoff })
         var latest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
         latest.fetchLimit = 60
@@ -65,8 +66,27 @@ struct SummaryView: View {
 
     // MARK: Net worth
 
+    private var snapshot: LedgerSnapshot? { LedgerIndex.shared.latest }
+
+    private var calculating: some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text("Calculating…").foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, minHeight: 60)
+    }
+
+    @ViewBuilder
     private var netWorthChart: some View {
-        Chart(Summary.netWorthSeries(accounts: accounts)) { point in
+        if let snapshot {
+            netWorthChart(Summary.netWorthSeries(accounts: accounts, snapshot: snapshot))
+        } else {
+            calculating
+        }
+    }
+
+    private func netWorthChart(_ series: [Summary.NetWorthPoint]) -> some View {
+        Chart(series) { point in
             BarMark(
                 x: .value("Month", point.month, unit: .month),
                 y: .value("Value", point.value)
@@ -83,12 +103,17 @@ struct SummaryView: View {
         .frame(height: 220)
     }
 
+    @ViewBuilder
     private var summaryTable: some View {
-        let cash = Summary.total(of: accounts, in: [.checkingSavings])
-        let investments = Summary.total(of: accounts, in: [.investments])
-        let assets = Summary.total(of: accounts, in: [.assets])
-        let cards = Summary.total(of: accounts, in: [.creditCards])
-        let loans = Summary.total(of: accounts, in: [.loans])
+        if let snapshot { summaryTable(snapshot) } else { calculating }
+    }
+
+    private func summaryTable(_ snapshot: LedgerSnapshot) -> some View {
+        let cash = Summary.total(of: accounts, in: [.checkingSavings], snapshot: snapshot)
+        let investments = Summary.total(of: accounts, in: [.investments], snapshot: snapshot)
+        let assets = Summary.total(of: accounts, in: [.assets], snapshot: snapshot)
+        let cards = Summary.total(of: accounts, in: [.creditCards], snapshot: snapshot)
+        let loans = Summary.total(of: accounts, in: [.loans], snapshot: snapshot)
 
         return Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 6) {
             row("Cash", cash)
@@ -114,8 +139,22 @@ struct SummaryView: View {
 
     // MARK: Income / spending
 
+    @ViewBuilder
     private var flowChart: some View {
-        Chart(Summary.flowSeries(transactions: transactions)) { point in
+        if let snapshot {
+            flowChart(snapshot.monthStarts.indices.flatMap { index -> [Summary.FlowPoint] in
+                [
+                    Summary.FlowPoint(month: snapshot.monthStarts[index], kind: "Income", value: snapshot.income[index].doubleValue),
+                    Summary.FlowPoint(month: snapshot.monthStarts[index], kind: "Spending", value: -snapshot.spending[index].doubleValue),
+                ]
+            })
+        } else {
+            calculating
+        }
+    }
+
+    private func flowChart(_ series: [Summary.FlowPoint]) -> some View {
+        Chart(series) { point in
             BarMark(
                 x: .value("Month", point.month, unit: .month),
                 y: .value("Amount", point.value)
@@ -132,9 +171,12 @@ struct SummaryView: View {
         .frame(height: 160)
     }
 
+    @ViewBuilder
     private var flowTable: some View {
-        let year = Summary.lastDays(365, transactions: transactions)
-        let month = Summary.lastDays(30, transactions: transactions)
+        if let snapshot { flowTable(year: snapshot.year, month: snapshot.thirtyDays) } else { calculating }
+    }
+
+    private func flowTable(year: LedgerSnapshot.Flow, month: LedgerSnapshot.Flow) -> some View {
 
         return Grid(alignment: .trailing, horizontalSpacing: 16, verticalSpacing: 6) {
             GridRow {

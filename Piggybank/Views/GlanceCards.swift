@@ -99,12 +99,12 @@ struct LiabilitiesGlance: View {
     let accounts: [Account]
 
     var body: some View {
-        let report = Liabilities.build(accounts)
+        let report = LedgerIndex.shared.whileStale { Liabilities.build(accounts) }
         ReportCard(title: "Liabilities", fillsHeight: true) {
             VStack(alignment: .leading, spacing: 8) {
-                if report.lines.isEmpty {
+                if let report, report.lines.isEmpty {
                     GlancePlaceholder(symbol: "scalemass", text: "No credit cards, mortgages or loans yet. Add one in Settings ▸ Accounts to track what you owe.")
-                } else {
+                } else if let report {
                 HStack(alignment: .firstTextBaseline) {
                     Text(report.totalOwed, format: .appCurrency).font(.title2.bold()).foregroundStyle(Theme.red)
                     Text("owed").foregroundStyle(.secondary)
@@ -124,6 +124,8 @@ struct LiabilitiesGlance: View {
                     .font(.callout)
                 }
                 if report.monthlyPayments > 0 { GlanceRow("Monthly payments", report.monthlyPayments) }
+                } else {
+                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
                 }
             }
         }
@@ -137,12 +139,12 @@ struct InvestmentsGlance: View {
 
     var body: some View {
         let range = Reports.range(.quarterly, anchor: .now)
-        let report = Investments.build(accounts, range: range)
+        let report = LedgerIndex.shared.whileStale { Investments.build(accounts, range: range) }
         ReportCard(title: "\(Reports.label(.quarterly, range: range)) · Investments", fillsHeight: true) {
             VStack(alignment: .leading, spacing: 8) {
-                if report.lines.isEmpty {
+                if let report, report.lines.isEmpty {
                     GlancePlaceholder(symbol: "chart.line.uptrend.xyaxis", text: "No investment accounts yet. Add a 401(k), IRA or brokerage in Settings ▸ Accounts to see how it grows.")
-                } else {
+                } else if let report {
                 HStack(alignment: .firstTextBaseline) {
                     Text(report.end, format: .appCurrency).font(.title2.bold())
                     Spacer()
@@ -155,6 +157,8 @@ struct InvestmentsGlance: View {
                 GlanceRow("Growth", report.growth, color: report.growth >= 0 ? Theme.green : Theme.red)
                 GlanceRow("Contributions", report.contributions)
                 Text("\(report.lines.count) account\(report.lines.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
                 }
             }
         }
@@ -168,11 +172,13 @@ struct LoansProgressCard: View {
     let accounts: [Account]
 
     var body: some View {
-        let loans = Liabilities.build(accounts).lines.filter(\.isLoan)
+        let loans = LedgerIndex.shared.whileStale { Liabilities.build(accounts).lines.filter(\.isLoan) }
         ReportCard(title: "Loans · Progress") {
-            if loans.isEmpty {
+            if loans == nil {
+                Text("Calculating…").font(.callout).foregroundStyle(.secondary)
+            } else if let loans, loans.isEmpty {
                 GlancePlaceholder(symbol: "banknote", text: "No mortgages or loans yet. Add one in Settings ▸ Accounts to watch it get paid off.")
-            } else {
+            } else if let loans {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
                     ForEach(loans) { row($0) }
                 }
