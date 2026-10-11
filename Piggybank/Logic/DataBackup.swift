@@ -2,8 +2,8 @@ import Foundation
 import SwiftData
 import UniformTypeIdentifiers
 
-/// A complete copy of everything in Piggybank, as one JSON file. Saved and opened from the Mac. The iPhone and iPad
-/// builds carry the same code so testing tools can keep a safety copy.
+/// A complete copy of everything in Piggybank, as one JSON file. Saved and opened from the Mac.
+/// Debug builds also use it so the testing tools can keep a safety copy.
 /// Money amounts are stored as text so no cent is ever lost to rounding.
 struct BackupFile: Codable {
     static let currentVersion = 1

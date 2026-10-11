@@ -1,8 +1,6 @@
 import Foundation
 import SwiftData
-#if canImport(AppKit)
 import AppKit
-#endif
 
 enum CheckStatus {
     case pending, running, ok, fixed, warning, failed
@@ -197,14 +195,10 @@ final class StartupChecker {
     }
 
     private func checkIcons() -> (CheckStatus, String) {
-        #if canImport(AppKit)
         let symbols = Set(Category.definitions.map(\.symbol) + AccountType.allCases.map(\.symbol) + PaymentType.allCases.map(\.symbol))
         let missing = symbols.filter { NSImage(systemSymbolName: $0, accessibilityDescription: nil) == nil }.sorted()
         if !missing.isEmpty { return (.warning, "Missing icons: " + missing.joined(separator: ", ")) }
         return (.ok, "All \(symbols.count) icons found")
-        #else
-        return (.ok, "Icons ready")
-        #endif
     }
 
     private func save(_ context: ModelContext) -> (CheckStatus, String) {

@@ -1,9 +1,7 @@
 import SwiftUI
 import SwiftData
-#if os(macOS)
 import AppKit
 import UniformTypeIdentifiers
-#endif
 
 /// Shown after the splash when the app has no accounts yet.
 /// Lets you add every kind of account, then continue into the app.
@@ -18,11 +16,7 @@ struct AccountSetupView: View {
     @State private var newAccountType: AccountType?
 
     var body: some View {
-        #if os(macOS)
         wideBody
-        #else
-        phoneBody
-        #endif
     }
 
     private var phoneBody: some View {
@@ -70,7 +64,6 @@ struct AccountSetupView: View {
         .sheet(item: $newAccountType) { AccountEditView(account: nil, initialType: $0) }
     }
 
-    #if os(macOS)
     // MARK: Mac: the whole window, so there is little to scroll
 
     /// Account types in columns across the window, with what has been added and the way forward in a side panel.
@@ -233,15 +226,10 @@ struct AccountSetupView: View {
         .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .contentShape(Rectangle())
     }
-    #endif
 
-    /// One column on iPhone and iPad so they match; two on the wide Mac window.
+    /// Two columns in the wide Mac window.
     private var typeColumns: [GridItem] {
-        #if os(iOS)
-        [GridItem(.flexible())]
-        #else
         [GridItem(.adaptive(minimum: 240), spacing: 12)]
-        #endif
     }
 
     private var header: some View {
@@ -305,18 +293,10 @@ struct AccountSetupView: View {
     }
 
     private var maxContentWidth: CGFloat {
-        #if os(iOS)
-        560
-        #else
         780
-        #endif
     }
 
     private var background: Color {
-        #if os(macOS)
         Theme.background
-        #else
-        Color(.systemGroupedBackground)
-        #endif
     }
 }

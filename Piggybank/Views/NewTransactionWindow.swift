@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import SwiftData
 
@@ -225,4 +224,3 @@ struct NewTransactionWindow: View {
         }
     }
 }
-#endif

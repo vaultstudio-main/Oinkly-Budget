@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import SwiftData
 import AppKit
@@ -223,4 +222,3 @@ struct ImportExportSettingsView: View {
         }
     }
 }
-#endif

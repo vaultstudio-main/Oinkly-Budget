@@ -29,9 +29,7 @@ struct GeneralSettingsView: View {
                 Text("Sends a notification the number of days before a bill is due that you chose for it, even when Piggybank Financial isn't open.")
             }
 
-            #if os(macOS)
             BackgroundSettingsSection()
-            #endif
 
             Section {
                 Picker("Interface", selection: appearanceBinding) {
@@ -376,9 +374,6 @@ struct CustomPaymentMethodEditView: View {
             }
             .formStyle(.grouped)
             .navigationTitle(method == nil ? "New Payment Method" : "Edit Payment Method")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -485,7 +480,6 @@ struct DataSettingsView: View {
 
 // MARK: Containers
 
-#if os(macOS)
 /// The Mac Settings window (Piggybank ▸ Settings…, ⌘,).
 struct MacSettingsView: View {
     var body: some View {
@@ -506,41 +500,4 @@ struct MacSettingsView: View {
         .frame(width: 640, height: 560)
     }
 }
-#endif
 
-#if os(iOS)
-/// The Settings tab on iPhone and iPad.
-struct PhoneSettingsView: View {
-    var body: some View {
-        NavigationStack {
-            List {
-                NavigationLink { GeneralSettingsView().navigationTitle("General") } label: {
-                    Label("General", systemImage: "gearshape")
-                }
-                NavigationLink { AccountsSettingsView().navigationTitle("Accounts") } label: {
-                    Label("Accounts", systemImage: "building.columns")
-                }
-                NavigationLink { CategoriesSettingsView().navigationTitle("Categories") } label: {
-                    Label("Categories & Budgets", systemImage: "tag")
-                }
-                NavigationLink { PaymentMethodsSettingsView().navigationTitle("Payment Methods") } label: {
-                    Label("Payment Methods", systemImage: "creditcard")
-                }
-                NavigationLink { DataSettingsView().navigationTitle("Data") } label: {
-                    Label("Data & About", systemImage: "externaldrive")
-                }
-                NavigationLink { ReleaseNotesWindow().navigationTitle("Release Notes") } label: {
-                    Label("Release Notes", systemImage: "list.bullet.rectangle")
-                }
-                #if DEBUG
-                NavigationLink { TestingWindow() } label: {
-                    Label("Testing", systemImage: "testtube.2")
-                }
-                #endif
-            }
-            .navigationTitle("Settings")
-            .menuButton()
-        }
-    }
-}
-#endif

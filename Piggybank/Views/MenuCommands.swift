@@ -11,7 +11,6 @@ struct NewTransactionRequest: Codable, Hashable {
     var accountID: PersistentIdentifier?
 }
 
-#if os(macOS)
 /// File > New Transaction opens its own window. Accounts are created in Settings.
 struct FileNewCommands: Commands {
     @Environment(\.openWindow) private var openWindow
@@ -83,4 +82,3 @@ struct FileNewCommands: Commands {
     }
 }
 
-#endif

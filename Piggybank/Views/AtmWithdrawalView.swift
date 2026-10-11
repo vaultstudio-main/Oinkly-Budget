@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// ATM Withdrawal: moves cash from a checking or savings account into Cash on Hand. One withdrawal, two linked
-/// entries, so it never counts as income or spending. A window on the Mac and a sheet on iPhone and iPad.
+/// entries, so it never counts as income or spending. A window on the Mac.
 struct AtmWithdrawalView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -28,23 +28,10 @@ struct AtmWithdrawalView: View {
     private var canSave: Bool { source?.isLive == true && cash?.isLive == true && (amount ?? 0) > 0 }
 
     var body: some View {
-        #if os(macOS)
         content
             .frame(width: 460, height: 620)
             .background(Theme.background)
             .onAppear(perform: pickDefaultSource)
-        #else
-        NavigationStack {
-            content
-                .navigationTitle("ATM Withdrawal")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Withdraw", action: save).disabled(!canSave) }
-                }
-        }
-        .onAppear(perform: pickDefaultSource)
-        #endif
     }
 
     @ViewBuilder
@@ -83,7 +70,6 @@ struct AtmWithdrawalView: View {
     }
 
     private var form: some View {
-        #if os(macOS)
         VStack(spacing: 0) {
             Form { fields }
                 .formStyle(.grouped)
@@ -96,9 +82,6 @@ struct AtmWithdrawalView: View {
             }
             .padding(16)
         }
-        #else
-        Form { fields }
-        #endif
     }
 
     private var summary: String {

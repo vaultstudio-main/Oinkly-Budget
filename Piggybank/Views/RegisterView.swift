@@ -58,9 +58,7 @@ struct RegisterView: View {
         return VStack(spacing: 12) {
             header
             AccountDetailsPanel(account: account, month: month) { isEditingDetails = true }
-            #if os(macOS)
             if account.supportsHoldings { HoldingsPanel(account: account) }
-            #endif
             Table(rows, selection: $selection) {
                 // Read-only here, so a stray click can't move a transaction to another day.
                 // Right-click a transaction and choose Edit Transaction… to change the date.
@@ -134,14 +132,12 @@ struct RegisterView: View {
                 }
                 .width(min: 90, ideal: 110)
 
-                #if os(macOS)
                 if account.supportsReceipts {
                     TableColumn("Receipt") { row in
                         ReceiptButton(transaction: row.transaction)
                     }
                     .width(min: 100, ideal: 110)
                 }
-                #endif
             }
             .overlay {
                 if account.transactions.isEmpty {
@@ -164,10 +160,8 @@ struct RegisterView: View {
                     }
                 }
             }
-            #if os(macOS)
             .alternatingRowBackgrounds(.disabled)
             .onDeleteCommand(perform: requestDelete)
-            #endif
         }
         .padding(16)
         .background(Theme.background)

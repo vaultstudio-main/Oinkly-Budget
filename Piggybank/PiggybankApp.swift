@@ -4,10 +4,8 @@ import SwiftData
 @main
 struct PiggybankApp: App {
     let container: ModelContainer
-    #if os(macOS)
     @NSApplicationDelegateAdaptor(PiggybankAppDelegate.self) private var appDelegate
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
-    #endif
 
     init() {
         let schema = Schema([Account.self, Category.self, Transaction.self, Payee.self, Holding.self, HoldingEvent.self, Bill.self, Goal.self, GoalContribution.self, CustomPaymentMethod.self])
@@ -16,28 +14,15 @@ struct PiggybankApp: App {
             // added to the app, so turn sync on here, deliberately, when the time comes.
             container = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, cloudKitDatabase: .none))
         } catch {
-            #if os(macOS)
             // Keep going with throwaway storage so the boot window can explain what went wrong.
             // The main window never opens in this state.
             StartupState.databaseError = error
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
-            #else
-            fatalError("Could not create ModelContainer: \(error)")
-            #endif
         }
-        #if os(macOS)
         PiggybankAppDelegate.container = container
-        #endif
-        #if os(iOS)
-        // On the Mac the boot window does this (and reports it).
-        Category.ensureSystemCategories(in: container.mainContext)
-        Account.ensureDefault(in: container.mainContext)
-        try? container.mainContext.save()
-        #endif
     }
 
     var body: some Scene {
-        #if os(macOS)
         // The boot window is its own scene, shown once at launch. It opens the main window when the checks pass.
         Window("Starting Piggybank Financial", id: "boot") {
             BootView()
@@ -48,21 +33,17 @@ struct PiggybankApp: App {
         .windowResizability(.contentSize)
         .defaultLaunchBehavior(.presented)
         .restorationBehavior(.disabled)
-        #endif
 
         WindowGroup("Piggybank Financial", id: "main") {
             ContentView()
         }
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
-        #if os(macOS)
         .defaultLaunchBehavior(.suppressed)
         .commands {
             FileNewCommands()
         }
-        #endif
 
-        #if os(macOS)
         WindowGroup("New Transaction", id: "new-transaction", for: NewTransactionRequest.self) { $request in
             NewTransactionWindow(accountID: request?.accountID)
                 .savesChangesImmediately()
@@ -186,6 +167,5 @@ struct PiggybankApp: App {
                 .modelContainer(container)
                 .appAppearance()
         }
-        #endif
     }
 }

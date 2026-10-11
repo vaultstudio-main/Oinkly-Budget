@@ -47,9 +47,7 @@ struct BudgetEditView: View {
                 }
             }
         }
-        #if os(macOS)
         .frame(minWidth: 400, minHeight: 280)
-        #endif
     }
 }
 
@@ -89,9 +87,6 @@ struct CustomBudgetEditView: View {
                         }
                     if !isIncome {
                         CurrencyField("Monthly budget", value: $limit)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                     }
                 }
                 if category != nil {
@@ -104,9 +99,6 @@ struct CustomBudgetEditView: View {
             }
             .formStyle(.grouped)
             .navigationTitle(category == nil ? "New Category" : "Edit Category")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(!canSave) }

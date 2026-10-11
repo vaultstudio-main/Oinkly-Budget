@@ -3,7 +3,7 @@ import SwiftData
 import Charts
 
 /// Retirement, brokerage and other investment accounts: value, growth and contributions over a quarter,
-/// six months or a year. The same screen on Mac, iPhone and iPad.
+/// six months or a year.
 struct InvestmentsView: View {
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
@@ -23,9 +23,7 @@ struct InvestmentsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                #if os(macOS)
                 PageTitle("Investments")
-                #endif
                 PeriodControls(periods: ReportPeriod.longTerm, period: $period, anchor: $anchor, earliest: earliest)
                 if investmentAccounts.isEmpty {
                     PlaceholderTiles(titles: ["Value", "Growth", "Contributions", "Change"])
@@ -53,17 +51,9 @@ struct InvestmentsView: View {
                         .padding(.horizontal, 4)
                 }
             }
-            #if os(macOS)
             .padding(16)
-            #else
-            .padding(.horizontal, 16)
-            #endif
         }
-        #if os(macOS)
         .background(Theme.background)
-        #else
-        .background(Color(.systemGroupedBackground))
-        #endif
     }
 
     // MARK: Tiles

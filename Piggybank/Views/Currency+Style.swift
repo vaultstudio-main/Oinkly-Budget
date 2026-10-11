@@ -31,15 +31,12 @@ struct CurrencyField: View {
 
     var body: some View {
         TextField(title, value: $value, format: .appCurrency, prompt: Text(Decimal(0), format: .appCurrency))
-            #if os(iOS)
-            .keyboardType(.decimalPad)
-            #endif
     }
 }
 
 /// A text field for forms. On the Mac a grouped form shows the title as a label and, with no prompt, again as the
 /// placeholder, so the word appears twice. This shows it once: as the label, with `hint` (usually empty) as the placeholder.
-/// Pass `showsLabel: false` under a section header that already names it. On iPhone and iPad the title is the placeholder.
+/// Pass `showsLabel: false` under a section header that already names it.
 struct FormTextField: View {
     let title: String
     @Binding var text: String
@@ -56,15 +53,11 @@ struct FormTextField: View {
     }
 
     var body: some View {
-        #if os(macOS)
         if showsLabel {
             TextField(title, text: $text, prompt: Text(hint), axis: axis)
         } else {
             TextField(title, text: $text, prompt: Text(hint.isEmpty ? title : hint), axis: axis)
                 .labelsHidden()
         }
-        #else
-        TextField(hint.isEmpty || showsLabel ? title : hint, text: $text, axis: axis)
-        #endif
     }
 }

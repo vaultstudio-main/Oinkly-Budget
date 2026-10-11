@@ -2,7 +2,7 @@
 import SwiftUI
 import SwiftData
 
-/// Piggybank ▸ Testing… on the Mac and Settings ▸ Testing on iPhone and iPad. Fills the app with test data, wipes it,
+/// Piggybank ▸ Testing… on the Mac. Fills the app with test data, wipes it,
 /// or brings your own data back.
 /// Debug builds only. Every change saves a copy of what was there first.
 struct TestingWindow: View {
@@ -55,13 +55,7 @@ struct TestingWindow: View {
             Spacer(minLength: 0)
         }
         .padding(24)
-        #if os(macOS)
         .frame(width: 520, height: 380)
-        #else
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .navigationTitle("Testing")
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
         .disabled(working)
         .confirmationDialog(confirming?.title ?? "", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
                             titleVisibility: .visible, presenting: confirming) { action in

@@ -33,13 +33,9 @@ extension View {
 }
 
 extension View {
-    /// Mac sheets need a minimum size; on iPhone and iPad they fill the screen.
+    /// Mac sheets need a minimum size.
     func macSheetFrame(minHeight: CGFloat) -> some View {
-        #if os(macOS)
         frame(minWidth: 420, minHeight: minHeight)
-        #else
-        self
-        #endif
     }
 }
 
@@ -98,25 +94,12 @@ struct HoldingEditView: View {
                 Section("Holding") {
                     FormTextField("Name", text: $name, hint: "such as Vanguard Total Market")
                     FormTextField("Symbol", text: $symbol, hint: "Optional")
-                        #if os(iOS)
-                        .textInputAutocapitalization(.characters)
-                        .autocorrectionDisabled()
-                        #endif
                 }
 
                 Section {
                     TextField("Shares or units", value: $shares, format: .number.precision(.fractionLength(0...6)), prompt: Text("0"))
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                     CurrencyField("Price per share", value: $price)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                     CurrencyField("Cost basis (total paid)", value: $cost)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                 } header: {
                     Text("Position")
                 } footer: {
@@ -157,9 +140,6 @@ struct HoldingEditView: View {
             }
             .formStyle(.grouped)
             .navigationTitle(holding == nil ? "New Holding" : "Edit Holding")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(!canSave) }
@@ -221,9 +201,6 @@ struct UpdatePriceView: View {
                     LabeledContent("Shares or units", value: holding.shares.formatted(.number.precision(.fractionLength(0...6))))
                     LabeledContent("Last price", value: holding.price.formatted(.appCurrency))
                     CurrencyField("New price per share", value: $price)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                 } footer: {
                     if let effect, let price {
                         Text("Value goes to \((holding.shares * price).formatted(.appCurrency)). This records \(gainText(effect)) on the account.")
@@ -234,9 +211,6 @@ struct UpdatePriceView: View {
             }
             .formStyle(.grouped)
             .navigationTitle("Update Price")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -279,9 +253,6 @@ struct UpdateValueView: View {
                     LabeledContent("Account", value: account.name)
                     LabeledContent("Current value", value: account.balance.formatted(.appCurrency))
                     CurrencyField("New value", value: $value)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                 } footer: {
                     if let effect {
                         Text("This records \(gainText(effect)) on the account, so it counts as growth in your Investments report.")
@@ -292,9 +263,6 @@ struct UpdateValueView: View {
             }
             .formStyle(.grouped)
             .navigationTitle("Update Account Value")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

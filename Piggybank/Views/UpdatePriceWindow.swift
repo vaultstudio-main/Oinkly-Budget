@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// File > Update Investment Price on the Mac, and a sheet on iPhone and iPad: pick any holding in any investment account and enter its new price.
+/// File > Update Investment Price on the Mac,: pick any holding in any investment account and enter its new price.
 struct UpdatePriceWindow: View {
     let accountID: PersistentIdentifier?
 
@@ -22,25 +22,10 @@ struct UpdatePriceWindow: View {
     }
 
     var body: some View {
-        #if os(macOS)
         content
             .frame(width: 460, height: 380)
             .background(Theme.background)
             .onAppear(perform: pickDefault)
-        #else
-        NavigationStack {
-            content
-                .navigationTitle("Update Price")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Save", action: save).disabled(holding == nil || price == nil || effect == nil)
-                    }
-                }
-        }
-        .onAppear(perform: pickDefault)
-        #endif
     }
 
     private func pickDefault() {
@@ -100,7 +85,6 @@ struct UpdatePriceWindow: View {
     }
 
     private var form: some View {
-        #if os(macOS)
         VStack(spacing: 0) {
             Form { fields }
                 .formStyle(.grouped)
@@ -115,9 +99,6 @@ struct UpdatePriceWindow: View {
             }
             .padding(16)
         }
-        #else
-        Form { fields }
-        #endif
     }
 
     private func select(_ new: Holding?) {

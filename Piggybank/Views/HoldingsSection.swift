@@ -5,7 +5,6 @@ private func percentText(_ fraction: Double?) -> String? {
     fraction.map { ($0 >= 0 ? "+" : "") + $0.formatted(.percent.precision(.fractionLength(1))) }
 }
 
-#if os(macOS)
 /// The Holdings panel on an investment account's register.
 struct HoldingsPanel: View {
     let account: Account
@@ -101,80 +100,4 @@ struct HoldingsPanel: View {
         }
     }
 }
-#endif
 
-#if os(iOS)
-/// The Holdings sections on an investment account's page.
-struct HoldingsSections: View {
-    let account: Account
-    @State private var sheet: HoldingSheet?
-
-    var body: some View {
-        let summary = HoldingsLedger.summary(for: account)
-        let holdings = account.holdings.live.sorted { $0.marketValue > $1.marketValue }
-
-        Group {
-            Section {
-                LabeledContent("Holdings value", value: summary.marketValue.formatted(.appCurrency))
-                LabeledContent("Cost basis", value: summary.costBasis.formatted(.appCurrency))
-                LabeledContent("Unrealized gain") {
-                    HStack(spacing: 6) {
-                        Text(summary.gain, format: .appCurrency)
-                        if let text = percentText(summary.gainFraction) { Text(text) }
-                    }
-                    .foregroundStyle(summary.gain >= 0 ? Color.green : Color.red)
-                }
-                if abs((summary.unallocated as NSDecimalNumber).doubleValue) >= 0.005 {
-                    LabeledContent("Not in a holding", value: summary.unallocated.formatted(.appCurrency))
-                }
-
-                ForEach(holdings) { holding in
-                    if holding.isLive {
-                        Button { sheet = .price(holding) } label: { row(holding) }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing) {
-                                Button("Edit", systemImage: "pencil") { sheet = .edit(holding) }.tint(.blue)
-                            }
-                            .contextMenu {
-                                Button("Update Price", systemImage: "arrow.up.arrow.down") { sheet = .price(holding) }
-                                Button("Edit", systemImage: "pencil") { sheet = .edit(holding) }
-                            }
-                    }
-                }
-
-                Button("Add Holding", systemImage: "plus.circle.fill") { sheet = .add }
-                Button("Update Account Value", systemImage: "dollarsign.arrow.circlepath") { sheet = .accountValue }
-            } header: {
-                Text("Holdings")
-            } footer: {
-                Text(holdings.isEmpty
-                     ? "Add the funds or stocks in this account, or update its value by hand."
-                     : "Tap a holding to update its price. The change is recorded as a gain or loss on the account.")
-            }
-        }
-        .holdingSheets($sheet, account: account)
-    }
-
-    private func row(_ holding: Holding) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(holding.name).font(.body)
-                Text("\(holding.shares.formatted(.number.precision(.fractionLength(0...6)))) × \(holding.price.formatted(.appCurrency))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(holding.marketValue, format: .appCurrency).fontWeight(.semibold)
-                HStack(spacing: 4) {
-                    Text(holding.gain, format: .appCurrency)
-                    if let text = percentText(holding.gainFraction) { Text(text) }
-                }
-                .font(.caption)
-                .foregroundStyle(holding.gain >= 0 ? Color.green : Color.red)
-            }
-        }
-        .contentShape(Rectangle())
-    }
-}
-#endif

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// New Credit Card Charge: adds debt to a credit card, and refuses a charge that would reach the card's credit limit.
-/// A window on the Mac (File menu) and a sheet on iPhone and iPad.
+/// A window on the Mac (File menu).
 struct CreditCardChargeView: View {
     /// The card to start on, when opened from its own page.
     var initialCard: Account?
@@ -40,25 +40,11 @@ struct CreditCardChargeView: View {
     private var exceedsLimit: Bool { card?.wouldExceedLimit(adding: -charge) == true }
 
     var body: some View {
-        #if os(macOS)
         content
             .frame(width: 460, height: 680)
             .background(Theme.background)
             .onAppear(perform: pickDefaultCard)
             .alert(limitAlertTitle, isPresented: limitAlertShowing) { Button("OK", role: .cancel) {} } message: { Text(limitMessage ?? "") }
-        #else
-        NavigationStack {
-            content
-                .navigationTitle("Credit Card Charge")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Add", action: save).disabled(!canSave) }
-                }
-        }
-        .onAppear(perform: pickDefaultCard)
-        .alert(limitAlertTitle, isPresented: limitAlertShowing) { Button("OK", role: .cancel) {} } message: { Text(limitMessage ?? "") }
-        #endif
     }
 
     private var limitAlertTitle: String { "Exceeds Credit Limit" }
@@ -135,7 +121,6 @@ struct CreditCardChargeView: View {
     }
 
     private var form: some View {
-        #if os(macOS)
         VStack(spacing: 0) {
             Form { fields }
                 .formStyle(.grouped)
@@ -148,9 +133,6 @@ struct CreditCardChargeView: View {
             }
             .padding(16)
         }
-        #else
-        Form { fields }
-        #endif
     }
 
     private func pickDefaultCard() {
@@ -191,7 +173,6 @@ struct CreditCardChargeView: View {
     }
 }
 
-#if os(macOS)
 /// Resolves the card the window was opened from, then shows the charge form.
 struct CreditCardChargeWindow: View {
     let accountID: PersistentIdentifier?
@@ -201,4 +182,3 @@ struct CreditCardChargeWindow: View {
         CreditCardChargeView(initialCard: allAccounts.live.first { $0.id == accountID })
     }
 }
-#endif

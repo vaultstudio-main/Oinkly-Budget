@@ -3,7 +3,7 @@ import SwiftData
 
 /// New Cash Transaction: money spent from, or received into, Cash on Hand. It only ever touches Cash on Hand, and the
 /// method is always Cash. Filling Cash on Hand from a bank account is an ATM Withdrawal instead.
-/// A window on the Mac and a sheet on iPhone and iPad.
+/// A window on the Mac.
 struct CashTransactionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -36,21 +36,9 @@ struct CashTransactionView: View {
     private var canSave: Bool { cash?.isLive == true && (amount ?? 0) > 0 }
 
     var body: some View {
-        #if os(macOS)
         form
             .frame(width: 460, height: 700)
             .background(Theme.background)
-        #else
-        NavigationStack {
-            form
-                .navigationTitle("Cash Transaction")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Add", action: save).disabled(!canSave) }
-                }
-        }
-        #endif
     }
 
     private var fields: some View {
@@ -111,7 +99,6 @@ struct CashTransactionView: View {
             ContentUnavailableView("No Cash on Hand", systemImage: "dollarsign.circle",
                                    description: Text("Cash on Hand is created automatically. Restart the app if it's missing."))
         } else {
-            #if os(macOS)
             VStack(spacing: 0) {
                 Form { fields }
                     .formStyle(.grouped)
@@ -124,9 +111,6 @@ struct CashTransactionView: View {
                 }
                 .padding(16)
             }
-            #else
-            Form { fields }
-            #endif
         }
     }
 

@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Every account's transactions together, a month at a time, so you can look at them as a whole.
-/// Searching looks through every month. The Mac shows a table; iPhone and iPad show a card-style list.
+/// Searching looks through every month. The Mac shows a table.
 struct TransactionsView: View {
     @Query(sort: \Transaction.date, order: .reverse) private var allTransactions: [Transaction]
     @Query(sort: \Account.name) private var allAccounts: [Account]
@@ -12,10 +12,6 @@ struct TransactionsView: View {
     @State private var accountID: Account.ID?
     @State private var search = ""
 
-    #if os(iOS)
-    @Environment(\.modelContext) private var modelContext
-    @State private var editing: Transaction?
-    #endif
 
     /// Live transactions of live accounts only, filtered by account, month and search text.
     private var shown: [Transaction] {
@@ -52,7 +48,6 @@ struct TransactionsView: View {
 
     private var heading: String { search.isEmpty ? "" : "Results for “\(search)”" }
 
-    #if os(macOS)
     var body: some View {
         let list = shown
         let sums = totals(list)
@@ -141,71 +136,4 @@ struct TransactionsView: View {
     private func investmentType(_ transaction: Transaction) -> InvestmentType? {
         transaction.account?.supportsHoldings == true ? InvestmentType.of(transaction) : nil
     }
-    #else
-    private var days: [(day: Date, items: [Transaction])] {
-        let grouped = Dictionary(grouping: shown) { Calendar.current.startOfDay(for: $0.date) }
-        return grouped.keys.sorted(by: >).map { day in
-            (day, grouped[day, default: []].sorted { $0.createdAt > $1.createdAt })
-        }
-    }
-
-    var body: some View {
-        let sums = totals(shown)
-        NavigationStack {
-            List {
-                if search.isEmpty {
-                    Section {
-                        MonthSelector(month: $month, range: range)
-                            .frame(maxWidth: .infinity)
-                            .listRowBackground(Color.clear)
-                    }
-                }
-                Section {
-                    HStack {
-                        Text("In").foregroundStyle(.secondary)
-                        Text(sums.income, format: .appCurrency).foregroundStyle(.green)
-                        Spacer()
-                        Text("Out").foregroundStyle(.secondary)
-                        Text(sums.spending, format: .appCurrency).foregroundStyle(.red)
-                    }
-                    .font(.subheadline.weight(.semibold))
-                }
-                if days.isEmpty {
-                    Section {
-                        Text(search.isEmpty ? "No transactions this month." : "No matches.").foregroundStyle(.secondary)
-                    }
-                }
-                ForEach(days, id: \.day) { day in
-                    Section(day.day.formatted(.dateTime.weekday(.wide).month().day())) {
-                        ForEach(day.items) { transaction in
-                            Button { editing = transaction } label: { TransactionRowView(transaction: transaction, showAccount: true) }
-                                .buttonStyle(.plain)
-                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) { Transfers.delete(transaction, in: modelContext); modelContext.saveNow() } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Transactions")
-            .menuButton()
-            .searchable(text: $search, prompt: "Search all transactions")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Picker("Account", selection: $accountID) {
-                            Text("All Accounts").tag(Account.ID?.none)
-                            ForEach(accounts) { Text($0.name).tag(Optional($0.id)) }
-                        }
-                    } label: {
-                        Label("Filter", systemImage: accountID == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                    }
-                }
-            }
-            .sheet(item: $editing) { if $0.isLive { PhoneTransactionForm(transaction: $0) } }
-        }
-    }
-    #endif
 }

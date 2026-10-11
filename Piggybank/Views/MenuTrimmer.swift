@@ -1,4 +1,3 @@
-#if os(macOS)
 import AppKit
 import SwiftData
 
@@ -158,4 +157,3 @@ enum BackupOpener {
         alert.runModal()
     }
 }
-#endif

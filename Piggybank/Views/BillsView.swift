@@ -15,7 +15,7 @@ private enum BillSheet: Identifiable {
 }
 
 /// Plan the month: a small calendar with every bill on it, what is coming up, and a place to add or remove bills.
-/// The same screen on Mac, iPhone and iPad. On the Mac the calendar and upcoming list sit in a sidebar.
+/// On the Mac the calendar and upcoming list sit in a sidebar.
 struct BillsView: View {
     @Query private var allBills: [Bill]
     private var bills: [Bill] { allBills.live }
@@ -34,7 +34,6 @@ struct BillsView: View {
         let monthItems = Bills.occurrences(bills, from: monthStart, through: monthEnd)
         let upcoming = Bills.upcoming(bills).filter(\.bill.isImportant)
         Group {
-            #if os(macOS)
             VStack(spacing: 0) {
             PageTitle("Bills").padding([.horizontal, .top], 16)
             HStack(alignment: .top, spacing: 0) {
@@ -59,20 +58,6 @@ struct BillsView: View {
             }
             }
             .background(Theme.background)
-            #else
-            ScrollView {
-                VStack(spacing: 14) {
-                    BillAlertBanner()
-                    BillCalendar(month: $month, selectedDay: $selectedDay, items: monthItems)
-                    addBillButton
-                    tiles(monthItems)
-                    upcomingCard(upcoming)
-                    monthCard(monthItems)
-                }
-                .padding(.horizontal, 16)
-            }
-            .background(Color(.systemGroupedBackground))
-            #endif
         }
         .sheet(item: $sheet) { item in
             switch item {
@@ -410,9 +395,6 @@ struct BillEditView: View {
                 Section {
                     FormTextField("Name", text: $name)
                     CurrencyField("Amount", value: $amount)
-                        #if os(iOS)
-                        .keyboardType(.decimalPad)
-                        #endif
                     Picker("Repeats", selection: $frequency) {
                         ForEach(BillFrequency.allCases) { Text($0.title).tag($0) }
                     }
@@ -486,9 +468,6 @@ struct BillEditView: View {
                 }
             }
             .navigationTitle(bill == nil ? "New Bill" : "Edit Bill")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

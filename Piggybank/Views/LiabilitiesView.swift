@@ -3,7 +3,7 @@ import SwiftData
 import Charts
 
 /// Every credit card, mortgage and loan in one place: what is owed, how much is paid off, and how
-/// leveraged you are. The same screen on Mac, iPhone and iPad.
+/// leveraged you are.
 struct LiabilitiesView: View {
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
@@ -21,9 +21,7 @@ struct LiabilitiesView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                #if os(macOS)
                 PageTitle("Liabilities")
-                #endif
                 PeriodControls(periods: ReportPeriod.longTerm, period: $period, anchor: $anchor, earliest: earliest)
                 if report.lines.isEmpty {
                     PlaceholderTiles(titles: ["Owed", "Outstanding", "Paid Off", "Monthly Payments"])
@@ -49,17 +47,9 @@ struct LiabilitiesView: View {
                     ReportCard(title: "All Liabilities (\(report.lines.count))") { list(report) }
                 }
             }
-            #if os(macOS)
             .padding(16)
-            #else
-            .padding(.horizontal, 16)
-            #endif
         }
-        #if os(macOS)
         .background(Theme.background)
-        #else
-        .background(Color(.systemGroupedBackground))
-        #endif
     }
 
     // MARK: Tiles

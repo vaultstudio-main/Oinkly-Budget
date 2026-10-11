@@ -124,9 +124,6 @@ struct AccountEditView: View {
                                 TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
                                     .labelsHidden()
                                     .multilineTextAlignment(.trailing)
-                                    #if os(iOS)
-                                    .keyboardType(.decimalPad)
-                                    #endif
                                 Text("%").foregroundStyle(.secondary)
                             }
                         }
@@ -153,9 +150,6 @@ struct AccountEditView: View {
                                 TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
                                     .labelsHidden()
                                     .multilineTextAlignment(.trailing)
-                                    #if os(iOS)
-                                    .keyboardType(.decimalPad)
-                                    #endif
                                 Text("%").foregroundStyle(.secondary)
                             }
                         }
@@ -263,9 +257,7 @@ struct AccountEditView: View {
                 }
             }
         }
-        #if os(macOS)
         .frame(minWidth: 460, minHeight: 600)
-        #endif
     }
 
     private func amountRow(_ title: String, _ value: Binding<Decimal>) -> some View {

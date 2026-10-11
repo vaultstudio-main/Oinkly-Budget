@@ -1,4 +1,3 @@
-#if os(macOS)
 import Foundation
 import SwiftData
 
@@ -231,4 +230,3 @@ enum TransactionCSV {
         return result
     }
 }
-#endif

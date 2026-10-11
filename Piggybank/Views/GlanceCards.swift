@@ -7,12 +7,8 @@ struct GlanceCards: View {
     let transactions: [Transaction]
 
     var body: some View {
-        #if os(macOS)
         HStack(alignment: .top, spacing: 12) { cards }
             .fixedSize(horizontal: false, vertical: true)
-        #else
-        VStack(spacing: 16) { cards }
-        #endif
     }
 
     @ViewBuilder
@@ -177,15 +173,9 @@ struct LoansProgressCard: View {
             if loans.isEmpty {
                 GlancePlaceholder(symbol: "banknote", text: "No mortgages or loans yet. Add one in Settings ▸ Accounts to watch it get paid off.")
             } else {
-                #if os(macOS)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
                     ForEach(loans) { row($0) }
                 }
-                #else
-                VStack(alignment: .leading, spacing: 18) {
-                    ForEach(loans) { row($0) }
-                }
-                #endif
             }
         }
     }
@@ -244,15 +234,9 @@ struct GoalsProgressCard: View {
             if list.isEmpty {
                 GlancePlaceholder(symbol: "target", text: "No goals yet. Set one up in Planning to watch your progress here.")
             } else {
-                #if os(macOS)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
                     ForEach(list) { row($0) }
                 }
-                #else
-                VStack(alignment: .leading, spacing: 18) {
-                    ForEach(list) { row($0) }
-                }
-                #endif
             }
         }
     }

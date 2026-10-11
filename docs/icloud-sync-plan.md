@@ -1,6 +1,18 @@
 # iCloud sync: plan for later
 
-Status: **not started.** Decided to finish the feature list first.
+Status: **shelved (2026-10-11).** Piggybank is now Mac-only: the iPhone and iPad code was removed on the `mac-only` branch
+(it is still in git history at commit `aa90b3f` and earlier). Windows was considered and dropped because iCloud has no Windows path.
+Sync is only worth revisiting if mobile comes back.
+
+## Idea kept for later: a capture-only mobile companion
+A small separate iPhone app that only creates transactions (amount, payee, category, account, date, optional receipt photo)
+and sends them to the Mac. No conflicts, because the phone never edits existing data.
+- Each entry gets its own UUID; the Mac imports idempotently by UUID into a "Review incoming" list or as pending transactions.
+- The Mac sends the phone a read-only snapshot of account and category names.
+- Transport options: a CloudKit inbox (needs the paid account), a JSON file drop in iCloud Drive, or share sheet / AirDrop / Shortcuts (nothing extra).
+- Cheap prep on the Mac: a stable UUID on every transaction, one "import incoming" path, and keeping Models/ and the .pig encoding free of UI code.
+
+The notes below were written when iPhone and iPad were planned.
 
 ## Where things stand
 - The app uses a plain local SwiftData store (`ModelContainer(for: schema)` in `Piggybank/PiggybankApp.swift`).

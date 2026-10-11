@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import AppKit
 
@@ -26,4 +25,3 @@ extension View {
     /// Opens this window as large as the screen allows.
     func opensMaximized() -> some View { background(MaximizeOnOpen()) }
 }
-#endif

@@ -96,12 +96,7 @@ struct GoalsView: View {
                     }
                 }
             }
-            #if os(macOS)
             .padding(16)
-            #else
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            #endif
         }
         .onChange(of: isAdding) {
             if isAdding { sheet = .add; isAdding = false }
@@ -165,17 +160,10 @@ private struct GoalCardBackground<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        #if os(macOS)
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
-        #else
-        content
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        #endif
     }
 }
 
@@ -309,9 +297,6 @@ struct GoalProgressSheet: View {
             }
             .formStyle(.grouped)
             .navigationTitle(goal.isPayoff ? "Add a Payment" : "Add to Savings")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled((amount ?? 0) <= 0) }
@@ -437,9 +422,6 @@ struct GoalDetailView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Goal")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
         .toolbar {
             ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
         }
@@ -571,9 +553,6 @@ struct GoalEditView: View {
             }
             .formStyle(.grouped)
             .navigationTitle(goal == nil ? "New Goal" : "Edit Goal")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 if goal != nil {

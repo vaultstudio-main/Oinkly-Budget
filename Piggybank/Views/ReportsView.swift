@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// Monthly, quarterly, 6-month and yearly reports. The same screen on Mac, iPhone and iPad.
+/// Monthly, quarterly, 6-month and yearly reports.
 struct ReportsView: View {
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
@@ -16,9 +16,7 @@ struct ReportsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                #if os(macOS)
                 PageTitle("Reports")
-                #endif
                 controls(range: range)
                 if report.totals.count == 0 {
                     PlaceholderTiles(titles: ["Income", "Spending", "Net", "Savings Rate"])
@@ -34,17 +32,9 @@ struct ReportsView: View {
                     ReportCard(title: "Spending by Category") { categories(report) }
                 }
             }
-            #if os(macOS)
             .padding(16)
-            #else
-            .padding(.horizontal, 16)
-            #endif
         }
-        #if os(macOS)
         .background(Theme.background)
-        #else
-        .background(Color(.systemGroupedBackground))
-        #endif
         .animation(.smooth, value: period)
     }
 
@@ -168,31 +158,17 @@ extension View {
     }
 
     fileprivate var tileBackground: some ShapeStyle {
-        #if os(macOS)
         AnyShapeStyle(Theme.panel)
-        #else
-        AnyShapeStyle(.regularMaterial)
-        #endif
     }
 }
 
-/// A titled card: the dark panel on the Mac, a material card on iPhone and iPad.
+/// A titled card: the dark panel on the Mac.
 struct ReportCard<Content: View>: View {
     let title: String
     var fillsHeight = false
     @ViewBuilder let content: Content
 
     var body: some View {
-        #if os(macOS)
         Panel(title: title, fillsHeight: fillsHeight) { content }
-        #else
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.headline)
-            content
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        #endif
     }
 }

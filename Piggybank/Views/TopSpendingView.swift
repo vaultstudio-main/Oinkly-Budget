@@ -57,17 +57,10 @@ struct TopSpendingView: View {
 
     var body: some View {
         Group {
-            #if os(iOS)
-            VStack(spacing: 24) {
-                donut
-                details
-            }
-            #else
             HStack(alignment: .top, spacing: 40) {
                 donut
                 details
             }
-            #endif
         }
         .animation(.smooth, value: hasData)
     }

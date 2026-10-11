@@ -3,13 +3,9 @@ import SwiftUI
 extension Color {
     /// A color that switches with the interface style.
     init(light: Color, dark: Color) {
-        #if os(macOS)
         self.init(nsColor: NSColor(name: nil) { appearance in
             appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(dark) : NSColor(light)
         })
-        #else
-        self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light) })
-        #endif
     }
 }
 
@@ -23,10 +19,6 @@ enum Theme {
 extension View {
     /// Applies the Light / Dark / System choice from Settings. Reads the setting, so changing it updates every window at once.
     func appAppearance() -> some View {
-        #if os(macOS)
         onAppear { AppSettings.shared.applyToApp() }
-        #else
-        preferredColorScheme(AppSettings.shared.appearance.colorScheme)
-        #endif
     }
 }

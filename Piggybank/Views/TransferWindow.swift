@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// File > Transfer on the Mac, and a sheet on iPhone and iPad. Moves money from one of your accounts to another.
+/// File > Transfer on the Mac. Moves money from one of your accounts to another.
 /// Debts (cards, loans, mortgages) can't be picked here; paying those is what Pay a Bill is for.
 struct TransferWindow: View {
     @Environment(\.modelContext) private var modelContext
@@ -28,23 +28,10 @@ struct TransferWindow: View {
     }
 
     var body: some View {
-        #if os(macOS)
         content
             .frame(width: 480, height: 400)
             .background(Theme.background)
             .onAppear(perform: pickDefaults)
-        #else
-        NavigationStack {
-            content
-                .navigationTitle("Transfer")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Transfer", action: transfer).disabled(!canTransfer) }
-                }
-        }
-        .onAppear(perform: pickDefaults)
-        #endif
     }
 
     private func pickDefaults() {
@@ -102,7 +89,6 @@ struct TransferWindow: View {
     }
 
     private var form: some View {
-        #if os(macOS)
         VStack(spacing: 0) {
             Form { fields }
                 .formStyle(.grouped)
@@ -117,9 +103,6 @@ struct TransferWindow: View {
             }
             .padding(16)
         }
-        #else
-        Form { fields }
-        #endif
     }
 
     private func transfer() {

@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import SwiftData
 import AppKit
@@ -204,4 +203,3 @@ struct BootView: View {
         }
     }
 }
-#endif

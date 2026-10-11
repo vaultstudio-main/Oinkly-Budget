@@ -1,9 +1,7 @@
 import Foundation
 import Observation
 import SwiftUI
-#if os(macOS)
 import AppKit
-#endif
 
 /// How the app looks: follow the device, or always light or dark.
 enum Appearance: String, CaseIterable, Identifiable {
@@ -58,16 +56,14 @@ final class AppSettings {
     }
 
     /// On the Mac the whole app's appearance is set directly. SwiftUI's own setting can't go back to "follow the system"
-    /// once it has been forced to light or dark. On iPhone and iPad every screen uses `preferredColorScheme` instead.
+    /// once it has been forced to light or dark.
     func applyToApp() {
-        #if os(macOS)
         let named: NSAppearance.Name? = switch appearance {
         case .system: nil
         case .light: .aqua
         case .dark: .darkAqua
         }
         NSApplication.shared.appearance = named.flatMap { NSAppearance(named: $0) }
-        #endif
     }
 
     static var deviceCurrencyCode: String { Locale.current.currency?.identifier ?? "USD" }

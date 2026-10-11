@@ -22,7 +22,6 @@ struct PDFPreview: View {
     }
 }
 
-#if os(macOS)
 private struct PDFHost: NSViewRepresentable {
     let data: Data
     func makeNSView(context: Context) -> PDFView {
@@ -35,20 +34,6 @@ private struct PDFHost: NSViewRepresentable {
         view.document = PDFDocument(data: data)
     }
 }
-#else
-private struct PDFHost: UIViewRepresentable {
-    let data: Data
-    func makeUIView(context: Context) -> PDFView {
-        let view = PDFView()
-        view.autoScales = true
-        view.document = PDFDocument(data: data)
-        return view
-    }
-    func updateUIView(_ view: PDFView, context: Context) {
-        view.document = PDFDocument(data: data)
-    }
-}
-#endif
 
 /// A photo or PDF of a receipt or bill: preview, add or replace, remove, and optionally "no receipt".
 /// Used inside forms and in the register's receipt sheet.
@@ -131,7 +116,6 @@ struct ReceiptPicker: View {
     }
 }
 
-#if os(macOS)
 /// The register's last column: "Add Receipt", "View Receipt", or "No Receipt" once marked.
 struct ReceiptButton: View {
     let transaction: Transaction
@@ -195,4 +179,3 @@ private struct ReceiptSheet: View {
         .frame(width: 460)
     }
 }
-#endif

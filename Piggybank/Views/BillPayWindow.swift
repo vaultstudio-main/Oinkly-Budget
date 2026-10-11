@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// File > Pay a Bill on the Mac, and a sheet on iPhone and iPad. Pick where the money comes from and what it pays. The payment lands in the paying account,
+/// File > Pay a Bill on the Mac. Pick where the money comes from and what it pays. The payment lands in the paying account,
 /// takes the same amount off the debt when it pays a loan or card, and ticks the bill off on the Bills page.
 struct BillPayWindow: View {
     /// A loan or card to start with, when opened from its own page.
@@ -52,23 +52,10 @@ struct BillPayWindow: View {
     }
 
     var body: some View {
-        #if os(macOS)
         content
             .frame(width: 480, height: 640)
             .background(Theme.background)
             .onAppear(perform: pickDefaultSource)
-        #else
-        NavigationStack {
-            content
-                .navigationTitle("Pay a Bill")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Pay", action: pay).disabled(!canPay) }
-                }
-        }
-        .onAppear(perform: pickDefaultSource)
-        #endif
     }
 
     private func pickDefaultSource() {
@@ -155,7 +142,6 @@ struct BillPayWindow: View {
     }
 
     private var form: some View {
-        #if os(macOS)
         VStack(spacing: 0) {
             Form { fields }
                 .formStyle(.grouped)
@@ -170,9 +156,6 @@ struct BillPayWindow: View {
             }
             .padding(16)
         }
-        #else
-        Form { fields }
-        #endif
     }
 
     /// A plain-words preview of everything this payment will do.

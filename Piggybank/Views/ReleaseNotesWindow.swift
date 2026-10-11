@@ -8,10 +8,7 @@ enum ReleaseNotes {
         let sections: [(heading: String, items: [String])]
         var id: String { version }
 
-        /// Sections about iPhone and iPad stay out until those are released.
-        var visibleSections: [(heading: String, items: [String])] {
-            sections.filter { ReleaseInfo.mentionsMobile || $0.heading != "iPhone & iPad" }
-        }
+        var visibleSections: [(heading: String, items: [String])] { sections }
     }
 
     static let releases: [Release] = [
@@ -67,17 +64,11 @@ enum ReleaseNotes {
                 "Help and these release notes in the Help menu.",
                 "Opens at full window size.",
             ]),
-            ("iPhone & iPad", [
-                "A slide-out menu on iPhone and a side panel on iPad, matching the Mac.",
-                "Transactions and Bills tabs, with accounts managed from the menu.",
-                "The same forms and rules as the Mac.",
-            ]),
         ]),
     ]
 }
 
-/// Help ▸ Release Notes on the Mac, and Settings ▸ Release Notes on iPhone and iPad. Every release, newest first,
-/// as bullet points, so every platform tells the same story.
+/// Help ▸ Release Notes. Every release, newest first, as bullet points.
 struct ReleaseNotesWindow: View {
     private var currentVersion: String {
         let info = Bundle.main.infoDictionary
@@ -115,8 +106,6 @@ struct ReleaseNotesWindow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(24)
         }
-        #if os(macOS)
         .frame(minWidth: 520, minHeight: 420)
-        #endif
     }
 }

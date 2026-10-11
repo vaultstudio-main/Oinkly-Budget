@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import SwiftData
 import AppKit
@@ -190,4 +189,3 @@ struct BackgroundSettingsSection: View {
         opensAtLogin = SMAppService.mainApp.status == .enabled
     }
 }
-#endif
