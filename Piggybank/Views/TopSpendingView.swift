@@ -19,6 +19,8 @@ enum ChartPalette {
 /// Until there are enough expenses to say anything useful, it shows a clearly labeled placeholder.
 struct TopSpendingView: View {
     let transactions: [Transaction]
+    /// Show money coming in instead of money going out.
+    var income = false
 
     private let months = 3
 
@@ -32,8 +34,8 @@ struct TopSpendingView: View {
         var id: String { name }
     }
 
-    private var totals: [SpendingReport.CategoryTotal] { SpendingReport.totals(transactions, months: months) }
-    private var hasData: Bool { SpendingReport.hasEnoughData(transactions, months: months) }
+    private var totals: [SpendingReport.CategoryTotal] { SpendingReport.totals(transactions, months: months, income: income) }
+    private var hasData: Bool { SpendingReport.hasEnoughData(transactions, months: months, income: income) }
 
     private var slices: [Slice] {
         let top = totals.prefix(Self.palette.count)
@@ -75,7 +77,7 @@ struct TopSpendingView: View {
     private var donut: some View {
         let data = hasData ? slices : placeholderSlices
         return Chart(data) { slice in
-            SectorMark(angle: .value("Spent", slice.value), innerRadius: .ratio(0.62), angularInset: 2)
+            SectorMark(angle: .value(income ? "Earned" : "Spent", slice.value), innerRadius: .ratio(0.62), angularInset: 2)
                 .cornerRadius(4)
                 .foregroundStyle(slice.color)
         }
@@ -131,7 +133,7 @@ struct TopSpendingView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("TOP CATEGORY BY MONTH").font(.caption).foregroundStyle(.secondary)
-                ForEach(SpendingReport.topByMonth(transactions, months: months)) { entry in
+                ForEach(SpendingReport.topByMonth(transactions, months: months, income: income)) { entry in
                     HStack(spacing: 10) {
                         Text(entry.month.formatted(.dateTime.month(.wide)))
                             .foregroundStyle(.secondary)
@@ -142,7 +144,7 @@ struct TopSpendingView: View {
                             Spacer(minLength: 12)
                             Text(top.total, format: .appCurrency)
                         } else {
-                            Text("No spending").foregroundStyle(.secondary)
+                            Text(income ? "No income" : "No spending").foregroundStyle(.secondary)
                             Spacer(minLength: 0)
                         }
                     }
@@ -165,7 +167,9 @@ struct TopSpendingView: View {
                         .scaleEffect(x: fraction, anchor: .leading)
                 }
             }
-            Text("Your biggest spending categories for the last \(months) months will appear here once you've entered a few expenses with a category.")
+            Text(income
+                 ? "Your biggest income categories for the last \(months) months will appear here once you've entered a few deposits with a category."
+                 : "Your biggest spending categories for the last \(months) months will appear here once you've entered a few expenses with a category.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

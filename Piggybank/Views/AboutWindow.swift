@@ -1,0 +1,67 @@
+#if os(macOS)
+import SwiftUI
+import AppKit
+
+/// Everything the About window says. Edit the text here; the layout below picks it up.
+enum AboutInfo {
+    /// Shown under the app name.
+    static let tagline = "Your money, kept personal."
+
+    /// A short paragraph about the app.
+    static var summary: String {
+        "Piggybank Financial is a personal finance app that keeps accounts, budgets, bills and investments in your control."
+    }
+
+    /// Lines near the bottom, such as who made it. Remove a line to hide it.
+    static let credits: [String] = [
+        "Made by Donald Stibich",
+    ]
+
+    /// Small print at the very bottom.
+    static let copyright = "© All rights reserved."
+}
+
+/// Piggybank ▸ About Piggybank. The text lives in `AboutInfo` above.
+struct AboutWindow: View {
+    private var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = info?["CFBundleVersion"] as? String ?? "1"
+        return "Version \(short) (\(build))"
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 112, height: 112)
+
+            VStack(spacing: 4) {
+                Text("Piggybank Financial").lineLimit(1).minimumScaleFactor(0.6).font(.system(size: 28, weight: .bold, design: .rounded))
+                Text(AboutInfo.tagline).foregroundStyle(.secondary)
+                Text(version).font(.caption).foregroundStyle(.tertiary)
+            }
+
+            Text(AboutInfo.summary)
+                .font(.callout)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if !AboutInfo.credits.isEmpty {
+                VStack(spacing: 2) {
+                    ForEach(AboutInfo.credits, id: \.self) { Text($0).font(.callout) }
+                }
+            }
+
+            Text(AboutInfo.copyright)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.top, 4)
+        }
+        .padding(28)
+        .frame(width: 360)
+        .background(Theme.background)
+    }
+}
+#endif

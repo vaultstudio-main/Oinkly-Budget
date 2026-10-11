@@ -19,8 +19,16 @@ struct AccountEditView: View {
     @State private var originalLoanAmount: Decimal
     @State private var monthlyPayment: Decimal
     @State private var owedNow: Decimal
+    @State private var interestRate: Decimal?
+    @State private var creditLimit: Decimal
+    @State private var cardBalance: Decimal
+    @State private var hasDueDate: Bool
+    @State private var isLease: Bool
+    @State private var dueDate: Date
     @State private var hasPayoffDate: Bool
     @State private var payoffDate: Date
+    @State private var hasStartDate: Bool
+    @State private var startDate: Date
     @State private var photoData: Data?
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var openingBalance: Decimal
@@ -38,7 +46,15 @@ struct AccountEditView: View {
         _originalLoanAmount = State(initialValue: account?.originalLoanAmount ?? 0)
         _monthlyPayment = State(initialValue: account?.monthlyPayment ?? 0)
         _owedNow = State(initialValue: abs(account?.openingBalance ?? 0))
+        _interestRate = State(initialValue: (account?.interestRate ?? 0) > 0 ? Decimal(account?.interestRate ?? 0) : nil)
+        _creditLimit = State(initialValue: account?.creditLimit ?? 0)
+        _cardBalance = State(initialValue: abs(account?.openingBalance ?? 0))
+        _hasDueDate = State(initialValue: account?.loanBill != nil)
+        _isLease = State(initialValue: account?.isLease ?? false)
+        _dueDate = State(initialValue: account?.loanBill?.dueDate ?? .now)
         _hasPayoffDate = State(initialValue: account?.payoffDate != nil)
+        _hasStartDate = State(initialValue: account?.loanStartDate != nil)
+        _startDate = State(initialValue: account?.loanStartDate ?? .now)
         _payoffDate = State(initialValue: account?.payoffDate ?? Calendar.current.date(byAdding: .year, value: 3, to: .now) ?? .now)
         _photoData = State(initialValue: account?.photoData)
         _openingBalance = State(initialValue: account?.openingBalance ?? 0)
@@ -46,19 +62,26 @@ struct AccountEditView: View {
     }
 
     private var isDebt: Bool { type.group.isLiability }
+    /// An auto account chosen as a lease instead of a loan.
+    private var leased: Bool { type == .autoLoan && isLease }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Account") {
-                    TextField("Name", text: $name)
+                    FormTextField("Name", text: $name)
+                        .onChange(of: name) { _, new in
+                            if new.count > Account.maxNameLength { name = String(new.prefix(Account.maxNameLength)) }
+                        }
                     Picker("Type", selection: $type) {
                         ForEach(AccountGroup.setupOrder) { group in
                             Section(group.title) {
-                                ForEach(group.accountTypes) { Text($0.title).tag($0) }
+                                // Cash on Hand is built in, so it isn't offered again.
+                                ForEach(group.accountTypes.filter { $0 != .cash || type == .cash }) { Text($0.title).tag($0) }
                             }
                         }
                     }
+                    .disabled(account?.isDefault == true)
                     HStack {
                         Text("Kind")
                         Spacer()
@@ -68,11 +91,18 @@ struct AccountEditView: View {
                         }
                         .foregroundStyle(isDebt ? Color.red : Color.green)
                     }
+                    if type == .autoLoan {
+                        Picker("Financing", selection: $isLease) {
+                            Text("Loan").tag(false)
+                            Text("Lease").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                    }
                     if type.group == .loans {
-                        TextField("What is this loan for? (e.g. 2021 Honda Civic)", text: $loanPurpose)
+                        FormTextField("What is this loan for?", text: $loanPurpose, hint: "e.g. 2021 Honda Civic")
                     }
                     if Account.typeHasVIN(type) {
-                        TextField("VIN (17 characters)", text: $vin)
+                        FormTextField("VIN", text: $vin, hint: "17 characters")
                             .onChange(of: vin) { _, new in
                                 let clean = Account.cleanVIN(new)
                                 if clean != new { vin = clean }
@@ -84,19 +114,77 @@ struct AccountEditView: View {
                         }
                     }
                     if type.group == .loans {
-                        amountRow("Original loan amount", $originalLoanAmount)
+                        amountRow(leased ? "Total lease cost" : "Original loan amount", $originalLoanAmount)
                         amountRow("Monthly payment", $monthlyPayment)
                         amountRow("Amount owed now", $owedNow)
-                        Toggle("Set a payoff date", isOn: $hasPayoffDate.animation())
+                        if !leased {
+                            HStack {
+                                Text("Interest rate (APR)")
+                                Spacer()
+                                TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
+                                    .labelsHidden()
+                                    .multilineTextAlignment(.trailing)
+                                    #if os(iOS)
+                                    .keyboardType(.decimalPad)
+                                    #endif
+                                Text("%").foregroundStyle(.secondary)
+                            }
+                        }
+                        Toggle("Set a payment due date", isOn: $hasDueDate.animation())
+                        if hasDueDate {
+                            DatePicker("Payment due date", selection: $dueDate, displayedComponents: .date)
+                            Text("This \(leased ? "lease" : "loan") is added to Bills for the monthly payment, due on this day every month.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Toggle(leased ? "Set the lease start date" : "Set the loan start date", isOn: $hasStartDate.animation())
+                        if hasStartDate {
+                            DatePicker(leased ? "Lease start date" : "Loan start date", selection: $startDate, in: ...Date.now, displayedComponents: .date)
+                        }
+                        Toggle(leased ? "Set a lease end date" : "Set a maturity date", isOn: $hasPayoffDate.animation())
                         if hasPayoffDate {
-                            DatePicker("Payoff date", selection: $payoffDate, in: Date.now..., displayedComponents: .date)
+                            DatePicker(leased ? "Lease end date" : "Maturity date", selection: $payoffDate, in: Date.now..., displayedComponents: .date)
                         }
                     } else {
+                        if type.group == .creditCards {
+                            HStack {
+                                Text("Interest rate (APR)")
+                                Spacer()
+                                TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
+                                    .labelsHidden()
+                                    .multilineTextAlignment(.trailing)
+                                    #if os(iOS)
+                                    .keyboardType(.decimalPad)
+                                    #endif
+                                Text("%").foregroundStyle(.secondary)
+                            }
+                        }
+                        if type.group == .creditCards {
+                            amountRow("Credit limit", $creditLimit)
+                            amountRow("Current balance on card", $cardBalance)
+                            amountRow("Minimum payment", $monthlyPayment)
+                            Toggle("Set a payment due date", isOn: $hasDueDate.animation())
+                            if hasDueDate {
+                                DatePicker("Payment due date", selection: $dueDate, displayedComponents: .date)
+                                Text("This card is added to Bills for the minimum payment, due on this day every month.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Text("What you owe on the card right now. Charges and payments you add change it from here.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else if type == .cash {
+                            Text("Cash on Hand starts at $0.00 and is filled by ATM withdrawals.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        } else {
                         HStack {
                             Text("Opening balance")
                             Spacer()
-                            TextField("", value: $openingBalance, format: .appCurrency)
+                            CurrencyField("Opening balance", amount: $openingBalance)
+                                .labelsHidden()
                                 .multilineTextAlignment(.trailing)
+                        }
                         }
                     }
                 }
@@ -120,31 +208,42 @@ struct AccountEditView: View {
                     }
                 }
 
-                Section("Bank Details") {
-                    TextField("Institution", text: $institution)
-                    TextField("Account number (up to 17 digits)", text: $accountNumber)
+                if type != .cash {
+                Section(type.group == .loans ? (leased ? "Leasing Company" : "Lender") : "Bank Details") {
+                    FormTextField(type.group == .loans ? (leased ? "Leasing company" : "Lender") : "Institution", text: $institution)
+                    FormTextField(type.group == .creditCards ? "Card number" : "Account number", text: $accountNumber, hint: type.group == .creditCards ? "Up to 19 digits" : "Up to 17 digits")
                         .onChange(of: accountNumber) { _, new in
-                            let clean = Account.digits(new, limit: Account.maxAccountNumberLength)
+                            let clean = Account.digits(new, limit: Account.numberLimit(for: type))
                             if clean != new { accountNumber = clean }
                         }
-                    TextField("Routing number (9 digits)", text: $routingNumber)
-                        .onChange(of: routingNumber) { _, new in
-                            let clean = Account.digits(new, limit: Account.routingNumberLength)
-                            if clean != new { routingNumber = clean }
+                        .onChange(of: type) { _, new in
+                            accountNumber = Account.digits(accountNumber, limit: Account.numberLimit(for: new))
                         }
-                    if !routingNumber.isEmpty && routingNumber.count != Account.routingNumberLength {
-                        Text("A routing number has exactly 9 digits.")
-                            .font(.footnote)
-                            .foregroundStyle(.orange)
+                    if type.group != .loans && type.group != .creditCards {
+                        FormTextField("Routing number", text: $routingNumber, hint: "9 digits")
+                            .onChange(of: routingNumber) { _, new in
+                                let clean = Account.digits(new, limit: Account.routingNumberLength)
+                                if clean != new { routingNumber = clean }
+                            }
+                        if !routingNumber.isEmpty && routingNumber.count != Account.routingNumberLength {
+                            Text("A routing number has exactly 9 digits.")
+                                .font(.footnote)
+                                .foregroundStyle(.orange)
+                        }
                     }
+                }
                 }
 
                 Section("Notes") {
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
                         .lineLimit(3...6)
                 }
             }
             .formStyle(.grouped)
+            .onChange(of: type) { _, new in
+                // A new cash account starts out named for what it is.
+                if new == .cash && name.trimmingCharacters(in: .whitespaces).isEmpty { name = "Cash on Hand" }
+            }
             .onChange(of: pickedPhoto) { _, item in
                 guard let item else { return }
                 Task {
@@ -173,18 +272,20 @@ struct AccountEditView: View {
         HStack {
             Text(title)
             Spacer()
-            TextField("", value: value, format: .appCurrency)
+            CurrencyField(title, amount: value)
+                .labelsHidden()
                 .multilineTextAlignment(.trailing)
         }
     }
 
     private func save() {
         let target = account ?? Account(name: "", type: type)
-        target.name = name.trimmingCharacters(in: .whitespaces)
+        target.name = String(name.trimmingCharacters(in: .whitespaces).prefix(Account.maxNameLength))
         target.type = type
-        target.institution = institution
-        target.accountNumber = Account.digits(accountNumber, limit: Account.maxAccountNumberLength)
-        target.routingNumber = Account.digits(routingNumber, limit: Account.routingNumberLength)
+        // Cash on hand has no bank details.
+        target.institution = type == .cash ? "" : institution
+        target.accountNumber = type == .cash ? "" : Account.digits(accountNumber, limit: Account.numberLimit(for: type))
+        target.routingNumber = type == .cash || type.group == .loans || type.group == .creditCards ? "" : Account.digits(routingNumber, limit: Account.routingNumberLength)
         target.vin = Account.typeHasVIN(type) ? Account.cleanVIN(vin) : ""
         target.photoData = (type.group == .loans || type.group == .assets) ? photoData : nil
         target.loanPurpose = type.group == .loans ? loanPurpose.trimmingCharacters(in: .whitespaces) : ""
@@ -194,14 +295,23 @@ struct AccountEditView: View {
             target.originalLoanAmount = abs(originalLoanAmount)
             target.monthlyPayment = abs(monthlyPayment)
             target.payoffDate = hasPayoffDate ? payoffDate : nil
+            target.loanStartDate = hasStartDate ? startDate : nil
+            target.interestRate = leased ? 0 : max((interestRate ?? 0).doubleValue, 0)
         } else {
-            target.openingBalance = openingBalance
+            // A card's balance is money owed, so it is stored negative like a loan's.
+            target.openingBalance = type.group == .creditCards ? -abs(cardBalance) : openingBalance
             target.originalLoanAmount = 0
-            target.monthlyPayment = 0
+            target.monthlyPayment = type.group == .creditCards ? abs(monthlyPayment) : 0
             target.payoffDate = nil
+            target.loanStartDate = nil
+            target.interestRate = type.group == .creditCards ? max((interestRate ?? 0).doubleValue, 0) : 0
         }
+        target.creditLimit = type.group == .creditCards ? abs(creditLimit) : 0
+        target.isLease = type == .autoLoan && isLease
         target.notes = notes
         if account == nil { modelContext.insert(target) }
+        LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
+        modelContext.saveNow()
         dismiss()
     }
 }

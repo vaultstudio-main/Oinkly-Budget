@@ -11,6 +11,12 @@ struct HomeView: View {
     private var transactions: [Transaction] { allTransactions.live }
 
     @State private var isAddingTransaction = false
+    @State private var isPayingBill = false
+    @State private var isCharging = false
+    @State private var isWithdrawing = false
+    @State private var isSpendingCash = false
+    @State private var isTransferring = false
+    @State private var isUpdatingPrice = false
 
     private var budgets: [Category] { Budget.visibleBudgets(categories) }
 
@@ -35,12 +41,20 @@ struct HomeView: View {
                     if accounts.isEmpty {
                         welcomeCard
                     } else {
-                        netWorth
+                        BillAlertBanner()
+                        GlanceCards(accounts: accounts, transactions: transactions)
                         monthCard(monthSpent)
                         Card {
                             VStack(alignment: .leading, spacing: 16) {
                                 Text("Top spending, last 3 months").font(.headline)
                                 TopSpendingView(transactions: transactions)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        Card {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("Top income, last 3 months").font(.headline)
+                                TopSpendingView(transactions: transactions, income: true)
                                     .frame(maxWidth: .infinity)
                             }
                         }
@@ -52,6 +66,8 @@ struct HomeView: View {
                                 }
                             }
                         }
+                        LoansProgressCard(accounts: accounts)
+                        GoalsProgressCard()
                         recentCard
                     }
                 }
@@ -59,13 +75,30 @@ struct HomeView: View {
             }
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Home")
+            .menuButton()
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("New Transaction", systemImage: "plus") { isAddingTransaction = true }
-                        .disabled(accounts.isEmpty)
+                    Menu {
+                        Button("New Transaction", systemImage: "plus") { isAddingTransaction = true }
+                        Button("New Credit Card Charge", systemImage: "creditcard.fill") { isCharging = true }
+                        Button("New Cash Transaction", systemImage: "dollarsign.circle") { isSpendingCash = true }
+                        Button("ATM Withdrawal", systemImage: "banknote") { isWithdrawing = true }
+                        Button("Transfer", systemImage: "arrow.left.arrow.right") { isTransferring = true }
+                        Button("Pay a Bill", systemImage: "creditcard") { isPayingBill = true }
+                        Button("Update Investment Price", systemImage: "chart.line.uptrend.xyaxis") { isUpdatingPrice = true }
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                    }
+                    .disabled(accounts.isEmpty)
                 }
             }
             .sheet(isPresented: $isAddingTransaction) { PhoneTransactionForm(transaction: nil) }
+            .sheet(isPresented: $isTransferring) { TransferWindow() }
+            .sheet(isPresented: $isPayingBill) { BillPayWindow() }
+            .sheet(isPresented: $isCharging) { CreditCardChargeView() }
+            .sheet(isPresented: $isWithdrawing) { AtmWithdrawalView() }
+            .sheet(isPresented: $isSpendingCash) { CashTransactionView() }
+            .sheet(isPresented: $isUpdatingPrice) { UpdatePriceWindow(accountID: nil) }
         }
     }
 
@@ -75,7 +108,7 @@ struct HomeView: View {
                 Image(systemName: "dollarsign.circle.fill")
                     .font(.system(size: 56))
                     .foregroundStyle(.pink)
-                Text("Welcome to Piggybank").font(.title2.bold())
+                Text("Welcome to Piggybank Financial").font(.title2.bold())
                 Text("Add your first account in Settings ▸ Accounts to start tracking your money. Your categories and budgets are already set up.")
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -83,20 +116,6 @@ struct HomeView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
-    }
-
-    private var netWorth: some View {
-        VStack(spacing: 4) {
-            Text("Net worth").font(.subheadline).foregroundStyle(.secondary)
-            Text(Summary.currentWorth(accounts), format: .appCurrency)
-                .font(.system(size: 44, weight: .bold, design: .rounded))
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .contentTransition(.numericText())
-                .animation(.smooth, value: Summary.currentWorth(accounts))
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
     }
 
     private func monthCard(_ monthSpent: Decimal) -> some View {

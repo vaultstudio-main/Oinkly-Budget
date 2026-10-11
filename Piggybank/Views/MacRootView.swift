@@ -4,6 +4,12 @@ import SwiftData
 private enum SidebarItem: Hashable {
     case summary
     case reports
+    case liabilities
+    case investments
+    case bills
+    case planning
+    case manageAccounts
+    case transactions
     case account(Account.ID)
 }
 
@@ -20,26 +26,55 @@ struct MacRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: .constant(.all)) {
             List(selection: $selection) {
                 Section("Overview") {
                     Label("Summary", systemImage: "building.columns")
                         .tag(SidebarItem.summary)
+                    Label("Transactions", systemImage: "list.bullet.rectangle")
+                        .tag(SidebarItem.transactions)
                     Label("Reports", systemImage: "chart.bar.xaxis")
                         .tag(SidebarItem.reports)
+                    Label("Liabilities", systemImage: "scalemass")
+                        .tag(SidebarItem.liabilities)
+                    Label("Investments", systemImage: "chart.line.uptrend.xyaxis")
+                        .tag(SidebarItem.investments)
+                    Label("Bills", systemImage: "calendar")
+                        .tag(SidebarItem.bills)
+                    Label("Planning", systemImage: "target")
+                        .tag(SidebarItem.planning)
                 }
                 Section("Accounts") {
+                    // Cash on hand sits at the top by itself, not inside a folder.
+                    ForEach(accounts.filter(\.isCashOnHand)) { account in
+                        if account.isLive {
+                            Label {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(account.name)
+                                    Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: account.type.symbol)
+                            }
+                            .tag(SidebarItem.account(account.id))
+                            .contextMenu {
+                                Button("Edit Details…") { editingAccount = account }
+                            }
+                        }
+                    }
                     ForEach(AccountGroup.allCases) { group in
-                        let members = accounts.filter { $0.type.group == group }
+                        let members = accounts.filter { $0.type.group == group && !$0.isCashOnHand }
                         if !members.isEmpty {
                             DisclosureGroup(isExpanded: expansion(of: group)) {
                                 ForEach(members) { account in
                                     if account.isLive {
-                                    HStack {
-                                        Label(account.name, systemImage: account.type.symbol)
-                                        Spacer()
-                                        Text(account.balance, format: .appCurrency)
-                                            .foregroundStyle(.secondary)
+                                    Label {
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(account.name)
+                                            Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    } icon: {
+                                        Image(systemName: account.type.symbol)
                                     }
                                     .tag(SidebarItem.account(account.id))
                                     .contextMenu {
@@ -55,7 +90,28 @@ struct MacRootView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 240, ideal: 300)
+            // Always visible at the bottom of the side panel, however long the account list gets.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 0) {
+                    Divider()
+                    Button {
+                        selection = .manageAccounts
+                    } label: {
+                        Label("Manage Accounts", systemImage: "gearshape.2")
+                            .font(.callout.weight(.medium))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(selection == .manageAccounts ? Color.accentColor.opacity(0.2) : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: 8))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(8)
+                }
+                .background(.bar)
+            }
+            .navigationSplitViewColumnWidth(300)
             .toolbar(removing: .sidebarToggle)
         } detail: {
             switch selection {
@@ -67,6 +123,22 @@ struct MacRootView: View {
                 }
             case .reports:
                 ReportsView()
+            case .liabilities:
+                LiabilitiesView()
+            case .investments:
+                InvestmentsView()
+            case .bills:
+                BillsView()
+            case .planning:
+                PlanningView()
+            case .manageAccounts:
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Manage Accounts").font(.largeTitle.bold()).padding([.top, .horizontal], 16)
+                    AccountsSettingsView()
+                }
+                .background(Theme.background)
+            case .transactions:
+                TransactionsView()
             case .summary, nil:
                 if accounts.isEmpty {
                     ContentUnavailableView("No Accounts", systemImage: "building.columns", description: Text("Open Settings (⌘,) ▸ Accounts to add one."))
@@ -78,7 +150,7 @@ struct MacRootView: View {
         .navigationTitle("Piggybank Financial")
         .onReceive(NotificationCenter.default.publisher(for: .piggybankWillDeleteAccounts)) { _ in selection = .summary }
         .focusedSceneValue(\.selectedAccountID, selectedAccountID)
-        .preferredColorScheme(.dark)
+        .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
     }
 

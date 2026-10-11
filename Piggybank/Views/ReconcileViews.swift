@@ -32,6 +32,16 @@ struct ReconcileMenu: View {
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
+        if transaction.isLive && transaction.isAtmWithdrawal {
+            // Cash comes out of the ATM at once, so a withdrawal is always reconciled.
+            ReconcileBadge(state: .reconciled)
+                .help("ATM withdrawals are always reconciled.")
+        } else {
+            menu
+        }
+    }
+
+    private var menu: some View {
         Menu {
             ForEach(ReconcileState.allCases) { state in
                 Button {

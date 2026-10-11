@@ -3,10 +3,10 @@ import SwiftData
 
 @Model
 final class Category {
-    var name: String
-    var colorHex: String
-    var symbol: String
-    var monthlyLimit: Decimal
+    var name: String = ""
+    var colorHex: String = "8E8E93"
+    var symbol: String = "tag"
+    var monthlyLimit: Decimal = 0
     var isIncome: Bool = false
     /// Whether this budget appears on Home, the Budgets tab and the Summary. Changed in Settings.
     var showOnBudgets: Bool = true
@@ -19,6 +19,10 @@ final class Category {
     @Relationship(deleteRule: .nullify, inverse: \Payee.lastCategory)
     var payees: [Payee] = []
 
+    /// Bills that are tracked under this category.
+    @Relationship(deleteRule: .nullify, inverse: \Bill.category)
+    var bills: [Bill] = []
+
     init(name: String, colorHex: String, symbol: String, monthlyLimit: Decimal, isIncome: Bool = false, systemKey: String? = nil) {
         self.name = name
         self.colorHex = colorHex
@@ -29,7 +33,13 @@ final class Category {
     }
 
     /// Built-in categories can't be renamed, restyled or deleted. Only their budget amount changes.
-    var isSystem: Bool { systemKey != nil }
+    var isSystem: Bool { systemKey != nil && !isCustom }
+
+    static let customKeyPrefix = "custom-"
+
+    /// A budget the user made themselves, such as "Civic Fuel". It keeps a key so the launch-time cleanup of
+    /// stray categories leaves it alone, but unlike built-in categories it can be renamed and deleted.
+    var isCustom: Bool { systemKey?.hasPrefix(Category.customKeyPrefix) == true }
 }
 
 extension Array where Element == Category {

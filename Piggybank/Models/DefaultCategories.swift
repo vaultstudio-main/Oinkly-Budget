@@ -87,6 +87,7 @@ extension Category {
         expense("fees-charges", "Fees & Charges", "8E8E93", "creditcard", 20),
         expense("bank-fees", "Bank Fees", "8E8E93", "building.columns", 10),
         expense("interest-paid", "Interest Paid", "8E8E93", "percent", 0),
+        expense("investment-fees", "Investment Fees", "8E8E93", "minus.circle", 0),
         expense("taxes-income", "Income Taxes", "8E8E93", "doc.plaintext", 0),
         expense("taxes-other", "Other Taxes", "8E8E93", "seal", 0),
         expense("professional-services", "Professional Services", "8E8E93", "briefcase", 0),

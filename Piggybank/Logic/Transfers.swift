@@ -4,19 +4,25 @@ import SwiftData
 /// Paying a loan, mortgage or card from another account. That is one event with two sides:
 /// money leaves the paying account and the same amount comes off what you owe.
 enum Transfers {
-    /// Accounts you can pay toward: anything you owe, except the account the money comes from.
-    static func payableAccounts(_ accounts: [Account], excluding source: Account?) -> [Account] {
-        accounts.live.filter { $0.isDebt && $0.persistentModelID != source?.persistentModelID }
+    /// Accounts money can be moved between: anything you own, open and live. Debts are left out, because paying a card or
+    /// loan is a payment, not a transfer.
+    static func transferable(_ accounts: [Account]) -> [Account] {
+        accounts.live.filter { !$0.isDebt && !$0.isClosed }
     }
 
-    /// Where a new payment starts. Opened from a loan or card page, the likely intent is a payment *to* it,
-    /// paid from your first ordinary account (checking preferred).
-    static func defaults(opening account: Account?, accounts: [Account]) -> (source: Account?, liability: Account?) {
+    /// Accounts a bill can be paid from. Money is never taken from an investment account to pay a bill.
+    static func billPayable(_ accounts: [Account]) -> [Account] {
+        transferable(accounts).filter { !$0.supportsHoldings }
+    }
+
+    /// The account a new transaction starts on. Loans take payments and credit cards take charges through their own
+    /// forms, so opening one of those starts on your first ordinary account (checking preferred).
+    static func startingAccount(opening account: Account?, accounts: [Account]) -> Account? {
         let live = accounts.live
-        guard let account, account.isLive, account.isDebt else { return (account ?? live.first, nil) }
-        let sources = live.filter { !$0.isDebt }
-        let source = sources.first { $0.type == .checking } ?? sources.first
-        return source == nil ? (account, nil) : (source, account)
+        guard let account, account.isLive else { return live.first }
+        guard account.isLoan || account.isCreditCard || account.isCashOnHand else { return account }
+        let ordinary = live.filter { !$0.isDebt && !$0.isCashOnHand }
+        return ordinary.first { $0.type == .checking } ?? ordinary.first ?? account
     }
 
     /// Creates both halves and returns them as (paying side, liability side).
@@ -32,10 +38,30 @@ enum Transfers {
         checkNumber: String,
         in context: ModelContext
     ) -> (out: Transaction, into: Transaction) {
+        move(from: source, to: liability, amount: amount, date: date, memo: memo, state: state,
+             paymentType: paymentType, checkNumber: checkNumber,
+             payeeOut: "Payment to \(liability.name)", payeeIn: "Payment from \(source.name)", in: context)
+    }
+
+    /// Moves money between two of your accounts: one event, two sides, left out of income and spending.
+    @discardableResult
+    static func move(
+        from source: Account,
+        to destination: Account,
+        amount: Decimal,
+        date: Date,
+        memo: String = "",
+        state: ReconcileState = .unreconciled,
+        paymentType: PaymentType? = nil,
+        checkNumber: String = "",
+        payeeOut: String,
+        payeeIn: String,
+        in context: ModelContext
+    ) -> (out: Transaction, into: Transaction) {
         let id = UUID()
-        let out = Transaction(account: source, date: date, payee: "Payment to \(liability.name)", memo: memo, amount: -abs(amount), paymentType: paymentType)
+        let out = Transaction(account: source, date: date, payee: payeeOut, memo: memo, amount: -abs(amount), paymentType: paymentType)
         out.checkNumber = paymentType == .check ? checkNumber : ""
-        let into = Transaction(account: liability, date: date, payee: "Payment from \(source.name)", memo: memo, amount: abs(amount))
+        let into = Transaction(account: destination, date: date, payee: payeeIn, memo: memo, amount: abs(amount))
         for leg in [out, into] {
             leg.transferID = id
             leg.state = state
@@ -53,7 +79,12 @@ enum Transfers {
 
     /// Deletes a transaction, and the other half of its transfer so the loan balance stays honest.
     static func delete(_ transaction: Transaction, in context: ModelContext) {
-        if let other = peer(of: transaction, in: context) { context.delete(other) }
+        // A bill this payment settled goes back to unpaid. The link is on the paying side, so look at both halves.
+        let other = peer(of: transaction, in: context)
+        var reopened = BillPayment.release(transaction)
+        if let other, BillPayment.release(other) { reopened = true }
+        if reopened { Task { await BillNotifier.refresh(in: context) } }
+        if let other { context.delete(other) }
         context.delete(transaction)
     }
 
@@ -68,12 +99,14 @@ enum Transfers {
 }
 
 enum RecentActivity {
-    /// The newest transactions across every account. Both sides of a transfer are included, so each account's
-    /// activity is complete.
+    /// The newest transactions across every account. A payment or transfer is one event with two entries, so only the
+    /// paying side (money out) is listed, and each event shows once. Each account's register still has both sides.
     static func latest(_ transactions: [Transaction], limit: Int = 15) -> [Transaction] {
         // Read each transaction's sort keys once, instead of inside every comparison.
         let keyed = transactions.compactMap { transaction -> (Date, Date, Transaction)? in
             guard transaction.isLive else { return nil }
+            // The receiving half of a payment or transfer is the same event as the paying half.
+            if transaction.isTransfer && transaction.amount > 0 { return nil }
             return (transaction.date, transaction.createdAt, transaction)
         }
         return keyed

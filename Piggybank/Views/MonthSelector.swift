@@ -4,6 +4,8 @@ import SwiftUI
 struct MonthSelector: View {
     @Binding var month: Date
     let range: ClosedRange<Date>
+    /// Pages that place the "This Month" button somewhere else turn the built-in one off.
+    var showsThisMonthButton = true
 
     private var calendar: Calendar { .current }
 
@@ -20,9 +22,8 @@ struct MonthSelector: View {
             Button { step(1) } label: { Image(systemName: "chevron.right") }
                 .disabled(month >= range.upperBound)
 
-            if !MonthFilter.isCurrent(month) {
-                Button("This Month") { select(MonthFilter.start(of: .now)) }
-                    .font(.caption)
+            if showsThisMonthButton, !MonthFilter.isCurrent(month) {
+                ThisMonthButton(month: $month)
             }
         }
         .buttonStyle(.borderless)
@@ -35,5 +36,28 @@ struct MonthSelector: View {
 
     private func select(_ date: Date) {
         withAnimation(.smooth) { month = date }
+    }
+}
+
+/// A pill-shaped button that jumps back to the current month. Dimmed while that month is already showing.
+struct ThisMonthButton: View {
+    @Binding var month: Date
+
+    var body: some View {
+        let isCurrent = MonthFilter.isCurrent(month)
+        Button {
+            withAnimation(.smooth) { month = MonthFilter.start(of: .now) }
+        } label: {
+            Label("This Month", systemImage: "calendar")
+                .font(.callout.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(Color.accentColor.opacity(isCurrent ? 0.06 : 0.15)))
+                .overlay(Capsule().strokeBorder(Color.accentColor.opacity(isCurrent ? 0.15 : 0.45), lineWidth: 1))
+                .foregroundStyle(isCurrent ? Color.secondary : Color.accentColor)
+        }
+        .buttonStyle(.plain)
+        .disabled(isCurrent)
+        .help("Back to this month")
     }
 }

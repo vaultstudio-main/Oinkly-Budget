@@ -8,6 +8,8 @@ struct LoanProgress {
     let monthlyPayment: Decimal
     /// The payoff date the user chose, if any.
     var targetDate: Date? = nil
+    /// Yearly interest rate as a percent. Zero means interest is ignored.
+    var annualRate: Double = 0
 
     var hasOriginal: Bool { original > 0 }
 
@@ -19,10 +21,20 @@ struct LoanProgress {
 
     var isPaidOff: Bool { owed <= 0 && hasOriginal }
 
-    /// Payments left at the current monthly payment. This ignores interest, so it is an estimate.
+    /// Payments left at the current monthly payment. With an interest rate this uses the standard loan formula;
+    /// without one it just divides. Either way it is an estimate. Nil if the payment never pays the loan off.
     var paymentsLeft: Int? {
         guard monthlyPayment > 0, owed > 0 else { return nil }
-        let count = (owed / monthlyPayment).doubleValue.rounded(.up)
+        let balance = owed.doubleValue
+        let payment = monthlyPayment.doubleValue
+        let monthlyRate = annualRate / 100 / 12
+        let count: Double
+        if monthlyRate > 0 {
+            guard payment > balance * monthlyRate else { return nil }
+            count = (-log(1 - balance * monthlyRate / payment) / log(1 + monthlyRate)).rounded(.up)
+        } else {
+            count = (balance / payment).rounded(.up)
+        }
         return count.isFinite && count < 10_000 ? Int(count) : nil
     }
 
@@ -55,6 +67,6 @@ struct LoanProgress {
 
 extension Account {
     var loanProgress: LoanProgress {
-        LoanProgress(original: originalLoanAmount, owed: max(-balance, 0), monthlyPayment: monthlyPayment, targetDate: payoffDate)
+        LoanProgress(original: originalLoanAmount, owed: max(-balance, 0), monthlyPayment: monthlyPayment, targetDate: payoffDate, annualRate: interestRate)
     }
 }

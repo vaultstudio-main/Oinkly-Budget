@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var hasChecked = false
     @State private var isSettingUp = false
     @State private var showSplash = true
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -36,20 +37,28 @@ struct ContentView: View {
             #endif
         }
         .savesChangesImmediately()
+        .appAppearance()
         #if os(macOS)
-        .preferredColorScheme(.dark)
+        .opensMaximized()
         #endif
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await BillNotifier.refresh(in: modelContext) } }
+        }
         // Erasing or deleting the last account brings the setup screen back.
-        .onChange(of: allAccounts.live.count) { _, count in
+        .onChange(of: allAccounts.live.addedByUser.count) { _, count in
             if hasChecked && count == 0 { withAnimation { isSettingUp = true } }
         }
         .task {
             #if os(iOS)
             try? await Task.sleep(for: .seconds(2))
             #endif
-            let count = (try? modelContext.fetchCount(FetchDescriptor<Account>())) ?? 0
-            isSettingUp = count == 0
+            // Cash on Hand is always there, so only accounts you added count toward "set up".
+            let accounts = (try? modelContext.fetch(FetchDescriptor<Account>())) ?? []
+            isSettingUp = accounts.filter(\.isLive).addedByUser.isEmpty
             hasChecked = true
+            GoalMigration.detachAccounts(in: modelContext)
+            await BillNotifier.refresh(in: modelContext)
+            GoalArchiver.archiveReached(in: modelContext)
             dismissSplash()
         }
     }

@@ -18,12 +18,67 @@ struct FileNewCommands: Commands {
     @FocusedValue(\.selectedAccountID) private var selectedAccountID
 
     var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Piggybank Financial") {
+                openWindow(id: "about")
+            }
+        }
+
+        CommandGroup(replacing: .help) {
+            Button("Piggybank Financial Help") {
+                openWindow(id: "help")
+            }
+            .keyboardShortcut("/", modifiers: [.command, .shift])
+
+            Button("Release Notes") {
+                openWindow(id: "release-notes")
+            }
+        }
+
+        #if DEBUG
+        // In the Piggybank menu, below About. Debug builds only.
+        CommandGroup(after: .appInfo) {
+            Button("Testing…") {
+                openWindow(id: "testing")
+            }
+        }
+        #endif
+
         CommandGroup(replacing: .newItem) {
             Button("New Transaction…") {
                 openWindow(id: "new-transaction", value: NewTransactionRequest(accountID: selectedAccountID))
             }
             .keyboardShortcut("n", modifiers: .command)
 
+            Button("New Cash Transaction…") {
+                openWindow(id: "cash-transaction")
+            }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+
+            Button("New Credit Card Charge…") {
+                openWindow(id: "credit-card-charge", value: NewTransactionRequest(accountID: selectedAccountID))
+            }
+            .keyboardShortcut("n", modifiers: [.command, .option])
+
+            Button("ATM Withdrawal…") {
+                openWindow(id: "atm-withdrawal")
+            }
+            .keyboardShortcut("a", modifiers: [.command, .shift])
+
+            Button("Update Investment Price…") {
+                openWindow(id: "update-price", value: NewTransactionRequest(accountID: selectedAccountID))
+            }
+            .keyboardShortcut("u", modifiers: [.command, .option])
+
+            Button("Transfer…") {
+                openWindow(id: "transfer")
+            }
+            .keyboardShortcut("t", modifiers: [.command, .shift])
+
+            Button("Pay a Bill…") {
+                openWindow(id: "bill-pay")
+            }
+            .keyboardShortcut("b", modifiers: [.command, .shift])
         }
     }
 }

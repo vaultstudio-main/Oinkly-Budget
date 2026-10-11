@@ -18,16 +18,20 @@ struct SplashView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 20) {
-                Image(systemName: "dollarsign.circle.fill")
-                    .font(.system(size: 120))
-                    .foregroundStyle(.white)
+                Image("BootPig")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 150)
                     .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
 
-                Text("Piggybank")
-                    .font(.system(size: 54, weight: .bold, design: .rounded))
+                Text("Piggybank Financial")
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
 
-                Text("FINANCIAL")
+                Text("MOBILE")
                     .font(.title3.weight(.medium))
                     .tracking(6)
                     .foregroundStyle(.white.opacity(0.85))

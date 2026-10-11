@@ -8,7 +8,7 @@ enum AccountPhoto {
     static let maxPixelSize = 1200
 
     /// Shrinks any image the user picked to a JPEG no larger than `maxPixelSize` on its long side.
-    static func compress(_ data: Data) -> Data? {
+    static func compress(_ data: Data, maxPixelSize: Int = AccountPhoto.maxPixelSize) -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
@@ -20,6 +20,18 @@ enum AccountPhoto {
         guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.8] as CFDictionary)
         return CGImageDestinationFinalize(destination) ? output as Data : nil
+    }
+
+    /// A small version for lists, so rows don't decode a full photo each time they draw.
+    static func thumbnail(from data: Data?, pixelSize: Int = 120) -> Image? {
+        guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: pixelSize,
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+        return Image(decorative: cgImage, scale: 1)
     }
 
     static func image(from data: Data?) -> Image? {

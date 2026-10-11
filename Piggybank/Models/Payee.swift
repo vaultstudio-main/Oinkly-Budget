@@ -4,7 +4,7 @@ import SwiftData
 /// A memorized payee: remembers the category and amount of its last use.
 @Model
 final class Payee {
-    var name: String
+    var name: String = ""
     var lastCategory: Category?
     /// Signed like `Transaction.amount`: payments are negative.
     var lastAmount: Decimal = 0

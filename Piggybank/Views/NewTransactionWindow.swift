@@ -10,6 +10,9 @@ struct NewTransactionWindow: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Account.name) private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
+    /// Loans are paid with Pay a Bill, credit cards take charges through New Credit Card Charge, and Cash on Hand is
+    /// filled by withdrawals rather than ordinary transactions.
+    private var choosableAccounts: [Account] { accounts.filter { !$0.isLoan && !$0.isCreditCard && !$0.isCashOnHand } }
     @Query(sort: \Category.name) private var allCategories: [Category]
     private var categories: [Category] { allCategories.live }
     @Query(sort: \Payee.name) private var allPayees: [Payee]
@@ -23,9 +26,9 @@ struct NewTransactionWindow: View {
     @State private var category: Category?
     @State private var memo = ""
     @State private var state: ReconcileState = .unreconciled
-    @State private var liability: Account?
-    @State private var paymentType: PaymentType?
+    @State private var paymentChoice: PaymentChoice?
     @State private var checkNumber = ""
+    @State private var investmentType = InvestmentType.contribution
 
     private var suggestions: [Payee] {
         let matches = PayeeMemory.matches(for: payee, in: payees)
@@ -33,31 +36,46 @@ struct NewTransactionWindow: View {
         return matches
     }
 
+    @State private var limitMessage: String?
+    @State private var receipt: Data?
+    @State private var noReceipt = false
+
+    /// The change this would make to the chosen account's balance. A payment is a charge on a card.
+    private var accountChange: Decimal {
+        let value = amount ?? 0
+        if account?.supportsHoldings == true { return investmentType.isOutflow ? -value : value }
+        return isPayment ? -value : value
+    }
+
+    private var exceedsLimit: Bool { account?.wouldExceedLimit(adding: accountChange) == true }
+
     private var canSave: Bool { (amount ?? 0) > 0 && account != nil }
 
-    /// Debts you can pay toward from the chosen account.
-    private var payableAccounts: [Account] { Transfers.payableAccounts(accounts, excluding: account) }
-
-    private var isPayingLiability: Bool { isPayment && liability != nil }
+    /// Investment accounts take a Type (contribution, gain, fee…) instead of a category and payment method.
+    private var isInvestment: Bool { account?.supportsHoldings == true }
 
     var body: some View {
         Group {
-            if accounts.isEmpty {
+            if choosableAccounts.isEmpty {
                 ContentUnavailableView("No Accounts", systemImage: "building.columns", description: Text("Add an account in Settings ▸ Accounts first."))
             } else {
                 form
             }
         }
-        .onChange(of: isPayment) { _, new in if !new { liability = nil } }
-        .onChange(of: account) { _, new in if liability?.persistentModelID == new?.persistentModelID { liability = nil } }
+        .onChange(of: isPayment) { _, new in
+            if let category, category.isIncome == new { self.category = nil }
+        }
+        .alert("Exceeds Credit Limit", isPresented: Binding(get: { limitMessage != nil }, set: { if !$0 { limitMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(limitMessage ?? "")
+        }
         .frame(width: 480, height: 700)
         .background(Theme.background)
         .onAppear {
             if account == nil {
                 let opened = accounts.first { $0.id == accountID } ?? accounts.first
-                let start = Transfers.defaults(opening: opened, accounts: accounts)
-                account = start.source
-                liability = start.liability
+                account = Transfers.startingAccount(opening: opened, accounts: accounts)
             }
         }
     }
@@ -67,38 +85,31 @@ struct NewTransactionWindow: View {
             Form {
                 Section("Transaction") {
                     Picker("Account", selection: $account) {
-                        ForEach(accounts) { account in if account.isLive { Text(account.name).tag(Optional(account)) } }
+                        ForEach(choosableAccounts) { account in if account.isLive { Text(account.name).tag(Optional(account)) } }
                     }
                     DatePicker("Date", selection: $date, displayedComponents: .date)
-                    Picker("Type", selection: $isPayment) {
-                        Text("Payment (money out)").tag(true)
-                        Text("Deposit (money in)").tag(false)
+                    if isInvestment {
+                        Picker("Type", selection: $investmentType) {
+                            ForEach(InvestmentType.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                        }
+                    } else {
+                        Picker("Type", selection: $isPayment) {
+                            Text("Payment (money out)").tag(true)
+                            Text("Deposit (money in)").tag(false)
+                        }
+                        .pickerStyle(.segmented)
                     }
-                    .pickerStyle(.segmented)
-                    TextField("Amount", value: $amount, format: .appCurrency)
-                    if isPayment && !payableAccounts.isEmpty {
-                        Picker("Pay toward", selection: $liability) {
-                            Text("Not a debt payment").tag(Account?.none)
-                            ForEach(AccountGroup.setupOrder.filter(\.isLiability)) { group in
-                                let members = payableAccounts.filter { $0.type.group == group }
-                                if !members.isEmpty {
-                                    Section(group.title) {
-                                        ForEach(members) { Text($0.name).tag(Optional($0)) }
-                                    }
-                                }
-                            }
-                        }
-                        if let liability {
-                            Text("This also lowers what you owe on \(liability.name) by the same amount.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
+                    CurrencyField("Amount", value: $amount)
+                    if exceedsLimit, let account {
+                        Label("This would reach the credit limit on \(account.name).", systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
                     }
                 }
 
                 Section("Details") {
-                    if !isPayingLiability { TextField("Payee", text: $payee) }
-                    if !suggestions.isEmpty && !isPayingLiability {
+                    FormTextField(isInvestment ? "Description" : "Payee", text: $payee)
+                    if !suggestions.isEmpty && !isInvestment {
                         HStack {
                             ForEach(suggestions) { suggestion in
                                 Button(suggestion.name) { apply(suggestion) }
@@ -107,21 +118,34 @@ struct NewTransactionWindow: View {
                             }
                         }
                     }
-                    if !isPayingLiability {
+                    if !isInvestment {
                         Picker("Category", selection: $category) {
-                            Text("None").tag(Category?.none)
-                            ForEach(categories.expensesFirst) { Text($0.name).tag(Optional($0)) }
+                            CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
                         }
                     }
-                    Picker("Payment method", selection: $paymentType) {
-                        PaymentTypeOptions()
+                    if !isInvestment {
+                        if let locked = account?.lockedPaymentType {
+                            LabeledContent("Payment method") {
+                                Label(locked.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Picker("Payment method", selection: $paymentChoice) {
+                                PaymentTypeOptions()
+                            }
+                            if paymentChoice?.isCheck == true {
+                                FormTextField("Check number", text: $checkNumber)
+                            }
+                        }
                     }
-                    if paymentType == .check {
-                        TextField("Check number", text: $checkNumber)
-                    }
-                    TextField("Memo", text: $memo)
+                    FormTextField("Memo", text: $memo)
                     Picker("Status", selection: $state) {
                         ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                    }
+                }
+
+                if account?.supportsReceipts == true {
+                    Section("Receipt") {
+                        ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
                     }
                 }
             }
@@ -143,26 +167,45 @@ struct NewTransactionWindow: View {
 
     private func apply(_ suggestion: Payee) {
         payee = suggestion.name
-        category = suggestion.lastCategory
         if suggestion.lastAmount != 0 {
             amount = abs(suggestion.lastAmount)
             isPayment = suggestion.lastAmount < 0
         }
+        // Only a category that fits the direction is filled in.
+        let last = suggestion.lastCategory
+        category = last?.isIncome == !isPayment ? last : nil
     }
 
     private func save(keepOpen: Bool) {
         guard let amount, let account else { return }
-        if isPayment, let liability, liability.isLive {
-            // One payment, two sides: money leaves this account and the debt shrinks.
-            Transfers.pay(from: account, toward: liability, amount: amount, date: date, memo: memo, state: state,
-                          paymentType: paymentType, checkNumber: checkNumber, in: modelContext)
+        if account.wouldExceedLimit(adding: accountChange) {
+            limitMessage = account.limitMessage
+            return
+        }
+        if account.supportsHoldings {
+            let transaction = Transaction(
+                account: account, date: date,
+                payee: payee.isEmpty ? investmentType.title : payee,
+                category: investmentType.category(in: categories), memo: memo,
+                amount: investmentType.isOutflow ? -amount : amount
+            )
+            transaction.state = state
+            transaction.receiptData = account.supportsReceipts ? receipt : nil
+            transaction.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
+            modelContext.insert(transaction)
         } else {
+            if let locked = account.lockedPaymentType {
+                paymentChoice = .type(locked)
+                checkNumber = ""
+            }
             let signed = isPayment ? -amount : amount
             PayeeMemory.record(name: payee, category: category, amount: signed, in: modelContext)
             let transaction = Transaction(account: account, date: date, payee: payee, category: category, memo: memo, amount: signed)
             transaction.state = state
-            transaction.paymentType = paymentType
-            transaction.checkNumber = paymentType == .check ? checkNumber : ""
+            transaction.paymentChoice = paymentChoice
+            transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
+            transaction.receiptData = account.supportsReceipts ? receipt : nil
+            transaction.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
             modelContext.insert(transaction)
         }
 
@@ -174,8 +217,9 @@ struct NewTransactionWindow: View {
             category = nil
             memo = ""
             state = .unreconciled
-            liability = nil
             checkNumber = ""
+            receipt = nil
+            noReceipt = false
         } else {
             dismiss()
         }

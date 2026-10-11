@@ -27,7 +27,7 @@ struct RecentTransactionsPanel: View {
                                 if transaction.isTransfer { Image(systemName: "arrow.left.arrow.right").font(.caption).foregroundStyle(.secondary) }
                                 Text(transaction.payee.isEmpty ? "—" : transaction.payee)
                             }
-                            Text(transaction.isTransfer ? "Transfer" : (transaction.category?.name ?? "—"))
+                            Text(transaction.fixedCategoryTitle ?? transaction.category?.name ?? "—")
                                 .foregroundStyle(.secondary)
                             ReconcileBadge(state: transaction.state)
                             Text(transaction.amount, format: .appCurrency)

@@ -33,10 +33,22 @@ final class StartupChecker {
     var hasFailure: Bool { steps.contains { $0.status == .failed } }
     var hasWarning: Bool { steps.contains { $0.status == .warning } }
 
+    /// How far along the checks are, 0...1.
+    var progress: Double {
+        let done = steps.filter { $0.status != .pending && $0.status != .running }.count
+        return Double(done) / Double(max(steps.count, 1))
+    }
+
+    /// The checks that need the user's attention: a failure or a warning.
+    var problems: [CheckStep] { steps.filter { $0.status == .failed || $0.status == .warning } }
+
+    /// How long each check shows as running. Only here so the loading bar fills at a pace you can see.
+    static let stepPause: Duration = .milliseconds(350)
+
     func run(in context: ModelContext, databaseError: Error?) async {
         for index in steps.indices {
             steps[index].status = .running
-            try? await Task.sleep(for: .milliseconds(260))
+            try? await Task.sleep(for: Self.stepPause)
 
             let result: (CheckStatus, String)
             switch steps[index].id {
@@ -77,7 +89,7 @@ final class StartupChecker {
     private func checkCategories(_ context: ModelContext) -> (CheckStatus, String) {
         let report = Category.ensureSystemCategories(in: context)
         let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
-        let keys = categories.compactMap(\.systemKey)
+        let keys = categories.filter { !$0.isCustom }.compactMap(\.systemKey)
         let expected = Category.definitions.count
 
         guard Set(keys).count == expected, keys.count == expected, keys.allSatisfy({ key in Category.definitions.contains { $0.key == key } }) else {
@@ -110,8 +122,11 @@ final class StartupChecker {
     }
 
     private func checkAccounts(_ context: ModelContext) -> (CheckStatus, String) {
+        // Cash on Hand is always there. Without it the app would have nowhere to record cash.
+        Account.ensureDefault(in: context)
+        try? context.save()
         let accounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
-        if accounts.isEmpty { return (.ok, "No accounts yet. Opening account setup") }
+        if accounts.addedByUser.isEmpty { return (.ok, "No accounts yet. Opening account setup") }
 
         // An account with no name can't be told apart in the sidebar: give it a name from its type.
         var named = 0
@@ -145,7 +160,7 @@ final class StartupChecker {
         }
 
         // A check number only means something on a check.
-        let stray = transactions.filter { !$0.checkNumber.isEmpty && $0.paymentType != .check }
+        let stray = transactions.filter { !$0.checkNumber.isEmpty && $0.paymentChoice?.isCheck != true }
         for transaction in stray { transaction.checkNumber = "" }
         if !stray.isEmpty { fixes.append("cleared \(stray.count) stray check number\(stray.count == 1 ? "" : "s")") }
 

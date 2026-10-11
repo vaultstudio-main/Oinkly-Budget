@@ -18,8 +18,17 @@ struct TransactionRowView: View {
     var showAccount = false
 
     var body: some View {
+        // The row can outlive its transaction for a moment after a delete.
+        if transaction.isLive { row }
+    }
+
+    private var row: some View {
         HStack(spacing: 12) {
-            CategoryBadge(category: transaction.category)
+            if let type = investmentType {
+                CategoryBadge(symbol: type.symbol, color: Color(hex: type.colorHex))
+            } else {
+                CategoryBadge(category: transaction.category)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body)
                 Text(subtitle)
@@ -34,16 +43,25 @@ struct TransactionRowView: View {
         }
     }
 
+    /// Set for transactions in investment accounts, which show a type instead of a category.
+    private var investmentType: InvestmentType? {
+        transaction.account?.supportsHoldings == true ? InvestmentType.of(transaction) : nil
+    }
+
     private var title: String {
         if !transaction.payee.isEmpty { return transaction.payee }
-        return transaction.category?.name ?? "Transaction"
+        return investmentType?.title ?? transaction.category?.name ?? "Transaction"
     }
 
     private var subtitle: String {
         var parts: [String] = []
-        if let name = transaction.category?.name, !transaction.payee.isEmpty { parts.append(name) }
+        if let type = investmentType {
+            if !transaction.payee.isEmpty, transaction.payee != type.title { parts.append(type.title) }
+        } else if let name = transaction.fixedCategoryTitle ?? transaction.category?.name, !transaction.payee.isEmpty {
+            parts.append(name)
+        }
         if showAccount, let account = transaction.account?.name { parts.append(account) }
-        if let method = transaction.paymentType { parts.append(method.title) }
+        if !transaction.paymentTitle.isEmpty { parts.append(transaction.paymentTitle) }
         if transaction.state != .unreconciled { parts.append(transaction.state.title) }
         parts.append(transaction.date.formatted(.dateTime.month().day()))
         return parts.joined(separator: " · ")

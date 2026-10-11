@@ -38,7 +38,7 @@ enum AccountType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .checking: "Checking"
         case .savings: "Savings"
-        case .cash: "Cash"
+        case .cash: "Cash on Hand"
         case .moneyMarket: "Money Market"
         case .certificateOfDeposit: "Certificate of Deposit (CD)"
         case .healthSavings: "Health Savings (HSA)"
@@ -49,7 +49,7 @@ enum AccountType: String, Codable, CaseIterable, Identifiable {
         case .storeCard: "Store Card"
         case .loan: "Other Loan"
         case .mortgage: "Mortgage"
-        case .autoLoan: "Car Loan"
+        case .autoLoan: "Auto Loan"
         case .studentLoan: "Student Loan"
         case .personalLoan: "Personal Loan"
         case .homeEquity: "Home Equity Loan / HELOC"
@@ -131,7 +131,7 @@ enum AccountType: String, Codable, CaseIterable, Identifiable {
         case .storeCard: "Retail or store-branded card"
         case .loan: "Any other loan you owe"
         case .mortgage: "Home loan"
-        case .autoLoan: "Car or truck loan or lease"
+        case .autoLoan: "Auto loan or lease"
         case .studentLoan: "Federal or private student debt"
         case .personalLoan: "Unsecured personal loan"
         case .homeEquity: "Borrowing against your home"
@@ -182,10 +182,12 @@ extension AccountGroup {
 
 @Model
 final class Account {
-    var name: String
-    var type: AccountType
-    var openingBalance: Decimal
+    var name: String = ""
+    var type: AccountType = AccountType.checking
+    var openingBalance: Decimal = 0
     var isClosed: Bool = false
+    /// The built-in Cash on Hand. There is exactly one, and it can't be deleted.
+    var isDefault: Bool = false
     var institution: String = ""
     var accountNumber: String = ""
     var routingNumber: String = ""
@@ -195,8 +197,16 @@ final class Account {
     var originalLoanAmount: Decimal = 0
     /// For loans: the regular payment each month.
     var monthlyPayment: Decimal = 0
-    /// For loans: the date you plan to have it paid off, chosen by you.
+    /// For loans: the date the loan matures, when the last payment is due. Chosen by you.
     var payoffDate: Date?
+    /// For loans: the day the loan started.
+    var loanStartDate: Date?
+    /// For loans: the yearly interest rate as a percent, such as 6.5.
+    var interestRate: Double = 0
+    /// For credit cards: the most you can charge. Zero means not set.
+    var creditLimit: Decimal = 0
+    /// For auto accounts: a lease instead of a loan. Only counts for the auto type, so use `isLeased`.
+    var isLease: Bool = false
     /// Vehicle identification number, for car, boat/RV and vehicle accounts.
     var vin: String = ""
     /// A picture of the car, house or other item. Kept out of the main database file.
@@ -205,6 +215,18 @@ final class Account {
 
     @Relationship(deleteRule: .cascade, inverse: \Transaction.account)
     var transactions: [Transaction] = []
+
+    /// The bill a loan adds to Bills when you give it a payment due date. At most one. Deleted with the loan.
+    @Relationship(deleteRule: .cascade, inverse: \Bill.loan)
+    var loanBills: [Bill] = []
+
+    /// Goals that track this account's balance.
+    @Relationship(deleteRule: .nullify, inverse: \Goal.account)
+    var goals: [Goal] = []
+
+    /// What an investment account holds. Empty for every other kind of account.
+    @Relationship(deleteRule: .cascade, inverse: \Holding.account)
+    var holdings: [Holding] = []
 
     init(name: String, type: AccountType, openingBalance: Decimal = 0) {
         self.name = name
@@ -217,10 +239,66 @@ final class Account {
 
     /// Real US account numbers are at most 17 digits and routing numbers are exactly 9.
     static let maxAccountNumberLength = 17
+    /// Keeps names short enough for the sidebar and menu.
+    static let maxNameLength = 30
     static let routingNumberLength = 9
+    /// Card numbers run 15 digits (Amex) to 16 (most cards), and up to 19 on some.
+    static let maxCardNumberLength = 19
+
+    /// The most digits the stored number may have for an account type.
+    static func numberLimit(for type: AccountType) -> Int {
+        type.group == .creditCards ? maxCardNumberLength : maxAccountNumberLength
+    }
 
     /// Digits only, cut to `limit`.
     static func digits(_ text: String, limit: Int) -> String { String(text.filter(\.isNumber).prefix(limit)) }
+
+    /// Only investment accounts (401(k), IRA, brokerage, crypto and so on) have holdings.
+    var supportsHoldings: Bool { type.group == .investments }
+
+    /// An auto account set up as a lease rather than a loan.
+    var isLeased: Bool { type == .autoLoan && isLease }
+
+    /// "Auto Lease" for a leased car, otherwise the account type's own name.
+    var typeTitle: String { isLeased ? "Auto Lease" : type.title }
+
+    /// Who you owe: the lender, or the leasing company for a lease.
+    var lenderLabel: String { isLeased ? "Leasing Company" : "Lender" }
+
+    /// "Loan", or "Lease" for a leased car.
+    var financingWord: String { isLeased ? "Lease" : "Loan" }
+
+    /// Checking accounts, cash on hand and credit cards keep receipt photos and PDF bills. A card's payments never have one.
+    var supportsReceipts: Bool { type == .checking || type == .cash || type.group == .creditCards }
+
+    /// The physical cash you carry. It has no bank details, and every transaction in it is a cash transaction.
+    var isCashOnHand: Bool { type == .cash }
+
+    /// The payment method every ordinary transaction in this account has, when it can't be anything else:
+    /// Credit Card on a card, Cash on cash on hand. Nil for accounts where you choose.
+    var lockedPaymentType: PaymentType? {
+        if isCreditCard { return .creditCard }
+        if isCashOnHand { return .cash }
+        return nil
+    }
+
+    /// Credit and store cards keep a card number, where other accounts keep an account number and routing number.
+    var isCreditCard: Bool { type.group == .creditCards }
+
+    /// For a card with a limit set: what is left to spend. Never negative.
+    var availableCredit: Decimal { max(creditLimit + balance, 0) }
+
+    /// True when a card has a limit and adding `change` (negative for a charge) would take what you owe to the limit or
+    /// past it. Payments and deposits never count, so a card already over its limit can still be paid down.
+    func wouldExceedLimit(adding change: Decimal) -> Bool {
+        isCreditCard && creditLimit > 0 && change < 0 && -(balance + change) >= creditLimit
+    }
+
+    /// What to say when a charge is refused.
+    var limitMessage: String { "Invalid transaction: it exceeds the credit limit on \(name)." }
+
+    /// "Card Number" for cards, otherwise "Account Number".
+    var numberLabel: String { isCreditCard ? "Card Number" : "Account Number" }
 
     /// Loans are the only accounts that say what they are for.
     var isLoan: Bool { type.group == .loans }
@@ -235,6 +313,6 @@ final class Account {
     var balance: Decimal { balance(asOf: .distantFuture) }
 
     func balance(asOf date: Date) -> Decimal {
-        transactions.reduce(openingBalance) { $1.date <= date ? $0 + $1.amount : $0 }
+        transactions.live.reduce(openingBalance) { $1.date <= date ? $0 + $1.amount : $0 }
     }
 }

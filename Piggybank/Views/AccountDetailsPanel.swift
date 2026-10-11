@@ -9,16 +9,16 @@ struct AccountDetailsPanel: View {
     @State private var showAccountNumber = false
 
     private var monthTransactions: [Transaction] {
-        MonthFilter.transactions(account.transactions, in: month)
+        MonthFilter.transactions(account.transactions.live, in: month)
     }
 
     /// Opening balance plus everything already matched to a statement.
     private var reconciledBalance: Decimal {
-        account.transactions.filter(\.isReconciled).reduce(account.openingBalance) { $0 + $1.amount }
+        account.transactions.live.filter(\.isReconciled).reduce(account.openingBalance) { $0 + $1.amount }
     }
 
     private var unreconciled: some View {
-        let open = account.transactions.filter { $0.state == .unreconciled }
+        let open = account.transactions.live.filter { $0.state == .unreconciled }
         let total = open.reduce(Decimal(0)) { $0 + $1.amount }
         return HStack(spacing: 4) {
             Text("\(open.count) transaction\(open.count == 1 ? "" : "s")")
@@ -28,7 +28,7 @@ struct AccountDetailsPanel: View {
     }
 
     private var pendingSummary: some View {
-        let pending = account.transactions.filter { $0.state == .pending }
+        let pending = account.transactions.live.filter { $0.state == .pending }
         let total = pending.reduce(Decimal(0)) { $0 + $1.amount }
         return HStack(spacing: 4) {
             Text("\(pending.count) transaction\(pending.count == 1 ? "" : "s")")
@@ -52,7 +52,7 @@ struct AccountDetailsPanel: View {
 
     private var loanContent: some View {
         let loan = account.loanProgress
-        return Panel(title: "Loan Details") {
+        return Panel(title: "\(account.financingWord) Details") {
             HStack(alignment: .top, spacing: 20) {
                 if let photo = AccountPhoto.image(from: account.photoData) {
                     photo
@@ -64,13 +64,13 @@ struct AccountDetailsPanel: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Grid(alignment: .leading, horizontalSpacing: 32, verticalSpacing: 10) {
                         GridRow {
-                            item("Loan Type") { Text(account.type.title) }
-                            item("Loan For") { text(account.loanPurpose) }
+                            item("Type") { Text(account.typeTitle) }
+                            item("\(account.financingWord) For") { text(account.loanPurpose) }
                             if account.supportsVIN { item("VIN") { text(account.vin) } }
-                            item("Lender") { text(account.institution) }
+                            item(account.lenderLabel) { text(account.institution) }
                         }
                         GridRow {
-                            item("Original Loan") { amount(loan.original, set: loan.hasOriginal) }
+                            item(account.isLeased ? "Total Lease Cost" : "Original Loan") { amount(loan.original, set: loan.hasOriginal) }
                             item("Monthly Payment") { amount(loan.monthlyPayment, set: loan.monthlyPayment > 0) }
                             item("Paid Off So Far") {
                                 if loan.hasOriginal {
@@ -86,13 +86,24 @@ struct AccountDetailsPanel: View {
                         }
                         GridRow {
                             item("Account Number") { accountNumber }
-                            item("Routing Number") { text(account.routingNumber) }
+                            if !account.isLeased { item("Interest Rate") { interest } }
                             item("Payments Left") { paymentsLeft(loan) }
-                            item(loan.targetDate == nil ? "Estimated Payoff" : "Payoff Date") { payoff(loan) }
+                            item(loan.targetDate == nil ? (account.isLeased ? "Estimated Lease End" : "Estimated Payoff") : (account.isLeased ? "Lease End Date" : "Maturity Date")) { payoff(loan) }
+                        }
+                        if let bill = account.loanBill {
+                            GridRow {
+                                item("Payment Due") { Text(LoanBill.dueText(bill)) }
+                                item("This Month's Payment") { LoanPaymentStatus(account: account) }
+                            }
+                        }
+                        if let start = account.loanStartDate {
+                            GridRow {
+                                item("\(account.financingWord) Started") { Text(start, format: .dateTime.month(.abbreviated).day().year()) }
+                            }
                         }
                         if loan.targetDate != nil {
                             GridRow {
-                                item("Months Left") { monthsLeft(loan) }
+                                item("Payments to Maturity") { paymentsToMaturity }
                                 item("Needed Per Month") { needed(loan) }
                                 item("Your Payment") { targetStatus(loan) }
                             }
@@ -112,14 +123,32 @@ struct AccountDetailsPanel: View {
                         }
                         .frame(maxWidth: 520)
                     } else {
-                        Text("Add the original loan amount in Edit Details to track your progress.")
+                        Text(account.isLeased ? "Add the total lease cost in Edit Details to track your progress." : "Add the original loan amount in Edit Details to track your progress.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
-                Button("Edit Details", action: onEdit)
+                VStack(alignment: .trailing, spacing: 10) {
+                    balanceBlock
+                    Button("Edit Details", action: onEdit)
+                }
             }
         }
+    }
+
+    /// The current balance, big, in the top-right corner of the card. Every account type shows it the same way;
+    /// a loan's balance is negative because it is money owed.
+    private var balanceBlock: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text("CURRENT BALANCE").font(.caption).foregroundStyle(.secondary)
+            Text(account.balance, format: .appCurrency)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(account.balance < 0 ? Theme.red : .primary)
+        }
+    }
+
+    private var interest: Text {
+        account.interestRate > 0 ? Text("\(account.interestRate.formatted(.number.precision(.fractionLength(0...3))))%") : Text("Not set").foregroundStyle(.secondary)
     }
 
     private func amount(_ value: Decimal, set: Bool) -> Text {
@@ -134,9 +163,9 @@ struct AccountDetailsPanel: View {
     }
 
     @ViewBuilder
-    private func monthsLeft(_ loan: LoanProgress) -> some View {
-        if loan.isPaidOff { Text("None") }
-        else if let months = loan.monthsToTarget() { Text("\(months)") }
+    private var paymentsToMaturity: some View {
+        if account.loanProgress.isPaidOff { Text("None") }
+        else if let count = LoanBill.paymentsToMaturity(account) { Text("About \(count)") }
         else { text("") }
     }
 
@@ -183,24 +212,50 @@ struct AccountDetailsPanel: View {
                                 .foregroundStyle(account.isDebt ? Theme.red : Theme.green)
                         }
                         item("Type") { Text(account.type.title) }
-                        item("Institution") { text(account.institution) }
+                        if !account.isCashOnHand { item("Institution") { text(account.institution) } }
                         if account.isLoan {
                             item("Loan For") { text(account.loanPurpose) }
                         }
-                        item("Opening Balance") { Text(account.openingBalance, format: .appCurrency) }
+                        if account.isCreditCard {
+                            item("Credit Limit") { amount(account.creditLimit, set: account.creditLimit > 0) }
+                        } else if !account.isCashOnHand {
+                            item("Opening Balance") { Text(account.openingBalance, format: .appCurrency) }
+                        }
                     }
                     GridRow {
-                        item("Account Number") { accountNumber }
+                        if !account.isCashOnHand { item(account.numberLabel) { accountNumber } }
                         if account.supportsVIN {
                             item("VIN") { text(account.vin) }
                         }
-                        item("Routing Number") { text(account.routingNumber) }
+                        if account.isCreditCard {
+                            item("Interest Rate (APR)") { interest }
+                        } else if !account.isCashOnHand {
+                            item("Routing Number") { text(account.routingNumber) }
+                        }
                         item("Transactions (\(monthLabel))") { Text(monthTransactions.count, format: .number) }
                         item("In / Out (\(monthLabel))") { inOut }
                     }
                     GridRow {
-                        item("Reconciled Balance") {
-                            Text(reconciledBalance, format: .appCurrency).foregroundStyle(Theme.green)
+                        if account.isCreditCard {
+                            item("Current Balance on Card") {
+                                Text(max(-account.balance, 0), format: .appCurrency).foregroundStyle(account.balance < 0 ? Theme.red : .primary)
+                            }
+                            item("Available Credit") { amount(account.availableCredit, set: account.creditLimit > 0) }
+                            item("Minimum Payment") { amount(account.monthlyPayment, set: account.monthlyPayment > 0) }
+                            if let bill = account.loanBill {
+                                item("Payment Due") {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(LoanBill.dueText(bill))
+                                        LoanPaymentStatus(account: account).font(.caption)
+                                    }
+                                }
+                            } else {
+                                item("Payment Due") { text("") }
+                            }
+                        } else {
+                            item("Reconciled Balance") {
+                                Text(reconciledBalance, format: .appCurrency).foregroundStyle(Theme.green)
+                            }
                         }
                         item("Unreconciled") { unreconciled }
                         item("Pending") { pendingSummary }
@@ -213,7 +268,10 @@ struct AccountDetailsPanel: View {
                     }
                 }
                 Spacer()
-                Button("Edit Details", action: onEdit)
+                VStack(alignment: .trailing, spacing: 10) {
+                    balanceBlock
+                    Button("Edit Details", action: onEdit)
+                }
             }
         }
     }
@@ -251,6 +309,32 @@ struct AccountDetailsPanel: View {
             Text(income, format: .appCurrency).foregroundStyle(Theme.green)
             Text("/").foregroundStyle(.secondary)
             Text(spending, format: .appCurrency).foregroundStyle(Theme.red)
+        }
+    }
+}
+
+/// Whether this month's payment on a loan has been paid, from the loan's bill on the Bills page.
+struct LoanPaymentStatus: View {
+    let account: Account
+
+    var body: some View {
+        if let item = LoanBill.thisMonth(account) {
+            let month = item.date.formatted(.dateTime.month(.abbreviated))
+            HStack(spacing: 6) {
+                if item.isPaid {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("\(month): Paid")
+                } else if item.isOverdue {
+                    Image(systemName: "exclamationmark.circle.fill")
+                    Text("\(month): Not paid (overdue)")
+                } else {
+                    Image(systemName: "circle")
+                    Text("\(month): Not paid")
+                }
+            }
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(item.isPaid ? Theme.green : (item.isOverdue ? Theme.red : Color.orange))
         }
     }
 }

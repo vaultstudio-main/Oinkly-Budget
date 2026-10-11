@@ -169,17 +169,30 @@ enum PaymentType: String, Codable, CaseIterable, Identifiable {
 @Model
 final class Transaction {
     var account: Account?
-    var date: Date
+    var date: Date = Date.now
     var payee: String = ""
     var category: Category?
     var memo: String = ""
     /// Signed: deposits are positive, payments are negative.
-    var amount: Decimal
+    var amount: Decimal = 0
     var status: ClearedStatus = ClearedStatus.uncleared
     /// Both halves of a transfer, such as a loan payment, share one ID. Nil for ordinary transactions.
     var transferID: UUID?
     var paymentType: PaymentType?
+    /// One of your own payment methods. Used instead of `paymentType`, never together with it.
+    var customMethod: CustomPaymentMethod?
     var checkNumber: String = ""
+    /// A photo or PDF of the receipt or bill. Kept out of the main database file.
+    @Attribute(.externalStorage) var receiptData: Data?
+    /// Marked as having no receipt, so the register stops offering to add one.
+    var noReceipt: Bool = false
+    /// Paid with Pay a Bill. These always use the Payment category.
+    var isBillPayment: Bool = false
+    /// Either half of an ATM withdrawal. These use the Payment category, like bill and debt payments.
+    var isAtmWithdrawal: Bool = false
+    /// The bill this payment settled, and the due date it settled. Deleting the payment marks that due date unpaid again.
+    var paidBill: Bill?
+    var paidDueDate: Date?
     /// Breaks ties between transactions on the same date.
     var createdAt: Date = Date.now
 
@@ -197,10 +210,12 @@ final class Transaction {
 extension Transaction {
     var state: ReconcileState {
         get {
+            // A transaction deleted a moment ago can still be on screen. Reading a deleted object is fatal.
+            guard isLive else { return .unreconciled }
             switch status {
-            case .pending: .pending
-            case .uncleared: .unreconciled
-            case .cleared, .reconciled: .reconciled
+            case .pending: return .pending
+            case .uncleared: return .unreconciled
+            case .cleared, .reconciled: return .reconciled
             }
         }
         set {
@@ -215,5 +230,35 @@ extension Transaction {
     /// Matched to a statement.
     var isReconciled: Bool { state == .reconciled }
 
-    var isTransfer: Bool { transferID != nil }
+    var isTransfer: Bool { isLive && transferID != nil }
+
+    /// A payment toward a loan, mortgage or card: either side of the pair a payment creates.
+    var isDebtPayment: Bool {
+        isLive && isTransfer && (account?.isDebt == true || payee.hasPrefix("Payment to ") || payee.hasPrefix("Payment from "))
+    }
+
+    /// The category a transfer shows. Payments to loans and cards are always "Payment", and other transfers "Transfer".
+    /// Neither can be changed. Nil for ordinary transactions, which have a category you choose.
+    var fixedCategoryTitle: String? {
+        guard isLive else { return nil }
+        if isAtmWithdrawal { return "ATM" }
+        if isDebtPayment { return "Payment" }
+        // A bill's payment is always locked to its category, or to Payment when the bill has none.
+        if isBillPayment { return category?.isLive == true ? category?.name : "Payment" }
+        return isTransfer ? "Transfer" : nil
+    }
+
+    /// A payment made toward a credit card, as seen on the card. These never have a receipt, and it can't be added.
+    var receiptLocked: Bool {
+        guard isLive else { return false }
+        // ATM withdrawals never have a receipt, on either side. Card payments never do either.
+        if isAtmWithdrawal { return true }
+        return isDebtPayment && account?.isLive == true && account?.isDebt == true
+    }
+
+    /// The attachment is a PDF rather than a photo.
+    var receiptIsPDF: Bool {
+        guard isLive, let data = receiptData else { return false }
+        return data.prefix(4) == Data("%PDF".utf8)
+    }
 }

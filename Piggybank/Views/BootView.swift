@@ -62,35 +62,53 @@ struct BootView: View {
 
             VStack(spacing: 22) {
                 VStack(spacing: 8) {
-                    Image(systemName: "dollarsign.circle.fill")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.white)
+                    Image("BootPig")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 92)
                         .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
-                    Text("Piggybank")
+                    Text("Piggybank Financial").lineLimit(1).minimumScaleFactor(0.6)
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
-                    Text(isFinished ? (needsAttention ? "NEEDS ATTENTION" : "READY") : "STARTING UP")
+                    Text(needsAttention ? "NEEDS ATTENTION" : "STARTING UP")
                         .font(.caption.weight(.semibold))
                         .tracking(5)
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .padding(.top, 36)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    ForEach(checker.steps) { step in
-                        row(step)
+                if !needsAttention { Spacer(minLength: 0) }
+
+                if needsAttention {
+                    // Every check still runs. They only show up here when one of them found a problem.
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(checker.problems) { step in
+                            row(step)
+                        }
+                    }
+                    .padding(.horizontal, 36)
+
+                    Spacer(minLength: 0)
+
+                    buttons
+                        .frame(height: 44)
+                        .padding(.bottom, 24)
+                } else {
+                    ProgressView(value: checker.progress)
+                        .progressViewStyle(.linear)
+                        .tint(.white)
+                        .frame(width: 260)
+                        .animation(.easeInOut(duration: 0.35), value: checker.progress)
+                        .padding(.bottom, 40)
+                    if handOffStalled {
+                        buttons
+                            .frame(height: 44)
+                            .padding(.bottom, 24)
                     }
                 }
-                .padding(.horizontal, 36)
-
-                Spacer(minLength: 0)
-
-                buttons
-                    .frame(height: 44)
-                    .padding(.bottom, 24)
             }
         }
-        .frame(width: 500, height: 600)
+        .frame(width: 500, height: needsAttention ? 580 : 330)
         .background(BootWindowStyle(box: windowBox))
         .task { await boot() }
     }
@@ -136,7 +154,7 @@ struct BootView: View {
     private var buttons: some View {
         if handOffStalled {
             // The main window should have replaced this screen by now. Never leave the user stuck here.
-            Button("Open Piggybank", action: handOff)
+            Button("Open Piggybank Financial", action: handOff)
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .controlSize(.large)
@@ -168,7 +186,7 @@ struct BootView: View {
         isFinished = true
 
         if checker.hasFailure || checker.hasWarning { return }
-        try? await Task.sleep(for: .milliseconds(800))
+        try? await Task.sleep(for: .milliseconds(600))
         handOff()
     }
 

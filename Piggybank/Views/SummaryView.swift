@@ -7,8 +7,6 @@ struct SummaryView: View {
     private var accounts: [Account] { allAccounts.live }
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
-    @Query(sort: \Category.name) private var allCategories: [Category]
-    private var categories: [Category] { allCategories.live }
 
     private static let groupColors: KeyValuePairs<String, Color> = [
         AccountGroup.checkingSavings.title: Theme.green,
@@ -19,15 +17,19 @@ struct SummaryView: View {
     ]
 
     var body: some View {
-        let spentTable = Budget.spentTable(transactions)
         ScrollView {
             VStack(spacing: 12) {
                 header
+                BillAlertBanner()
+                GlanceCards(accounts: accounts, transactions: transactions)
                 HStack(alignment: .top, spacing: 12) {
-                    Panel(title: "Net Worth") { netWorthChart }
-                    Panel(title: "Summary") { summaryTable }
+                    Panel(title: "Net Worth", fillsHeight: true) { netWorthChart }
+                    Panel(title: "Summary", fillsHeight: true) { summaryTable }
                         .frame(width: 280)
                 }
+                .fixedSize(horizontal: false, vertical: true)
+                LoansProgressCard(accounts: accounts)
+                GoalsProgressCard()
                 Panel(title: "Last 15 Transactions (All Accounts)") { RecentTransactionsPanel(transactions: transactions) }
                 Panel(title: "Income / Spending Summary") {
                     HStack(alignment: .top, spacing: 24) {
@@ -36,7 +38,7 @@ struct SummaryView: View {
                     }
                 }
                 Panel(title: "Top Spending Categories (Last 3 Months)") { TopSpendingView(transactions: transactions) }
-                Panel(title: "Category Spending This Month") { categorySpending(spentTable) }
+                Panel(title: "Top Income Categories (Last 3 Months)") { TopSpendingView(transactions: transactions, income: true) }
             }
             .padding(16)
         }
@@ -44,52 +46,9 @@ struct SummaryView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack {
             Text("Summary").font(.largeTitle.bold())
             Spacer()
-            Text("CURRENT WORTH").font(.caption).foregroundStyle(.secondary)
-            Text(Summary.currentWorth(accounts), format: .appCurrency)
-                .font(.system(size: 28, weight: .bold))
-        }
-    }
-
-    // MARK: Category spending
-
-
-    /// Budgets that are set and switched on in Settings, most used first.
-    private func spendingCategories(_ table: SpentTable) -> [Category] {
-        Budget.visibleBudgets(categories)
-            .sorted {
-                let a = Budget.progress(spent: table[$0], limit: $0.monthlyLimit)
-                let b = Budget.progress(spent: table[$1], limit: $1.monthlyLimit)
-                return a == b ? $0.name < $1.name : a > b
-            }
-    }
-
-    private func categorySpending(_ table: SpentTable) -> some View {
-        let rows = spendingCategories(table)
-        let totalSpent = rows.reduce(Decimal(0)) { $0 + table[$1] }
-        let totalBudget = rows.reduce(Decimal(0)) { $0 + $1.monthlyLimit }
-
-        return VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(totalSpent, format: .appCurrency).font(.title2.bold())
-                Text("of \(totalBudget.formatted(.appCurrency)) budgeted").foregroundStyle(.secondary)
-                Spacer()
-            }
-
-            if rows.isEmpty {
-                Text("No budgets to show. Set budgets, and choose which appear here, in Settings ▸ Categories & Budgets.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 32), GridItem(.flexible())], alignment: .leading, spacing: 18) {
-                    ForEach(rows) { category in
-                        BudgetProgressRow(category: category, spent: table[category])
-                    }
-                }
-                Text("Set budgets, and choose which show here, in Settings ▸ Categories & Budgets.").font(.caption).foregroundStyle(.secondary)
-            }
         }
     }
 
@@ -156,7 +115,7 @@ struct SummaryView: View {
         .chartLegend(.hidden)
         .chartXAxis {
             AxisMarks(values: .stride(by: .month)) { _ in
-                AxisValueLabel(format: .dateTime.month(.narrow), centered: true)
+                AxisValueLabel(format: .dateTime.month(.abbreviated), centered: true)
             }
         }
         .frame(height: 160)

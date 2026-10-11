@@ -56,6 +56,7 @@ struct BudgetsView: View {
                 }
             }
             .navigationTitle("Budgets")
+            .menuButton()
         }
     }
 }

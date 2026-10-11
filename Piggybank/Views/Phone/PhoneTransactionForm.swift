@@ -10,6 +10,14 @@ struct PhoneTransactionForm: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Account.name) private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
+    /// Loans are paid with Pay a Bill, and credit cards take charges through New Credit Card Charge, so a new
+    /// transaction can't go on either. An existing transaction on one can still be opened and edited.
+    private var choosableAccounts: [Account] {
+        accounts.filter {
+            ($0.isLoan == false && $0.isCreditCard == false && $0.isCashOnHand == false)
+                || $0.persistentModelID == transaction?.account?.persistentModelID
+        }
+    }
     @Query(sort: \Category.name) private var allCategories: [Category]
     private var categories: [Category] { allCategories.live }
     @Query(sort: \Payee.name) private var allPayees: [Payee]
@@ -23,10 +31,10 @@ struct PhoneTransactionForm: View {
     @State private var memo: String
     @State private var account: Account?
     @State private var confirmingDelete = false
-    @State private var paymentType: PaymentType?
+    @State private var paymentChoice: PaymentChoice?
     @State private var checkNumber: String
     @State private var state: ReconcileState
-    @State private var liability: Account?
+    @State private var investmentType: InvestmentType
 
     init(transaction: Transaction?, defaultAccount: Account? = nil) {
         self.transaction = transaction
@@ -37,19 +45,36 @@ struct PhoneTransactionForm: View {
         _date = State(initialValue: transaction?.date ?? .now)
         _memo = State(initialValue: transaction?.memo ?? "")
         _account = State(initialValue: transaction?.account ?? defaultAccount)
-        _paymentType = State(initialValue: transaction?.paymentType)
+        _paymentChoice = State(initialValue: transaction?.paymentChoice)
         _checkNumber = State(initialValue: transaction?.checkNumber ?? "")
         _state = State(initialValue: transaction?.state ?? .unreconciled)
+        _receipt = State(initialValue: transaction?.receiptData)
+        _noReceipt = State(initialValue: transaction?.noReceipt ?? false)
+        _investmentType = State(initialValue: transaction.map { InvestmentType.of($0) } ?? .contribution)
     }
+
+    @State private var limitMessage: String?
+    @State private var receipt: Data?
+    @State private var noReceipt: Bool
+
+    /// How much this changes the chosen account: a new charge, or the difference when editing one on the same account.
+    private var accountChange: Decimal {
+        let value = amount ?? 0
+        let signed = isInvestment ? (investmentType.isOutflow ? -value : value) : (isExpense ? -value : value)
+        if let transaction, transaction.account?.persistentModelID == account?.persistentModelID {
+            return signed - transaction.amount
+        }
+        return signed
+    }
+
+    private var exceedsLimit: Bool { account?.wouldExceedLimit(adding: accountChange) == true }
 
     private var isTransfer: Bool { transaction?.isTransfer == true }
 
-    /// Debts you can pay toward from the chosen account. Only when adding a new expense.
-    private var payableAccounts: [Account] {
-        transaction == nil && isExpense ? Transfers.payableAccounts(accounts, excluding: account) : []
-    }
+    /// Investment accounts take a Type (contribution, gain, fee…) instead of a category and payment method.
+    private var isInvestment: Bool { account?.supportsHoldings == true }
 
-    private var isPayingLiability: Bool { transaction == nil && isExpense && liability != nil }
+    private var isInflow: Bool { isInvestment ? !investmentType.isOutflow : !isExpense }
 
     private var suggestions: [Payee] {
         let matches = PayeeMemory.matches(for: payee, in: payees)
@@ -58,48 +83,48 @@ struct PhoneTransactionForm: View {
     }
 
     var body: some View {
+        // Deleting from inside the form (or from a list behind it) leaves this on screen for a moment.
+        if transaction?.isLive ?? true { content }
+    }
+
+    private var content: some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Type", selection: $isExpense) {
-                        Text("Expense").tag(true)
-                        Text("Income").tag(false)
+                    if isInvestment {
+                        Picker("Type", selection: $investmentType) {
+                            ForEach(InvestmentType.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                        }
+                        .disabled(isTransfer)
+                    } else {
+                        Picker("Type", selection: $isExpense) {
+                            Text("Expense").tag(true)
+                            Text("Income").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .disabled(isTransfer)
                     }
-                    .pickerStyle(.segmented)
-                    .disabled(isTransfer)
 
-                    TextField("$0.00", value: $amount, format: .appCurrency)
+                    CurrencyField("$0.00", value: $amount)
                         .keyboardType(.decimalPad)
                         .font(.system(size: 44, weight: .bold, design: .rounded))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(isExpense ? Color.primary : Color.green)
+                        .foregroundStyle(isInflow ? Color.green : Color.primary)
                         .padding(.vertical, 8)
                 }
 
-                if !payableAccounts.isEmpty {
+                if exceedsLimit, let account {
                     Section {
-                        Picker("Pay toward", selection: $liability) {
-                            Text("Not a debt payment").tag(Account?.none)
-                            ForEach(AccountGroup.setupOrder.filter(\.isLiability)) { group in
-                                let members = payableAccounts.filter { $0.type.group == group }
-                                if !members.isEmpty {
-                                    Section(group.title) {
-                                        ForEach(members) { Text($0.name).tag(Optional($0)) }
-                                    }
-                                }
-                            }
-                        }
-                    } footer: {
-                        if let liability {
-                            Text("This also lowers what you owe on \(liability.name) by the same amount.")
-                        }
+                        Label("This would reach the credit limit on \(account.name).", systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
                     }
                 }
 
-                if !isPayingLiability && !isTransfer {
-                Section("Payee") {
-                    TextField("Who was it?", text: $payee)
-                    if !suggestions.isEmpty {
+                if !isTransfer {
+                Section(isInvestment ? "Description" : "Payee") {
+                    TextField(isInvestment ? "What was it?" : "Who was it?", text: $payee)
+                    if !suggestions.isEmpty && !isInvestment {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack {
                                 ForEach(suggestions) { suggestion in
@@ -114,27 +139,10 @@ struct PhoneTransactionForm: View {
 
                 }
 
-                if !isPayingLiability && !isTransfer {
-                Section("Category") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 76))], spacing: 12) {
-                        ForEach(categories.expensesFirst) { item in
-                            Button {
-                                withAnimation(.snappy) { category = category == item ? nil : item }
-                            } label: {
-                                VStack(spacing: 4) {
-                                    CategoryBadge(category: item)
-                                    Text(item.name).font(.caption).lineLimit(1)
-                                }
-                                .padding(6)
-                                .frame(maxWidth: .infinity)
-                                .background {
-                                    if category == item {
-                                        RoundedRectangle(cornerRadius: 12).fill(Color(hex: item.colorHex).opacity(0.15))
-                                    }
-                                }
-                            }
-                            .buttonStyle(.plain)
-                        }
+                if !isTransfer && !isInvestment && transaction?.isBillPayment != true {
+                Section {
+                    Picker("Category", selection: $category) {
+                        CategoryOptions(categories: categories, only: isExpense ? .expense : .income, keeping: category)
                     }
                 }
 
@@ -142,20 +150,44 @@ struct PhoneTransactionForm: View {
 
                 Section {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
-                    if accounts.count != 1 {
+                    if choosableAccounts.count != 1 {
                         Picker("Account", selection: $account) {
-                            ForEach(accounts) { account in if account.isLive { Text(account.name).tag(Optional(account)) } }
+                            ForEach(choosableAccounts) { account in if account.isLive { Text(account.name).tag(Optional(account)) } }
                         }
                     }
-                    Picker("Payment method", selection: $paymentType) {
-                        PaymentTypeOptions()
+                    if !isInvestment && transaction?.isAtmWithdrawal != true {
+                        if let locked = account?.lockedPaymentType, !isTransfer {
+                            LabeledContent("Payment method") {
+                                Label(locked.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Picker("Payment method", selection: $paymentChoice) {
+                                PaymentTypeOptions()
+                            }
+                            if paymentChoice?.isCheck == true {
+                                TextField("Check number", text: $checkNumber)
+                            }
+                        }
                     }
-                    if paymentType == .check {
-                        TextField("Check number", text: $checkNumber)
+                    if transaction?.isAtmWithdrawal == true {
+                        LabeledContent("Memo") { Label(memo, systemImage: "lock.fill").foregroundStyle(.secondary) }
+                    } else {
+                        TextField("Memo", text: $memo)
                     }
-                    TextField("Memo", text: $memo)
-                    Picker("Status", selection: $state) {
-                        ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                    if transaction?.isAtmWithdrawal == true {
+                        LabeledContent("Status") {
+                            Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Picker("Status", selection: $state) {
+                            ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                        }
+                    }
+                }
+
+                if account?.supportsReceipts == true && transaction?.receiptLocked != true {
+                    Section("Receipt") {
+                        ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
                     }
                 }
 
@@ -175,6 +207,11 @@ struct PhoneTransactionForm: View {
             } message: {
                 Text("This can't be undone.")
             }
+            .alert("Exceeds Credit Limit", isPresented: Binding(get: { limitMessage != nil }, set: { if !$0 { limitMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(limitMessage ?? "")
+            }
             .navigationTitle(transaction == nil ? "New Transaction" : "Edit Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -186,38 +223,46 @@ struct PhoneTransactionForm: View {
                         .disabled((amount ?? 0) <= 0 || account == nil)
                 }
             }
-            .onChange(of: isExpense) { _, new in if !new { liability = nil } }
-            .onChange(of: account) { _, new in if liability?.persistentModelID == new?.persistentModelID { liability = nil } }
+            .onChange(of: isExpense) { _, new in
+                // A category only fits one direction, so a change of direction clears one that no longer fits.
+                if let category, category.isIncome == new { self.category = nil }
+            }
             .onAppear {
                 guard transaction == nil else { return }
                 let opened = account ?? accounts.first { $0.type == .checking } ?? accounts.first
-                let start = Transfers.defaults(opening: opened, accounts: accounts)
-                account = start.source
-                liability = start.liability
+                account = Transfers.startingAccount(opening: opened, accounts: accounts)
             }
         }
     }
 
     private func apply(_ suggestion: Payee) {
         payee = suggestion.name
-        category = suggestion.lastCategory
         if suggestion.lastAmount != 0 {
             amount = abs(suggestion.lastAmount)
             isExpense = suggestion.lastAmount < 0
         }
+        // Only a category that fits the direction is filled in.
+        let last = suggestion.lastCategory
+        category = last?.isIncome == !isExpense ? last : nil
     }
 
     private func save() {
         guard let amount, let account else { return }
-        let signed = isExpense ? -amount : amount
-        if transaction == nil, isExpense, let liability, liability.isLive {
-            // One payment, two sides: money leaves this account and the debt shrinks.
-            Transfers.pay(from: account, toward: liability, amount: amount, date: date, memo: memo, state: state,
-                          paymentType: paymentType, checkNumber: checkNumber, in: modelContext)
-            modelContext.saveNow()
-            dismiss()
+        if account.wouldExceedLimit(adding: accountChange) {
+            limitMessage = account.limitMessage
             return
         }
+        if account.supportsHoldings && !isTransfer {
+            saveInvestment(amount: amount, account: account)
+            return
+        }
+        if transaction?.isAtmWithdrawal == true { state = .reconciled }
+        // Charges on a credit card are always credit card charges, and cash on hand is always cash.
+        if let locked = account.lockedPaymentType, !isTransfer {
+            paymentChoice = .type(locked)
+            checkNumber = ""
+        }
+        let signed = isExpense ? -amount : amount
         if !isTransfer { PayeeMemory.record(name: payee, category: category, amount: signed, in: modelContext) }
         if let transaction {
             transaction.account = account
@@ -226,14 +271,51 @@ struct PhoneTransactionForm: View {
             transaction.category = category
             transaction.memo = memo
             transaction.amount = signed
-            transaction.paymentType = paymentType
-            transaction.checkNumber = paymentType == .check ? checkNumber : ""
+            transaction.paymentChoice = paymentChoice
+            transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             transaction.state = state
+            if account.supportsReceipts {
+                transaction.receiptData = receipt
+                transaction.noReceipt = receipt == nil && noReceipt
+            }
             if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
         } else {
-            let created = Transaction(account: account, date: date, payee: payee, category: category, memo: memo, amount: signed, paymentType: paymentType)
-            created.checkNumber = paymentType == .check ? checkNumber : ""
+            let created = Transaction(account: account, date: date, payee: payee, category: category, memo: memo, amount: signed)
+            created.paymentChoice = paymentChoice
+            created.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             created.state = state
+            created.receiptData = account.supportsReceipts ? receipt : nil
+            created.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
+            modelContext.insert(created)
+        }
+        modelContext.saveNow()
+        dismiss()
+    }
+
+    /// An investment transaction: the Type sets the sign and the category.
+    private func saveInvestment(amount: Decimal, account: Account) {
+        let signed = investmentType.isOutflow ? -amount : amount
+        let name = payee.isEmpty ? investmentType.title : payee
+        let category = investmentType.category(in: categories)
+        if let transaction {
+            transaction.account = account
+            transaction.date = date
+            transaction.payee = name
+            transaction.category = category
+            transaction.memo = memo
+            transaction.amount = signed
+            transaction.paymentChoice = nil
+            transaction.checkNumber = ""
+            transaction.state = state
+            if account.supportsReceipts {
+                transaction.receiptData = receipt
+                transaction.noReceipt = receipt == nil && noReceipt
+            }
+        } else {
+            let created = Transaction(account: account, date: date, payee: name, category: category, memo: memo, amount: signed)
+            created.state = state
+            created.receiptData = account.supportsReceipts ? receipt : nil
+            created.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
             modelContext.insert(created)
         }
         modelContext.saveNow()
