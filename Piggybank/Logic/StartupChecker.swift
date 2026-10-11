@@ -86,6 +86,7 @@ final class StartupChecker {
 
     private func checkCategories(_ context: ModelContext) -> (CheckStatus, String) {
         let report = Category.ensureSystemCategories(in: context)
+        StoreReset.restoreKeptBudgets(in: context)
         let categories = (try? context.fetch(FetchDescriptor<Category>())) ?? []
         let keys = categories.filter { !$0.isCustom }.compactMap(\.systemKey)
         let expected = Category.definitions.count

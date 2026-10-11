@@ -426,14 +426,10 @@ struct DataSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
-    @Query private var allTransactions: [Transaction]
-    private var transactions: [Transaction] { allTransactions.live }
     @Query private var allPayees: [Payee]
     private var payees: [Payee] { allPayees.live }
 
     @State private var confirmingErase = false
-    @State private var confirmingReset = false
-    @State private var eraseError: String?
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -446,20 +442,13 @@ struct DataSettingsView: View {
         Form {
             Section("Your Data") {
                 LabeledContent("Accounts", value: "\(accounts.count)")
-                LabeledContent("Transactions", value: "\(transactions.count)")
+                LabeledContent("Transactions", value: (try? modelContext.fetchCount(FetchDescriptor<Transaction>()))?.formatted() ?? "0")
                 LabeledContent("Memorized payees", value: "\(payees.count)")
             }
 
             Section {
                 Button("Erase All Data…", role: .destructive) { confirmingErase = true }
-                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added. Built-in categories and your budget amounts are kept. This can't be undone.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                Button("Reset Database and Quit…", role: .destructive) { confirmingReset = true }
-                Text("Starts over from an empty database in one step, however much data there is, then quits. Open Piggybank Financial again afterwards. Use this if Erase All Data is slow.")
+                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open Piggybank Financial again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -469,54 +458,18 @@ struct DataSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .confirmationDialog("Erase all your accounts, transactions, bills, goals, custom categories and payment methods?", isPresented: $confirmingErase, titleVisibility: .visible) {
-            Button("Erase Everything", role: .destructive, action: erase)
+        .confirmationDialog("Erase everything and quit?", isPresented: $confirmingErase, titleVisibility: .visible) {
+            Button("Erase Everything and Quit", role: .destructive, action: erase)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This can't be undone.")
-        }
-        .confirmationDialog("Delete everything and quit?", isPresented: $confirmingReset, titleVisibility: .visible) {
-            Button("Reset and Quit", role: .destructive) { StoreReset.requestAndQuit() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("The whole database is removed, including budget amounts, and the app quits. This can't be undone.")
-        }
-        .alert("Couldn't erase your data", isPresented: Binding(get: { eraseError != nil }, set: { if !$0 { eraseError = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(eraseError ?? "")
+            Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone.")
         }
     }
 
-    /// Deletes objects one by one. A batch delete fails on the account/transaction links.
+    /// Removes the whole database at the next launch, which takes no time however much data there is, then quits.
+    /// Deleting thousands of transactions one by one would tie the app up for minutes.
     private func erase() {
-        DataDeletion.afterLeavingAccountPages { performErase() }
-    }
-
-    private func performErase() {
-        do {
-            try modelContext.deleteAllTransactions()
-            // Cash on Hand stays, emptied out. Its transactions went with the loop above.
-            for account in try modelContext.fetch(FetchDescriptor<Account>()) {
-                if account.isDefault {
-                    account.openingBalance = 0
-                    account.notes = ""
-                } else {
-                    modelContext.delete(account)
-                }
-            }
-            for payee in try modelContext.fetch(FetchDescriptor<Payee>()) { modelContext.delete(payee) }
-            for bill in try modelContext.fetch(FetchDescriptor<Bill>()) { modelContext.delete(bill) }
-            for goal in try modelContext.fetch(FetchDescriptor<Goal>()) { modelContext.delete(goal) }
-            // Everything you added yourself goes too: custom payment methods and custom categories. Built-in categories
-            // and their budget amounts stay.
-            for method in try modelContext.fetch(FetchDescriptor<CustomPaymentMethod>()) { modelContext.delete(method) }
-            for category in try modelContext.fetch(FetchDescriptor<Category>()) where category.isCustom { modelContext.delete(category) }
-            try modelContext.save()
-        } catch {
-            modelContext.rollback()
-            eraseError = error.localizedDescription
-        }
+        DataDeletion.afterLeavingAccountPages { StoreReset.requestAndQuit(keepingBudgets: modelContext) }
     }
 }
 

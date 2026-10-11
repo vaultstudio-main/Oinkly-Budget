@@ -8,9 +8,21 @@ enum StoreReset {
     /// Also settable from the command line: `open -a Piggybank --args -piggybank.resetStoreOnLaunch YES`.
     static let key = "piggybank.resetStoreOnLaunch"
 
-    /// Asks for the database to be emptied at the next launch, then quits.
+    private static let budgetsKey = "piggybank.budgetsToKeepAfterReset"
+
+    /// Asks for the database to be emptied at the next launch, then quits. With `keepingBudgets`, the budget amounts
+    /// on the built-in categories are carried over to the fresh database.
     @MainActor
-    static func requestAndQuit() {
+    static func requestAndQuit(keepingBudgets context: ModelContext? = nil) {
+        if let context, let categories = try? context.fetch(FetchDescriptor<Category>()) {
+            var kept: [String: String] = [:]
+            for category in categories where category.isLive && !category.isCustom && category.monthlyLimit != 0 {
+                if let systemKey = category.systemKey { kept[systemKey] = "\(category.monthlyLimit)" }
+            }
+            UserDefaults.standard.set(kept, forKey: budgetsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: budgetsKey)
+        }
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -27,6 +39,19 @@ enum StoreReset {
         let storeName = url.lastPathComponent
         for name in names where name.hasPrefix(storeName) || name.hasPrefix("." + storeName.replacingOccurrences(of: ".store", with: "")) {
             try? manager.removeItem(at: folder.appendingPathComponent(name))
+        }
+    }
+
+    /// Puts the budget amounts carried over from before a reset back on the built-in categories. Call once the
+    /// built-in categories exist.
+    static func restoreKeptBudgets(in context: ModelContext) {
+        guard let kept = UserDefaults.standard.dictionary(forKey: budgetsKey) as? [String: String] else { return }
+        UserDefaults.standard.removeObject(forKey: budgetsKey)
+        guard let categories = try? context.fetch(FetchDescriptor<Category>()) else { return }
+        for category in categories {
+            if let key = category.systemKey, let text = kept[key], let amount = Decimal(string: text) {
+                category.monthlyLimit = amount
+            }
         }
     }
 }

@@ -230,7 +230,7 @@ enum HelpContent {
                 "## CSV",
                 "Export Transactions saves a spreadsheet. Import Transactions adds rows from a CSV, skipping ones already there if you want.",
                 "## Erase All Data",
-                "Settings ▸ Data erases your accounts, transactions, bills, goals, custom categories and payment methods. Built-in categories, their budgets and Cash on Hand stay.",
+                "Settings ▸ Data ▸ Erase All Data deletes your accounts, transactions, bills, goals, custom categories and payment methods, then quits. Open the app again to start fresh. Built-in categories and their budgets stay.",
                 "Take a backup before anything you can't undo.",
             ], shots: [Shot(asset: "Help-backup", caption: "Settings ▸ Import & Export.")]),
 
