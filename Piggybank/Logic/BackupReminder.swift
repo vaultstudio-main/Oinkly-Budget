@@ -43,78 +43,77 @@ enum BackupExporter {
     }
 }
 
-/// When to push a backup on the user. The longer the history, the sooner it asks again: from two years of data a
-/// backup older than a year is flagged, and from three years one older than six months.
+/// When to push a backup on the user: only once there are a lot of transactions, which is when a backup (and a
+/// fresh start for the oldest years, if you want one) is worth thinking about.
 enum BackupReminder {
     static let snoozeKey = "piggybank.backupReminderSnoozedUntil"
 
+    /// A gentle nudge from here, and a firmer one from `urgentCount`.
+    static let softCount = 50_000
+    static let urgentCount = 100_000
+
     struct Prompt {
-        let years: Int
+        let count: Int
         let isUrgent: Bool
     }
 
-    static func prompt(oldest: Date?, lastBackup: Date?, snoozedUntil: Date?, now: Date = .now,
+    static func prompt(transactionCount: Int, lastBackup: Date?, snoozedUntil: Date?, now: Date = .now,
                        calendar: Calendar = .current) -> Prompt? {
-        guard let oldest else { return nil }
-        let years = calendar.dateComponents([.year], from: oldest, to: now).year ?? 0
-        guard years >= 2 else { return nil }
+        guard transactionCount >= softCount else { return nil }
         if let snoozedUntil, snoozedUntil > now { return nil }
-        let urgent = years >= 3
-        let allowedAge = calendar.date(byAdding: .month, value: urgent ? -6 : -12, to: now) ?? now
+        let urgent = transactionCount >= urgentCount
+        // A recent backup quiets the reminder: 6 months at the soft level, 3 months at the firm one.
+        let allowedAge = calendar.date(byAdding: .month, value: urgent ? -3 : -6, to: now) ?? now
         if let lastBackup, lastBackup > allowedAge { return nil }
-        return Prompt(years: years, isUrgent: urgent)
+        return Prompt(count: transactionCount, isUrgent: urgent)
     }
 }
 
-/// A banner on the Summary that asks for a backup once there are a couple of years of history.
+/// A banner for Settings ▸ Data that asks for a backup once the transaction count is high.
 struct BackupReminderBanner: View {
     @Environment(\.modelContext) private var modelContext
-    /// The date of the oldest transaction, found by the page that shows this.
-    let oldest: Date?
+    /// How many transactions there are, counted by the page that shows this.
+    let transactionCount: Int
     @AppStorage(BackupExporter.lastBackupKey) private var lastBackupInterval: Double = 0
     @AppStorage(BackupReminder.snoozeKey) private var snoozedInterval: Double = 0
     @State private var message: String?
 
     private var prompt: BackupReminder.Prompt? {
         BackupReminder.prompt(
-            oldest: oldest,
+            transactionCount: transactionCount,
             lastBackup: lastBackupInterval > 0 ? Date(timeIntervalSinceReferenceDate: lastBackupInterval) : nil,
             snoozedUntil: snoozedInterval > 0 ? Date(timeIntervalSinceReferenceDate: snoozedInterval) : nil)
     }
 
     var body: some View {
-        Group {
-            if let prompt {
-                let tint: Color = prompt.isUrgent ? .orange : .accentColor
-                HStack(alignment: .center, spacing: 14) {
-                    Image(systemName: "externaldrive.badge.checkmark")
-                        .font(.title2)
-                        .foregroundStyle(tint)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(prompt.isUrgent ? "Back up your \(prompt.years) years of history" : "Time for a backup")
-                            .font(.headline)
-                        Text("Piggybank Financial holds \(prompt.years) years of your money now. Save a backup file somewhere safe, like iCloud Drive or an external drive.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let message {
-                            Text(message).font(.caption).foregroundStyle(.secondary)
-                        }
+        if let prompt {
+            let tint: Color = prompt.isUrgent ? .orange : .accentColor
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "externaldrive.badge.checkmark")
+                    .font(.title2)
+                    .foregroundStyle(tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("You have \(prompt.count.formatted()) transactions")
+                        .font(.headline)
+                    Text("That's a lot of history. Save a backup file somewhere safe, like iCloud Drive or an external drive.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let message {
+                        Text(message).font(.caption).foregroundStyle(.secondary)
                     }
-                    Spacer(minLength: 12)
-                    Button("Later") {
-                        let until = Calendar.current.date(byAdding: .day, value: 30, to: .now) ?? .now
-                        snoozedInterval = until.timeIntervalSinceReferenceDate
-                    }
-                    .buttonStyle(.borderless)
-                    Button("Export Backup…") { export() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(tint)
                 }
-                .padding(14)
-                .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(tint.opacity(0.45), lineWidth: 1))
+                Spacer(minLength: 8)
+                Button("Later") {
+                    let until = Calendar.current.date(byAdding: .day, value: 30, to: .now) ?? .now
+                    snoozedInterval = until.timeIntervalSinceReferenceDate
+                }
+                .buttonStyle(.borderless)
+                Button("Export Backup…") { export() }
+                    .buttonStyle(.borderedProminent)
+                    .tint(tint)
             }
+            .padding(.vertical, 4)
         }
     }
 

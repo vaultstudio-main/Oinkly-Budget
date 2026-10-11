@@ -8,15 +8,6 @@ struct SummaryView: View {
     /// Only the last 13 months: everything on this page looks back a year at most.
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
-    @Environment(\.modelContext) private var modelContext
-
-    /// The date of the oldest transaction, for the backup reminder. One row, not a pass over everything.
-    private var oldestTransactionDate: Date? {
-        var oldest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date)])
-        oldest.fetchLimit = 1
-        return (try? modelContext.fetch(oldest))?.first?.date
-    }
-
     /// The newest few, however old, for the "Last 15 Transactions" panel.
     @Query private var newest: [Transaction]
 
@@ -41,7 +32,6 @@ struct SummaryView: View {
             VStack(spacing: 12) {
                 header
                 BillAlertBanner()
-                BackupReminderBanner(oldest: oldestTransactionDate)
                 GlanceCards(accounts: accounts, transactions: transactions)
                 HStack(alignment: .top, spacing: 12) {
                     Panel(title: "Net Worth", fillsHeight: true) { netWorthChart }

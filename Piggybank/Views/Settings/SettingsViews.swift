@@ -438,11 +438,25 @@ struct DataSettingsView: View {
         return "\(short) (\(build))"
     }
 
+    @AppStorage(BackupExporter.lastBackupKey) private var lastBackupInterval: Double = 0
+    @AppStorage(BackupReminder.snoozeKey) private var snoozedInterval: Double = 0
+
+    private var transactionCount: Int { (try? modelContext.fetchCount(FetchDescriptor<Transaction>())) ?? 0 }
+
     var body: some View {
+        let count = transactionCount
         Form {
+            // Only shows once there are a great many transactions.
+            if BackupReminder.prompt(
+                transactionCount: count,
+                lastBackup: lastBackupInterval > 0 ? Date(timeIntervalSinceReferenceDate: lastBackupInterval) : nil,
+                snoozedUntil: snoozedInterval > 0 ? Date(timeIntervalSinceReferenceDate: snoozedInterval) : nil) != nil {
+                Section { BackupReminderBanner(transactionCount: count) }
+            }
+
             Section("Your Data") {
                 LabeledContent("Accounts", value: "\(accounts.count)")
-                LabeledContent("Transactions", value: (try? modelContext.fetchCount(FetchDescriptor<Transaction>()))?.formatted() ?? "0")
+                LabeledContent("Transactions", value: count.formatted())
                 LabeledContent("Memorized payees", value: "\(payees.count)")
             }
 
