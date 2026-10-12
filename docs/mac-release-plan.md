@@ -63,8 +63,8 @@ container). Tick each:
       using `docs/help-screenshots.md` as the shot list.
 - [ ] Age rating questionnaire (no objectionable content).
 - [ ] App Privacy answers: "Data Not Collected".
-- [ ] Review notes: no account needed; to look around, use Piggybank ▸ Testing is NOT in release builds, so mention that
-      the reviewer can add accounts from the setup screen.
+- [ ] Review notes: no sign-in needed. The reviewer adds a few accounts from the setup screen to look around. (The
+      Testing window and test data exist only in Debug builds, so there is no demo data to offer in a release build.)
 - [ ] What's new (1.0): copy from the Release Notes window.
 
 ### 6. Archive and upload
