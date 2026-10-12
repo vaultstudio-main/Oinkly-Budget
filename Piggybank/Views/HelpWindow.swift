@@ -239,7 +239,7 @@ enum HelpContent {
                 "• Click it for priority bills, what's coming up in the next 14 days, and a total. Click a circle to mark a bill paid.",
                 "• Closing the main window leaves the app running so the pig stays. Click the app in the Dock to open the window again, and press ⌘Q to quit.",
                 "• Settings ▸ General ▸ Background turns the menu bar item on or off and opens the app when you log in.",
-                "• Reminders are notifications sent the number of days you chose before a bill is due, while the app is running. Turn them off in Settings ▸ General.",
+                "• Reminders are notifications sent the number of days you chose before a bill is due, while the app is running. Turn them off, or add your own reminders such as reviewing your budget, in Settings ▸ Reminders.",
             ], shots: [Shot(asset: "Help-menu-bar", caption: "The menu bar pop-up.")]),
 
             Topic(title: "Settings", symbol: "gearshape", lines: [

@@ -47,7 +47,7 @@ container). Tick each:
 - [ ] Edit and delete a transaction. Delete one half of a transfer (both go).
 - [ ] Add a receipt photo and a PDF. Remove one.
 - [ ] Add a bill, mark it paid, pay it with Pay a Bill. Reminder permission prompt appears the first time.
-- [ ] Notifications: Settings ▸ General ▸ Send a Test Notification shows a banner.
+- [ ] Notifications: Settings ▸ Reminders ▸ Send a Test Notification shows a banner.
 - [ ] Goals: create, add progress, reach one (it archives).
 - [ ] Reports: all four tabs, back and forward, Current pill.
 - [ ] Backup: Export Backup, Erase All Data, open the `.pig` (double-click) and confirm everything returns.
