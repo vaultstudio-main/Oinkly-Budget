@@ -8,6 +8,7 @@ struct TransactionDetailWindow: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var allCategories: [Category]
+    @Environment(\.dismiss) private var dismiss
     @State private var editing = false
 
     private var transaction: Transaction? {
@@ -88,6 +89,8 @@ struct TransactionDetailWindow: View {
             Divider()
             HStack {
                 Spacer()
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Button("Edit…") { editing = true }
                     .keyboardShortcut(.defaultAction)
             }
