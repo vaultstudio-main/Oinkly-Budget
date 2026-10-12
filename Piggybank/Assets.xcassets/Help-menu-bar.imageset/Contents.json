@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "Help-menu-bar.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

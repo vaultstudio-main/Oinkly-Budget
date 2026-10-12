@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "Help-card-details.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

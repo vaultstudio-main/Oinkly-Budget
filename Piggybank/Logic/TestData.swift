@@ -87,7 +87,7 @@ enum TestData {
             return made
         }
         let cash = Account.ensureDefault(in: context)
-        let checking = account("Everyday Checking", .checking, 2_400)
+        let checking = account("Everyday Checking", .checking, 35_000)
         checking.institution = "Harbor Credit Union"
         checking.accountNumber = "004821907365"
         checking.routingNumber = "021000021"
@@ -171,8 +171,8 @@ enum TestData {
             // Amounts drift a little from month to month without growing forever.
             let drift = back % 4
             // Pay and savings.
-            tx(checking, monthDay(back, 1), "Acme Corp Payroll", "paycheck", 2_850, method: .directDeposit)
-            tx(checking, monthDay(back, 15), "Acme Corp Payroll", "paycheck", 2_850, method: .directDeposit)
+            tx(checking, monthDay(back, 1), "Acme Corp Payroll", "paycheck", 3_500, method: .directDeposit)
+            tx(checking, monthDay(back, 15), "Acme Corp Payroll", "paycheck", 3_500, method: .directDeposit)
             tx(savings, monthDay(back, 28), "Interest", "interest-dividends", 11.80)
             if back == 1 { tx(checking, monthDay(back, 9), "Weekend House Sit", "custom-house-sitting", 180, method: .venmo) }
 
@@ -201,7 +201,7 @@ enum TestData {
             }
             let atmDate = monthDay(back, 7)
             if atmDate <= today {
-                let moved = Transfers.move(from: checking, to: cash, amount: 120, date: atmDate, memo: "Cash", state: .reconciled,
+                let moved = Transfers.move(from: checking, to: cash, amount: 300, date: atmDate, memo: "Cash", state: .reconciled,
                                            paymentType: .atm, checkNumber: "", payeeOut: "ATM Withdrawal", payeeIn: "ATM Withdrawal", in: context)
                 moved.into.paymentChoice = .type(.cash)
                 for leg in [moved.out, moved.into] { leg.isAtmWithdrawal = true; leg.noReceipt = true }
@@ -209,11 +209,17 @@ enum TestData {
 
             // Card payments.
             if back >= 1 {
-                let pay = Transfers.pay(from: checking, toward: card, amount: 900, date: monthDay(back, 26), memo: "Statement payment",
+                let pay = Transfers.pay(from: checking, toward: card, amount: 1_550, date: monthDay(back, 26), memo: "Statement payment",
                                         state: .reconciled, paymentType: nil, checkNumber: "", in: context)
                 pay.out.paymentChoice = .type(.bankTransfer)
                 pay.into.paymentChoice = .type(.bankTransfer)
                 pay.into.noReceipt = true
+
+                let storePay = Transfers.pay(from: checking, toward: storeCard, amount: 280, date: monthDay(back, 27), memo: "Statement payment",
+                                             state: .reconciled, paymentType: nil, checkNumber: "", in: context)
+                storePay.out.paymentChoice = .type(.bankTransfer)
+                storePay.into.paymentChoice = .type(.bankTransfer)
+                storePay.into.noReceipt = true
             }
 
             // Investments.
@@ -226,8 +232,8 @@ enum TestData {
 
         // Everyday purchases, every day of the history, to put real volume in the store.
         addEverydayPurchases(today: today, context: context, categories: categories,
-                             targets: [(checking, .debitCard, 35), (card, .creditCard, 25), (cash, .cash, 15),
-                                       (storeCard, .storeCard, 15), (savings, .bankTransfer, 10)])
+                             targets: [(checking, .debitCard, 55), (card, .creditCard, 25), (cash, .cash, 5),
+                                       (storeCard, .storeCard, 5), (savings, .bankTransfer, 10)])
 
         // A few pending and unreconciled entries, a check with a number, and a receipt.
         if let pending = tx(card, day(-1), "Bookshop on Elm", "books-media", -34.20, method: .creditCard, state: .pending) {

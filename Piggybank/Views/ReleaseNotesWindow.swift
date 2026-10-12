@@ -84,6 +84,16 @@ struct ReleaseNotesWindow: View {
                     Text("You are running \(currentVersion)").foregroundStyle(.secondary)
                 }
 
+                // A look at the app, from the same screenshot the Help uses.
+                if let image = NSImage(named: "Help-welcome") {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 560)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
+                }
+
                 ForEach(ReleaseNotes.releases) { release in
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Version \(release.version) · \(release.title)").font(.title2.bold())
