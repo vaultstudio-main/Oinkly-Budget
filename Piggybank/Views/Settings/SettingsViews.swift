@@ -14,49 +14,8 @@ struct GeneralSettingsView: View {
         Binding(get: { settings.appearance }, set: { settings.setAppearance($0) })
     }
 
-    @AppStorage(BillNotifier.enabledKey) private var billReminders = true
-    @State private var notificationStatus: BillNotifier.Status?
-    @State private var testMessage: String?
-
     var body: some View {
         Form {
-            Section {
-                Toggle("Remind me about upcoming bills", isOn: $billReminders)
-                    .onChange(of: billReminders) { _, on in
-                        if on { Task { await BillNotifier.requestAccess(); notificationStatus = await BillNotifier.status() } }
-                    }
-                LabeledContent("Notifications") {
-                    switch notificationStatus {
-                    case .allowed: Label("On", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
-                    case .denied: Label("Off in System Settings", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                    case .notAsked: Text("Not allowed yet").foregroundStyle(.secondary)
-                    case nil: Text("Checking…").foregroundStyle(.secondary)
-                    }
-                }
-                HStack {
-                    Button("Send a Test Notification") {
-                        Task {
-                            let sent = await BillNotifier.sendTest()
-                            testMessage = sent ? "Sent. It should appear in a moment." : "Notifications aren't allowed yet. Turn them on in System Settings."
-                            notificationStatus = await BillNotifier.status()
-                        }
-                    }
-                    Button("Open Notification Settings") {
-                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                }
-                if let testMessage {
-                    Text(testMessage).font(.footnote).foregroundStyle(.secondary)
-                }
-            } header: {
-                Text("Bill Reminders")
-            } footer: {
-                Text("You get a notification the number of days before a bill is due that you chose for it, and another on the day it is due, at 9 AM, even when Piggybank Financial isn't open.")
-            }
-            .task { notificationStatus = await BillNotifier.status() }
-
             BackgroundSettingsSection()
 
             Section {

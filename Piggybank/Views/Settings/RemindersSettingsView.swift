@@ -6,6 +6,8 @@ struct RemindersSettingsView: View {
     @State private var editing: CustomReminder?
     @State private var isNew = false
     @State private var status: BillNotifier.Status?
+    @State private var testMessage: String?
+    @AppStorage(BillNotifier.enabledKey) private var billReminders = true
 
     var body: some View {
         Form {
@@ -45,8 +47,12 @@ struct RemindersSettingsView: View {
                 Text("Each one arrives as a notification, even when Piggybank Financial isn't open. Click it to jump to the page you chose.")
             }
 
-            Section("Notifications") {
-                LabeledContent("Status") {
+            Section {
+                Toggle("Remind me about upcoming bills", isOn: $billReminders)
+                    .onChange(of: billReminders) { _, on in
+                        if on { Task { await BillNotifier.requestAccess(); status = await BillNotifier.status() } }
+                    }
+                LabeledContent("Notifications") {
                     switch status {
                     case .allowed: Label("On", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
                     case .denied: Label("Off in System Settings", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
@@ -54,13 +60,27 @@ struct RemindersSettingsView: View {
                     case nil: Text("Checking…").foregroundStyle(.secondary)
                     }
                 }
-                if status == .denied {
+                HStack {
+                    Button("Send a Test Notification") {
+                        Task {
+                            let sent = await BillNotifier.sendTest()
+                            testMessage = sent ? "Sent. It should appear in a moment." : "Notifications aren't allowed yet. Turn them on in System Settings."
+                            status = await BillNotifier.status()
+                        }
+                    }
                     Button("Open Notification Settings") {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
                             NSWorkspace.shared.open(url)
                         }
                     }
                 }
+                if let testMessage {
+                    Text(testMessage).font(.footnote).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Bill Reminders")
+            } footer: {
+                Text("You get a notification the number of days before a bill is due that you chose for it, and another on the day it is due, at 9 AM, even when Piggybank Financial isn't open.")
             }
         }
         .formStyle(.grouped)
