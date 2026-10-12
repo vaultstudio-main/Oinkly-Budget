@@ -51,7 +51,7 @@ struct GeneralSettingsView: View {
                     Text(testMessage).font(.footnote).foregroundStyle(.secondary)
                 }
             } header: {
-                Text("Reminders")
+                Text("Bill Reminders")
             } footer: {
                 Text("You get a notification the number of days before a bill is due that you chose for it, and another on the day it is due, at 9 AM, even when Piggybank Financial isn't open.")
             }
@@ -495,6 +495,8 @@ struct MacSettingsView: View {
         TabView {
             GeneralSettingsView()
                 .tabItem { Label("General", systemImage: "gearshape") }
+            RemindersSettingsView()
+                .tabItem { Label("Reminders", systemImage: "bell") }
             AccountsSettingsView()
                 .tabItem { Label("Accounts", systemImage: "building.columns") }
             CategoriesSettingsView()

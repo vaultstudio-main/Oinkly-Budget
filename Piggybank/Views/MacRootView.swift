@@ -148,6 +148,18 @@ struct MacRootView: View {
             }
         }
         .navigationTitle("Piggybank Financial")
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
+            switch note.userInfo?["page"] as? String {
+            case "summary": selection = .summary
+            case "transactions": selection = .transactions
+            case "reports": selection = .reports
+            case "bills": selection = .bills
+            case "planning": selection = .planning
+            case "liabilities": selection = .liabilities
+            case "investments": selection = .investments
+            default: break
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankWillDeleteAccounts)) { _ in selection = .summary }
         .focusedSceneValue(\.selectedAccountID, selectedAccountID)
         .appAppearance()

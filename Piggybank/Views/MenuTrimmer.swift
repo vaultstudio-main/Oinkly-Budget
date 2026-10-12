@@ -85,6 +85,19 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         completionHandler([.banner, .list, .sound])
     }
 
+    /// Clicking a reminder brings Piggybank Financial forward and goes to the page the reminder named.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
+        let page = response.notification.request.content.userInfo["page"] as? String
+        Task { @MainActor in
+            NSApp.activate(ignoringOtherApps: true)
+            if let page, page != ReminderPage.none.rawValue {
+                NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+            }
+            completionHandler()
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         MenuTrimmer.install()
@@ -105,6 +118,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
     static func refreshReminders() async {
         guard let container else { return }
         await BillNotifier.refresh(in: container.mainContext)
+        await CustomReminders.shared.apply()
     }
 
     /// Closing the window leaves Piggybank Financial running, so its menu bar item stays. Without a menu bar item there
