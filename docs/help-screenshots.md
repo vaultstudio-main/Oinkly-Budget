@@ -1,4 +1,7 @@
-# Help screenshots to take
+# Help screenshots
+
+All 18 are in the asset catalog (taken 2026-10-11 at about 1,450 px wide from the test data, light mode). Retake them
+at a larger size using the list below if you want them sharper for the App Store.
 
 The Help window shows a screenshot under a topic when an image set with the exact name below exists in
 `Piggybank/Assets.xcassets`. A missing image just doesn't show, so you can add them one at a time.

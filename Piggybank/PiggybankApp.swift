@@ -8,13 +8,13 @@ struct PiggybankApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema([Account.self, Category.self, Transaction.self, Payee.self, Holding.self, HoldingEvent.self, Bill.self, Goal.self, GoalContribution.self, CustomPaymentMethod.self])
+        let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
         StoreReset.performIfRequested(for: configuration)
         do {
-            container = try ModelContainer(for: schema, configurations: configuration)
+            container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)
         } catch {
             // Keep going with throwaway storage so the boot window can explain what went wrong.
             // The main window never opens in this state.
