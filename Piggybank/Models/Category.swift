@@ -32,17 +32,9 @@ final class Category {
         self.systemKey = systemKey
     }
 
-    /// Built-in categories can't be renamed, restyled or deleted. Only their budget amount changes.
-    var isSystem: Bool { systemKey != nil && !isCustom }
-
     static let customKeyPrefix = "custom-"
 
     /// A budget the user made themselves, such as "Civic Fuel". It keeps a key so the launch-time cleanup of
     /// stray categories leaves it alone, but unlike built-in categories it can be renamed and deleted.
     var isCustom: Bool { systemKey?.hasPrefix(Category.customKeyPrefix) == true }
-}
-
-extension Array where Element == Category {
-    /// Expense categories first, then income categories, each in the existing order.
-    var expensesFirst: [Category] { filter { !$0.isIncome } + filter { $0.isIncome } }
 }

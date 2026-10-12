@@ -256,9 +256,4 @@ extension Transaction {
         return isDebtPayment && account?.isLive == true && account?.isDebt == true
     }
 
-    /// The attachment is a PDF rather than a photo.
-    var receiptIsPDF: Bool {
-        guard isLive, let data = receiptData else { return false }
-        return data.prefix(4) == Data("%PDF".utf8)
-    }
 }

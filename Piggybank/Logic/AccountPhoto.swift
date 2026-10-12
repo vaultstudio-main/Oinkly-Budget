@@ -22,18 +22,6 @@ enum AccountPhoto {
         return CGImageDestinationFinalize(destination) ? output as Data : nil
     }
 
-    /// A small version for lists, so rows don't decode a full photo each time they draw.
-    static func thumbnail(from data: Data?, pixelSize: Int = 120) -> Image? {
-        guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: pixelSize,
-        ]
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return Image(decorative: cgImage, scale: 1)
-    }
-
     static func image(from data: Data?) -> Image? {
         guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else { return nil }

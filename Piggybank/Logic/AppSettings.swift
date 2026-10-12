@@ -17,14 +17,6 @@ enum Appearance: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Nil lets the device decide.
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: nil
-        case .light: .light
-        case .dark: .dark
-        }
-    }
 }
 
 /// User preferences, saved on the device. Observable, so every screen that reads a value

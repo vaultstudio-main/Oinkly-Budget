@@ -38,12 +38,4 @@ enum Budget {
 }
 
 extension Budget {
-    /// A budget counts as "set" once it has an amount above zero.
-    static func isSet(_ category: Category) -> Bool { !category.isIncome && category.monthlyLimit > 0 }
-
-    /// Budgets to show on Home, the Budgets tab and the Summary: only ones with an amount set and
-    /// visibility turned on in Settings. Nothing is ever deleted; hidden budgets stay in Settings.
-    static func visibleBudgets(_ categories: [Category]) -> [Category] {
-        categories.filter { isSet($0) && $0.showOnBudgets }
-    }
 }
