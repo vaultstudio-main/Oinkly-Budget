@@ -11,6 +11,11 @@ struct NewTransactionRequest: Codable, Hashable {
     var accountID: PersistentIdentifier?
 }
 
+/// Which transaction the read-only detail window shows.
+struct TransactionDetailRequest: Codable, Hashable {
+    var id: PersistentIdentifier
+}
+
 /// File > New Transaction opens its own window. Accounts are created in Settings.
 struct FileNewCommands: Commands {
     @Environment(\.openWindow) private var openWindow

@@ -90,6 +90,7 @@ struct TransactionsView: View {
 /// database does the filtering.
 private struct TransactionsTable: View {
     @Query private var rows: [Transaction]
+    @Environment(\.openWindow) private var openWindow
     private let isSearching: Bool
 
     init(month: Date, accountID: Account.ID?, search: String) {
@@ -133,6 +134,10 @@ private struct TransactionsTable: View {
         transaction.account?.supportsHoldings == true ? InvestmentType.of(transaction) : nil
     }
 
+    private func openDetails(_ id: Transaction.ID) {
+        openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
+    }
+
     var body: some View {
         let list = rows.filter { $0.isLive && $0.account?.isLive == true }
         let sums = totals(list)
@@ -161,6 +166,13 @@ private struct TransactionsTable: View {
                 .width(min: 100, ideal: 120)
                 TableColumn("Status") { ReconcileBadge(state: $0.state) }
                     .width(min: 110, ideal: 120)
+            }
+            .contextMenu(forSelectionType: Transaction.ID.self) { ids in
+                if ids.count == 1, let id = ids.first {
+                    Button("View Details", systemImage: "doc.text.magnifyingglass") { openDetails(id) }
+                }
+            } primaryAction: { ids in
+                if ids.count == 1, let id = ids.first { openDetails(id) }
             }
             .overlay {
                 if list.isEmpty {

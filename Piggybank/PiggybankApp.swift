@@ -68,6 +68,16 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        WindowGroup("Transaction", id: "transaction-detail", for: TransactionDetailRequest.self) { $request in
+            TransactionDetailWindow(id: request?.id)
+                .savesChangesImmediately()
+                .appAppearance()
+        }
+        .modelContainer(container)
+        .defaultSize(width: 520, height: 640)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         WindowGroup("Update Investment Price", id: "update-price", for: NewTransactionRequest.self) { $request in
             UpdatePriceWindow(accountID: request?.accountID)
                 .savesChangesImmediately()

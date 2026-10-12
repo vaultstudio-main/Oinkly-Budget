@@ -32,6 +32,7 @@ private struct RegisterContent: View {
     @State private var confirmingDelete = false
     @State private var limitMessage: String?
     @State private var editingDate: Transaction?
+    @Environment(\.openWindow) private var openWindow
 
     init(account: Account, month: Binding<Date>) {
         self.account = account
@@ -182,6 +183,9 @@ private struct RegisterContent: View {
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .contextMenu(forSelectionType: PersistentIdentifier.self) { ids in
                 if ids.count == 1, let id = ids.first, let transaction = monthTransactions.first(where: { $0.persistentModelID == id }) {
+                    Button("View Details", systemImage: "doc.text.magnifyingglass") {
+                        openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
+                    }
                     Button("Edit Transaction…", systemImage: "pencil") { editingDate = transaction }
                 }
                 if !ids.isEmpty {
@@ -189,6 +193,11 @@ private struct RegisterContent: View {
                         selection = ids
                         confirmingDelete = true
                     }
+                }
+            } primaryAction: { ids in
+                // Double-click: a read-only close look in its own window. Nothing is changed by looking.
+                if ids.count == 1, let id = ids.first {
+                    openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
                 }
             }
             .alternatingRowBackgrounds(.disabled)
@@ -232,7 +241,7 @@ private struct RegisterContent: View {
 
 /// Right-click ▸ Edit Transaction… in the register. Everything about a transaction is changed here, so nothing can be
 /// bumped by accident in the list itself.
-private struct EditTransactionSheet: View {
+struct EditTransactionSheet: View {
     let transaction: Transaction
     let account: Account
     let categories: [Category]
