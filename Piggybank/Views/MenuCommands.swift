@@ -39,14 +39,12 @@ struct FileNewCommands: Commands {
             }
         }
 
-        #if DEBUG
-        // In the Piggybank menu, below About. Debug builds only.
-        CommandGroup(after: .appInfo) {
-            Button("Testing…") {
-                openWindow(id: "testing")
-            }
-        }
-        #endif
+        // The Testing window (id "testing", Debug builds only) still exists but has no menu item for now. To bring
+        // the item back, add a Button here that calls openWindow(id: "testing"), inside #if DEBUG:
+        //
+        //     CommandGroup(after: .appInfo) {
+        //         Button("Testing…") { openWindow(id: "testing") }
+        //     }
 
         CommandGroup(replacing: .newItem) {
             Button("New Transaction…") {
