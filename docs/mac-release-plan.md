@@ -16,8 +16,9 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
 
 ### 1. Product decisions (you)
 - [ ] **Price.** Free, paid, or free with a tip? Decide before creating the app record.
-- [ ] **Minimum macOS.** The project currently requires macOS 27.0 (`MACOSX_DEPLOYMENT_TARGET`). Lower it if you want to
-      reach people on older systems, then build and test on that version.
+- [x] **Minimum macOS** is now 15.0 (`MACOSX_DEPLOYMENT_TARGET`). It builds clean, but only macOS 27 was available to test
+      on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
+      (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
 - [ ] **Name.** The app is "Piggybank Financial" (bundle id `vault.Piggybank`). Check the name is free in App Store Connect.
 - [ ] **Support and privacy URLs.** App Store Connect requires both. A one-page site or a GitHub page is enough.
       Privacy statement in one line: nothing is collected, nothing leaves the Mac.
@@ -57,10 +58,8 @@ container). Tick each:
 
 ### 5. Store listing (you)
 - [ ] Name, subtitle, description, keywords, promotional text. Mention Mac only.
-- [ ] Screenshots: Mac App Store takes 1280×800, 1440×900, 2560×1600 or 2880×1800. The Help screenshots in
-      `Piggybank/Assets.xcassets/Help-*.imageset` are the right content (Summary, register, bills, reports, goals) but
-      are small. Retake them at full size on your Mac in light mode with sample data (Testing ▸ Fill with Test Data),
-      using `docs/help-screenshots.md` as the shot list.
+- [x] Screenshots: 10 at 2880×1800 (dark mode, sample data, no alpha) are in `docs/app-store-screenshots`. Lead with
+      01-summary, 06-bills, 08-checking, 03-reports, 05-investments. Upload up to 10.
 - [ ] Age rating questionnaire (no objectionable content).
 - [ ] App Privacy answers: "Data Not Collected".
 - [ ] Review notes: no sign-in needed. The reviewer adds a few accounts from the setup screen to look around. (The
@@ -79,7 +78,6 @@ Archive ▸ Distribute App ▸ Developer ID ▸ Upload for notarization ▸ expo
 no 30% cut, but you host it and handle updates yourself. The sandbox can stay on.
 
 ## Known rough edges (none block a 1.0)
-- The ATM Withdrawal and Pay a Bill windows have empty space below the form.
 - Debug builds are much slower than Release, especially under Xcode's debugger. Judge speed on Release only.
 - Reports (yearly) loads the whole year, about 1.5 s at 100,000 transactions. It could read from the ledger snapshot.
 - After an edit the Summary can be a second behind while the background snapshot rebuilds. Registers are exact.

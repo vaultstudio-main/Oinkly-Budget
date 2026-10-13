@@ -53,7 +53,7 @@ struct BillPayWindow: View {
 
     var body: some View {
         content
-            .frame(width: 480, height: 640)
+            .frame(width: 480, height: 720)
             .background(Theme.background)
             .onAppear(perform: pickDefaultSource)
     }

@@ -29,7 +29,7 @@ struct AtmWithdrawalView: View {
 
     var body: some View {
         content
-            .frame(width: 460, height: 620)
+            .frame(width: 460, height: 410)
             .background(Theme.background)
             .onAppear(perform: pickDefaultSource)
     }

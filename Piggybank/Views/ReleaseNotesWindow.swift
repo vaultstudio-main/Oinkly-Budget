@@ -36,11 +36,13 @@ enum ReleaseNotes {
                 "Categories match the direction: expense categories for money out, income categories for money in.",
                 "Payment methods, including your own, and a check number for checks.",
                 "Pending, Unreconciled and Reconciled statuses.",
+                "Double-click any transaction for a closer look in its own window, with the receipt shown larger. Open several side by side. Nothing changes until you press Edit.",
                 "Receipt photos or PDF bills on checking accounts and credit card charges, or mark a transaction as having no receipt. Card payments never have one.",
             ]),
             ("Bills & Payments", [
                 "A Bills page with a calendar, an Important list and a monthly view.",
                 "Reminders before each bill is due, plus a priority alert for important bills.",
+                "Your own reminders in Settings ▸ Reminders: review the budget each month, check bills each week, back up, or anything else, with a notification that opens the page you choose.",
                 "Loans and credit cards with a due date add their own bill.",
                 "Pay a Bill records the payment on both sides, with a payment method and status.",
                 "Bills can have a category. Paying one with Pay a Bill records it under that category, locked, so it shows in reports; with no category it is locked to Payment.",
@@ -62,6 +64,7 @@ enum ReleaseNotes {
                 "A reminder on the Summary to save a backup once you have two years of history, and a firmer one at three.",
                 "Help and these release notes in the Help menu.",
                 "Opens at full window size.",
+                "Works on macOS 15 and later.",
             ]),
         ]),
     ]
