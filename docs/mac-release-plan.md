@@ -15,7 +15,11 @@ Status as of 2026-10-11. Piggybank is a **Mac-only** app. The iPhone and iPad co
 Work top to bottom. Items marked **you** need your account, your Mac or your eyes.
 
 ### 1. Product decisions (you)
-- [ ] **Price.** Free, paid, or free with a tip? Decide before creating the app record.
+- [x] **Price: $9.99** (one-time purchase). Needs, in App Store Connect before you can sell:
+      the **Paid Apps Agreement** signed, **banking** details and **tax** forms completed (Business ▸ Agreements, Tax and
+      Banking). Also apply for the **App Store Small Business Program** (Apple's commission drops from 30% to 15% while
+      your yearly proceeds are under $1 million). There are no free trials on the Mac App Store, so the screenshots and
+      description have to do the selling. Promo codes can be given to reviewers or friends.
 - [x] **Minimum macOS** is now 15.0 (`MACOSX_DEPLOYMENT_TARGET`). It builds clean, but only macOS 27 was available to test
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
