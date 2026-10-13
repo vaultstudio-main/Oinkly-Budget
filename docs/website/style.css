@@ -82,3 +82,5 @@ footer.site a { color: var(--muted); margin-right: 16px; }
 .narrow { max-width: 720px; }
 .about-head { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; flex-wrap: wrap; }
 .portrait { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--line); }
+
+.hero p.price { font-size: 16px; opacity: .9; margin-top: 14px; }
