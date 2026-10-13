@@ -21,7 +21,12 @@ enum MenuTrimmer {
         // Copy, paste and the rest normally live in the Edit menu. Without it they would stop working in text
         // fields, so they are handled here directly.
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            handleEditingShortcut(event) ? nil : event
+            if event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
+               event.charactersIgnoringModifiers == "w", let window = NSApp.keyWindow {
+                window.performClose(nil)
+                return nil
+            }
+            return handleEditingShortcut(event) ? nil : event
         }
     }
 
@@ -31,6 +36,26 @@ enum MenuTrimmer {
             menu.removeItem(item)
         }
         trimAppMenu(menu)
+        trimFileMenu(menu)
+    }
+
+    /// File keeps only the ways to add things. Close and Close All come back with every window, so they are removed
+    /// again here. ⌘W still closes the front window (see the key monitor).
+    private static func trimFileMenu(_ mainMenu: NSMenu) {
+        guard let file = mainMenu.items.first(where: { $0.submenu?.title == "File" })?.submenu else { return }
+        for item in file.items where item.title == "Close" || item.title == "Close All" {
+            file.removeItem(item)
+        }
+        // Don't leave a divider hanging at the bottom or two in a row.
+        while let last = file.items.last, last.isSeparatorItem { file.removeItem(last) }
+        var index = 1
+        while index < file.items.count {
+            if file.items[index].isSeparatorItem && file.items[index - 1].isSeparatorItem {
+                file.removeItem(at: index)
+            } else {
+                index += 1
+            }
+        }
     }
 
     /// The app's own menu keeps only About, Settings and Quit. No Services or Hide rows.
