@@ -26,7 +26,7 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
       required. Privacy in one line: nothing is collected, nothing leaves the Mac.
 
 ### 2. Accounts and signing (you)
-- [ ] Paid Apple Developer Program membership (the project already has team `LVKJ422Q3M`; confirm it is the paid one).
+- [x] Paid Apple Developer Program membership (confirmed; the project uses team `LVKJ422Q3M`).
 - [ ] App Store Connect: create the app record, platform **macOS**, bundle id `vault.Piggybank`, category Finance.
 - [ ] Signing: Automatic, Apple Distribution certificate, Mac App Store provisioning. Xcode handles it on Archive.
 - [ ] Sandbox entitlements the app needs: App Sandbox, User Selected File (read/write). Nothing else. Notifications need
