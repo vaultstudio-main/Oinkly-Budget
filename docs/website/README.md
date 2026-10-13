@@ -7,6 +7,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 |---|---|
 | `index.html` | Home page and project list (add new apps as cards here) |
 | `piggybank.html` | Piggybank Financial product page |
+| `about.html` | About you. Add a photo as `images/portrait.png` (square, about 400 px) and fill in the capitalised prompts |
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |
 | `style.css` | Shared look, follows light and dark mode |
@@ -14,6 +15,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 
 ## Fill in before publishing
 Search the folder for these and replace them:
+- `YOUR NAME`, `YOUR CITY OR REGION` and the capitalised prompts on `about.html`.
 - `YOUR NAME OR STUDIO`: the name shown in the header, footer and home page.
 - `YOUR-SUPPORT-EMAIL`: a real address for support. Use an address you are happy to make public.
 - `https://apps.apple.com/` on `piggybank.html`: the app's real Mac App Store link, once it exists.
