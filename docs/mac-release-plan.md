@@ -20,8 +20,10 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
 - [ ] **Name.** The app is "Piggybank Financial" (bundle id `vault.Piggybank`). Check the name is free in App Store Connect.
-- [ ] **Support and privacy URLs.** App Store Connect requires both. A one-page site or a GitHub page is enough.
-      Privacy statement in one line: nothing is collected, nothing leaves the Mac.
+- [ ] **Website.** A draft is in `docs/website` (home, product, support and privacy pages; see its `README.md`). Fill in
+      the placeholders (name, support email, App Store link), upload the folder to the new domain, then use the
+      `support.html` and `privacy.html` URLs as the Support URL and Privacy Policy URL in App Store Connect. They are
+      required. Privacy in one line: nothing is collected, nothing leaves the Mac.
 
 ### 2. Accounts and signing (you)
 - [ ] Paid Apple Developer Program membership (the project already has team `LVKJ422Q3M`; confirm it is the paid one).
