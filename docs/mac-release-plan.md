@@ -89,7 +89,7 @@ no 30% cut, but you host it and handle updates yourself. The sandbox can stay on
 - Reports (yearly) loads the whole year, about 1.5 s at 100,000 transactions. It could read from the ledger snapshot.
 - After an edit the Summary can be a second behind while the background snapshot rebuilds. Registers are exact.
 - Importing a very large CSV into an account that already has tens of thousands of rows is slow (SwiftData cost).
-- No sync between devices (decided), and no mobile version. See `docs/icloud-sync-plan.md` for the companion-app idea.
+- No sync between devices (decided), and no mobile version. Backups (`.pig`) are how data moves between computers.
 
 ## After release
 - Take a `.pig` backup before every update you install on your own Mac.
