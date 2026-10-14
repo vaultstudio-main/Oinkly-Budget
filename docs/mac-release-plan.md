@@ -3,6 +3,10 @@
 Status as of 2026-10-11. Piggybank is a **Mac-only** app. The iPhone and iPad code was removed (still in git history up to
 `aa90b3f`), and there is no sync: data lives on the Mac, and `.pig` backups are the way to move or protect it.
 
+> Repository layout: this folder is the git repository. The Mac app is in `Piggybank/` (its Xcode project and source),
+> these notes are in `docs/`, and a `piggybank-windows/` folder can sit beside them later. File paths below that
+> start with `Piggybank/` are inside that app folder.
+
 ## Where the app stands
 - Features for 1.0 are in: accounts of every kind, registers, receipts, bills and reminders, goals, budgets, reports,
   investments, liabilities, backups, menu bar item, notifications, Help with 18 screenshots, Release Notes.
