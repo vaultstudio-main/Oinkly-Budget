@@ -7,7 +7,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 |---|---|
 | `index.html` | Home page and project list (add new apps as cards here) |
 | `piggybank.html` | Piggybank Financial product page |
-| `about.html` | About Vault Studio (hobbyist studio, no personal details). Add a photo as `images/portrait.png` (square, about 400 px) when you have one |
+| `about.html` | About Vault Studio (hobbyist studio, no personal details). Photo is `images/profile-square.jpg` (square crop of `profile.jpeg`) |
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |
 | `style.css` | Shared look, follows light and dark mode |
@@ -19,8 +19,9 @@ A small static site for the domain. No build step and no dependencies: upload th
 - Canonical links, `sitemap.xml` and `robots.txt` use `https://vaultstudio.dev`.
 
 ## Still to do before publishing
-- The About page is deliberately impersonal (a hobbyist studio, no name or location). Add your photo as
-  `images/portrait.png` when you have it; until then the picture slot hides itself.
+- The About page text is deliberately impersonal (a hobbyist studio, no name or location). The profile picture is
+  `images/profile-square.jpg`, a 400 px square crop of `images/profile.jpeg`. To change the photo, replace
+  `profile.jpeg` and make a new square crop.
 - "Coming soon to the Mac App Store" on `index.html` and `piggybank.html`: when the app is live, swap each
   `<span class="button soon">` for `<a class="button" href="YOUR APP STORE LINK">Get it on the Mac App Store</a>`, and
   change the "Coming soon for Mac" badge on `index.html` to "Now available for Mac".
