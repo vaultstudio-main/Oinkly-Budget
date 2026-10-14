@@ -84,3 +84,6 @@ footer.site a { color: var(--muted); margin-right: 16px; }
 .portrait { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--line); }
 
 .hero p.price { font-size: 16px; opacity: .9; margin-top: 14px; }
+
+.button.soon { cursor: default; opacity: .92; }
+.cta .button.soon { background: rgba(255,255,255,.18); color: #fff; border: 1.5px solid rgba(255,255,255,.7); }

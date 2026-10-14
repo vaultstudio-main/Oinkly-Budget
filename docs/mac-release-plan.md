@@ -95,3 +95,6 @@ no 30% cut, but you host it and handle updates yourself. The sandbox can stay on
 - Take a `.pig` backup before every update you install on your own Mac.
 - Any change to a stored model property needs `PiggybankSchemaV2` and a migration stage before it ships.
 - Keep `checkpoint` pointing at the last build you shipped.
+
+## After 1.0
+- A Windows version is planned: see `docs/windows-plan.md`.
