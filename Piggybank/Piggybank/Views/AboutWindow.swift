@@ -22,7 +22,7 @@ enum AboutInfo {
     static let websiteTitle = "vaultstudio.dev"
 
     /// Small print at the very bottom.
-    static let copyright = "© 2026 Donald Stibich (Vault Studio). All rights reserved."
+    static let copyright = "© 2026 Vault Studio. All rights reserved."
 }
 
 /// Piggybank ▸ About Piggybank. The text lives in `AboutInfo` above.

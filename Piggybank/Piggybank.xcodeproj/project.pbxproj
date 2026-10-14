@@ -131,7 +131,7 @@
 				INFOPLIST_FILE = "Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Financial";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Donald Stibich (Vault Studio). All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
@@ -165,7 +165,7 @@
 				INFOPLIST_FILE = "Info-macOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Financial";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Donald Stibich (Vault Studio). All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.0;
