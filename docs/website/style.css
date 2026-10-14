@@ -116,3 +116,8 @@ main { padding-bottom: 24px; }
 .callout p { margin: 14px 0; }
 .oldschool { margin: 48px 0 8px; padding: 22px 24px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); border-left: 4px solid var(--teal); }
 .oldschool p { margin: 8px 0 0; color: var(--text); }
+
+/* Studio mark */
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.brand-logo { display: inline-block; flex: none; border-radius: 7px; vertical-align: middle; }
+.foot-brand strong { display: flex; align-items: center; gap: 10px; }
