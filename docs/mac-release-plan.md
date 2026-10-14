@@ -28,10 +28,11 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
 - [ ] **Name.** The app is "Piggybank Financial" (bundle id `vault.Piggybank`). Check the name is free in App Store Connect.
-- [ ] **Website.** A draft is in `docs/website` (home, product, support and privacy pages; see its `README.md`). Fill in
-      the placeholders (name, support email, App Store link), upload the folder to the new domain, then use the
-      `support.html` and `privacy.html` URLs as the Support URL and Privacy Policy URL in App Store Connect. They are
-      required. Privacy in one line: nothing is collected, nothing leaves the Mac.
+- [x] **Website is live** at https://vaultstudio.dev (source in `docs/website`, see its `README.md`) and the support
+      address `support@vaultstudio.dev` is set up. Use these in App Store Connect: Support URL
+      `https://vaultstudio.dev/support`, Privacy Policy URL `https://vaultstudio.dev/privacy`, Marketing URL
+      `https://vaultstudio.dev/piggybank`. (The host serves clean addresses without `.html`.) Still to do on the site
+      later: swap the "Coming soon" button for the App Store link when the app is live.
 
 ### 2. Accounts and signing (you)
 - [x] Paid Apple Developer Program membership (confirmed; the project uses team `LVKJ422Q3M`).
