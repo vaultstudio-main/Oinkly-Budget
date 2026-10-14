@@ -13,14 +13,20 @@ A small static site for the domain. No build step and no dependencies: upload th
 | `style.css` | Shared look, follows light and dark mode |
 | `images/` | App icon and screenshots (resized to 1600 px wide) |
 
-## Fill in before publishing
-Search the folder for these and replace them:
-- `YOUR NAME`, `YOUR CITY OR REGION` and the capitalised prompts on `about.html`.
-- `YOUR NAME OR STUDIO`: the name shown in the header, footer and home page.
-- `YOUR-SUPPORT-EMAIL`: a real address for support. Use an address you are happy to make public.
-- "Coming soon to the Mac App Store" on `index.html` and `piggybank.html`: when the app is live, swap each `<span class="button soon">` for `<a class="button" href="YOUR APP STORE LINK">Get it on the Mac App Store</a>`, and change the "Coming soon for Mac" badge on `index.html` to "Now available for Mac".
-- The Windows "coming soon" lines on both pages: remove or change them if the Windows plan is dropped (`piggybank-windows/PLAN.md`).
-- Add `<link rel="canonical">` and a favicon if you want them once the domain is set.
+## Already filled in
+- Studio name: **Vault Studio**. Domain: **vaultstudio.dev**. Support email: **support@vaultstudio.dev**
+  (create this address or forward it before launch, otherwise mail to it will bounce).
+- Canonical links, `sitemap.xml` and `robots.txt` use `https://vaultstudio.dev`.
+
+## Still to do before publishing
+- `YOUR CITY OR REGION` and the capitalised prompts on `about.html`, and your photo as `images/portrait.png`.
+  The About page says "Hi, I'm Donald" (your first name); change it if you prefer another name.
+- "Coming soon to the Mac App Store" on `index.html` and `piggybank.html`: when the app is live, swap each
+  `<span class="button soon">` for `<a class="button" href="YOUR APP STORE LINK">Get it on the Mac App Store</a>`, and
+  change the "Coming soon for Mac" badge on `index.html` to "Now available for Mac".
+- The Windows "coming soon" lines on both pages: remove or change them if the Windows plan is dropped
+  (`piggybank-windows/PLAN.md`).
+- Optional: an `og:image` preview picture and a favicon at several sizes.
 
 ## Adding another project later
 Copy the Piggybank card on `index.html`, give it its own page (copy `piggybank.html`) and add it to the nav in each

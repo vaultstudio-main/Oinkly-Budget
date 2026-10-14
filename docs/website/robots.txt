@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://vaultstudio.dev/sitemap.xml

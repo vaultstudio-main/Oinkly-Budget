@@ -68,7 +68,7 @@ container). Tick each:
 
 ### 5. Store listing (you)
 - [ ] Name, subtitle, description, keywords, promotional text. Mention Mac only. A full draft is in
-      `docs/app-store-listing.md`; replace `YOUR-DOMAIN` and your studio name, then paste each block in.
+      `docs/app-store-listing.md`; paste each block in (the domain and studio name are already filled in).
 - [x] Screenshots: 10 at 2880×1800 (dark mode, sample data, no alpha) are in `docs/app-store-screenshots`. Lead with
       01-summary, 06-bills, 08-checking, 03-reports, 05-investments. Upload up to 10.
 - [ ] Age rating questionnaire (no objectionable content).

@@ -55,16 +55,16 @@ Welcome to Piggybank Financial 1.0, the first release.
 • Private by design: everything stays on your Mac
 
 ## Support URL
-https://YOUR-DOMAIN/support.html
+https://vaultstudio.dev/support.html
 
 ## Privacy policy URL
-https://YOUR-DOMAIN/privacy.html
+https://vaultstudio.dev/privacy.html
 
 ## Marketing URL (optional)
-https://YOUR-DOMAIN/piggybank.html
+https://vaultstudio.dev/piggybank.html
 
 ## Copyright
-2026 YOUR NAME OR STUDIO
+2026 Vault Studio
 
 ## App Privacy answers
 Data Not Collected. (The app has no network access to its own servers, no analytics and no tracking.)
