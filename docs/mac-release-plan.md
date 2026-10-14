@@ -53,19 +53,19 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
 
 ### 4. Build quality pass (you, about an hour)
 Run the **Release** build, not Debug, from a fresh store (Settings ▸ Data ▸ Erase All Data, or delete the app's
-container). Tick each:
-- [ ] First launch: boot window, then the account setup screen. Add a checking account, a card and a loan.
-- [ ] New Transaction, Cash Transaction, Credit Card Charge, ATM Withdrawal, Transfer, Pay a Bill. Balances move.
-- [ ] Edit and delete a transaction. Delete one half of a transfer (both go).
-- [ ] Add a receipt photo and a PDF. Remove one.
-- [ ] Add a bill, mark it paid, pay it with Pay a Bill. Reminder permission prompt appears the first time.
-- [ ] Notifications: Settings ▸ Reminders ▸ Send a Test Notification shows a banner.
-- [ ] Goals: create, add progress, reach one (it archives).
-- [ ] Reports: all four tabs, back and forward, Current pill.
-- [ ] Backup: Export Backup, Erase All Data, open the `.pig` (double-click) and confirm everything returns.
-- [ ] Light and dark appearance, a resized window, full screen.
-- [ ] Quit with ⌘Q, reopen: data is there. Close the window: menu bar item stays.
-- [ ] Update test: install this build over the previous dev build and confirm your data opens.
+container). Tick each. **All done (confirmed by you, 2026-10-14), along with a backup of your real data.**
+- [x] First launch: boot window, then the account setup screen. Add a checking account, a card and a loan.
+- [x] New Transaction, Cash Transaction, Credit Card Charge, ATM Withdrawal, Transfer, Pay a Bill. Balances move.
+- [x] Edit and delete a transaction. Delete one half of a transfer (both go).
+- [x] Add a receipt photo and a PDF. Remove one.
+- [x] Add a bill, mark it paid, pay it with Pay a Bill. Reminder permission prompt appears the first time.
+- [x] Notifications: Settings ▸ Reminders ▸ Send a Test Notification shows a banner.
+- [x] Goals: create, add progress, reach one (it archives).
+- [x] Reports: all four tabs, back and forward, Current pill.
+- [x] Backup: Export Backup, Erase All Data, open the `.pig` (double-click) and confirm everything returns.
+- [x] Light and dark appearance, a resized window, full screen.
+- [x] Quit with ⌘Q, reopen: data is there. Close the window: menu bar item stays.
+- [x] Update test: install this build over the previous dev build and confirm your data opens.
 
 ### 5. Store listing (you)
 - [ ] Name, subtitle, description, keywords, promotional text. Mention Mac only. A full draft is in
