@@ -16,6 +16,10 @@ enum AboutInfo {
         "Made by Donald Stibich",
     ]
 
+    /// The studio's website, shown as a link under the credits.
+    static let website = URL(string: "https://vaultstudio.dev")!
+    static let websiteTitle = "vaultstudio.dev"
+
     /// Small print at the very bottom.
     static let copyright = "© All rights reserved."
 }
@@ -52,6 +56,12 @@ struct AboutWindow: View {
                     ForEach(AboutInfo.credits, id: \.self) { Text($0).font(.callout) }
                 }
             }
+
+            Link(destination: AboutInfo.website) {
+                Label(AboutInfo.websiteTitle, systemImage: "globe")
+                    .font(.callout)
+            }
+            .help("Open the Vault Studio website")
 
             Text(AboutInfo.copyright)
                 .font(.caption2)
