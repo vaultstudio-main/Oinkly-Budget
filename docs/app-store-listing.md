@@ -10,7 +10,7 @@ Piggybank Financial
 Private money, bills & budgets
 
 ## Promotional text (max 170, can be changed any time without a new build)
-Your accounts, bills, budgets and goals in one calm app. Everything stays on your Mac: no account, no sign-in, no tracking.
+Your accounts, bills, budgets and goals in one calm app. No bank linking and no sign-in: you go through your own statements, and everything stays on your Mac.
 
 ## Keywords (max 100, comma separated, no spaces after commas)
 budget,finance,money,bills,expenses,accounts,loans,net worth,checking,savings,reports,goals,private
@@ -26,6 +26,9 @@ A calendar shows what is due, what is paid and what is next. Get a reminder befo
 
 PLAN AND TRACK
 Set monthly budgets for your categories, and goals for saving up or paying off debt. Reports show income against spending, where your money goes, what you owe and how your investments are growing, by month, quarter or year.
+
+OLD SCHOOL ON PURPOSE
+Piggybank Financial doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself.
 
 DETAILS THAT FEEL RIGHT
 • Credit limits are real: a charge that would reach a card's limit is stopped before it's saved

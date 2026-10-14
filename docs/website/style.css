@@ -110,3 +110,9 @@ a.more:hover { text-decoration: underline; }
 .button.soon::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fff; margin-right: 10px; vertical-align: middle; opacity: .9; }
 main { padding-bottom: 24px; }
 .foot-links a { margin-left: 0; font-size: 15px; }
+
+/* Old school callout */
+.callout { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--teal); border-radius: 12px; padding: 6px 22px; margin: 16px 0; }
+.callout p { margin: 14px 0; }
+.oldschool { margin: 48px 0 8px; padding: 22px 24px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); border-left: 4px solid var(--teal); }
+.oldschool p { margin: 8px 0 0; color: var(--text); }
