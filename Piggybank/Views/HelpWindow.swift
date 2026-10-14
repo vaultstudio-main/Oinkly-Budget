@@ -6,7 +6,7 @@ import AppKit
 /// Text lines: start with "## " for a subheading and "• " for a bullet. Anything else is a paragraph.
 /// Screenshots: each topic can list shots by asset name. Add an image set with that exact name to
 /// Assets.xcassets and it appears under the text; a shot with no image yet simply doesn't show.
-/// The list of shots to take is in docs/help-screenshots.md.
+/// The list of shots to take is in help-screenshots.md, in the docs folder next to the project folder.
 enum HelpContent {
     struct Shot: Hashable {
         /// Asset catalog name, such as "Help-summary".
