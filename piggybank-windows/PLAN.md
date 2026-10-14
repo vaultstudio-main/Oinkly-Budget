@@ -1,6 +1,7 @@
 # Piggybank Financial for Windows: plan
 
 Status: **draft for a later decision.** Ship the Mac app first. Nothing here is started.
+This folder (`piggybank-windows/`) sits beside the Mac app (`Piggybank/`) and the notes (`docs/`) in one repository.
 
 A Windows version is a **new app built to match the Mac one, not a port.** The Mac app is about 14,000 lines of Swift
 (3,900 logic, 1,200 models, 9,300 screens) on SwiftUI, SwiftData, UserNotifications, PDFKit, PhotosUI and AppKit,
@@ -38,6 +39,26 @@ saves only the language. So the Windows app is a translation of the behaviour, a
 Two projects in one solution: `Piggybank.Core` (no UI: models, rules, storage, backup) and `Piggybank.App` (WinUI).
 Keeping Core free of UI makes it testable and reusable if an Avalonia or Mac-side tool is ever wanted.
 
+## Planned folder layout (when work starts)
+```
+piggybank-windows/
+├── PLAN.md                  this file
+├── Piggybank.sln            Visual Studio solution
+├── src/
+│   ├── Piggybank.Core/      models, rules, SQLite, backup, CSV (no UI)
+│   ├── Piggybank.App/       WinUI 3 app: pages, windows, tray, notifications
+│   └── Piggybank.Tests/     xUnit tests, golden .pig fixtures
+├── fixtures/                .pig files exported from the Mac app (test data)
+└── tools/                   packaging and signing scripts
+```
+
+## Screens to build (from the Mac app)
+Sidebar pages: Summary, Transactions, Reports, Liabilities, Investments, Bills, Planning, Manage Accounts, and one
+register per account. Windows and dialogs: New Transaction, New Cash Transaction, New Credit Card Charge, ATM
+Withdrawal, Update Investment Price, Transfer, Pay a Bill, Edit Transaction, Transaction detail, receipt viewer,
+account setup and edit, goal and bill editors, Reminders editor. Settings: General, Reminders, Accounts, Categories,
+Payment Methods, Data, Import & Export. Also: boot and startup checks, Help, Release Notes, About, tray item.
+
 ## Architecture
 - **Core** owns: models, SQLite store, ledger and balance calculations, reports, bills, loans, goals, budgets,
   backup import and export, CSV import and export, and the startup repair checks.
@@ -48,7 +69,7 @@ Keeping Core free of UI makes it testable and reusable if an Avalonia or Mac-sid
 - **Queries scoped to what is shown:** one month or one search at a time, with a database index on date and account.
 
 ## The `.pig` backup format (must stay identical)
-Defined by `Piggybank/Logic/DataBackup.swift`. It is one JSON file, `BackupFile`, `version = 1`:
+Defined by `Piggybank/Piggybank/Logic/DataBackup.swift` (in the Mac app folder). It is one JSON file, `BackupFile`, `version = 1`:
 - Top-level lists: `categories`, `accounts`, `payees`, `transactions`, `holdings`, `bills`, `goals`, `paymentMethods`,
   and an optional `settings` object.
 - **Money amounts are strings**, never numbers. Dates are numbers: seconds since 1970 (Unix time).
@@ -60,7 +81,7 @@ Defined by `Piggybank/Logic/DataBackup.swift`. It is one JSON file, `BackupFile`
   both apps together.
 
 ## Map: Mac code to Windows modules
-| Mac (`Piggybank/...`) | Windows module | Notes |
+| Mac (`Piggybank/Piggybank/...`) | Windows module | Notes |
 |---|---|---|
 | `Models/*.swift` | `Core/Models` | Account, Transaction, Category, Bill, Goal, Holding, Payee, payment methods. Keep the same rules (live/deleted flags, transfers, locked categories) |
 | `Models/DefaultCategories.swift` | `Core/Seed/Categories` | Same built-in category keys, so backups line up |

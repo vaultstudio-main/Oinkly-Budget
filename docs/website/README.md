@@ -19,7 +19,7 @@ Search the folder for these and replace them:
 - `YOUR NAME OR STUDIO`: the name shown in the header, footer and home page.
 - `YOUR-SUPPORT-EMAIL`: a real address for support. Use an address you are happy to make public.
 - "Coming soon to the Mac App Store" on `index.html` and `piggybank.html`: when the app is live, swap each `<span class="button soon">` for `<a class="button" href="YOUR APP STORE LINK">Get it on the Mac App Store</a>`, and change the "Coming soon for Mac" badge on `index.html` to "Now available for Mac".
-- The Windows "coming soon" lines on both pages: remove or change them if the Windows plan is dropped (`docs/windows-plan.md`).
+- The Windows "coming soon" lines on both pages: remove or change them if the Windows plan is dropped (`piggybank-windows/PLAN.md`).
 - Add `<link rel="canonical">` and a favicon if you want them once the domain is set.
 
 ## Adding another project later

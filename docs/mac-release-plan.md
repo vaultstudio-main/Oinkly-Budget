@@ -101,4 +101,4 @@ no 30% cut, but you host it and handle updates yourself. The sandbox can stay on
 - Keep `checkpoint` pointing at the last build you shipped.
 
 ## After 1.0
-- A Windows version is planned: see `docs/windows-plan.md`.
+- A Windows version is planned: see `piggybank-windows/PLAN.md`.
