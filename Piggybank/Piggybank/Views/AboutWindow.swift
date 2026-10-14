@@ -13,6 +13,7 @@ enum AboutInfo {
 
     /// Lines near the bottom, such as who made it. Remove a line to hide it.
     static let credits: [String] = [
+        "Vault Studio",
         "Made by Donald Stibich",
     ]
 
@@ -21,7 +22,7 @@ enum AboutInfo {
     static let websiteTitle = "vaultstudio.dev"
 
     /// Small print at the very bottom.
-    static let copyright = "© All rights reserved."
+    static let copyright = "© 2026 Donald Stibich (Vault Studio). All rights reserved."
 }
 
 /// Piggybank ▸ About Piggybank. The text lives in `AboutInfo` above.
