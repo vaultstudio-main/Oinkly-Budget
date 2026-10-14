@@ -45,8 +45,6 @@ details p { margin: 10px 0 2px; }
 table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 16px; }
 th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 code, kbd { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; font-size: .92em; }
-footer.site { border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; padding: 24px 0 40px; }
-footer.site a { color: var(--muted); margin-right: 16px; }
 
 /* Home page */
 .hero-home { padding: 72px 0 64px; }
@@ -87,3 +85,28 @@ footer.site a { color: var(--muted); margin-right: 16px; }
 
 .button.soon { cursor: default; opacity: .92; }
 .cta .button.soon { background: rgba(255,255,255,.18); color: #fff; border: 1.5px solid rgba(255,255,255,.7); }
+
+/* Footer */
+footer.site { margin-top: 56px; border-top: 1px solid var(--line); background: var(--panel); padding: 36px 0 44px; color: var(--muted); font-size: 15px; }
+.foot-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px 40px; flex-wrap: wrap; }
+.foot-brand strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 4px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.foot-links a, .foot-note a { color: var(--muted); text-decoration: none; }
+.foot-links a:hover, .foot-note a:hover { color: var(--text); text-decoration: underline; }
+.foot-note { margin: 28px 0 0; padding-top: 18px; border-top: 1px solid var(--line); font-size: 14px; }
+
+/* Home page closing sections */
+.about { margin-top: 56px; padding-top: 8px; }
+.about p { max-width: 640px; }
+a.more { font-weight: 600; text-decoration: none; }
+a.more:hover { text-decoration: underline; }
+.cta { margin-top: 56px; padding: 44px 24px 40px; }
+.cta h2 { margin: 0 0 8px; font-size: 28px; }
+.cta p { margin: 6px 0; }
+.cta-sub { opacity: .95; }
+.cta-price { font-size: 17px; }
+.cta .button.soon { margin-top: 22px; }
+.button.soon { background: rgba(255,255,255,.2); color: #fff; border: 1.5px solid rgba(255,255,255,.65); cursor: default; padding: 10px 20px; border-radius: 999px; font-size: 16px; }
+.button.soon::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fff; margin-right: 10px; vertical-align: middle; opacity: .9; }
+main { padding-bottom: 24px; }
+.foot-links a { margin-left: 0; font-size: 15px; }
