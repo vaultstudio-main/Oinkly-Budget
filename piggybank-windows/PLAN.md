@@ -1,6 +1,7 @@
 # OinklyBudget for Windows: plan
 
 Status: **draft for a later decision.** Ship the Mac app first. Nothing here is started.
+Updated 2026-10-15: added how much of this can be built on a Mac (see "Developing on a Mac").
 This folder (`piggybank-windows/`) sits beside the Mac app (`Piggybank/`) and the notes (`docs/`) in one repository.
 
 A Windows version is a **new app built to match the Mac one, not a port.** The Mac app is about 14,000 lines of Swift
@@ -25,8 +26,7 @@ saves only the language. So the Windows app is a translation of the behaviour, a
 | Part | Choice | Why |
 |---|---|---|
 | Language | C# on .NET 8 (LTS) or later | Mature, fast, `decimal` type fits money, easy for Claude and humans to maintain |
-| UI | **WinUI 3** (Windows App SDK) | The native Windows 11 look; MSIX packaging; Microsoft Store friendly |
-| Alternative UI | Avalonia | Same C# code runs on Windows, Mac and Linux. Pick this if a Linux build or a unified code base matters more than the most native Windows feel |
+| UI | **WinUI 3** (Windows App SDK) **or Avalonia** (decide at the spike) | WinUI 3: the most native Windows 11 look and MSIX packaging, but it builds and runs **only on Windows**. Avalonia: C# UI that builds and runs on a Mac and on Windows (and Linux), a little less native-looking. See "Developing on a Mac" |
 | Database | SQLite via `Microsoft.Data.Sqlite` with Dapper, or EF Core | Local single file; migrations; indexes for speed. Same idea as the Mac store |
 | Money | `decimal`, stored as text/integer cents | Never floating point. Same rule as the Mac backup file (amounts as text) |
 | Charts | LiveCharts2 or ScottPlot | Bar and donut charts for Reports, Summary and Investments |
@@ -36,18 +36,39 @@ saves only the language. So the Windows app is a translation of the behaviour, a
 | Icons | Segoe Fluent Icons / Fluent System Icons | The Mac app uses SF Symbols names; each needs a mapping |
 | Tests | xUnit | Port the rules with tests first |
 
-Two projects in one solution: `Piggybank.Core` (no UI: models, rules, storage, backup) and `Piggybank.App` (WinUI).
-Keeping Core free of UI makes it testable and reusable if an Avalonia or Mac-side tool is ever wanted.
+Two projects in one solution: `OinklyBudget.Core` (no UI: models, rules, storage, backup) and `OinklyBudget.App`
+(WinUI or Avalonia). Keeping Core free of UI means it builds and tests on a Mac, whichever UI is chosen.
+
+## Developing on a Mac
+The Mac app's author works on a Mac, so this matters. What can and can't be done there:
+
+| Part | On a Mac? |
+|---|---|
+| `OinklyBudget.Core`: models, SQLite storage, rules, reports, backup and CSV | **Yes.** Plain C# on .NET, builds, runs and tests on macOS |
+| `.pig` import and export, and golden tests against Mac-exported files | **Yes** |
+| Avalonia UI | **Yes.** Builds and runs on macOS and produces a Windows app |
+| WinUI 3 UI | **No.** Windows only (a Windows 11 ARM VM on Apple silicon works) |
+| MSIX packaging, Microsoft Store signing, Windows toasts and tray behaviour | **No.** Needs Windows (VM, spare PC, or a Windows CI runner) |
+
+Ways to get Windows when needed:
+1. **A Windows 11 virtual machine on the Mac** (Parallels, VMware Fusion or UTM, Windows 11 for ARM). Visual Studio
+   and WinUI work there. Costs a Windows licence and disk space.
+2. **A cloud or spare Windows PC** for the Windows-only steps.
+3. **GitHub Actions Windows runners** to build, test and package automatically (free for small projects).
+
+**Recommended approach:** build `OinklyBudget.Core` and the `.pig` tests on the Mac first. That is roughly 40% of
+the work and is the same under either UI. Choose Avalonia to stay on the Mac for the screens too, or WinUI 3 plus a
+Windows VM for the most native result. Either way, test on real Windows before shipping.
 
 ## Planned folder layout (when work starts)
 ```
 piggybank-windows/
 ├── PLAN.md                  this file
-├── Piggybank.sln            Visual Studio solution
+├── OinklyBudget.sln         solution (opens in Visual Studio, Rider or VS Code)
 ├── src/
-│   ├── Piggybank.Core/      models, rules, SQLite, backup, CSV (no UI)
-│   ├── Piggybank.App/       WinUI 3 app: pages, windows, tray, notifications
-│   └── Piggybank.Tests/     xUnit tests, golden .pig fixtures
+│   ├── OinklyBudget.Core/   models, rules, SQLite, backup, CSV (no UI; builds on a Mac)
+│   ├── OinklyBudget.App/    WinUI 3 or Avalonia app: pages, windows, tray, notifications
+│   └── OinklyBudget.Tests/  xUnit tests, golden .pig fixtures (run on a Mac)
 ├── fixtures/                .pig files exported from the Mac app (test data)
 └── tools/                   packaging and signing scripts
 ```
@@ -104,8 +125,12 @@ Defined by `Piggybank/Piggybank/Logic/DataBackup.swift` (in the Mac app folder).
 ## Phases
 Each phase ends with something you can run and judge. Stop after any phase if it isn't worth continuing.
 
-1. **Spike (a few days).** WinUI 3 window with a sidebar, SQLite, and `.pig` import that lists accounts and totals.
-   Proves the stack, the format and the packaging. Decide go or no-go here.
+0. **Foundation on the Mac (a few days).** Create `OinklyBudget.Core` and `OinklyBudget.Tests`. Define the models,
+   open a SQLite file, and import a Mac-exported `.pig`; print accounts and totals in a test. No UI yet, so it works
+   whichever toolkit is chosen and proves the file format early.
+1. **Spike (a few days).** A window with a sidebar that opens the same data and shows accounts and totals. Build it
+   in **Avalonia on the Mac** or **WinUI 3 on Windows/a VM**, and compare. Proves the stack, the format and the
+   packaging. Decide go or no-go, and which UI, here.
 2. **Core rules with tests.** Models, ledger, transfers, bills, loans, goals, reports, CSV. Port the Mac test data
    generator so both apps produce the same numbers. Golden test: same `.pig` in, same totals out.
 3. **Main pages.** Summary, Transactions, account registers (month-scoped, running balance), New Transaction and the
@@ -117,7 +142,10 @@ Each phase ends with something you can run and judge. Stop after any phase if it
    reader labels, installer, update path.
 7. **Store and release.** Packaging, signing, listing, privacy page update for Windows, website page.
 
-Rough effort, with Claude doing most of the typing and you testing: phases 1 to 2 are the foundation, phases 3 to 5
+Phases 0 to 2 can be done entirely on a Mac. Windows is first needed for phase 1 if WinUI is chosen, and for
+phases 6 and 7 either way.
+
+Rough effort, with Claude doing most of the typing and you testing: phases 0 to 2 are the foundation, phases 3 to 5
 are the bulk, and it is weeks of calendar time, not days. Every new feature after that is built twice.
 
 ## Distribution
@@ -131,7 +159,8 @@ Plan on the Microsoft Store first. Pricing could be a one-time purchase to match
 
 ## Risks and open questions
 - **Testing on real Windows:** needs a Windows PC (or a VM) and a couple of real-world machines. Claude can build and
-  run it; installs, high-DPI and driver quirks need a person.
+  run it; installs, high-DPI and driver quirks need a person. A Mac alone is enough for the core and, with Avalonia,
+  the screens, but not for the final packaging and store steps.
 - **Two code bases:** every rule must change in both places. Mitigation: the shared golden test files and `.pig` fixtures.
 - **Feature parity vs timing:** decide whether Windows 1.0 can launch without the most complex pieces (investments
   holdings, goals payoff) and add them in 1.1.
@@ -142,13 +171,15 @@ Plan on the Microsoft Store first. Pricing could be a one-time purchase to match
 
 ## Decisions you need to make
 1. Go or no-go after the spike?
-2. WinUI 3 (most native) or Avalonia (also gives a Linux build)?
+2. WinUI 3 (most native, needs Windows or a VM to build) or Avalonia (builds on the Mac, also gives a Linux build)?
+   Where will the Windows build and tests run: a VM on the Mac, a spare PC, or GitHub Actions?
 3. Microsoft Store only, or Store plus direct download?
 4. Price: same as Mac ($9.99) or different?
 5. Launch together with feature parity, or an early 1.0 with a smaller set?
 
 ## Before starting
 - Mac app released and stable.
-- A Windows 11 PC or VM available for testing.
+- A way to run Windows for testing and packaging: a Windows 11 PC, a VM on the Mac, or a CI runner. (Not needed for
+  phase 0 or for Core work.)
 - A Microsoft Partner Center developer account.
 - A frozen `.pig` format and a set of Mac-exported fixture files committed to the repo.
