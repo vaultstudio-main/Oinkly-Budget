@@ -1,4 +1,4 @@
-# App Store listing draft: Piggybank Financial
+# App Store listing draft: Piggybank Financial Budget
 
 Copy and paste each block into App Store Connect. Character limits are Apple's. Edit freely.
 Price: $9.99, one-time purchase. Category: Finance (primary). Optional secondary: Productivity.
@@ -6,10 +6,10 @@ Price: $9.99, one-time purchase. Category: Finance (primary). Optional secondary
 ## App name (max 30)
 Piggybank Financial Budget
 
-("Piggybank Financial" was already taken in App Store Connect. The app's own name on the Mac stays "Piggybank Financial".)
+(The shorter "Piggybank Financial" was already taken in App Store Connect, so the store name and the app's name are both "Piggybank Financial Budget".)
 
 ## Subtitle (max 30)
-Private money, bills & budgets
+Private money, bills & goals
 
 ## Promotional text (max 170, can be changed any time without a new build)
 Your accounts, bills, budgets and goals in one calm app. No bank linking and no sign-in: you go through your own statements, and everything stays on your Mac.
@@ -18,7 +18,7 @@ Your accounts, bills, budgets and goals in one calm app. No bank linking and no 
 budget,finance,money,bills,expenses,accounts,loans,net worth,checking,savings,reports,goals,private
 
 ## Description (max 4000)
-Piggybank Financial keeps your whole financial picture in one place, and keeps it private. Everything you enter stays on your own Mac. There is no account to create, no sign-in, no ads and no tracking.
+Piggybank Financial Budget keeps your whole financial picture in one place, and keeps it private. Everything you enter stays on your own Mac. There is no account to create, no sign-in, no ads and no tracking.
 
 KEEP EVERY ACCOUNT TOGETHER
 Checking, savings, cash, credit cards, loans, mortgages, investments and assets all live side by side. Each account has its own register with a running balance, and you can see everything together on one Transactions page.
@@ -30,7 +30,7 @@ PLAN AND TRACK
 Set monthly budgets for your categories, and goals for saving up or paying off debt. Reports show income against spending, where your money goes, what you owe and how your investments are growing, by month, quarter or year.
 
 OLD SCHOOL ON PURPOSE
-Piggybank Financial doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself.
+Piggybank Financial Budget doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself.
 
 DETAILS THAT FEEL RIGHT
 • Credit limits are real: a charge that would reach a card's limit is stopped before it's saved
@@ -48,10 +48,10 @@ Piggybank is built to stay quick with very large numbers of transactions, so it 
 YOURS TO KEEP
 Backups are a single file you control. Save everything, restore it on a new Mac, or keep a copy somewhere safe. There is no subscription and no data held hostage.
 
-Piggybank Financial is made for the Mac and requires macOS 15 or later. It does not sync with other devices.
+Piggybank Financial Budget is made for the Mac and requires macOS 15 or later. It does not sync with other devices.
 
 ## What's new in this version (1.0)
-Welcome to Piggybank Financial 1.0, the first release.
+Welcome to Piggybank Financial Budget 1.0, the first release.
 • Accounts of every kind, with registers and running balances
 • Bills calendar, reminders and one-step payments
 • Budgets, goals and reports

@@ -200,8 +200,8 @@ enum DataBackup {
 
         var errorDescription: String? {
             switch self {
-            case .unreadable: "That file isn't a Piggybank Financial backup."
-            case .newerVersion(let version): "That backup is from a newer version of Piggybank Financial (format \(version)). Update the app and try again."
+            case .unreadable: "That file isn't a Piggybank Financial Budget backup."
+            case .newerVersion(let version): "That backup is from a newer version of Piggybank Financial Budget (format \(version)). Update the app and try again."
             }
         }
     }

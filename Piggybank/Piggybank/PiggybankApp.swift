@@ -28,7 +28,7 @@ struct PiggybankApp: App {
 
     var body: some Scene {
         // The boot window is its own scene, shown once at launch. It opens the main window when the checks pass.
-        Window("Starting Piggybank Financial", id: "boot") {
+        Window("Starting Piggybank Financial Budget", id: "boot") {
             BootView()
                 .preferredColorScheme(.dark)
         }
@@ -38,7 +38,7 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.presented)
         .restorationBehavior(.disabled)
 
-        WindowGroup("Piggybank Financial", id: "main") {
+        WindowGroup("Piggybank Financial Budget", id: "main") {
             ContentView()
         }
         .modelContainer(container)
@@ -88,7 +88,7 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("About Piggybank Financial", id: "about") {
+        Window("About Piggybank Financial Budget", id: "about") {
             AboutWindow()
                 .appAppearance()
         }
@@ -109,7 +109,7 @@ struct PiggybankApp: App {
         .restorationBehavior(.disabled)
         #endif
 
-        Window("Piggybank Financial Help", id: "help") {
+        Window("Piggybank Financial Budget Help", id: "help") {
             HelpWindow()
                 .appAppearance()
         }

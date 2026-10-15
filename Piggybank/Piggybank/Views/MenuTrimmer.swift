@@ -75,7 +75,7 @@ enum MenuTrimmer {
         for (index, item) in wanted.enumerated() {
             if index > 0 { appMenu.addItem(.separator()) }
             // The system words these with the short product name.
-            if item.title.hasPrefix("Quit") { item.title = "Quit Piggybank Financial" }
+            if item.title.hasPrefix("Quit") { item.title = "Quit Piggybank Financial Budget" }
             appMenu.addItem(item)
         }
     }
@@ -110,7 +110,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         completionHandler([.banner, .list, .sound])
     }
 
-    /// Clicking a reminder brings Piggybank Financial forward and goes to the page the reminder named.
+    /// Clicking a reminder brings Piggybank Financial Budget forward and goes to the page the reminder named.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
         let page = response.notification.request.content.userInfo["page"] as? String
@@ -146,7 +146,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         await CustomReminders.shared.apply()
     }
 
-    /// Closing the window leaves Piggybank Financial running, so its menu bar item stays. Without a menu bar item there
+    /// Closing the window leaves Piggybank Financial Budget running, so its menu bar item stays. Without a menu bar item there
     /// would be nothing left to show, so then closing the last window quits as usual. ⌘Q always quits.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         let showsMenuBarItem = UserDefaults.standard.object(forKey: BackgroundSettingsSection.showMenuBarKey) as? Bool ?? true
@@ -165,7 +165,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
 enum BackupOpener {
     static func offerRestore(of url: URL) async {
         // A launch by double-click arrives before the app is ready. Wait for the main window.
-        for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "Piggybank Financial" && $0.isVisible }) {
+        for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "Piggybank Financial Budget" && $0.isVisible }) {
             try? await Task.sleep(for: .milliseconds(250))
         }
         guard let container = PiggybankAppDelegate.container else { return }
@@ -181,7 +181,7 @@ enum BackupOpener {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Replace everything with this backup?"
-        alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Piggybank Financial is erased first, and this can't be undone."
+        alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Piggybank Financial Budget is erased first, and this can't be undone."
         alert.addButton(withTitle: "Replace Everything")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }

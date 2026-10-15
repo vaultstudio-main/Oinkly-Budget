@@ -30,7 +30,7 @@ enum BackupExporter {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [DataBackup.fileType]
         panel.nameFieldStringValue = "Piggybank Financial Backup \(stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save a backup of everything in Piggybank Financial."
+        panel.message = "Save a backup of everything in Piggybank Financial Budget."
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         do {
             let file = try DataBackup.make(from: context)

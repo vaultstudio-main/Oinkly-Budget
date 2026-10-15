@@ -118,7 +118,7 @@ struct AccountSetupView: View {
                             .frame(maxWidth: .infinity)
                     }
                     .controlSize(.large)
-                    .help("Open a Piggybank Financial backup (.pig) to bring back everything you saved")
+                    .help("Open a Piggybank Financial Budget backup (.pig) to bring back everything you saved")
 
                     Text("Already have a .pig backup? Restore it instead of adding accounts by hand.")
                         .font(.caption)
@@ -139,7 +139,7 @@ struct AccountSetupView: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [DataBackup.fileType, .json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Piggybank Financial backup file (.pig)."
+        panel.message = "Choose a Piggybank Financial Budget backup file (.pig)."
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         func show(_ title: String, _ text: String) {

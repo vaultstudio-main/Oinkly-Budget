@@ -6,7 +6,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 | File | What it is |
 |---|---|
 | `index.html` | Home page and project list (add new apps as cards here) |
-| `piggybank.html` | Piggybank Financial product page |
+| `piggybank.html` | Piggybank Financial Budget product page |
 | `about.html` | About Vault Studio (hobbyist studio, no personal details). Photo is `images/profile-square.jpg` (square crop of `profile.jpeg`) |
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |

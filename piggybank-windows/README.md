@@ -1,4 +1,4 @@
-# Piggybank Financial for Windows
+# Piggybank Financial Budget for Windows
 
 Not started. The plan is in [PLAN.md](PLAN.md).
 

@@ -66,7 +66,7 @@ struct BootView: View {
                         .scaledToFit()
                         .frame(height: 92)
                         .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
-                    Text("Piggybank Financial").lineLimit(1).minimumScaleFactor(0.6)
+                    Text("Piggybank Financial Budget").lineLimit(1).minimumScaleFactor(0.6)
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(needsAttention ? "NEEDS ATTENTION" : "STARTING UP")
@@ -153,7 +153,7 @@ struct BootView: View {
     private var buttons: some View {
         if handOffStalled {
             // The main window should have replaced this screen by now. Never leave the user stuck here.
-            Button("Open Piggybank Financial", action: handOff)
+            Button("Open Piggybank Financial Budget", action: handOff)
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .controlSize(.large)
