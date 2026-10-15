@@ -8,7 +8,7 @@ enum AboutInfo {
 
     /// A short paragraph about the app.
     static var summary: String {
-        "PigVault is a personal finance app that keeps accounts, budgets, bills and investments in your control."
+        "OinklyBudget is a personal finance app that keeps accounts, budgets, bills and investments in your control."
     }
 
     /// Lines near the bottom, such as who made it. Remove a line to hide it.
@@ -25,7 +25,7 @@ enum AboutInfo {
     static let copyright = "© 2026 Vault Studio. All rights reserved."
 }
 
-/// PigVault ▸ About PigVault. The text lives in `AboutInfo` above.
+/// OinklyBudget ▸ About OinklyBudget. The text lives in `AboutInfo` above.
 struct AboutWindow: View {
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -42,7 +42,7 @@ struct AboutWindow: View {
                 .frame(width: 112, height: 112)
 
             VStack(spacing: 4) {
-                Text("PigVault").lineLimit(1).minimumScaleFactor(0.6).font(.system(size: 28, weight: .bold, design: .rounded))
+                Text("OinklyBudget").lineLimit(1).minimumScaleFactor(0.6).font(.system(size: 28, weight: .bold, design: .rounded))
                 Text(AboutInfo.tagline).foregroundStyle(.secondary)
                 Text(version).font(.caption).foregroundStyle(.tertiary)
             }

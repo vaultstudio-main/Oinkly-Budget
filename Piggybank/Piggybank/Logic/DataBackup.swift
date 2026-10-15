@@ -200,8 +200,8 @@ enum DataBackup {
 
         var errorDescription: String? {
             switch self {
-            case .unreadable: "That file isn't a PigVault backup."
-            case .newerVersion(let version): "That backup is from a newer version of PigVault (format \(version)). Update the app and try again."
+            case .unreadable: "That file isn't a OinklyBudget backup."
+            case .newerVersion(let version): "That backup is from a newer version of OinklyBudget (format \(version)). Update the app and try again."
             }
         }
     }

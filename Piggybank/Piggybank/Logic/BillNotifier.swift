@@ -31,7 +31,7 @@ enum BillNotifier {
 
     enum Status { case notAsked, allowed, denied }
 
-    /// Whether macOS will let PigVault show notifications.
+    /// Whether macOS will let OinklyBudget show notifications.
     static func status() async -> Status {
         switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
         case .authorized, .provisional, .ephemeral: .allowed
@@ -45,7 +45,7 @@ enum BillNotifier {
     static func sendTest() async -> Bool {
         guard await requestAccess() else { return false }
         let content = UNMutableNotificationContent()
-        content.title = "PigVault"
+        content.title = "OinklyBudget"
         content.body = "Bill reminders will look like this."
         content.sound = .default
         let request = UNNotificationRequest(identifier: "piggybank.test", content: content,

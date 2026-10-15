@@ -14,7 +14,7 @@ enum ReminderPage: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .none: "Just open PigVault"
+        case .none: "Just open OinklyBudget"
         case .summary: "Summary"
         case .transactions: "Transactions"
         case .reports: "Reports"
@@ -85,7 +85,7 @@ struct CustomReminder: Codable, Identifiable, Equatable {
 }
 
 /// The user's custom reminders. Kept in preferences (they're settings, not financial data) and turned into repeating
-/// system notifications, so they arrive even when PigVault isn't open.
+/// system notifications, so they arrive even when OinklyBudget isn't open.
 @MainActor
 @Observable
 final class CustomReminders {
@@ -139,8 +139,8 @@ final class CustomReminders {
                 repeating = false
             }
             let content = UNMutableNotificationContent()
-            content.title = reminder.title.isEmpty ? "PigVault" : reminder.title
-            content.body = reminder.note.isEmpty ? "A reminder from PigVault." : reminder.note
+            content.title = reminder.title.isEmpty ? "OinklyBudget" : reminder.title
+            content.body = reminder.note.isEmpty ? "A reminder from OinklyBudget." : reminder.note
             content.sound = .default
             content.userInfo = ["page": reminder.page.rawValue]
             let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: repeating)

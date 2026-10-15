@@ -421,7 +421,7 @@ struct DataSettingsView: View {
 
             Section {
                 Button("Erase All Data…", role: .destructive) { confirmingErase = true }
-                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open PigVault again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
+                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -448,7 +448,7 @@ struct DataSettingsView: View {
 
 // MARK: Containers
 
-/// The Mac Settings window (PigVault ▸ Settings…, ⌘,).
+/// The Mac Settings window (OinklyBudget ▸ Settings…, ⌘,).
 struct MacSettingsView: View {
     var body: some View {
         TabView {

@@ -10,7 +10,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>PigDocument</string>
 			<key>CFBundleTypeName</key>
-			<string>PigVault Backup</string>
+			<string>OinklyBudget Backup</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -29,7 +29,7 @@
 				<string>public.json</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>PigVault Backup</string>
+			<string>OinklyBudget Backup</string>
 			<key>UTTypeIconFile</key>
 			<string>PigDocument</string>
 			<key>UTTypeIdentifier</key>

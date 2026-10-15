@@ -23,13 +23,13 @@ struct FileNewCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("About PigVault") {
+            Button("About OinklyBudget") {
                 openWindow(id: "about")
             }
         }
 
         CommandGroup(replacing: .help) {
-            Button("PigVault Help") {
+            Button("OinklyBudget Help") {
                 openWindow(id: "help")
             }
             .keyboardShortcut("/", modifiers: [.command, .shift])

@@ -1,4 +1,4 @@
-# PigVault for Windows
+# OinklyBudget for Windows
 
 Not started. The plan is in [PLAN.md](PLAN.md).
 

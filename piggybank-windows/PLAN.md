@@ -1,4 +1,4 @@
-# PigVault for Windows: plan
+# OinklyBudget for Windows: plan
 
 Status: **draft for a later decision.** Ship the Mac app first. Nothing here is started.
 This folder (`piggybank-windows/`) sits beside the Mac app (`Piggybank/`) and the notes (`docs/`) in one repository.
@@ -138,7 +138,7 @@ Plan on the Microsoft Store first. Pricing could be a one-time purchase to match
 - **Support load:** a second platform doubles questions and support email.
 - **Market:** Windows has more finance software and fierce competition. The advantage is the privacy story and the
   matching Mac app.
-- **Naming and branding:** reuse "PigVault" if the name is free on the Microsoft Store.
+- **Naming and branding:** reuse "OinklyBudget" if the name is free on the Microsoft Store.
 
 ## Decisions you need to make
 1. Go or no-go after the spike?

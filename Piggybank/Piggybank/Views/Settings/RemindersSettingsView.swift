@@ -44,7 +44,7 @@ struct RemindersSettingsView: View {
             } header: {
                 Text("Your Reminders")
             } footer: {
-                Text("Each one arrives as a notification, even when PigVault isn't open. Click it to jump to the page you chose.")
+                Text("Each one arrives as a notification, even when OinklyBudget isn't open. Click it to jump to the page you chose.")
             }
 
             Section {
@@ -80,7 +80,7 @@ struct RemindersSettingsView: View {
             } header: {
                 Text("Bill Reminders")
             } footer: {
-                Text("You get a notification the number of days before a bill is due that you chose for it, and another on the day it is due, at 9 AM, even when PigVault isn't open.")
+                Text("You get a notification the number of days before a bill is due that you chose for it, and another on the day it is due, at 9 AM, even when OinklyBudget isn't open.")
             }
         }
         .formStyle(.grouped)
