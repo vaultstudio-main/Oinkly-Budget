@@ -129,7 +129,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Info-macOS.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Financial Budget";
+				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Budgeting";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
@@ -163,7 +163,7 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Info-macOS.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Financial Budget";
+				INFOPLIST_KEY_CFBundleDisplayName = "Piggybank Budgeting";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";

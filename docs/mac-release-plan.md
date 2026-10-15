@@ -1,4 +1,4 @@
-# Piggybank Financial Budget 1.0: Mac release plan
+# Piggybank Budgeting 1.0: Mac release plan
 
 Status as of 2026-10-11. Piggybank is a **Mac-only** app. The iPhone and iPad code was removed (still in git history up to
 `aa90b3f`), and there is no sync: data lives on the Mac, and `.pig` backups are the way to move or protect it.
@@ -27,8 +27,8 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
 - [x] **Minimum macOS** is now 15.0 (`MACOSX_DEPLOYMENT_TARGET`). It builds clean, but only macOS 27 was available to test
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
-- [x] **Name.** "Piggybank Financial" was already taken in App Store Connect, so the name everywhere (store, app, website)
-      is **Piggybank Financial Budget** (bundle id `vault.Piggybank`).
+- [x] **Name.** "Piggybank Financial" and "Piggybank Financial Budget" were already taken in App Store Connect, so the
+      name everywhere (store, app, website) is **Piggybank Budgeting** (bundle id `vault.Piggybank`).
 - [x] **Website is live** at https://vaultstudio.dev (source in `docs/website`, see its `README.md`) and the support
       address `support@vaultstudio.dev` is set up. Use these in App Store Connect: Support URL
       `https://vaultstudio.dev/support`, Privacy Policy URL `https://vaultstudio.dev/privacy`, Marketing URL

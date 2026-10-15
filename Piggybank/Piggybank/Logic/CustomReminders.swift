@@ -85,7 +85,7 @@ struct CustomReminder: Codable, Identifiable, Equatable {
 }
 
 /// The user's custom reminders. Kept in preferences (they're settings, not financial data) and turned into repeating
-/// system notifications, so they arrive even when Piggybank Financial Budget isn't open.
+/// system notifications, so they arrive even when Piggybank Budgeting isn't open.
 @MainActor
 @Observable
 final class CustomReminders {
@@ -139,8 +139,8 @@ final class CustomReminders {
                 repeating = false
             }
             let content = UNMutableNotificationContent()
-            content.title = reminder.title.isEmpty ? "Piggybank Financial Budget" : reminder.title
-            content.body = reminder.note.isEmpty ? "A reminder from Piggybank Financial Budget." : reminder.note
+            content.title = reminder.title.isEmpty ? "Piggybank Budgeting" : reminder.title
+            content.body = reminder.note.isEmpty ? "A reminder from Piggybank Budgeting." : reminder.note
             content.sound = .default
             content.userInfo = ["page": reminder.page.rawValue]
             let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: repeating)

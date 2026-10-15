@@ -31,14 +31,14 @@ struct ImportExportSettingsView: View {
     var body: some View {
         Form {
             Section {
-                actionRow("Export Backup…", detail: "Everything in Piggybank Financial Budget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.") { exportBackup() }
+                actionRow("Export Backup…", detail: "Everything in Piggybank Budgeting in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.") { exportBackup() }
                 actionRow("Export Transactions (CSV)…", detail: "Every transaction as a spreadsheet you can open in Numbers or Excel.") { exportCSV() }
             } header: {
                 Text("Export")
             }
 
             Section {
-                actionRow("Import Backup…", detail: "Restore from a .pig backup file. This replaces everything currently in Piggybank Financial Budget, including custom categories, payment methods and preferences.") { chooseBackup() }
+                actionRow("Import Backup…", detail: "Restore from a .pig backup file. This replaces everything currently in Piggybank Budgeting, including custom categories, payment methods and preferences.") { chooseBackup() }
                 actionRow("Import Transactions (CSV)…", detail: "Add transactions from a spreadsheet. Needs a Date column and an Amount column (or Debit and Credit).") { chooseCSV() }
             } header: {
                 Text("Import")
@@ -55,7 +55,7 @@ struct ImportExportSettingsView: View {
                             ForEach(accounts) { Text($0.name).tag(Optional($0)) }
                         }
                     }
-                    Toggle("Skip ones already in Piggybank Financial Budget", isOn: $skipDuplicates)
+                    Toggle("Skip ones already in Piggybank Budgeting", isOn: $skipDuplicates)
                     HStack {
                         Spacer()
                         Button("Cancel") { self.pendingCSV = nil }
@@ -82,7 +82,7 @@ struct ImportExportSettingsView: View {
             Button("Replace Everything", role: .destructive, action: restoreBackup)
             Button("Cancel", role: .cancel) { pendingBackup = nil }
         } message: {
-            Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in Piggybank Financial Budget is erased first, and this can't be undone.")
+            Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in Piggybank Budgeting is erased first, and this can't be undone.")
         }
         .onAppear {
             if defaultAccount == nil { defaultAccount = accounts.first }
@@ -125,7 +125,7 @@ struct ImportExportSettingsView: View {
     private func exportCSV() {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.commaSeparatedText]
-        panel.nameFieldStringValue = "Piggybank Financial Transactions \(Self.stamp()).csv"
+        panel.nameFieldStringValue = "Piggybank Budgeting Transactions \(Self.stamp()).csv"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let text = try TransactionCSV.export(from: modelContext)
@@ -144,7 +144,7 @@ struct ImportExportSettingsView: View {
         // .pig is the backup format. Older backups saved as plain .json still open.
         panel.allowedContentTypes = [DataBackup.fileType, .json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Piggybank Financial Budget backup file (.pig)."
+        panel.message = "Choose a Piggybank Budgeting backup file (.pig)."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)

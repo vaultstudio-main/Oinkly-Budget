@@ -8,7 +8,7 @@ enum AboutInfo {
 
     /// A short paragraph about the app.
     static var summary: String {
-        "Piggybank Financial Budget is a personal finance app that keeps accounts, budgets, bills and investments in your control."
+        "Piggybank Budgeting is a personal finance app that keeps accounts, budgets, bills and investments in your control."
     }
 
     /// Lines near the bottom, such as who made it. Remove a line to hide it.
@@ -42,7 +42,7 @@ struct AboutWindow: View {
                 .frame(width: 112, height: 112)
 
             VStack(spacing: 4) {
-                Text("Piggybank Financial Budget").lineLimit(1).minimumScaleFactor(0.6).font(.system(size: 28, weight: .bold, design: .rounded))
+                Text("Piggybank Budgeting").lineLimit(1).minimumScaleFactor(0.6).font(.system(size: 28, weight: .bold, design: .rounded))
                 Text(AboutInfo.tagline).foregroundStyle(.secondary)
                 Text(version).font(.caption).foregroundStyle(.tertiary)
             }
