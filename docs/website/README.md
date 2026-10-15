@@ -11,7 +11,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |
 | `style.css` | Shared look, follows light and dark mode |
-| `images/` | App icon and screenshots (resized to 1600 px wide) |
+| `images/` | App icon, logo and screenshots (summary, transactions, bills, register, card, mortgage, reports, liabilities, investments, planning; 1600 px wide). Originals are in `../website-src/` and are not uploaded |
 
 ## Already filled in
 - Studio name: **Vault Studio**. Domain: **vaultstudio.dev**. Support email: **support@vaultstudio.dev**

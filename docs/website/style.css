@@ -121,3 +121,12 @@ main { padding-bottom: 24px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; }
 .brand-logo { display: inline-block; flex: none; border-radius: 7px; vertical-align: middle; }
 .foot-brand strong { display: flex; align-items: center; gap: 10px; }
+
+/* Screenshot gallery */
+.gallery { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin: 18px 0 8px; }
+.gallery figure { margin: 0; }
+.gallery img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); box-shadow: 0 6px 22px rgba(0,0,0,.18); display: block; }
+.gallery a { display: block; }
+.gallery figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; text-align: center; }
+.gallery figure:last-child:nth-child(odd) { grid-column: 1 / -1; }
+@media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
