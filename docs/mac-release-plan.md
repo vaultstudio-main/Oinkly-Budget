@@ -1,4 +1,4 @@
-# Piggybank Budgeting 1.0: Mac release plan
+# PigVault 1.0: Mac release plan
 
 Status as of 2026-10-11. Piggybank is a **Mac-only** app. The iPhone and iPad code was removed (still in git history up to
 `aa90b3f`), and there is no sync: data lives on the Mac, and `.pig` backups are the way to move or protect it.
@@ -27,17 +27,17 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
 - [x] **Minimum macOS** is now 15.0 (`MACOSX_DEPLOYMENT_TARGET`). It builds clean, but only macOS 27 was available to test
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
-- [x] **Name.** "Piggybank Financial" and "Piggybank Financial Budget" were already taken in App Store Connect, so the
-      name everywhere (store, app, website) is **Piggybank Budgeting** (bundle id `dev.vaultstudio.piggybankbudgeting`).
+- [x] **Name.** "Piggybank Financial", "Piggybank Financial Budget" and "Piggybank Budgeting" were all rejected in App Store
+      Connect, so the product is **PigVault** everywhere (bundle id `dev.vaultstudio.pigvault`).
 - [x] **Website is live** at https://vaultstudio.dev (source in `docs/website`, see its `README.md`) and the support
       address `support@vaultstudio.dev` is set up. Use these in App Store Connect: Support URL
       `https://vaultstudio.dev/support`, Privacy Policy URL `https://vaultstudio.dev/privacy`, Marketing URL
-      `https://vaultstudio.dev/piggybank`. (The host serves clean addresses without `.html`.) Still to do on the site
+      `https://vaultstudio.dev/pigvault`. (The host serves clean addresses without `.html`.) Still to do on the site
       later: swap the "Coming soon" button for the App Store link when the app is live.
 
 ### 2. Accounts and signing (you)
 - [x] Paid Apple Developer Program membership (confirmed; the project uses team `LVKJ422Q3M`).
-- [ ] App Store Connect: create the app record, platform **macOS**, bundle id `dev.vaultstudio.piggybankbudgeting`, category Finance.
+- [ ] App Store Connect: create the app record, platform **macOS**, bundle id `dev.vaultstudio.pigvault`, category Finance.
 - [ ] Signing: Automatic, Apple Distribution certificate, Mac App Store provisioning. Xcode handles it on Archive.
 - [ ] Sandbox entitlements the app needs: App Sandbox, User Selected File (read/write). Nothing else. Notifications need
       no entitlement. `Piggybank/Piggybank.entitlements` is not wired into the target; leave it unwired (it lists iCloud and

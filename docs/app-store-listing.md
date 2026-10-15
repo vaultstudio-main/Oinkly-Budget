@@ -1,12 +1,12 @@
-# App Store listing draft: Piggybank Budgeting
+# App Store listing draft: PigVault
 
 Copy and paste each block into App Store Connect. Character limits are Apple's. Edit freely.
 Price: $9.99, one-time purchase. Category: Finance (primary). Optional secondary: Productivity.
 
 ## App name (max 30)
-Piggybank Budgeting
+PigVault
 
-("Piggybank Financial" and "Piggybank Financial Budget" were already taken in App Store Connect, so the name everywhere is "Piggybank Budgeting".)
+("Piggybank …" names were rejected in App Store Connect, so the product is called PigVault everywhere.)
 
 ## Subtitle (max 30)
 Private money, bills & goals
@@ -18,7 +18,7 @@ Your accounts, bills, budgets and goals in one calm app. No bank linking and no 
 budget,finance,money,bills,expenses,accounts,loans,net worth,checking,savings,reports,goals,private
 
 ## Description (max 4000)
-Piggybank Budgeting keeps your whole financial picture in one place, and keeps it private. Everything you enter stays on your own Mac. There is no account to create, no sign-in, no ads and no tracking.
+PigVault keeps your whole financial picture in one place, and keeps it private. Everything you enter stays on your own Mac. There is no account to create, no sign-in, no ads and no tracking.
 
 KEEP EVERY ACCOUNT TOGETHER
 Checking, savings, cash, credit cards, loans, mortgages, investments and assets all live side by side. Each account has its own register with a running balance, and you can see everything together on one Transactions page.
@@ -30,7 +30,7 @@ PLAN AND TRACK
 Set monthly budgets for your categories, and goals for saving up or paying off debt. Reports show income against spending, where your money goes, what you owe and how your investments are growing, by month, quarter or year.
 
 OLD SCHOOL ON PURPOSE
-Piggybank Budgeting doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself.
+PigVault doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself.
 
 DETAILS THAT FEEL RIGHT
 • Credit limits are real: a charge that would reach a card's limit is stopped before it's saved
@@ -43,15 +43,15 @@ DETAILS THAT FEEL RIGHT
 • Import transactions from a CSV file, and export when you like
 
 FAST, EVEN WITH YEARS OF HISTORY
-Piggybank is built to stay quick with very large numbers of transactions, so it feels the same in year five as in week one.
+PigVault is built to stay quick with very large numbers of transactions, so it feels the same in year five as in week one.
 
 YOURS TO KEEP
 Backups are a single file you control. Save everything, restore it on a new Mac, or keep a copy somewhere safe. There is no subscription and no data held hostage.
 
-Piggybank Budgeting is made for the Mac and requires macOS 15 or later. It does not sync with other devices.
+PigVault is made for the Mac and requires macOS 15 or later. It does not sync with other devices.
 
 ## What's new in this version (1.0)
-Welcome to Piggybank Budgeting 1.0, the first release.
+Welcome to PigVault 1.0, the first release.
 • Accounts of every kind, with registers and running balances
 • Bills calendar, reminders and one-step payments
 • Budgets, goals and reports
@@ -66,7 +66,7 @@ https://vaultstudio.dev/support
 https://vaultstudio.dev/privacy
 
 ## Marketing URL (optional)
-https://vaultstudio.dev/piggybank
+https://vaultstudio.dev/pigvault
 
 ## Copyright
 2026 Vault Studio

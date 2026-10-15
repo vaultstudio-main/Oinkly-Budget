@@ -31,14 +31,14 @@ enum HelpContent {
     static let groups: [Group] = [
         Group(title: "Start Here", topics: [
             Topic(title: "Welcome", symbol: "hand.wave", lines: [
-                "Piggybank Budgeting keeps your accounts, bills, budgets, goals and investments on your own Mac. There is no account to create and nothing is sent anywhere.",
+                "PigVault keeps your accounts, bills, budgets, goals and investments on your own Mac. There is no account to create and nothing is sent anywhere.",
                 "## Your first few minutes",
                 "• Add your accounts. The setup screen walks you through it, and Manage Accounts at the bottom of the side panel lets you add more any time.",
                 "• Record what happens: File ▸ New Transaction for everyday money in and out, New Credit Card Charge for cards, ATM Withdrawal for cash.",
                 "• Add your bills on the Bills page so they show on the calendar and remind you.",
                 "• Open Summary for the big picture and Reports to see where your money goes.",
                 "## Help any time",
-                "Press ⇧⌘/ or choose Help ▸ Piggybank Budgeting Help. Search this window with the field at the top of the list.",
+                "Press ⇧⌘/ or choose Help ▸ PigVault Help. Search this window with the field at the top of the list.",
             ], shots: [Shot(asset: "Help-welcome", caption: "The Summary page, with the side panel on the left.")]),
 
             Topic(title: "Finding Your Way", symbol: "sidebar.left", lines: [
@@ -59,7 +59,7 @@ enum HelpContent {
 
         Group(title: "Accounts", topics: [
             Topic(title: "Adding & Managing Accounts", symbol: "building.columns", lines: [
-                "Choose Manage Accounts at the bottom of the side panel (or Piggybank ▸ Settings ▸ Accounts) to add, edit or delete an account.",
+                "Choose Manage Accounts at the bottom of the side panel (or PigVault ▸ Settings ▸ Accounts) to add, edit or delete an account.",
                 "## What each kind keeps",
                 "• Checking, savings and the like: institution, account number, routing number and an opening balance.",
                 "• Credit cards: card number, credit limit, APR, minimum payment, payment due date and the balance you owe.",
@@ -77,7 +77,7 @@ enum HelpContent {
             Topic(title: "Cash on Hand", symbol: "dollarsign.circle", lines: [
                 "Cash on Hand is built in. It is for the cash you carry, so it has no bank details and no opening balance. It starts at $0.00 and is filled by ATM withdrawals.",
                 "## ATM Withdrawal",
-                "Choose File ▸ ATM Withdrawal… (⇧⌘A). Pick the checking or savings account the cash comes from, the amount and the date. Piggybank Budgeting takes it out of that account and adds it to Cash on Hand as one linked pair, so it never counts as income or spending.",
+                "Choose File ▸ ATM Withdrawal… (⇧⌘A). Pick the checking or savings account the cash comes from, the amount and the date. PigVault takes it out of that account and adds it to Cash on Hand as one linked pair, so it never counts as income or spending.",
                 "• Every withdrawal reads the same: payee ATM Withdrawal, category ATM, method Cash, memo Cash, no receipt, always reconciled.",
                 "• Those fields are locked on purpose, because that's what cash from an ATM always is.",
                 "## Spending and receiving cash",
@@ -100,7 +100,7 @@ enum HelpContent {
                        Shot(asset: "Help-card-details", caption: "A card's page with limit, available credit and APR.")]),
 
             Topic(title: "Loans & Mortgages", symbol: "banknote", lines: [
-                "Loans keep what you borrowed, the interest rate, the monthly payment, a start date and a maturity date. Piggybank Budgeting estimates the payments left until maturity.",
+                "Loans keep what you borrowed, the interest rate, the monthly payment, a start date and a maturity date. PigVault estimates the payments left until maturity.",
                 "• Turn on Set a payment due date and the loan adds its own bill to the Bills page, repeating monthly.",
                 "• Mark it paid on Bills, or pay it with Pay a Bill, and the loan's page shows this month as Paid.",
                 "• A loan's photo is used as the picture on its bill.",
@@ -250,7 +250,7 @@ enum HelpContent {
             ], shots: [Shot(asset: "Help-menu-bar", caption: "The menu bar pop-up.")]),
 
             Topic(title: "Settings", symbol: "gearshape", lines: [
-                "Open Settings with Piggybank ▸ Settings… (⌘,).",
+                "Open Settings with PigVault ▸ Settings… (⌘,).",
                 "• General: menu bar and login options, appearance (light, dark or system) and currency.",
                 "• Reminders: bill reminders and your own custom reminders.",
                 "• Accounts: add, edit and delete accounts.",
@@ -288,7 +288,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Your Data & Privacy", symbol: "lock.shield", lines: [
-                "Everything stays on your Mac. Piggybank Budgeting has no account, no sign-in and no online sync.",
+                "Everything stays on your Mac. PigVault has no account, no sign-in and no online sync.",
                 "• Account and card numbers show masked until you press Show.",
                 "• The side panel never shows balances. They appear once you open an account.",
                 "• Backups are plain files you keep. Store them somewhere safe, since anyone with a .pig file can read it.",
@@ -299,7 +299,7 @@ enum HelpContent {
     static var topics: [Topic] { groups.flatMap(\.topics) }
 }
 
-/// Help ▸ Piggybank Budgeting Help. Topics on the left, the text and screenshots on the right.
+/// Help ▸ PigVault Help. Topics on the left, the text and screenshots on the right.
 struct HelpWindow: View {
     @State private var selection: HelpContent.Topic? = HelpContent.topics.first
     @State private var search = ""

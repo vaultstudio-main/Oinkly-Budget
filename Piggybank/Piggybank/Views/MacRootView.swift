@@ -147,7 +147,7 @@ struct MacRootView: View {
                 }
             }
         }
-        .navigationTitle("Piggybank Budgeting")
+        .navigationTitle("PigVault")
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
             switch note.userInfo?["page"] as? String {
             case "summary": selection = .summary

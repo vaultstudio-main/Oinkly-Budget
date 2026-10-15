@@ -2,7 +2,7 @@
 import SwiftUI
 import SwiftData
 
-/// Piggybank ▸ Testing… on the Mac. Fills the app with test data or wipes it.
+/// PigVault ▸ Testing… on the Mac. Fills the app with test data or wipes it.
 /// Debug builds only, for testing: it replaces whatever is in the app, with no way back.
 struct TestingWindow: View {
     @Environment(\.modelContext) private var modelContext

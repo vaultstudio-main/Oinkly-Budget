@@ -29,8 +29,8 @@ enum BackupExporter {
     static func exportWithPanel(from context: ModelContext) -> Outcome? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [DataBackup.fileType]
-        panel.nameFieldStringValue = "Piggybank Budgeting Backup \(stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save a backup of everything in Piggybank Budgeting."
+        panel.nameFieldStringValue = "PigVault Backup \(stamp()).\(DataBackup.fileExtension)"
+        panel.message = "Save a backup of everything in PigVault."
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         do {
             let file = try DataBackup.make(from: context)

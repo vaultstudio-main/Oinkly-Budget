@@ -46,7 +46,7 @@ struct MenuBarBills: View {
                     .frame(width: 44, height: 44)
                     .background(Theme.green.gradient, in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Piggybank Budgeting")
+                    Text("PigVault")
                         .font(.system(size: 18, weight: .bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -86,7 +86,7 @@ struct MenuBarBills: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if upcoming.isEmpty {
-                    Text(bills.isEmpty ? "No bills yet. Add some in Piggybank Budgeting ▸ Bills." : "Nothing due in the next two weeks.")
+                    Text(bills.isEmpty ? "No bills yet. Add some in PigVault ▸ Bills." : "Nothing due in the next two weeks.")
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                 } else {
@@ -164,8 +164,8 @@ struct BackgroundSettingsSection: View {
 
     var body: some View {
         Section {
-            Toggle("Show Piggybank Budgeting in the menu bar", isOn: $showInMenuBar)
-            Toggle("Open Piggybank Budgeting when I log in", isOn: Binding(
+            Toggle("Show PigVault in the menu bar", isOn: $showInMenuBar)
+            Toggle("Open PigVault when I log in", isOn: Binding(
                 get: { opensAtLogin },
                 set: { setLogin($0) }
             ))
@@ -175,7 +175,7 @@ struct BackgroundSettingsSection: View {
         } header: {
             Text("Background")
         } footer: {
-            Text("The menu bar item shows your upcoming bills. Closing the window leaves Piggybank Budgeting running so the item stays; open the window again from the Dock, and quit with ⌘Q. Turn on opening at login to have it ready when you start your Mac.")
+            Text("The menu bar item shows your upcoming bills. Closing the window leaves PigVault running so the item stays; open the window again from the Dock, and quit with ⌘Q. Turn on opening at login to have it ready when you start your Mac.")
         }
     }
 

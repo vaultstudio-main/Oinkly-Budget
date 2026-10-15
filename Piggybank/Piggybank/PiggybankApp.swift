@@ -28,7 +28,7 @@ struct PiggybankApp: App {
 
     var body: some Scene {
         // The boot window is its own scene, shown once at launch. It opens the main window when the checks pass.
-        Window("Starting Piggybank Budgeting", id: "boot") {
+        Window("Starting PigVault", id: "boot") {
             BootView()
                 .preferredColorScheme(.dark)
         }
@@ -38,7 +38,7 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.presented)
         .restorationBehavior(.disabled)
 
-        WindowGroup("Piggybank Budgeting", id: "main") {
+        WindowGroup("PigVault", id: "main") {
             ContentView()
         }
         .modelContainer(container)
@@ -88,7 +88,7 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("About Piggybank Budgeting", id: "about") {
+        Window("About PigVault", id: "about") {
             AboutWindow()
                 .appAppearance()
         }
@@ -109,7 +109,7 @@ struct PiggybankApp: App {
         .restorationBehavior(.disabled)
         #endif
 
-        Window("Piggybank Budgeting Help", id: "help") {
+        Window("PigVault Help", id: "help") {
             HelpWindow()
                 .appAppearance()
         }
@@ -174,7 +174,7 @@ struct PiggybankApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        // Adds Piggybank ▸ Settings… (⌘,) to the app menu.
+        // Adds PigVault ▸ Settings… (⌘,) to the app menu.
         Settings {
             MacSettingsView()
                 .savesChangesImmediately()
