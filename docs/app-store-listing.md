@@ -4,7 +4,9 @@ Copy and paste each block into App Store Connect. Character limits are Apple's. 
 Price: $9.99, one-time purchase. Category: Finance (primary). Optional secondary: Productivity.
 
 ## App name (max 30)
-Piggybank Financial
+Piggybank Financial Budget
+
+("Piggybank Financial" was already taken in App Store Connect. The app's own name on the Mac stays "Piggybank Financial".)
 
 ## Subtitle (max 30)
 Private money, bills & budgets

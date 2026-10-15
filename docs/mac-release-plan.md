@@ -27,7 +27,8 @@ Work top to bottom. Items marked **you** need your account, your Mac or your eye
 - [x] **Minimum macOS** is now 15.0 (`MACOSX_DEPLOYMENT_TARGET`). It builds clean, but only macOS 27 was available to test
       on: run it once on a Mac with macOS 15 or 26 if you can. 14 is not possible without reworking how windows open
       (`defaultLaunchBehavior` and `restorationBehavior` need macOS 15).
-- [ ] **Name.** The app is "Piggybank Financial" (bundle id `vault.Piggybank`). Check the name is free in App Store Connect.
+- [x] **Name.** "Piggybank Financial" was already taken in App Store Connect, so the store name is **Piggybank Financial Budget**
+      (bundle id `vault.Piggybank`). The app's own name on the Mac stays "Piggybank Financial".
 - [x] **Website is live** at https://vaultstudio.dev (source in `docs/website`, see its `README.md`) and the support
       address `support@vaultstudio.dev` is set up. Use these in App Store Connect: Support URL
       `https://vaultstudio.dev/support`, Privacy Policy URL `https://vaultstudio.dev/privacy`, Marketing URL
