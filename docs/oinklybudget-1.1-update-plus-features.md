@@ -51,14 +51,45 @@ Pick from this list; each one is small to medium.
 - Accessibility pass (VoiceOver, larger text) for the new screens.
 - Settings for default report period and print style.
 
-## Data file work (not in 1.1)
+## Shared data file: two users on one Mac
 
-Letting people choose where the data file is saved, with one shared file on one Mac opened by one person at a time, is a separate and bigger change. It is not part of 1.1. Until it is planned, avoid new code that assumes the data lives in a fixed place. The earlier plan is in git history (`docs/data-file-plan.md`).
+Goal: two people on the same Mac can use the same OinklyBudget data file, **one at a time**. No sync, no cloud, no accounts inside the app. (Both editing at the same moment is a much harder problem and is not part of this. If you want that, say so, because it changes the design.)
+
+### What it does
+
+- The data is a file the household chooses the location of (Documents, or `/Users/Shared` when each person has their own Mac login). Double-clicking it in Finder opens it.
+- **File menu:** New Data File…, Open…, Open Recent, Show in Finder, Move Data File…, and "Close File So Someone Else Can Use It". The file name shows in the window title.
+- **Opens the last file at launch.** If the file is missing, a clear screen says so and offers Locate, Open Another, or New. It never starts an empty database silently.
+- **One person at a time.** Opening a file leaves a small lock beside it with who has it and since when. A second person sees "Sam has this file open since 3:10 PM" and can open it read-only, open another file, or cancel.
+- **Stale locks** after a crash: if the lock is old and the app that wrote it is gone, offer "Take Over" with a warning.
+- **Existing 1.0 data is copied, not moved.** The first launch of 1.1 copies the data to a file the person picks, checks the counts match, keeps the original untouched, and offers a `.pig` backup first.
+
+### The main risk, and the answer
+
+If each person has their own Mac login, two logins sharing one live database is risky: SQLite creates side files while running, and files made by one login can be unwritable by the other. The safe design is **check out and check in**:
+
+- Opening takes the lock and copies the shared file to a private working copy; editing happens on the copy.
+- Saving and closing writes the copy back to the shared file in one safe replace step, then releases the lock. The shared file is only ever a finished, closed file.
+- Autosave writes back on a timer and when the app is hidden. After a crash, the app offers to recover the unsaved working copy.
+
+If everyone shares one Mac login, opening the file live is simpler and probably fine. A short prototype settles it.
+
+### Technical notes
+
+- The app is sandboxed with user-selected file access already on. A stored bookmark of the last file is needed; bookmarks are per Mac login, so each person opens the shared file once.
+- Older files open and are upgraded; newer files are refused with a clear message.
+- Show the file path in Settings, since "where is my file?" will be the common question.
+- This is the riskiest work in 1.1 because it touches how data is saved. Back up first, test crashes (kill the app mid-edit, stale locks), and test with large data.
+
+### Effort
+
+About 4 to 5 weeks part-time: prototype (3 to 5 days), core file menu and bookmark (1 week), sharing and locks (1 week), safety and recovery (1 week), migration (3 to 5 days), Help and release (3 to 5 days).
 
 ## Order of work
 
 1. **Printing foundation:** shared report page, page setup, Print and Save as PDF commands. Prove it on the register.
 2. **Print everywhere:** transaction, budget, bills, reports.
+   *The shared data file can go first or last; it does not depend on printing. Since it changes how data is saved, doing it first (or in its own release) keeps it from being rushed.*
 3. **New reports** and report options.
 4. **Everyday features:** pick two or three from "Should have" (recurring, splits and OFX/QIF import are the strongest).
 5. **Polish:** Help pages and screenshots for every new feature, release notes, accessibility check.
@@ -74,7 +105,7 @@ Letting people choose where the data file is saved, with one shared file on one 
 | Each everyday feature | 3 days to 2 weeks (splits and recurring are the larger ones) |
 | Help, screenshots, release | 1 week |
 
-About 5 to 8 weeks part-time for printing, reports and two or three everyday features.
+About 5 to 8 weeks part-time for printing, reports and two or three everyday features, plus about 4 to 5 weeks for the shared data file, so 9 to 13 weeks in total. If that is too long, ship printing and reports as 1.1 and the shared file as 1.2.
 
 ## Release housekeeping
 
@@ -96,4 +127,5 @@ About 5 to 8 weeks part-time for printing, reports and two or three everyday fea
 1. Which of the "Should have" features come in 1.1 (suggestion: recurring transactions, split transactions, OFX/QIF import)?
 2. Are check printing and attachments in or out?
 3. Is any model change acceptable in 1.1, or should it be print and report features only?
+3b. Shared file: one person at a time (as planned), or both at once? And is it in 1.1 or its own 1.2?
 4. Release timing, after 1.0 is approved?
