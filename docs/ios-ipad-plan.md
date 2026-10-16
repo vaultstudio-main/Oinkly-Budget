@@ -12,19 +12,35 @@ Drafted 2026-10-15, decisions made the same day. Nothing here is started. The Ma
 
 ## Release sequence
 
-| Release | Contents | When |
-|---|---|---|
-| **1.0 (Mac)** | The app as it is now: local storage, no sync. Ships as planned. | Friday, if review and plans go through |
-| **1.1 (Mac, iPhone, iPad)** | iCloud sync, the iPhone and iPad app, widgets, Face ID lock. The Mac update and the iOS app go out together. | After 1.0, when phases 0 to 5 are done |
+The Mac app gets better through the 1.x releases, and the iPhone and iPad app arrives with 2.0. The iOS groundwork is built quietly inside 1.x so 2.0 is not a rewrite.
 
-Because 1.0 goes out first with sync off, **1.1 has to migrate real users' stores** and not just fresh installs. That is the main thing this plan protects:
+| Release | Contents |
+|---|---|
+| **1.0 (Mac)** | The app as it is now. Local storage, no sync. Ships Friday if review and plans go through. |
+| **1.x (Mac)** | Better Mac features: printing reports, printing transactions, Save as PDF, printing to paper, and whatever else comes up. iOS scaffolding goes in alongside, with no visible change for users (see below). |
+| **2.0 (Mac, iPhone, iPad)** | iCloud sync, the iPhone and iPad app, widgets, Face ID lock. The Mac update and the iOS app go out together. $9.99 covers all of them. |
 
-- Do **not** change the models before Friday. The checks below show the models are already close to sync-ready, and the change is a small, lightweight migration that belongs in 1.1 (as `PiggybankSchemaV2`), where it can be tested properly.
-- Sync-readiness check of the current models: there are no `@Attribute(.unique)` fields, and every relationship already has an inverse. The one change needed is that to-many relationships (`transactions`, `bills`, `goals`, `holdings`, `events`, `contributions`, `payees`, `loanBills`, `payments`) must become optional for CloudKit, and every other stored property needs a default value (check each one). Photo and receipt data already use external storage, which CloudKit handles as assets.
-- 1.0 should keep `PiggybankSchemaV1` exactly as it is, so the 1.1 migration has a clean starting point. The versioned schema and migration plan are already in place for this.
-- Keep the `.pig` backup in 1.0 prominent. It is the safety net for the move to sync, and Help should tell 1.0 users to make a backup before updating to 1.1.
-- Nothing about sync appears in the 1.0 listing, website, or privacy page. Add it with 1.1.
-- Set up the iCloud container ID and the iOS app record (same bundle ID, for Universal Purchase) in App Store Connect while 1.0 is in review, so they are not a surprise later. This does not touch the 1.0 build.
+### Scaffolding that is safe to add during 1.x
+
+Only changes that do not alter the stored data and are invisible to users:
+
+- **Platform wrappers.** A `PlatformImage` alias for `NSImage` and `UIImage`, and small wrappers for pasteboard, open-URL and file import and export, so shared files stop calling AppKit directly.
+- **Printing and PDF built to be shared.** Build the report and transaction printing on SwiftUI views rendered with `ImageRenderer` into PDF pages, with only the last step platform-specific (`NSPrintOperation` on the Mac, `UIPrintInteractionController` and the share sheet on iOS). Then the same report layouts print on the phone in 2.0 for free.
+- **Move code into shared folders.** Keep `Models/` and `Logic/` free of AppKit, and keep Mac-only code in the Mac views, so the iOS target can compile them later.
+- **Separate view logic from window logic.** Pull the content of each window (Transfer, Bill Pay, New Transaction) into plain views that take a model and a dismiss closure, so 2.0 can show them as sheets.
+- **A multiplatform target** can be added once the Mac code compiles cleanly, but is not shipped until 2.0.
+- Unit tests for `Logic/` keep running on both.
+
+### The one step that must stay deliberate: the data model
+
+Changing the stored models for CloudKit is not scaffolding, because it changes every user's database. Keep it as a single, tested step (`PiggybankSchemaV2`) done when the sync work starts, not slipped in with feature releases.
+
+- Do not change the models in 1.x unless a feature needs it. If printing or reports need a new stored field, add it in a way that already follows the sync rules (a default value, optional relationships, no unique attributes) so it does not make the 2.0 migration bigger.
+- Check the sync-readiness of the current models: no `@Attribute(.unique)` fields and every relationship has an inverse. The to-many relationships (`transactions`, `bills`, `goals`, `holdings`, `events`, `contributions`, `payees`, `loanBills`, `payments`) must become optional for CloudKit and every other stored property needs a default. Photo and receipt data already use external storage, which CloudKit handles as assets.
+- Keep `PiggybankSchemaV1` exactly as shipped until the migration is written, so the move has a clean starting point.
+- Keep the `.pig` backup prominent. It is the safety net for the move to sync, and Help should tell users to back up before updating to 2.0.
+- Nothing about sync appears in the listing, website or privacy page until 2.0.
+- Set up the iCloud container and the iOS app record (same bundle ID, for Universal Purchase) in App Store Connect while 1.0 is in review or soon after.
 
 ## Goal
 
@@ -116,7 +132,7 @@ Checks before turning sync on:
 
 | Phase | Work | Rough effort |
 |---|---|---|
-| 0. Prepare | Add iOS destination, get Models and Logic compiling on iOS, wrap AppKit calls, add `PlatformImage`. | 2 to 4 days |
+| 0. Prepare | Mostly done during 1.x as scaffolding. Add the iOS destination, get Models and Logic compiling on iOS, wrap AppKit calls. | 2 to 4 days |
 | 0b. Sync-ready models | Apply the CloudKit model rules, schema version bump and migration, iCloud capability, two-device test on Mac. | 1 to 2 weeks |
 | 1. Skeleton | Phone tab layout, iPad split view, account list, register list, transaction detail, add and edit transaction. | 1 to 2 weeks |
 | 2. Core flows | Bills and bill pay, transfers, categories, budget screen, goals, reminders, settings. | 1 to 2 weeks |
@@ -152,7 +168,7 @@ Estimate for one developer part-time: about 8 to 12 weeks to a first TestFlight 
 
 ## Order of work
 
-1. Ship Mac 1.0 (record, TestFlight, review, Friday).
+1. Ship Mac 1.0 (record, TestFlight, review, Friday), then the 1.x feature releases (printing, PDF, reports) with the scaffolding.
 2. Phase 0 (iOS compiles) and 0b (sync-ready models, tested on Mac).
 3. Phases 1 to 5.
-4. Ship the Mac update and the iOS app together so sync works from day one.
+4. Ship it as 2.0, the Mac update and the iOS app together, so sync works from day one.
