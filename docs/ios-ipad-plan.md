@@ -145,7 +145,7 @@ The Mac app stores data locally and has `cloudKitDatabase: .none`. A phone app r
 | **B. iCloud sync (CloudKit via SwiftData)** | Mac, iPhone and iPad stay in step automatically. | Most requested feature, most work. Models need CloudKit rules (no unique constraints, optional or defaulted properties, no ordered relationships). Needs testing on real accounts. Changes the privacy wording. |
 | **C. iCloud Drive file** | A single backup file kept in iCloud Drive, restored on demand. | Middle ground. Simple, but not real sync and risks overwrites. |
 
-**Decision: B, iCloud sync (CloudKit through SwiftData), in the first iOS release.** The `.pig` backup stays as the manual backup and restore path, and is also how existing Mac data can be moved if sync is not wanted.
+**Decision: iCloud sync ships with the first iOS release. Note: the storage technology is now open, see "Family sharing and the storage rework" above, because SwiftData with CloudKit cannot do family data sharing.** The `.pig` backup stays as the manual backup and restore path, and is also how existing Mac data can be moved if sync is not wanted.
 
 This means the Mac app has to change too: it currently runs with `cloudKitDatabase: .none`, so the model rules below must be applied and the Mac release should be updated at the same time as iOS ships. Because sync touches the store, do the model changes as a schema version bump with a tested migration, and test them against a copy of real data before anyone's store is touched.
 

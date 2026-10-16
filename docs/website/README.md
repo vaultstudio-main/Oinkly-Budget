@@ -25,8 +25,6 @@ A small static site for the domain. No build step and no dependencies: upload th
 - "Coming soon to the Mac App Store" on `index.html` and `oinklybudget.html`: when the app is live, swap each
   `<span class="button soon">` for `<a class="button" href="YOUR APP STORE LINK">Get it on the Mac App Store</a>`, and
   change the "Coming soon for Mac" badge on `index.html` to "Now available for Mac".
-- The Windows "coming soon" lines on both pages: remove or change them if the Windows plan is dropped
-  (`piggybank-windows/PLAN.md`).
 - Optional: an `og:image` preview picture and a favicon at several sizes.
 
 ## Adding another project later
