@@ -10,6 +10,47 @@ Drafted 2026-10-15, decisions made the same day. Nothing here is started. The Ma
 4. **Widgets and Face ID lock are in the first release.**
 5. **The Windows version is dropped.** iOS is the only other platform. The `piggybank-windows/` plan is retired.
 
+## Product direction (updated)
+
+- **The Mac app is the product.** The goal is a full, big, Quicken-style desktop program. Most new features go there first and keep going there through the 1.x releases.
+- **The iPhone and iPad app is a companion and viewer.** It is deliberately stripped down. It does not need to list every account or offer every screen. It shows what is useful on the go (balances that matter, bills due, budget left, recent transactions, goals) and may allow quick entry. The full data still syncs to the device, but the app only shows part of it.
+- **Family sharing of the data** is a planned feature. It changes how data is saved and shared, so it drives the 2.0 storage rework (see the next section).
+
+Effect on this plan: the iOS app is much smaller than the earlier phases assumed. Most of the effort moves into the Mac features and the storage layer, and the phone UI shrinks to a handful of screens.
+
+## Family sharing and the storage rework (the big one)
+
+Two different things are called sharing, and only one needs the rework:
+
+| Thing | What it is | Work |
+|---|---|---|
+| **App purchase sharing** (Apple Family Sharing) | Family members can download the app on their own devices. | A checkbox in App Store Connect. No code. |
+| **Data sharing** | A household shares one set of accounts, each person on their own Apple ID. | Needs CloudKit sharing. This is the rework. |
+
+Why it matters: SwiftData with CloudKit syncs only to the user's own private iCloud database, and as far as I know it cannot take part in CloudKit shared databases. Data sharing between Apple IDs therefore cannot be added on top of the current storage. Verify this against the current SDK when work starts, since Apple may have changed it.
+
+Options for 2.0:
+
+| Option | Sharing | Notes |
+|---|---|---|
+| **A. SwiftData + CloudKit private database** | No | Simplest. Syncs a person's own devices only. Fine for iCloud sync alone, but a dead end for family sharing. |
+| **B. Core Data with `NSPersistentCloudKitContainer`** | Yes (shared store, `CKShare`) | Mature and supported. Means moving off SwiftData, rewriting the model layer and every `@Query`. |
+| **C. Own sync layer using `CKSyncEngine`** | Yes (private and shared databases) | Most control and most work. Keep a local store (SwiftData, SQLite or similar) and sync records yourself. Fits a "full Quicken" app that needs precise conflict handling. |
+| **D. A document-style data file in iCloud Drive** | Limited | Matches the existing `.pig` idea. Weak at concurrent edits from several people. Not recommended for a household sharing live data. |
+
+Recommendation: decide between B and C before building any iOS UI, because everything else depends on it. Do not do A, since the family sharing goal makes it a dead end. If the data is reworked anyway, this is also the time to review the model: IDs, change tracking per record, deletion handling, and how multiple people's edits merge.
+
+Questions the sharing design must answer:
+
+- Who owns the shared data set, and who can edit versus only view?
+- Is it one shared set of everything, or can individual accounts be shared and others kept private?
+- What happens when two people edit the same transaction, or one deletes it while another edits it?
+- How does a person leave a share, and what do they keep?
+- How does the `.pig` backup behave with shared data?
+- Privacy wording: data goes through the users' own iCloud, never to Vault Studio. The privacy page and App Store privacy answers change with 2.0.
+
+Because this is a major change to saving, treat 2.0 as a new major version of the program, possibly with a reworked data layer, and give it its own plan once the options are tested with a small prototype.
+
 ## Release sequence
 
 The Mac app gets better through the 1.x releases, and the iPhone and iPad app arrives with 2.0. The iOS groundwork is built quietly inside 1.x so 2.0 is not a rewrite.
@@ -17,8 +58,8 @@ The Mac app gets better through the 1.x releases, and the iPhone and iPad app ar
 | Release | Contents |
 |---|---|
 | **1.0 (Mac)** | The app as it is now. Local storage, no sync. Ships Friday if review and plans go through. |
-| **1.x (Mac)** | Better Mac features: printing reports, printing transactions, Save as PDF, printing to paper, and whatever else comes up. iOS scaffolding goes in alongside, with no visible change for users (see below). |
-| **2.0 (Mac, iPhone, iPad)** | iCloud sync, the iPhone and iPad app, widgets, Face ID lock. The Mac update and the iOS app go out together. $9.99 covers all of them. |
+| **1.x (Mac)** | Grow the Mac app toward a full Quicken-style program:  printing reports, printing transactions, Save as PDF, printing to paper, and whatever else comes up. iOS scaffolding goes in alongside, with no visible change for users (see below). |
+| **2.0 (Mac, iPhone, iPad)** | Reworked data layer, iCloud sync, family data sharing (if the prototype holds up), and the iPhone and iPad companion app with widgets and Face ID lock. Mac and iOS go out together. $9.99 covers all of them. |
 
 ### Scaffolding that is safe to add during 1.x
 
