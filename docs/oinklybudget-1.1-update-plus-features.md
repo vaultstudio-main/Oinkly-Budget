@@ -72,17 +72,18 @@ Goal: two people on the same Mac can use the same OinklyBudget data file, **one 
 
 ### The main risk, and the answer
 
-If each person has their own Mac login, two logins sharing one live database is risky: SQLite creates side files while running, and files made by one login can be unwritable by the other. The safe design is **check out and check in**:
+Decided: each person has their own Mac login, so the file lives in a shared place such as `/Users/Shared`, and two logins can be signed in at once through fast user switching. Two logins sharing one live database is risky: SQLite creates side files while running, and files made by one login can be unwritable by the other. So the design is **check out and check in**, not opening the shared file live:
 
-- Opening takes the lock and copies the shared file to a private working copy; editing happens on the copy.
+- Opening takes the lock and copies the shared file to a private working copy in the app's own storage; editing happens on the copy.
 - Saving and closing writes the copy back to the shared file in one safe replace step, then releases the lock. The shared file is only ever a finished, closed file.
 - Autosave writes back on a timer and when the app is hidden. After a crash, the app offers to recover the unsaved working copy.
-
-If everyone shares one Mac login, opening the file live is simpler and probably fine. A short prototype settles it.
+- The app sets permissions on the shared file and its folder so every login can read and write it, and checks this on open with a clear message if it can't.
 
 ### Technical notes
 
-- The app is sandboxed with user-selected file access already on. A stored bookmark of the last file is needed; bookmarks are per Mac login, so each person opens the shared file once.
+- The app is sandboxed with user-selected file access already on. A stored bookmark of the last file is needed; bookmarks are per Mac login, so each person opens the shared file once with the Open dialog.
+- The lock file records the Mac user name, the time, and a "still in use" timestamp refreshed every minute. A different login cannot check whether the first login's app is still running, so a lock is treated as stale only when its timestamp has stopped updating, and Take Over always asks first.
+- With fast user switching, both people can be signed in with the app open. The second person sees who has the file and can wait, so "Close File So Someone Else Can Use It" must be easy to find.
 - Older files open and are upgraded; newer files are refused with a clear message.
 - The file path is shown in Settings ▸ Data, since "where is my file?" will be the common question.
 - This is the riskiest work in 1.1 because it touches how data is saved. Back up first, test crashes (kill the app mid-edit, stale locks), and test with large data.
@@ -93,7 +94,7 @@ About 4 to 5 weeks part-time: prototype (3 to 5 days), Settings ▸ Data section
 
 ## Order of work
 
-1. **Shared data file prototype (3 to 5 days):** open a store at a chosen location from a bookmark, try check-out and check-in, and try a second Mac login on a file in `/Users/Shared`. This decides the design, and it is the riskiest work, so it goes first.
+1. **Shared data file prototype (3 to 5 days):** build check-out and check-in on a file in `/Users/Shared` and test it with two real Mac logins (including fast user switching): permissions, bookmarks per login, locks, crashes. This decides the design, and it is the riskiest work, so it goes first.
 2. **Shared data file build:** Settings ▸ Data section, last-file bookmark, missing-file screen, locks with who and when, read-only open, take-over for stale locks, safe write-back and crash recovery, and the first-run copy of existing data.
 3. **Printing foundation:** shared report page, page setup, Print and Save as PDF commands. Prove it on the register.
 4. **Print everywhere:** transaction, budget, bills, reports.
@@ -137,6 +138,5 @@ About 5 to 8 weeks part-time for printing, reports and two or three everyday fea
 1. Which of the "Should have" features come in 1.1 (suggestion: recurring transactions, split transactions, OFX/QIF import)?
 2. Are check printing and attachments in or out?
 3. Is any model change acceptable in 1.1, or should it be print and report features only?
-3b. Shared file (in 1.1): one person at a time, as planned, or both at once? (Both at once is a different and much harder design.)
-3c. Must it work across separate Mac logins, or only people sharing one login?
+3b. Shared file: **decided.** One person at a time, across separate Mac logins. Both at once is not planned.
 4. Release timing, after 1.0 is approved?
