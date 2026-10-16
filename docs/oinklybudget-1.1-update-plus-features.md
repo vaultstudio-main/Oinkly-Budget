@@ -57,8 +57,14 @@ Goal: two people on the same Mac can use the same OinklyBudget data file, **one 
 
 ### What it does
 
-- The data is a file the household chooses the location of (Documents, or `/Users/Shared` when each person has their own Mac login). Double-clicking it in Finder opens it.
-- **File menu:** New Data File…, Open…, Open Recent, Show in Finder, Move Data File…, and "Close File So Someone Else Can Use It". The file name shows in the window title.
+- The data is a file the household chooses the location of (Documents, or `/Users/Shared` when each person has their own Mac login). Double-clicking it in Finder also opens it.
+- **All of it lives in Settings ▸ Data**, not in the File menu. The File menu gets nothing new for this. The Data tab (it already holds data tools) gets a "Data File" section:
+  - **Current file:** the file name and full path, with Show in Finder.
+  - **Who has it open:** the person's name and since when, and the last save.
+  - **Buttons:** Choose a Different File…, Create a New Data File…, Move This File…, Open Recent (a pop-up list), and "Close File So Someone Else Can Use It".
+  - **Read-only status** shown when the file was opened read-only.
+  - **Backup:** the existing backup options stay in the same tab.
+  - The file name still shows in the window title.
 - **Opens the last file at launch.** If the file is missing, a clear screen says so and offers Locate, Open Another, or New. It never starts an empty database silently.
 - **One person at a time.** Opening a file leaves a small lock beside it with who has it and since when. A second person sees "Sam has this file open since 3:10 PM" and can open it read-only, open another file, or cancel.
 - **Stale locks** after a crash: if the lock is old and the app that wrote it is gone, offer "Take Over" with a warning.
@@ -78,12 +84,12 @@ If everyone shares one Mac login, opening the file live is simpler and probably 
 
 - The app is sandboxed with user-selected file access already on. A stored bookmark of the last file is needed; bookmarks are per Mac login, so each person opens the shared file once.
 - Older files open and are upgraded; newer files are refused with a clear message.
-- Show the file path in Settings, since "where is my file?" will be the common question.
+- The file path is shown in Settings ▸ Data, since "where is my file?" will be the common question.
 - This is the riskiest work in 1.1 because it touches how data is saved. Back up first, test crashes (kill the app mid-edit, stale locks), and test with large data.
 
 ### Effort
 
-About 4 to 5 weeks part-time: prototype (3 to 5 days), core file menu and bookmark (1 week), sharing and locks (1 week), safety and recovery (1 week), migration (3 to 5 days), Help and release (3 to 5 days).
+About 4 to 5 weeks part-time: prototype (3 to 5 days), Settings ▸ Data section and bookmark (1 week), sharing and locks (1 week), safety and recovery (1 week), migration (3 to 5 days), Help and release (3 to 5 days).
 
 ## Order of work
 
