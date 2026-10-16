@@ -1,6 +1,14 @@
 # OinklyBudget for iPhone and iPad — plan
 
-Drafted 2026-10-15. Nothing here is started. The Mac release comes first.
+Drafted 2026-10-15, decisions made the same day. Nothing here is started. The Mac release comes first.
+
+## Decisions (made)
+
+1. **iCloud sync ships with the first iOS release.** Mac, iPhone and iPad stay in step.
+2. **$9.99, one purchase for all of them** (Universal Purchase).
+3. **iPhone and iPad together** from day one.
+4. **Widgets and Face ID lock are in the first release.**
+5. **The Windows version is dropped.** iOS is the only other platform. The `piggybank-windows/` plan is retired.
 
 ## Goal
 
@@ -64,11 +72,13 @@ The Mac app stores data locally and has `cloudKitDatabase: .none`. A phone app r
 | **B. iCloud sync (CloudKit via SwiftData)** | Mac, iPhone and iPad stay in step automatically. | Most requested feature, most work. Models need CloudKit rules (no unique constraints, optional or defaulted properties, no ordered relationships). Needs testing on real accounts. Changes the privacy wording. |
 | **C. iCloud Drive file** | A single backup file kept in iCloud Drive, restored on demand. | Middle ground. Simple, but not real sync and risks overwrites. |
 
-**Recommendation:** ship **A** in the first iOS release, with a clear "Move my data to this device" flow built on the existing `.pig` backup. Then take on **B** as a separate release once the phone app is stable. There is already a note in the repo that sync was deliberately deferred, and the model is easier to adapt once you know what the phone version actually needs.
+**Decision: B, iCloud sync (CloudKit through SwiftData), in the first iOS release.** The `.pig` backup stays as the manual backup and restore path, and is also how existing Mac data can be moved if sync is not wanted.
 
-Whatever you pick, decide before submitting: it changes the privacy page, the App Store privacy answers and the Help text.
+This means the Mac app has to change too: it currently runs with `cloudKitDatabase: .none`, so the model rules below must be applied and the Mac release should be updated at the same time as iOS ships. Because sync touches the store, do the model changes as a schema version bump with a tested migration, and test them against a copy of real data before anyone's store is touched.
 
-If you go with B later, plan these checks first:
+Things to decide in the work: whether sync is on by default or opt-in in Settings (opt-in fits the privacy message), and how the privacy page, App Store privacy answers and Help describe it (data goes to the user's own iCloud, never to Vault Studio).
+
+Checks before turning sync on:
 
 - Every model property has a default or is optional.
 - No `@Attribute(.unique)` fields.
@@ -91,18 +101,19 @@ If you go with B later, plan these checks first:
 | Phase | Work | Rough effort |
 |---|---|---|
 | 0. Prepare | Add iOS destination, get Models and Logic compiling on iOS, wrap AppKit calls, add `PlatformImage`. | 2 to 4 days |
+| 0b. Sync-ready models | Apply the CloudKit model rules, schema version bump and migration, iCloud capability, two-device test on Mac. | 1 to 2 weeks |
 | 1. Skeleton | Phone tab layout, iPad split view, account list, register list, transaction detail, add and edit transaction. | 1 to 2 weeks |
 | 2. Core flows | Bills and bill pay, transfers, categories, budget screen, goals, reminders, settings. | 1 to 2 weeks |
 | 3. The rest | Investments, liabilities, reports, receipts, `.pig` backup and restore, CSV import and export, Help and About. | 1 to 2 weeks |
-| 4. Phone extras | Widgets, Face ID lock, Spotlight and Shortcuts if wanted, haptics. | 3 to 5 days |
+| 4. Phone extras | Widgets (next bill, budget left), Face ID lock, haptics. Shortcuts and Spotlight optional. | 3 to 5 days |
 | 5. Polish and release | Accessibility pass, iPad multitasking, screenshots, TestFlight, App Store submission. | 1 to 2 weeks |
 
-Estimate for one developer part-time: about 6 to 10 weeks to a first TestFlight build. Phase 1 is where the risk is; do a thin vertical slice first and judge it before committing to the rest.
+Estimate for one developer part-time: about 8 to 12 weeks to a first TestFlight build. Phase 1 is where the risk is; do a thin vertical slice first and judge it before committing to the rest.
 
 ## Release and App Store
 
 - **Universal Purchase.** Use the same bundle ID family and the same App Store Connect app record so one purchase covers Mac, iPhone and iPad. The Mac app is currently `dev.vaultstudio.oinklybudget`; adding iOS to the same record needs the same bundle ID (check this before the Mac app is final, because changing bundle IDs later is painful).
-- **Price.** Decide whether the iPhone and iPad version is included in the $9.99 purchase or sold separately. Universal Purchase means included.
+- **Price.** $9.99, one purchase for Mac, iPhone and iPad (Universal Purchase). Anyone who already bought the Mac app gets iOS free.
 - **Minimum iOS.** Match what the code needs. The Mac app targets macOS 15, which lines up with iOS 18. Targeting iOS 18 keeps the code simple; check what share of users that excludes before deciding.
 - **Screenshots.** Required sizes are a 6.9" iPhone and a 13" iPad set. Reuse the screenshot pipeline from the Mac release with the Simulator and `xcrun simctl io booted screenshot`.
 - **Privacy labels.** Same answers as the Mac app as long as there is no sync and no analytics. Re-check if you add iCloud.
@@ -119,24 +130,13 @@ Estimate for one developer part-time: about 6 to 10 weeks to a first TestFlight 
 ## Risks
 
 - **Scope.** The Mac UI is built around windows. Treat the phone UI as new design work, not a port.
-- **Sync expectations.** Users will assume a phone app syncs. The listing must say plainly that it does not (if you choose A) and offer a clear transfer path.
 - **Two code paths.** `#if os(macOS)` sprinkled everywhere gets hard to maintain. Keep the platform differences in a small number of wrapper files.
 - **Bundle ID and record.** The App Store Connect record problems from the Mac submission show that this is easy to get wrong. Sort the Mac record first, then add iOS to it.
-- **Time.** This competes with the Windows plan. Decide which comes first (see below).
+- **Sync correctness.** A finance app that duplicates or loses a transaction loses trust. Budget real time for two-device and conflict testing, and keep the `.pig` backup prominent as a safety net.
 
 ## Order of work
 
 1. Finish the Mac release (record, TestFlight, review).
-2. Phase 0 of this plan, which is also the cheapest way to find out how portable the code really is.
-3. Decide the data transfer story (A, B or C) before building the phone UI.
-4. Phases 1 to 5.
-5. Windows, if still wanted. Note that the Windows plan also has a Mac-first Phase 0 (the `.pig` format and core logic), and the two plans share the same backup format.
-
-## Decisions needed from you
-
-1. Standalone with manual transfer first, or iCloud sync before the first iOS release?
-2. Included in the $9.99 purchase (Universal Purchase), or a separate price?
-3. iPhone and iPad together from day one, or iPhone first and iPad as a fast follow?
-4. Minimum iOS version (18 recommended).
-5. Are widgets and Face ID lock in the first release or a later one?
-6. iOS before or after Windows?
+2. Phase 0 (iOS compiles) and 0b (sync-ready models, tested on Mac).
+3. Phases 1 to 5.
+4. Ship the Mac update and the iOS app together so sync works from day one.
