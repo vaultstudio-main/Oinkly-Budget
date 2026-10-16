@@ -103,4 +103,4 @@ no 30% cut, but you host it and handle updates yourself. The sandbox can stay on
 - Keep `checkpoint` pointing at the last build you shipped.
 
 ## After 1.0
-- An iPhone and iPad version is planned, with iCloud sync: see `ios-ipad-plan.md`. The Windows version was dropped.
+- Next after release: choose where your data file is saved, see `data-file-plan.md`. The Windows, iPhone and iPad versions are not planned.
