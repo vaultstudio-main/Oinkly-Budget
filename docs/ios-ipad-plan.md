@@ -10,6 +10,22 @@ Drafted 2026-10-15, decisions made the same day. Nothing here is started. The Ma
 4. **Widgets and Face ID lock are in the first release.**
 5. **The Windows version is dropped.** iOS is the only other platform. The `piggybank-windows/` plan is retired.
 
+## Release sequence
+
+| Release | Contents | When |
+|---|---|---|
+| **1.0 (Mac)** | The app as it is now: local storage, no sync. Ships as planned. | Friday, if review and plans go through |
+| **1.1 (Mac, iPhone, iPad)** | iCloud sync, the iPhone and iPad app, widgets, Face ID lock. The Mac update and the iOS app go out together. | After 1.0, when phases 0 to 5 are done |
+
+Because 1.0 goes out first with sync off, **1.1 has to migrate real users' stores** and not just fresh installs. That is the main thing this plan protects:
+
+- Do **not** change the models before Friday. The checks below show the models are already close to sync-ready, and the change is a small, lightweight migration that belongs in 1.1 (as `PiggybankSchemaV2`), where it can be tested properly.
+- Sync-readiness check of the current models: there are no `@Attribute(.unique)` fields, and every relationship already has an inverse. The one change needed is that to-many relationships (`transactions`, `bills`, `goals`, `holdings`, `events`, `contributions`, `payees`, `loanBills`, `payments`) must become optional for CloudKit, and every other stored property needs a default value (check each one). Photo and receipt data already use external storage, which CloudKit handles as assets.
+- 1.0 should keep `PiggybankSchemaV1` exactly as it is, so the 1.1 migration has a clean starting point. The versioned schema and migration plan are already in place for this.
+- Keep the `.pig` backup in 1.0 prominent. It is the safety net for the move to sync, and Help should tell 1.0 users to make a backup before updating to 1.1.
+- Nothing about sync appears in the 1.0 listing, website, or privacy page. Add it with 1.1.
+- Set up the iCloud container ID and the iOS app record (same bundle ID, for Universal Purchase) in App Store Connect while 1.0 is in review, so they are not a surprise later. This does not touch the 1.0 build.
+
 ## Goal
 
 Bring OinklyBudget to iPhone and iPad as one universal app that keeps the same promises as the Mac app:
@@ -136,7 +152,7 @@ Estimate for one developer part-time: about 8 to 12 weeks to a first TestFlight 
 
 ## Order of work
 
-1. Finish the Mac release (record, TestFlight, review).
+1. Ship Mac 1.0 (record, TestFlight, review, Friday).
 2. Phase 0 (iOS compiles) and 0b (sync-ready models, tested on Mac).
 3. Phases 1 to 5.
 4. Ship the Mac update and the iOS app together so sync works from day one.
