@@ -4,7 +4,7 @@ Drafted 2026-10-16. Nothing here is started. Version 1.0 is in App Review and do
 
 ## Goal
 
-Make the Mac app more useful for people who keep their books on paper and PDF. 1.1 adds printing and PDF export across the app, a few more reports, and some everyday Quicken-style features. The direction stays the same: a full desktop program, no bank linking, no accounts, no network.
+Make the Mac app more useful for people who keep their books on paper and PDF, and for households that share one Mac. 1.1 adds printing and PDF export across the app, a few more reports, some everyday Quicken-style features, and a shared data file that two users on one Mac can use (one at a time), controlled from Settings ▸ Data. The direction stays the same: a full desktop program, no bank linking, no accounts, no network.
 
 ## What is already there
 
@@ -93,13 +93,14 @@ About 4 to 5 weeks part-time: prototype (3 to 5 days), Settings ▸ Data section
 
 ## Order of work
 
-1. **Printing foundation:** shared report page, page setup, Print and Save as PDF commands. Prove it on the register.
-2. **Print everywhere:** transaction, budget, bills, reports.
-   *The shared data file can go first or last; it does not depend on printing. Since it changes how data is saved, doing it first (or in its own release) keeps it from being rushed.*
-3. **New reports** and report options.
-4. **Everyday features:** pick two or three from "Should have" (recurring, splits and OFX/QIF import are the strongest).
-5. **Polish:** Help pages and screenshots for every new feature, release notes, accessibility check.
-6. **Release:** TestFlight, submission, website and listing update.
+1. **Shared data file prototype (3 to 5 days):** open a store at a chosen location from a bookmark, try check-out and check-in, and try a second Mac login on a file in `/Users/Shared`. This decides the design, and it is the riskiest work, so it goes first.
+2. **Shared data file build:** Settings ▸ Data section, last-file bookmark, missing-file screen, locks with who and when, read-only open, take-over for stale locks, safe write-back and crash recovery, and the first-run copy of existing data.
+3. **Printing foundation:** shared report page, page setup, Print and Save as PDF commands. Prove it on the register.
+4. **Print everywhere:** transaction, budget, bills, reports.
+5. **New reports** and report options.
+6. **Everyday features:** pick two or three from "Should have" (recurring, splits and OFX/QIF import are the strongest).
+7. **Polish:** Help pages and screenshots for every new feature (including Settings ▸ Data), release notes, accessibility check.
+8. **Release:** TestFlight, submission, website and listing update.
 
 ## Rough effort
 
@@ -111,7 +112,7 @@ About 4 to 5 weeks part-time: prototype (3 to 5 days), Settings ▸ Data section
 | Each everyday feature | 3 days to 2 weeks (splits and recurring are the larger ones) |
 | Help, screenshots, release | 1 week |
 
-About 5 to 8 weeks part-time for printing, reports and two or three everyday features, plus about 4 to 5 weeks for the shared data file, so 9 to 13 weeks in total. If that is too long, ship printing and reports as 1.1 and the shared file as 1.2.
+About 5 to 8 weeks part-time for printing, reports and two or three everyday features, plus about 4 to 5 weeks for the shared data file, so 9 to 13 weeks in total. All of it is in 1.1. If the schedule slips, drop items from "Should have" first and keep printing and the shared data file.
 
 ## Release housekeeping
 
@@ -120,12 +121,15 @@ About 5 to 8 weeks part-time for printing, reports and two or three everyday fea
 - New screenshots for the listing and Help for the new features.
 - Update the website product page and the "What's new" text.
 - Remove the unused iCloud and push entitlements before the next upload.
+- The shared data file changes how the app saves, so the release notes and Help explain it, and tell users to make a `.pig` backup before updating.
+- New App Review notes: say the app still has no network access and the data file stays on the Mac.
 
 ## Risks
 
 - **Print quality:** long lists, page breaks and different paper sizes. Test on real printers and PDF.
 - **Model changes** for splits, tags and recurring transactions need a migration. Keep them small and tested.
-- **Scope:** printing alone is worth shipping. Stop adding features when the schedule slips.
+- **Scope:** printing and the shared data file are the core of 1.1. Stop adding "Should have" features when the schedule slips.
+- **Shared data file:** a damaged or unreadable file (two logins and SQLite side files), data loss during the first-run copy, lost edits if someone takes over a lock, stale locks after crashes, and "where is my file?" questions. Check out and check in, copy first and verify, back up first, and crash tests reduce these.
 - **Review:** the new version goes through App Review again. Keep release notes clear and the app free of crashes.
 
 ## Decisions needed
@@ -133,5 +137,6 @@ About 5 to 8 weeks part-time for printing, reports and two or three everyday fea
 1. Which of the "Should have" features come in 1.1 (suggestion: recurring transactions, split transactions, OFX/QIF import)?
 2. Are check printing and attachments in or out?
 3. Is any model change acceptable in 1.1, or should it be print and report features only?
-3b. Shared file: one person at a time (as planned), or both at once? And is it in 1.1 or its own 1.2?
+3b. Shared file (in 1.1): one person at a time, as planned, or both at once? (Both at once is a different and much harder design.)
+3c. Must it work across separate Mac logins, or only people sharing one login?
 4. Release timing, after 1.0 is approved?
