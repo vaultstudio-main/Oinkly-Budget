@@ -15,8 +15,11 @@ struct TagChip: View {
                 Button(action: onRemove) { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain)
                     .help("Remove this tag")
+                    .accessibilityLabel("Remove tag \(name)")
             }
         }
+        .accessibilityElement(children: onRemove == nil ? .ignore : .contain)
+        .accessibilityLabel("Tag \(name)")
         .font(.caption.weight(.medium))
         .padding(.horizontal, 7)
         .padding(.vertical, 2)
@@ -202,6 +205,7 @@ private struct TagRow: View {
             }
             .buttonStyle(.plain)
             .help("Change the color")
+            .accessibilityLabel("Change the color of \(tag.name)")
             .popover(isPresented: $choosingColor, arrowEdge: .bottom) {
                 HStack(spacing: 8) {
                     ForEach(Tags.palette, id: \.self) { hex in
@@ -240,6 +244,7 @@ private struct TagRow: View {
             Button(role: .destructive, action: onDelete) { Image(systemName: "trash") }
                 .buttonStyle(.borderless)
                 .help("Delete this tag")
+                .accessibilityLabel("Delete tag \(tag.name)")
         }
         .onAppear { name = tag.name }
     }

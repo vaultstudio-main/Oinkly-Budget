@@ -263,12 +263,16 @@ struct AccountPicture: View {
     let type: AccountType?
 
     var body: some View {
-        if let image = AccountPhoto.image(from: data) {
-            image.resizable().scaledToFill()
-        } else if let type {
-            AccountArtwork(type: type)
-        } else {
-            AccountArtwork()
+        Group {
+            if let image = AccountPhoto.image(from: data) {
+                image.resizable().scaledToFill()
+            } else if let type {
+                AccountArtwork(type: type)
+            } else {
+                AccountArtwork()
+            }
         }
+        // A decoration. The account's name and type are read from the text beside it.
+        .accessibilityHidden(true)
     }
 }

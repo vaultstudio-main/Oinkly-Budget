@@ -13,6 +13,7 @@ struct MonthSelector: View {
         HStack(spacing: 8) {
             Button { step(-1) } label: { Image(systemName: "chevron.left") }
                 .disabled(month <= range.lowerBound)
+                .accessibilityLabel("Previous month")
 
             Text(month.formatted(.dateTime.month(.wide).year()))
                 .font(.headline)
@@ -21,6 +22,7 @@ struct MonthSelector: View {
 
             Button { step(1) } label: { Image(systemName: "chevron.right") }
                 .disabled(month >= range.upperBound)
+                .accessibilityLabel("Next month")
 
             if showsThisMonthButton, !MonthFilter.isCurrent(month) {
                 ThisMonthButton(month: $month)

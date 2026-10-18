@@ -27,7 +27,7 @@ struct ReportPanel<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline)
+                    Text(title).font(.headline).accessibilityAddTraits(.isHeader)
                     Text(summary).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)

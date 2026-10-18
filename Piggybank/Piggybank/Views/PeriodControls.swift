@@ -21,12 +21,14 @@ struct PeriodControls: View {
             HStack(spacing: 14) {
                 Button { step(-1) } label: { Image(systemName: "chevron.left") }
                     .disabled(earliest.map { range.start <= $0 } ?? true)
+                    .accessibilityLabel("Previous period")
                 Text(Reports.label(period, range: range))
                     .font(.headline)
                     .frame(minWidth: 150)
                     .contentTransition(.numericText())
                 Button { step(1) } label: { Image(systemName: "chevron.right") }
                     .disabled(range.end > .now)
+                    .accessibilityLabel("Next period")
             }
             .buttonStyle(.borderless)
             .frame(maxWidth: .infinity)

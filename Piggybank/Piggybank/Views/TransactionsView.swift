@@ -76,6 +76,7 @@ struct TransactionsView: View {
                 Button { search = "" } label: { Image(systemName: "xmark.circle.fill") }
                     .buttonStyle(.plain)
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Clear search")
             }
         }
         .font(.callout)

@@ -12,6 +12,7 @@ struct Panel<Content: View>: View {
             Text(title.uppercased())
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .accessibilityAddTraits(.isHeader)
             content
         }
         .padding(16)
@@ -28,6 +29,7 @@ struct PageTitle: View {
     var body: some View {
         HStack {
             Text(title).font(.largeTitle.bold())
+                .accessibilityAddTraits(.isHeader)
             Spacer()
         }
     }

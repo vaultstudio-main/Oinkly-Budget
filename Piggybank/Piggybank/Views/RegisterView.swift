@@ -258,6 +258,7 @@ private struct RegisterContent: View {
         .statusBarText(account.isLoan
             ? "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(account.name)"
             : "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(month.formatted(.dateTime.month(.wide).year())) · \(account.name)")
+        .focusedSceneValue(\.registerActions, registerActions)
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
         .sheet(item: $savingAs) { ExportSheet(account: account, kind: $0, startingMonth: month) }
         .sheet(item: $pendingImport) { ImportStatementSheet(account: account, fileURL: $0.url) }
@@ -280,6 +281,27 @@ private struct RegisterContent: View {
         } message: {
             Text("This can't be undone.")
         }
+    }
+
+    /// The one transaction selected, if exactly one is.
+    private var selectedTransaction: Transaction? {
+        guard selection.count == 1, let id = selection.first else { return nil }
+        return monthTransactions.first { $0.persistentModelID == id && $0.isLive }
+    }
+
+    /// What the menu bar's File, Transaction and Print commands do here.
+    private var registerActions: RegisterActions {
+        let chosen = selectedTransaction
+        return RegisterActions(
+            hasSelection: chosen != nil,
+            canMakeRecurring: chosen.map { $0.canSplit && $0.recurring == nil } ?? false,
+            canImport: true,
+            edit: { if let chosen { editingDate = chosen } },
+            details: { if let chosen { openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: chosen.persistentModelID)) } },
+            makeRecurring: { if let chosen, chosen.canSplit, chosen.recurring == nil { makingRecurring = chosen } },
+            importStatement: { if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) } },
+            exportCSV: { savingAs = .csv },
+            printPDF: { savingAs = .pdf })
     }
 
     private func requestDelete() {

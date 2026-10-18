@@ -21,6 +21,7 @@ struct SplitEditor: View {
                     .labelsHidden()
                     CurrencyField("Amount", value: $part.amount)
                         .labelsHidden()
+                        .accessibilityLabel("Amount for this part")
                         .multilineTextAlignment(.trailing)
                         .frame(width: 110)
                     Button {
@@ -31,6 +32,7 @@ struct SplitEditor: View {
                     .buttonStyle(.borderless)
                     .disabled(parts.count <= Splits.minimumParts)
                     .help("Remove this part")
+                    .accessibilityLabel("Remove this part")
                 }
                 FormTextField("Memo", text: $part.memo, hint: "Memo for this part (optional)", showsLabel: false)
                     .font(.callout)

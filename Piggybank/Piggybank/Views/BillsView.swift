@@ -296,8 +296,10 @@ private struct BillCalendar: View {
                     }
                     Button { step(-1) } label: { Image(systemName: "chevron.left") }
                         .help("Previous month")
+                        .accessibilityLabel("Previous month")
                     Button { step(1) } label: { Image(systemName: "chevron.right") }
                         .help("Next month")
+                        .accessibilityLabel("Next month")
                 }
                 .buttonStyle(.borderless)
                 .animation(.snappy(duration: 0.2), value: isCurrentMonth)
@@ -607,6 +609,7 @@ struct PriorityBillsCard: View {
                             Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
                         }
                         .padding(.vertical, 8)
+                        .accessibilityElement(children: .combine)
                     }
                 }
             }

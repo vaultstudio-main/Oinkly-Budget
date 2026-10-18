@@ -119,6 +119,7 @@ private struct RuleRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(rule.amount, format: .appCurrency)
@@ -129,6 +130,7 @@ private struct RuleRow: View {
                     .foregroundStyle(isDue ? Color.orange : Color.secondary)
             }
             .frame(width: 150, alignment: .trailing)
+            .accessibilityElement(children: .combine)
             Text(statusText)
                 .font(.caption.weight(.medium))
                 .padding(.horizontal, 8).padding(.vertical, 2)
@@ -172,6 +174,7 @@ private struct RuleRow: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .accessibilityLabel("Actions for \(rule.payee)")
         }
     }
 

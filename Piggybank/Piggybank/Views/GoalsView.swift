@@ -459,6 +459,7 @@ struct GoalDetailView: View {
                                 Button { delete(item) } label: { Image(systemName: "trash") }
                                     .buttonStyle(.borderless)
                                     .foregroundStyle(.secondary)
+                                    .accessibilityLabel("Delete this entry")
                             }
                         }
                     }

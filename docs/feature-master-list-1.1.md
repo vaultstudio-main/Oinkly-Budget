@@ -206,8 +206,13 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 ### G1. Bigger Help and Release Notes windows (Built)
 - Open at 1100×780 and 860×780. Shots: S-G1 (Help window).
 
-### G2. Keyboard shortcuts and accessibility (Planned)
-- Reviewed shortcuts, more menu commands, VoiceOver and larger text across the new screens. Shots: S-G2 (shortcut list in Help).
+### G2. Keyboard shortcuts and accessibility (Built in part)
+- New Go menu: ⌘1 to ⌘8 for Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets.
+- New Transaction menu for the selected transaction: ⌘E Edit Transaction, ⌘I View Details, ⇧⌘R Make Recurring. These do what right-click does, so the keyboard and VoiceOver can reach them.
+- File menu: ⇧⌘I Import Statement, ⇧⌘E Export CSV, ⌘P Print PDF, for the account on screen.
+- Existing shortcuts stay: ⌘N, ⌥⌘N, ⇧⌘A, ⇧⌘T, ⇧⌘B, ⌥⌘U, ⇧⌘/, ⌘, and ⌘Q.
+- VoiceOver labels on icon-only buttons, headings on page and card titles, and decorative pictures hidden. Chart descriptions, larger text and the Edit menu are still open; see `accessibility-audit.md`.
+- Shots: S-G2 (shortcut list in Help).
 
 ### G3. Default settings for export (Planned)
 - Default paper size and export style in Settings. Shots: S-G3.
