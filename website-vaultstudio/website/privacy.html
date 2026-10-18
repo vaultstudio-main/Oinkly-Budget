@@ -10,12 +10,13 @@
 <meta property="og:title" content="Vault Studio">
 <meta property="og:image" content="https://vaultstudio.dev/images/summary.png">
 <link rel="icon" href="images/logo-64.png" type="image/png">
-<link rel="stylesheet" href="style.css?v=9">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 <header class="site"><div class="wrap">
   <a class="brand" href="index.html"><img class="brand-logo" src="images/logo-128.png" alt="" width="28" height="28">Vault Studio</a>
-  <nav><a href="index.html">Home</a><a href="oinklybudget.html">OinklyBudget</a><a href="about.html">About</a><a href="support.html">Support</a></nav>
+  <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="site-nav"><span></span><span></span><span></span></button>
+  <nav id="site-nav" aria-label="Main"><a href="index.html">Home</a><a href="oinklybudget.html">OinklyBudget</a><a href="about.html">About</a><a href="support.html">Support</a></nav>
 </div></header>
 
 <main><div class="wrap">
@@ -66,5 +67,6 @@
   </div>
   <p class="foot-note">&copy; 2026 Vault Studio &middot; OinklyBudget is made for the Mac &middot; <a href="mailto:support@vaultstudio.dev">support@vaultstudio.dev</a></p>
 </div></footer>
+<script src="menu.js"></script>
 </body>
 </html>

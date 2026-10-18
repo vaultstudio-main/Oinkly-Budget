@@ -31,7 +31,7 @@ Attached. It was recorded on a physical Mac running the latest macOS. It starts 
 OinklyBudget is a personal finance app for Mac. It is for people who want to keep track of their own money by entering their own transactions, the way a paper check register or a desktop checkbook program works. It helps them keep a register for each account, track bills and due dates, set budgets and savings goals, and view reports. It deliberately does not link to bank accounts. People enter and check their own numbers, which keeps their data private. The app is a one-time purchase.
 
 **3. Setup and access**
-No sign-in, account or login is needed. On first launch the app is empty. To explore: add an account (Settings ▸ Accounts ▸ Add Account…, or the prompt on the main window), then add transactions with File ▸ New Transaction. To load sample data quickly, use Settings ▸ Import & Export ▸ Import Backup… and choose the attached sample file (`OinklyBudget-sample.pig`) [attach or remove this sentence]. Help is available from the Help menu.
+No sign-in, account or login is needed. On first launch the app is empty. To explore: add an account (Settings ▸ Accounts ▸ Add Account…, or the prompt on the main window), then add transactions with File ▸ New Transaction.  Help is available from the Help menu.
 
 **4. External services**
 None. The app does not use any servers, data providers, authentication services, payment processors, analytics, advertising or AI services. It makes no network requests. All data is stored on the user's Mac. Local notifications (bill and custom reminders) use Apple's UserNotifications framework on the device.
@@ -40,7 +40,7 @@ None. The app does not use any servers, data providers, authentication services,
 None. The app works the same in every region. Amounts use the user's Mac currency and date formatting settings.
 
 **6. Regulated industry or protected material**
-The app does not provide banking, payments, lending, investing or tax services and does not connect to financial institutions. It is a record-keeping tool for the user's own information. It includes no protected third-party material. The app icon, artwork and text are original to Vault Studio.
+The app does not provide banking, payments, lending, investing or tax services and does not connect to financial institutions. It is a record-keeping tool for the user's own information. It includes no protected third-party material. The app icon, artwork and text are original to Donald Stibich.
 
 ## After you reply
 

@@ -10,7 +10,8 @@ A small static site for the domain. No build step and no dependencies: upload th
 | `about.html` | About Vault Studio (hobbyist studio, no personal details). Photo is `images/profile-square.jpg` (square crop of `profile.jpeg`) |
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |
-| `style.css` | Shared look, follows light and dark mode |
+| `style.css` | Shared look, follows light and dark mode. Header and footer run edge to edge, content width is fluid, and the nav becomes a hamburger menu at 1024 px and below |
+| `menu.js` | Opens and closes the hamburger menu (the nav still shows as a plain list if JavaScript is off) |
 | `images/` | App icon, logo and screenshots (summary, transactions, bills, register, card, mortgage, reports, liabilities, investments, planning; 1600 px wide). Originals are in `../website-src/` and are not uploaded |
 
 ## Already filled in

@@ -130,3 +130,37 @@ main { padding-bottom: 24px; }
 .gallery figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; text-align: center; }
 .gallery figure:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (max-width: 640px) { .gallery { grid-template-columns: 1fr; } }
+
+/* Fluid layout: header and footer run edge to edge, content grows with the screen */
+:root { --gutter: clamp(16px, 4vw, 56px); }
+body { font-size: clamp(16px, 0.35vw + 15px, 19px); }
+.wrap { max-width: 1400px; padding-left: var(--gutter); padding-right: var(--gutter); }
+.wrap.narrow { max-width: 860px; }
+header.site .wrap, footer.site .wrap { max-width: none; }
+header.site { position: sticky; top: 0; z-index: 20; background: var(--bg); }
+.gallery { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+.gallery figure:last-child:nth-child(odd) { grid-column: auto; }
+.featured { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 64px); }
+.grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.about p, .hero p { max-width: 720px; }
+img, table { max-width: 100%; }
+@media (max-width: 720px) { .featured { grid-template-columns: 1fr; } }
+
+/* Menu button: hidden on wide screens */
+.nav-toggle { display: none; }
+@media (max-width: 1024px) {
+  html.js header.site .wrap { flex-wrap: wrap; }
+  html.js .nav-toggle {
+    display: inline-flex; flex-direction: column; justify-content: center; gap: 5px;
+    width: 44px; height: 44px; padding: 0 11px; margin-right: -11px;
+    background: none; border: 0; border-radius: 10px; cursor: pointer;
+  }
+  html.js .nav-toggle span { display: block; height: 2px; border-radius: 2px; background: var(--text); transition: transform .2s, opacity .2s; }
+  html.js.nav-open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  html.js.nav-open .nav-toggle span:nth-child(2) { opacity: 0; }
+  html.js.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  html.js header.site nav { display: none; flex-basis: 100%; flex-direction: column; padding: 4px 0 10px; border-top: 1px solid var(--line); }
+  html.js.nav-open header.site nav { display: flex; }
+  html.js header.site nav a { margin: 0; padding: 14px 2px; font-size: 17px; border-bottom: 1px solid var(--line); }
+  html.js header.site nav a:last-child { border-bottom: 0; }
+}
