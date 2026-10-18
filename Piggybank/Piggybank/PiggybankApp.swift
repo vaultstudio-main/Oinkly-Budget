@@ -128,7 +128,7 @@ struct PiggybankApp: App {
             HelpWindow()
                 .appAppearance()
         }
-        .defaultSize(width: 820, height: 560)
+        .defaultSize(width: 1100, height: 780)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
@@ -136,7 +136,7 @@ struct PiggybankApp: App {
             ReleaseNotesWindow()
                 .appAppearance()
         }
-        .defaultSize(width: 620, height: 600)
+        .defaultSize(width: 860, height: 780)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
