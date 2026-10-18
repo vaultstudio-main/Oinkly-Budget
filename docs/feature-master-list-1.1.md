@@ -218,8 +218,11 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - VoiceOver labels on icon-only buttons, headings on page and card titles, and decorative pictures hidden. Chart descriptions, larger text and the Edit menu are still open; see `accessibility-audit.md`.
 - Shots: S-G2 (shortcut list in Help).
 
-### G3. Default settings for export (Planned)
-- Default paper size and export style in Settings. Shots: S-G3.
+### G3. Default settings for export (Built)
+- Settings ▸ General ▸ PDFs: **Paper size** (Automatic follows your region, US Letter or A4) and **Style** (Plain black and grey, or With color accents using blue headings).
+- Every PDF reads them: account statements, one transaction, Reports and the Summary. The Export sheet starts from the paper chosen here and can still change it for one export.
+- Saved in the backup file with the other preferences.
+- Shots: S-G3.
 
 ### G4. Check printing (Planned, optional)
 - Print checks on standard check stock. Shots: S-G4.

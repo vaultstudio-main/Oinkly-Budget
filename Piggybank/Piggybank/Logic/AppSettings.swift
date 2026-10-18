@@ -19,6 +19,30 @@ enum Appearance: String, CaseIterable, Identifiable {
 
 }
 
+/// Which paper PDFs are made for.
+enum PaperChoice: String, CaseIterable, Identifiable {
+    case automatic, letter, a4
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .automatic: "Automatic (\(PaperSize.regional.title))"
+        case .letter: "US Letter"
+        case .a4: "A4"
+        }
+    }
+}
+
+/// How exported PDFs look. Plain is black and grey and prints well on any printer.
+enum ExportStyle: String, CaseIterable, Identifiable {
+    case plain, color
+
+    var id: Self { self }
+
+    var title: String { self == .plain ? "Plain (black and grey)" : "With color accents" }
+}
+
 /// User preferences, saved on the device. Observable, so every screen that reads a value
 /// (including a currency format) redraws as soon as it changes in Settings.
 @Observable
@@ -28,6 +52,8 @@ final class AppSettings {
     private enum Key {
         static let currency = "currencyCode"
         static let appearance = "appearance"
+        static let paper = "paperChoice"
+        static let exportStyle = "exportStyle"
     }
 
     /// ISO currency code the user picked. Empty means "use this device's currency".
@@ -36,9 +62,27 @@ final class AppSettings {
     /// Light, dark, or follow the device.
     private(set) var appearance: Appearance
 
+    /// The paper for PDFs: follow the region, or always Letter or A4.
+    private(set) var paperChoice: PaperChoice
+
+    /// The look of exported PDFs.
+    private(set) var exportStyle: ExportStyle
+
     private init() {
+        paperChoice = UserDefaults.standard.string(forKey: Key.paper).flatMap(PaperChoice.init(rawValue:)) ?? .automatic
+        exportStyle = UserDefaults.standard.string(forKey: Key.exportStyle).flatMap(ExportStyle.init(rawValue:)) ?? .plain
         currencyCode = UserDefaults.standard.string(forKey: Key.currency) ?? ""
         appearance = UserDefaults.standard.string(forKey: Key.appearance).flatMap(Appearance.init(rawValue:)) ?? .system
+    }
+
+    func setPaperChoice(_ value: PaperChoice) {
+        paperChoice = value
+        UserDefaults.standard.set(value.rawValue, forKey: Key.paper)
+    }
+
+    func setExportStyle(_ value: ExportStyle) {
+        exportStyle = value
+        UserDefaults.standard.set(value.rawValue, forKey: Key.exportStyle)
     }
 
     func setAppearance(_ value: Appearance) {

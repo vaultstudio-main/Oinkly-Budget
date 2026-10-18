@@ -31,7 +31,7 @@ struct ExportSheet: View {
     @State private var year = Calendar.current.component(.year, from: .now)
     @State private var from = Calendar.current.date(byAdding: .month, value: -1, to: .now) ?? .now
     @State private var to = Date.now
-    @State private var paper = PaperSize.regional
+    @State private var paper = PaperSize.preferred
     @State private var accountID: Account.ID?
     @State private var errorMessage: String?
 

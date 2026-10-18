@@ -12,6 +12,14 @@ struct GeneralSettingsView: View {
         Binding(get: { settings.currencyCode }, set: { settings.setCurrencyCode($0) })
     }
 
+    private var paperBinding: Binding<PaperChoice> {
+        Binding(get: { settings.paperChoice }, set: { settings.setPaperChoice($0) })
+    }
+
+    private var styleBinding: Binding<ExportStyle> {
+        Binding(get: { settings.exportStyle }, set: { settings.setExportStyle($0) })
+    }
+
     private var appearanceBinding: Binding<Appearance> {
         Binding(get: { settings.appearance }, set: { settings.setAppearance($0) })
     }
@@ -29,6 +37,19 @@ struct GeneralSettingsView: View {
                 Text("Appearance")
             } footer: {
                 Text("System follows your device's light or dark setting.")
+            }
+
+            Section {
+                Picker("Paper size", selection: paperBinding) {
+                    ForEach(PaperChoice.allCases) { Text($0.title).tag($0) }
+                }
+                Picker("Style", selection: styleBinding) {
+                    ForEach(ExportStyle.allCases) { Text($0.title).tag($0) }
+                }
+            } header: {
+                Text("PDFs")
+            } footer: {
+                Text("Used for statements, reports and the Summary. You can still change the paper in the Export sheet. Plain prints well on any printer; color accents use blue headings.")
             }
 
             Section("Currency") {

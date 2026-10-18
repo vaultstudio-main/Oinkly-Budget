@@ -187,7 +187,7 @@ enum PDFSaver {
         let cleaned = suggestedName.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         panel.nameFieldStringValue = cleaned + ".pdf"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let data = DocumentPDF.render(document, paper: .regional)
+        let data = DocumentPDF.render(document, paper: .preferred)
         do {
             guard !data.isEmpty else { throw CocoaError(.fileWriteUnknown) }
             try data.write(to: url, options: .atomic)

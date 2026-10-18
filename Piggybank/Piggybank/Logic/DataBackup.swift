@@ -50,6 +50,9 @@ struct BackupFile: Codable {
         var currencyCode: String
         var appearance: String
         var billRemindersOn: Bool
+        /// Added in 1.1; absent in older files.
+        var paperChoice: String?
+        var exportStyle: String?
     }
 
     struct PaymentMethodRecord: Codable {
@@ -358,7 +361,9 @@ enum DataBackup {
         file.settings = .init(
             currencyCode: AppSettings.shared.currencyCode,
             appearance: AppSettings.shared.appearance.rawValue,
-            billRemindersOn: BillNotifier.isEnabled
+            billRemindersOn: BillNotifier.isEnabled,
+            paperChoice: AppSettings.shared.paperChoice.rawValue,
+            exportStyle: AppSettings.shared.exportStyle.rawValue
         )
         return file
     }
@@ -590,6 +595,8 @@ enum DataBackup {
             AppSettings.shared.setCurrencyCode(settings.currencyCode)
             if let appearance = Appearance(rawValue: settings.appearance) { AppSettings.shared.setAppearance(appearance) }
             UserDefaults.standard.set(settings.billRemindersOn, forKey: BillNotifier.enabledKey)
+            if let raw = settings.paperChoice, let choice = PaperChoice(rawValue: raw) { AppSettings.shared.setPaperChoice(choice) }
+            if let raw = settings.exportStyle, let style = ExportStyle(rawValue: raw) { AppSettings.shared.setExportStyle(style) }
         }
     }
 }

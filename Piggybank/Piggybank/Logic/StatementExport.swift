@@ -41,6 +41,15 @@ enum PaperSize: String, CaseIterable, Identifiable {
     var title: String { self == .letter ? "US Letter" : "A4" }
     var size: CGSize { self == .letter ? CGSize(width: 612, height: 792) : CGSize(width: 595, height: 842) }
 
+    /// The paper chosen in Settings, or the regional one when it is left on Automatic.
+    static var preferred: PaperSize {
+        switch AppSettings.shared.paperChoice {
+        case .automatic: regional
+        case .letter: .letter
+        case .a4: .a4
+        }
+    }
+
     /// The paper most people in the current region use.
     static var regional: PaperSize {
         Locale.current.measurementSystem == .us ? .letter : .a4

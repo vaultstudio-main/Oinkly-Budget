@@ -15,9 +15,10 @@ enum PDFTestHook {
             let context = container.mainContext
             let source = PageDocuments.source(in: context)
             @MainActor func describe(_ name: String, _ document: ExportDocument) {
-                let data = DocumentPDF.render(document, paper: .regional)
+                let data = DocumentPDF.render(document, paper: .preferred)
                 let pages = PDFDocument(data: data)?.pageCount ?? 0
-                print("=== \(name): \(data.count) bytes, \(pages) page(s)")
+                let box = PDFDocument(data: data)?.page(at: 0)?.bounds(for: .mediaBox).size ?? .zero
+                print("=== \(name): \(data.count) bytes, \(pages) page(s), page \(Int(box.width))x\(Int(box.height)), style \(AppSettings.shared.exportStyle.rawValue)")
                 print("title: \(document.title) | \(document.subtitle)")
                 print("summary: \(document.summary.map { "\($0.label)=\($0.value)" }.joined(separator: "; "))")
                 for section in document.sections {

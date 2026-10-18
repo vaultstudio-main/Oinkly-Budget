@@ -58,6 +58,14 @@ enum DocumentPDF {
     private static let footerHeight: CGFloat = 28
     /// A fixed dark grey. System colours change with light and dark mode, which would make printed text pale.
     private static let grey = NSColor(white: 0.38, alpha: 1)
+    /// The color of titles and table headings: black for the plain style, a deep blue for the color style.
+    private static var accent: NSColor {
+        AppSettings.shared.exportStyle == .color ? NSColor(calibratedRed: 0.05, green: 0.30, blue: 0.62, alpha: 1) : .black
+    }
+    /// Table heading text and the rules under them. Blue in the color style, grey in the plain one.
+    private static var headingColor: NSColor {
+        AppSettings.shared.exportStyle == .color ? NSColor(calibratedRed: 0.05, green: 0.30, blue: 0.62, alpha: 1) : grey
+    }
 
     static func render(_ document: ExportDocument, paper: PaperSize) -> Data {
         // Lay everything out once to count the pages, then again to draw with the real "Page x of y".
@@ -147,7 +155,7 @@ enum DocumentPDF {
         // MARK: Header
 
         private mutating func drawHeader() {
-            text(document.title, in: CGRect(x: margin, y: y, width: width, height: 24), size: 19, weight: .bold)
+            text(document.title, in: CGRect(x: margin, y: y, width: width, height: 24), size: 19, weight: .bold, color: accent)
             y += 22
             text(document.subtitle, in: CGRect(x: margin, y: y + 2, width: width, height: 16), size: 11, color: grey)
             y += 30
@@ -192,14 +200,14 @@ enum DocumentPDF {
             if let title = table.title {
                 if y + 60 > bottom { newPage() }
                 y += 6
-                text(title, in: CGRect(x: margin, y: y, width: width, height: 18), size: 12, weight: .semibold)
+                text(title, in: CGRect(x: margin, y: y, width: width, height: 18), size: 12, weight: .semibold, color: accent)
                 y += 22
             }
             func headings() {
                 var x = margin
                 for (index, column) in table.columns.enumerated() {
                     text(column.title.uppercased(), in: CGRect(x: x, y: y + 2, width: widths[index] - 6, height: rowHeight),
-                         size: 7.5, weight: .semibold, color: grey, right: column.rightAligned)
+                         size: 7.5, weight: .semibold, color: headingColor, right: column.rightAligned)
                     x += widths[index]
                 }
                 line(from: margin, to: margin + width, y: y + rowHeight, alpha: 0.55, thickness: 0.8)
