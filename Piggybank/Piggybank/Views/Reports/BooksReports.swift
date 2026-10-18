@@ -79,7 +79,7 @@ struct UnreconciledByAccountReport: View {
             if snapshot == nil {
                 ReportCalculating(height: 170)
             } else if rows.isEmpty {
-                ReportEmpty(message: "Everything is reconciled. Nothing waiting.", height: 170)
+                ReportEmpty(message: "Everything is reconciled. Nothing waiting.", height: 170, shape: .table, title: "All clear")
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -123,7 +123,7 @@ struct MissingReceiptsReport: View {
         return ReportPanel(title: "Missing Receipts", summary: "Spending with no receipt attached and not marked as having none.",
                            headline: missing.isEmpty ? nil : "\(missing.count)\(candidates.count == 800 ? "+" : "")", headlineNote: missing.isEmpty ? nil : "to add or mark") {
             if missing.isEmpty {
-                ReportEmpty(message: "Every spending transaction has a receipt or is marked as having none.", height: 170)
+                ReportEmpty(message: "Every spending transaction has a receipt or is marked as having none.", height: 170, shape: .table, title: "All clear")
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(missing.prefix(5)) { transaction in
@@ -172,7 +172,7 @@ struct DuplicatePayeesReport: View {
             if payees.isEmpty {
                 ReportEmpty(message: "No payees yet.", height: 170)
             } else if groups.isEmpty {
-                ReportEmpty(message: "No look-alike payees. Your list is clean.", height: 170)
+                ReportEmpty(message: "No look-alike payees. Your list is clean.", height: 170, shape: .table, title: "All clear")
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(groups.prefix(5), id: \.0) { _, names in

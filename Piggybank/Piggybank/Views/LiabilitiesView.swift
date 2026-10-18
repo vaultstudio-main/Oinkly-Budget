@@ -78,6 +78,7 @@ struct LiabilitiesView: View {
             CreditCardUseReport()
             DebtPayoffPlanReport()
         }
+        .environment(\.reportCardMinHeight, 290)
     }
 
     // MARK: Tiles

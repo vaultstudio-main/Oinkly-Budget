@@ -35,6 +35,7 @@ private struct ReportsContent: View {
     @Binding var section: ReportSection
     let earliest: Date?
     @State private var pageWidth: CGFloat = 1000
+    @State private var showingPeriod = false
 
     init(period: Binding<ReportPeriod>, anchor: Binding<Date>, section: Binding<ReportSection>, earliest: Date?) {
         _period = period
@@ -57,7 +58,6 @@ private struct ReportsContent: View {
             VStack(spacing: 14) {
                 PageTitle("Reports")
                 sectionPicker
-                if section.usesPeriod { controls(range: range) }
                 placeholders
             }
             .padding(16)
@@ -96,20 +96,24 @@ private struct ReportsContent: View {
 
     private var sectionPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(ReportSection.allCases) { item in
-                        Button { section = item } label: {
-                            Label(item.rawValue, systemImage: item.symbol)
-                                .font(.callout.weight(section == item ? .semibold : .regular))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(section == item ? Color.accentColor.opacity(0.22) : Theme.panel, in: Capsule())
-                                .contentShape(Capsule())
+            HStack(spacing: 10) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(ReportSection.allCases) { item in
+                            Button { section = item } label: {
+                                Label(item.rawValue, systemImage: item.symbol)
+                                    .font(.callout.weight(section == item ? .semibold : .regular))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 7)
+                                    .background(section == item ? Color.accentColor.opacity(0.22) : Theme.panel, in: Capsule())
+                                    .contentShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
+                // The period (month, quarter, six months, year) is one button, only where a report uses it.
+                if section.usesPeriod { periodButton }
             }
             Text(section.blurb).font(.callout).foregroundStyle(.secondary)
         }
@@ -133,12 +137,15 @@ private struct ReportsContent: View {
         return rows
     }
 
+    /// Every card is at least as big as its placeholder, so a report with no data yet takes the same room it will
+    /// take once it fills in.
     @ViewBuilder
     private func card(_ item: ReportItem) -> some View {
+        let minimum: CGFloat = item.isWide ? 330 : 290
         if let kind = item.trend {
-            TrendChartCard(kind: kind, height: item.isWide ? 220 : 190)
+            TrendChartCard(kind: kind, height: item.isWide ? 220 : 190).environment(\.reportCardMinHeight, minimum)
         } else if let built = ReportCards.view(section: section, title: item.title) {
-            built
+            built.environment(\.reportCardMinHeight, minimum).environment(\.reportShape, item.shape)
         } else {
             ReportPlaceholderCard(report: item)
         }
@@ -180,8 +187,23 @@ private struct ReportsContent: View {
 
     // MARK: Controls
 
-    private func controls(range: ReportRange) -> some View {
-        PeriodControls(periods: ReportPeriod.allCases, period: $period, anchor: $anchor, earliest: earliest)
+    private var periodButton: some View {
+        let range = Reports.range(period, anchor: anchor)
+        return Button { showingPeriod.toggle() } label: {
+            Label(Reports.label(period, range: range), systemImage: "calendar")
+                .font(.callout.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color.accentColor.opacity(0.22), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .help("Choose the month, quarter, six months or year these reports cover")
+        .popover(isPresented: $showingPeriod, arrowEdge: .bottom) {
+            PeriodControls(periods: ReportPeriod.allCases, period: $period, anchor: $anchor, earliest: earliest)
+                .padding(16)
+                .frame(width: 380)
+        }
     }
 
     // MARK: Summary tiles

@@ -2,31 +2,32 @@ import SwiftUI
 import SwiftData
 import Charts
 
+private struct ReportCardMinHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    /// The least height a report card takes. The Reports page sets it to the size of a placeholder.
+    var reportCardMinHeight: CGFloat {
+        get { self[ReportCardMinHeightKey.self] }
+        set { self[ReportCardMinHeightKey.self] = newValue }
+    }
+}
+
 /// The shell every built report sits in: a title, what it shows, an optional headline figure, then the content.
 struct ReportPanel<Content: View>: View {
+    @Environment(\.reportCardMinHeight) private var minHeight
     let title: String
     let summary: String
     var headline: String?
     var headlineNote: String?
-    /// True when the numbers are made up to show what the report will look like.
-    var sample = false
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(title).font(.headline)
-                        if sample {
-                            Text("Sample")
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 2)
-                                .background(Color.orange.opacity(0.2), in: Capsule())
-                                .foregroundStyle(.orange)
-                        }
-                    }
+                    Text(title).font(.headline)
                     Text(summary).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
@@ -40,7 +41,7 @@ struct ReportPanel<Content: View>: View {
             content
         }
         .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
@@ -74,27 +75,48 @@ struct ReportKey: View {
     }
 }
 
-/// A line of text where a chart would go, for a report that has nothing to show yet.
+private struct ReportShapeKey: EnvironmentKey {
+    static let defaultValue: ReportShape = .line
+}
+
+extension EnvironmentValues {
+    /// The shape of the report being drawn, so an empty one can show the right outline.
+    var reportShape: ReportShape {
+        get { self[ReportShapeKey.self] }
+        set { self[ReportShapeKey.self] = newValue }
+    }
+}
+
+/// What a report shows when it has no data yet: its usual outline, faint, with a note on what it needs. It stretches to
+/// fill the card, so the card keeps the size it will have once it fills in.
 struct ReportEmpty: View {
+    @Environment(\.reportShape) private var inheritedShape
     let message: String
+    /// The least height, for cards drawn outside the Reports page.
     var height: CGFloat = 150
-    /// The faint outline drawn behind the message, so an empty report still shows its shape.
-    var shape: ReportShape = .line
+    /// The faint outline drawn behind the message. By default the shape of the report it sits in.
+    var shape: ReportShape?
+    /// "Needs more data" while the report is waiting for data; something like "All clear" when there is just nothing to flag.
+    var title: String? = "Needs more data"
 
     var body: some View {
         ZStack {
-            GhostView(shape: shape, projects: false)
+            GhostView(shape: shape ?? inheritedShape, projects: false)
                 .opacity(0.8)
-            Text(message)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-                .padding(.horizontal, 20)
+            VStack(spacing: 4) {
+                if let title { Text(title).font(.callout.weight(.semibold)) }
+                Text(message).font(.callout).foregroundStyle(.secondary)
+                if title == "Needs more data" {
+                    Text("This builds itself over time as you add transactions.").font(.caption).foregroundStyle(.tertiary)
+                }
+            }
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+            .padding(.horizontal, 20)
         }
-        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: .infinity)
     }
 }
 

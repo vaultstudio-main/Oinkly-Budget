@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import Charts
 
-// Each report below is a thin wrapper: it asks for the investment numbers (yours, or a sample portfolio when you have
-// no investment account yet) and hands them to the card that draws them.
+// Each report below is a thin wrapper: it asks for the investment numbers and hands them to the card that draws them.
+// With no investment account the cards keep their size and show an empty outline.
 
 struct PortfolioValueReport: View {
     var body: some View { WithInvestmentsData { PortfolioValueCard(data: $0) } }
@@ -37,9 +37,11 @@ struct PortfolioValueCard: View {
         let change = (end?.value ?? 0) - (last?.value ?? 0)
 
         ReportPanel(title: "Portfolio Value", summary: "Your investments together over the last year, and six months ahead at your recent pace of growth and contributions.",
-                    headline: last.map { ReportFormat.money($0.value) }, headlineNote: end == nil ? nil : "\(ReportFormat.money(end?.value ?? 0)) in 6 months", sample: data.isSample) {
-            if history.isEmpty {
-                ReportCalculating(height: 210)
+                    headline: last.map { ReportFormat.money($0.value) }, headlineNote: end == nil ? nil : "\(ReportFormat.money(end?.value ?? 0)) in 6 months") {
+            if data.accounts.isEmpty {
+                ReportEmpty(message: "Add an investment account to see its value and projection.", height: 290, shape: .line)
+            } else if history.isEmpty {
+                ReportCalculating(height: 290)
             } else {
                 Chart {
                     ForEach(history) { point in
@@ -87,9 +89,9 @@ struct InvestmentAllocationCard: View {
         let total = slices.reduce(0) { $0 + $1.value }
 
         ReportPanel(title: "Allocation", summary: byHolding.isEmpty ? "How your investments are split between accounts." : "How your investments are spread across your holdings.",
-                    headline: slices.first.map { "\(Int($0.value / max(total, 1) * 100))% \($0.name)" }, headlineNote: slices.isEmpty ? nil : "largest position", sample: data.isSample) {
+                    headline: slices.first.map { "\(Int($0.value / max(total, 1) * 100))% \($0.name)" }, headlineNote: slices.isEmpty ? nil : "largest position") {
             if slices.isEmpty {
-                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: 190)
+                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: 150, shape: .ring)
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -127,9 +129,9 @@ struct InvestmentBucketsCard: View {
         let buckets = data.buckets
         let total = buckets.reduce(0) { $0 + $1.value }
 
-        ReportPanel(title: "Where It Is", summary: "Retirement, brokerage, education and crypto: what share of your investments sits in each.", sample: data.isSample) {
+        ReportPanel(title: "Where It Is", summary: "Retirement, brokerage, education and crypto: what share of your investments sits in each.") {
             if buckets.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 190)
+                ReportEmpty(message: "No investment accounts yet.", height: 170, shape: .table)
             } else {
                 VStack(spacing: 12) {
                     ForEach(buckets, id: \.name) { bucket in
@@ -160,11 +162,11 @@ struct InvestmentContributionsCard: View {
     var body: some View {
         let total = data.contributed12
         ReportPanel(title: "Contributions", summary: "Money you've put in (or taken out), month by month. Growth isn't counted.",
-                    headline: data.accounts.isEmpty ? nil : ReportFormat.money(total), headlineNote: data.accounts.isEmpty ? nil : "net over 12 months", sample: data.isSample) {
+                    headline: data.accounts.isEmpty ? nil : ReportFormat.money(total), headlineNote: data.accounts.isEmpty ? nil : "net over 12 months") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 170)
+                ReportEmpty(message: "No investment accounts yet.", height: 170, shape: .bars)
             } else if data.contributions.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "No contributions in the last 12 months.", height: 170)
+                ReportEmpty(message: "No contributions in the last 12 months.", height: 170, shape: .bars)
             } else {
                 Chart(data.contributions) { month in
                     BarMark(x: .value("Month", month.date, unit: .month), y: .value("Contributed", month.value))
@@ -186,9 +188,9 @@ struct InvestmentGrowthCard: View {
 
     var body: some View {
         ReportPanel(title: "Growth by Account", summary: "What each account grew (or lost) over the last twelve months, as an amount and a return.",
-                    headline: data.accounts.isEmpty ? nil : ReportFormat.signed(Decimal(data.growth12)), headlineNote: data.accounts.isEmpty ? nil : "in total", sample: data.isSample) {
+                    headline: data.accounts.isEmpty ? nil : ReportFormat.signed(Decimal(data.growth12)), headlineNote: data.accounts.isEmpty ? nil : "in total") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 170)
+                ReportEmpty(message: "No investment accounts yet.", height: 200, shape: .bars)
             } else {
                 Chart(data.accounts) { account in
                     BarMark(x: .value("Growth", account.growth), y: .value("Account", account.name))
@@ -217,9 +219,9 @@ struct InvestmentGainsCard: View {
         let holdings = data.holdings.sorted { $0.gain > $1.gain }
         ReportPanel(title: "Gains and Losses", summary: "What each holding is worth against what you paid. Not realized until you sell.",
                     headline: holdings.isEmpty ? nil : ReportFormat.signed(Decimal(data.unrealizedGain)),
-                    headlineNote: holdings.isEmpty || data.costBasis == 0 ? nil : "\(ReportFormat.percent(data.unrealizedGain / data.costBasis * 100, digits: 1)) on cost", sample: data.isSample) {
+                    headlineNote: holdings.isEmpty || data.costBasis == 0 ? nil : "\(ReportFormat.percent(data.unrealizedGain / data.costBasis * 100, digits: 1)) on cost") {
             if holdings.isEmpty {
-                ReportEmpty(message: "No holdings yet. Add shares to an investment account to see gains and losses.", height: 170)
+                ReportEmpty(message: "No holdings yet. Add shares to an investment account to see gains and losses.", height: 300, shape: .table)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 9) {
                     GridRow {

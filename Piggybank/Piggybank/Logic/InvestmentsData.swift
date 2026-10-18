@@ -2,8 +2,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 
-/// Everything the investment reports draw, in one place: real numbers from your investment accounts, or a made-up
-/// portfolio when you have none yet, so the page shows what it will look like.
+/// Everything the investment reports draw, in one place. Empty when you have no investment account yet.
 struct InvestmentsData {
     struct AccountRow: Identifiable {
         let id: String
@@ -35,7 +34,6 @@ struct InvestmentsData {
         var id: Date { date }
     }
 
-    var isSample = false
     var accounts: [AccountRow] = []
     var holdings: [HoldingRow] = []
     /// Twelve months of total value, then six projected.
@@ -65,7 +63,7 @@ struct InvestmentsData {
 
     static func make(accounts all: [Account], transactions: [Transaction], snapshot: LedgerSnapshot?) -> InvestmentsData {
         let accounts = all.live.filter { $0.type.group == .investments && !$0.isClosed }
-        guard !accounts.isEmpty else { return sample() }
+        guard !accounts.isEmpty else { return InvestmentsData() }
 
         let months = Summary.monthStarts(count: 12)
         var growth: [PersistentIdentifier: Double] = [:]
@@ -107,44 +105,9 @@ struct InvestmentsData {
         let change = (last.value - history[history.count - 4].value) / 3
         return ReportMath.future(from: last) { last.value + change * Double($0) }
     }
-
-    // MARK: Sample
-
-    /// A made-up portfolio, shown until you add an investment account.
-    static func sample(now: Date = .now) -> InvestmentsData {
-        var data = InvestmentsData()
-        data.isSample = true
-        data.accounts = [
-            AccountRow(id: "s1", name: "Workplace 401(k)", typeTitle: "401(k)", symbol: "building.2", bucket: "Retirement", value: 84_200, growth: 9_120),
-            AccountRow(id: "s2", name: "Roth IRA", typeTitle: "Roth IRA", symbol: "leaf", bucket: "Retirement", value: 31_450, growth: 3_310),
-            AccountRow(id: "s3", name: "Brokerage", typeTitle: "Brokerage", symbol: "chart.line.uptrend.xyaxis", bucket: "Brokerage", value: 22_870, growth: 2_740),
-            AccountRow(id: "s4", name: "College 529", typeTitle: "529 Plan", symbol: "graduationcap", bucket: "Education", value: 14_300, growth: 1_160),
-            AccountRow(id: "s5", name: "Crypto", typeTitle: "Crypto", symbol: "bitcoinsign.circle", bucket: "Crypto", value: 3_180, growth: -420),
-        ]
-        data.holdings = [
-            HoldingRow(id: "h1", label: "VTSAX", name: "Total Stock Market", accountName: "Workplace 401(k)", value: 68_400, cost: 52_000),
-            HoldingRow(id: "h2", label: "VXUS", name: "International Stock", accountName: "Roth IRA", value: 27_900, cost: 25_100),
-            HoldingRow(id: "h3", label: "BND", name: "Total Bond Market", accountName: "Workplace 401(k)", value: 19_300, cost: 20_400),
-            HoldingRow(id: "h4", label: "AAPL", name: "Apple", accountName: "Brokerage", value: 12_200, cost: 7_800),
-            HoldingRow(id: "h5", label: "NVDA", name: "NVIDIA", accountName: "Brokerage", value: 9_600, cost: 4_100),
-            HoldingRow(id: "h6", label: "QQQ", name: "Nasdaq 100", accountName: "College 529", value: 8_950, cost: 7_000),
-            HoldingRow(id: "h7", label: "BTC", name: "Bitcoin", accountName: "Crypto", value: 3_180, cost: 3_600),
-        ]
-        let calendar = Calendar.current
-        let months = Summary.monthStarts(count: 12, now: now, calendar: calendar)
-        let wobble: [Double] = [0, 0.012, -0.008, 0.018, 0.004, -0.014, 0.02, 0.006, -0.01, 0.016, 0.002, 0]
-        let history = months.indices.map { index -> TrendPoint in
-            let base = 156_000 * (0.82 + 0.18 * Double(index) / 11)
-            return TrendPoint(date: months[index], value: index == 11 ? 156_000 : base * (1 + wobble[index]), projected: false)
-        }
-        data.history = history + projection(of: history)
-        let flows: [Double] = [1_500, 1_500, 1_800, 1_500, 1_500, 2_200, 1_500, 1_500, 1_500, 1_900, 1_500, 1_500]
-        data.contributions = months.indices.map { Month(date: months[$0], value: flows[$0]) }
-        return data
-    }
 }
 
-/// Builds `InvestmentsData` from the database (or the sample) and hands it to `content`.
+/// Builds `InvestmentsData` from the database and hands it to `content`.
 struct WithInvestmentsData<Content: View>: View {
     @Query private var allAccounts: [Account]
     @Query private var yearTransactions: [Transaction]

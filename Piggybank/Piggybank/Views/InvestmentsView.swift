@@ -6,7 +6,6 @@ import Charts
 /// six months or a year.
 struct InvestmentsView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.openSettings) private var openSettings
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
@@ -28,10 +27,11 @@ struct InvestmentsView: View {
                     PeriodControls(periods: ReportPeriod.longTerm, period: $period, anchor: $anchor, earliest: earliest)
                 }
                 if investmentAccounts.isEmpty {
-                    sampleBanner
-                    WithInvestmentsData { sampleTiles($0) }
+                    PlaceholderTiles(titles: ["Value", "Growth", "Contributions", "Unrealized Gain"])
                     deepDive
-                    WithInvestmentsData { sampleAccounts($0) }
+                    ReportPanel(title: "Accounts (0)", summary: "Every investment account with its value, growth and share.") {
+                        ReportEmpty(message: "No investment accounts yet.", height: 220, shape: .table)
+                    }
                 } else {
                     tiles(report)
                     if report.points.count > 1 { ReportCard(title: "Value") { chart(report) } }
@@ -75,65 +75,7 @@ struct InvestmentsView: View {
             .fixedSize(horizontal: false, vertical: true)
             InvestmentGainsReport()
         }
-    }
-
-    // MARK: Sample
-
-    private var sampleBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "sparkles").font(.title3).foregroundStyle(.orange)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("This is sample data").font(.headline)
-                Text("Add a 401(k), IRA, brokerage, 529 or crypto account and this page fills in with your own investments.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Add an Account") {
-                UserDefaults.standard.set("accounts", forKey: MacSettingsView.tabKey)
-                openSettings()
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding(14)
-        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private func sampleTiles(_ data: InvestmentsData) -> some View {
-        StatGrid {
-            tile("Value", Decimal(data.totalValue), color: .primary, note: "sample portfolio")
-            tile("Growth", Decimal(data.growth12), color: Theme.green, note: "over 12 months")
-            tile("Contributions", Decimal(data.contributed12), color: .primary, note: "net money in, 12 months")
-            tile("Unrealized Gain", Decimal(data.unrealizedGain), color: data.unrealizedGain >= 0 ? Theme.green : Theme.red, note: "on what you paid")
-        }
-    }
-
-    private func sampleAccounts(_ data: InvestmentsData) -> some View {
-        ReportPanel(title: "Accounts (\(data.accounts.count))", summary: "Every investment account with its value, growth and share.", sample: true) {
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(data.accounts) { account in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 10) {
-                            Image(systemName: account.symbol).foregroundStyle(Theme.green).frame(width: 24)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(account.name).fontWeight(.medium)
-                                Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Text(ReportFormat.money(account.value)).fontWeight(.semibold)
-                        }
-                        HStack {
-                            Text("Growth \(ReportFormat.signed(Decimal(account.growth)))\(account.growthRate.map { " · \(ReportFormat.percent($0 * 100, digits: 1))" } ?? "")")
-                                .foregroundStyle(account.growth >= 0 ? Theme.green : Theme.red)
-                            Spacer()
-                            Text("\(ReportFormat.percent(account.value / max(data.totalValue, 1) * 100)) of your investments").foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
-                        ProgressView(value: account.value / max(data.totalValue, 1)).tint(Theme.green)
-                    }
-                }
-            }
-        }
+        .environment(\.reportCardMinHeight, 290)
     }
 
     // MARK: Tiles

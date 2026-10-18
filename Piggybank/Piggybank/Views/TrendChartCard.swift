@@ -38,6 +38,7 @@ struct TrendChartCard: View {
     var height: CGFloat = 200
 
     @Query private var allAccounts: [Account]
+    @Environment(\.reportCardMinHeight) private var minHeight
 
     private var points: [TrendPoint]? {
         guard let snapshot = LedgerIndex.shared.latest else { return nil }
@@ -67,7 +68,7 @@ struct TrendChartCard: View {
             content
         }
         .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -82,8 +83,7 @@ struct TrendChartCard: View {
     private var content: some View {
         if let points {
             if points.filter({ !$0.projected }).count < 2 {
-                NoDataNote(message: emptyMessage)
-                    .frame(height: height, alignment: .center)
+                ReportEmpty(message: emptyMessage, height: height + 22, shape: .line)
             } else {
                 chart(points)
             }
