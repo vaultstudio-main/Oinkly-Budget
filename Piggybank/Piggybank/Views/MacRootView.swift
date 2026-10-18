@@ -8,6 +8,7 @@ private enum SidebarItem: Hashable {
     case investments
     case bills
     case planning
+    case budgets
     case manageAccounts
     case transactions
     case account(Account.ID)
@@ -27,23 +28,27 @@ struct MacRootView: View {
     }
 
     var body: some View {
-        NavigationSplitView(columnVisibility: .constant(.all)) {
+        // A plain row, not a split view: a split view's side panel can be hidden, and a hidden panel left people with no
+        // way to reach their accounts. This one has nothing to collapse.
+        HStack(spacing: 0) {
             List(selection: $selection) {
                 Section("Overview") {
-                    Label("Summary", systemImage: "building.columns")
+                    SidebarLabel(title: "Summary", symbol: "building.columns", color: .blue)
                         .tag(SidebarItem.summary)
-                    Label("Transactions", systemImage: "list.bullet.rectangle")
+                    SidebarLabel(title: "Transactions", symbol: "list.bullet.rectangle", color: .teal)
                         .tag(SidebarItem.transactions)
-                    Label("Reports", systemImage: "chart.bar.xaxis")
+                    SidebarLabel(title: "Reports", symbol: "chart.bar.xaxis", color: .indigo)
                         .tag(SidebarItem.reports)
-                    Label("Liabilities", systemImage: "scalemass")
+                    SidebarLabel(title: "Liabilities", symbol: "scalemass", color: Theme.red)
                         .tag(SidebarItem.liabilities)
-                    Label("Investments", systemImage: "chart.line.uptrend.xyaxis")
+                    SidebarLabel(title: "Investments", symbol: "chart.line.uptrend.xyaxis", color: .purple)
                         .tag(SidebarItem.investments)
-                    Label("Bills", systemImage: "calendar")
+                    SidebarLabel(title: "Bills", symbol: "calendar", color: .orange)
                         .tag(SidebarItem.bills)
-                    Label("Planning", systemImage: "target")
+                    SidebarLabel(title: "Planning", symbol: "target", color: Theme.green)
                         .tag(SidebarItem.planning)
+                    SidebarLabel(title: "Budgets", symbol: "chart.pie", color: .pink)
+                        .tag(SidebarItem.budgets)
                 }
                 Section("Accounts") {
                     // Cash on hand sits at the top by itself, not inside a folder, and the primary checking account
@@ -58,7 +63,7 @@ struct MacRootView: View {
                             DisclosureGroup(isExpanded: expansion(of: group)) {
                                 ForEach(members) { sidebarRow($0) }
                             } label: {
-                                Label(group.title, systemImage: "folder")
+                                SidebarLabel(title: group.title, symbol: "folder", color: group.sidebarColor)
                             }
                         }
                     }
@@ -86,13 +91,15 @@ struct MacRootView: View {
                 }
                 .background(.bar)
             }
-            .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
-            .fixedSidebarWidth(300)
-            .toolbar(removing: .sidebarToggle)
-        } detail: {
+            .frame(width: 300)
+
+            Divider()
+
             StatusBarHost(fallback: pageName, page: detailPage)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .navigationTitle("OinklyBudget")
+        .frame(minWidth: 1000, minHeight: 600)
+        .navigationTitle("Oinkly Budget")
         // The name sits in the middle of the top bar, matching the bar along the bottom.
         .toolbar(removing: .title)
         .toolbar { AppNameToolbarItem() }
@@ -103,6 +110,7 @@ struct MacRootView: View {
             case "reports": selection = .reports
             case "bills": selection = .bills
             case "planning": selection = .planning
+            case "budgets": selection = .budgets
             case "liabilities": selection = .liabilities
             case "investments": selection = .investments
             default: break
@@ -133,6 +141,8 @@ struct MacRootView: View {
             BillsView()
         case .planning:
             PlanningView()
+        case .budgets:
+            BudgetsView()
         case .manageAccounts:
             VStack(alignment: .leading, spacing: 0) {
                 Text("Manage Accounts").font(.largeTitle.bold()).padding([.top, .horizontal], 16)
@@ -163,7 +173,7 @@ struct MacRootView: View {
                         .foregroundStyle(.secondary)
                 }
             } icon: {
-                Image(systemName: account.type.symbol)
+                Image(systemName: account.type.symbol).foregroundStyle(account.type.group.sidebarColor)
             }
             .tag(SidebarItem.account(account.id))
             .contextMenu {
@@ -187,6 +197,7 @@ struct MacRootView: View {
         case .investments: "Investments"
         case .bills: "Bills"
         case .planning: "Planning"
+        case .budgets: "Budgets"
         case .manageAccounts: "Manage Accounts"
         case .transactions: "Transactions"
         case .summary, nil: "Summary"
@@ -219,6 +230,34 @@ private struct AppNameToolbarItem: ToolbarContent {
     }
 
     private var name: some View {
-        Text("OinklyBudget").font(.headline).foregroundStyle(.secondary)
+        Text("Oinkly Budget").font(.headline).foregroundStyle(.secondary)
+    }
+}
+
+/// A side panel row with a coloured icon.
+private struct SidebarLabel: View {
+    let title: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: symbol).foregroundStyle(color)
+        }
+    }
+}
+
+extension AccountGroup {
+    /// The colour of this kind of account in the side panel: money you have is green, debts are red.
+    var sidebarColor: Color {
+        switch self {
+        case .checkingSavings: Theme.green
+        case .creditCards: .orange
+        case .loans: Theme.red
+        case .investments: .purple
+        case .assets: .teal
+        }
     }
 }

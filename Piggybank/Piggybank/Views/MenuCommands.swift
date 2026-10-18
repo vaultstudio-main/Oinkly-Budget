@@ -22,6 +22,9 @@ struct FileNewCommands: Commands {
     @FocusedValue(\.selectedAccountID) private var selectedAccountID
 
     var body: some Commands {
+        // The side panel always stays open, so there is no Hide Sidebar command.
+        CommandGroup(replacing: .sidebar) {}
+
         CommandGroup(replacing: .appInfo) {
             Button("About OinklyBudget") {
                 openWindow(id: "about")
@@ -51,11 +54,6 @@ struct FileNewCommands: Commands {
                 openWindow(id: "new-transaction", value: NewTransactionRequest(accountID: selectedAccountID))
             }
             .keyboardShortcut("n", modifiers: .command)
-
-            Button("New Cash Transaction…") {
-                openWindow(id: "cash-transaction")
-            }
-            .keyboardShortcut("n", modifiers: [.command, .shift])
 
             Button("New Credit Card Charge…") {
                 openWindow(id: "credit-card-charge", value: NewTransactionRequest(accountID: selectedAccountID))

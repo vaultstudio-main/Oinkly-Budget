@@ -24,6 +24,7 @@ private struct FixedSidebarWidth: NSViewRepresentable {
                    let controller = split.delegate as? NSSplitViewController,
                    let item = controller.splitViewItems.first {
                     item.canCollapse = false
+                    item.isCollapsed = false
                     item.minimumThickness = self.width
                     item.maximumThickness = self.width
                     item.holdingPriority = NSLayoutConstraint.Priority(rawValue: 999)
