@@ -13,8 +13,6 @@ struct ReportItem: Identifiable {
     let shape: ReportShape
     /// Reports that look ahead show a "next 6 months" projection beside the history.
     var projects = true
-    /// Built reports show real data. Everything else is a placeholder.
-    var isBuilt = false
     /// A wide report takes the full width of the page.
     var isWide = false
     /// Reports that are real line charts, with history and a projection.
@@ -36,7 +34,6 @@ enum ReportSection: String, CaseIterable, Identifiable {
     case bills = "Bills"
     case investments = "Investments"
     case health = "Books & Records"
-    case projections = "Next 6 Months"
 
     var id: Self { self }
 
@@ -53,16 +50,6 @@ enum ReportSection: String, CaseIterable, Identifiable {
         case .bills: "calendar"
         case .investments: "chart.line.uptrend.xyaxis"
         case .health: "checkmark.seal"
-        case .projections: "forward"
-        }
-    }
-
-    /// Sections whose reports cover a chosen period. The rest follow the last twelve months and look six months ahead.
-    /// Cash Flow, Net Worth, Debt, Goals, Budgets, Bills and the projections don't use one.
-    var usesPeriod: Bool {
-        switch self {
-        case .overview, .spending, .income: true
-        default: false
         }
     }
 
@@ -80,7 +67,6 @@ enum ReportSection: String, CaseIterable, Identifiable {
         case .bills: "What's paid, what's due and the next six months of bills."
         case .investments: "Value, mix, gains and contributions."
         case .health: "Reconciliation, receipts and anything that needs attention."
-        case .projections: "Every projection in one place, six months out."
         }
     }
 
@@ -91,8 +77,8 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Net Worth Over Time", summary: "", symbol: "scalemass", shape: .line, isWide: true, trend: .netWorth),
                 ReportItem(title: "Total Debt Over Time", summary: "", symbol: "creditcard", shape: .line, trend: .debt),
                 ReportItem(title: "Debt-to-Income Ratio", summary: "", symbol: "percent", shape: .line, trend: .debtToIncome),
-                ReportItem(title: "Income vs Spending", summary: "Income, spending and what's left, for the period.", symbol: "chart.bar", shape: .bars, isBuilt: true),
-                ReportItem(title: "Spending by Category", summary: "Every category's share of spending.", symbol: "chart.pie", shape: .table, isBuilt: true),
+                ReportItem(title: "Income & Spending", summary: "This month, the last three and six months and the last year, with twelve months of bars and the next six projected.", symbol: "chart.bar", shape: .bars, isWide: true),
+                ReportItem(title: "Spending by Category", summary: "Every category's spending across the four windows.", symbol: "chart.pie", shape: .table, isWide: true),
                 ReportItem(title: "Year-End Summary", summary: "A one-page summary of the year: income, spending, savings, debt paid, net worth change.", symbol: "doc.text", shape: .tiles, isWide: true),
                 ReportItem(title: "Report Card", summary: "Savings rate, debt-to-income, emergency fund and budget score in one glance.", symbol: "rosette", shape: .ring),
                 ReportItem(title: "What Changed", summary: "The biggest moves compared with the last period.", symbol: "arrow.up.arrow.down", shape: .table),
@@ -138,6 +124,8 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Ahead or Behind", summary: "Estimated payoff against maturity date for every loan, in months.", symbol: "flag.checkered", shape: .bars),
                 ReportItem(title: "Interest Paid", summary: "Interest paid so far and still to come at the current payment.", symbol: "percent", shape: .bars),
                 ReportItem(title: "Credit Card Use", summary: "Balance against limit for every card, and the projected balance.", symbol: "creditcard", shape: .ring),
+                ReportItem(title: "Loan Balances Ahead", summary: "What each loan will owe after each of the next six payments.", symbol: "calendar.badge.clock", shape: .line),
+                ReportItem(title: "Card Balances Ahead", summary: "What each card will owe after six months of minimum payments.", symbol: "creditcard", shape: .line),
                 ReportItem(title: "Debt Payoff Plan", summary: "How much sooner you'd finish by adding to each payment.", symbol: "arrow.down.circle", shape: .table, isWide: true),
             ]
         case .goals:
@@ -147,6 +135,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Needed Per Month", summary: "What every goal needs each month, against what you set aside now.", symbol: "calendar", shape: .bars),
                 ReportItem(title: "Savings Growth", summary: "Linked savings accounts over time, with six months projected.", symbol: "chart.xyaxis.line", shape: .line),
                 ReportItem(title: "Emergency Fund Coverage", summary: "How many months of spending your savings would cover.", symbol: "shield.lefthalf.filled", shape: .ring),
+                ReportItem(title: "Goal Finish Dates", summary: "When each goal lands at your current pace, against its date.", symbol: "flag.checkered", shape: .table, isWide: true),
             ]
         case .budgets:
             [
@@ -178,19 +167,6 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Unreconciled by Account", summary: "What's still to match, account by account.", symbol: "list.bullet", shape: .table, projects: false),
                 ReportItem(title: "Missing Receipts", summary: "Transactions with no receipt and not marked as having none.", symbol: "doc.questionmark", shape: .table, projects: false),
                 ReportItem(title: "Duplicate Payees", summary: "Payees that look like the same one, to clean up.", symbol: "person.2.slash", shape: .table, projects: false),
-            ]
-        case .projections:
-            [
-                ReportItem(title: "Net Worth", summary: "", symbol: "scalemass", shape: .line, isWide: true, trend: .netWorth),
-                ReportItem(title: "Cash Balance", summary: "Expected balance of your checking and savings.", symbol: "banknote", shape: .line),
-                ReportItem(title: "Debt-to-Income", summary: "", symbol: "percent", shape: .line, trend: .debtToIncome),
-                ReportItem(title: "Total Debt", summary: "", symbol: "creditcard", shape: .line, trend: .debt),
-                ReportItem(title: "Spending", summary: "Expected spending by month, using your recent average and known bills.", symbol: "cart", shape: .bars),
-                ReportItem(title: "Income", summary: "Expected income by month, using your pay pattern.", symbol: "arrow.down.circle", shape: .bars),
-                ReportItem(title: "Savings Rate", summary: "The share of income you're on pace to keep.", symbol: "percent", shape: .line),
-                ReportItem(title: "Loan Balances", summary: "Each loan's balance after every payment.", symbol: "calendar.badge.clock", shape: .line),
-                ReportItem(title: "Credit Card Balances", summary: "Expected card balances and utilization.", symbol: "creditcard", shape: .line),
-                ReportItem(title: "Goal Finish Dates", summary: "When each goal lands at the current pace.", symbol: "target", shape: .table, isWide: true),
             ]
         }
     }

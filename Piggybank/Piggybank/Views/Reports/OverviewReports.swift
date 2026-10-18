@@ -145,26 +145,31 @@ struct WhatChangedReport: View {
     @Environment(\.reportInputs) private var inputs
 
     var body: some View {
-        func sums(_ range: ReportRange) -> (income: Double, spending: Double, byCategory: [String: Double]) {
+        let calendar = Calendar.current
+        let windows = ReportInputs.windows()
+        let recentStart = windows[1].start
+        let earlierStart = windows[2].start
+        func sums(_ list: [Transaction]) -> (income: Double, spending: Double, byCategory: [String: Double]) {
             var income = 0.0, spending = 0.0
             var byCategory: [String: Double] = [:]
-            for transaction in inputs.period where !transaction.isTransfer && transaction.date >= range.start && transaction.date < range.end {
+            for transaction in list {
                 let amount = transaction.amount.doubleValue
                 if amount > 0 { income += amount } else { spending -= amount; byCategory[transaction.category?.name ?? "Uncategorized", default: 0] -= amount }
             }
             return (income, spending, byCategory)
         }
-        let now = sums(inputs.range)
-        let before = sums(inputs.previous)
+        let now = sums(inputs.real(since: recentStart))
+        let before = sums(inputs.real(since: earlierStart, before: recentStart))
         let names = Set(now.byCategory.keys).union(before.byCategory.keys)
         let changes = names.map { ($0, now.byCategory[$0, default: 0] - before.byCategory[$0, default: 0]) }
             .filter { abs($0.1) > 0.005 }
             .sorted { abs($0.1) > abs($1.1) }
         let hasData = now.income + now.spending + before.income + before.spending > 0
+        _ = calendar
 
-        return ReportPanel(title: "What Changed", summary: "\(inputs.periodName) against the period before it: the biggest moves in income and spending.") {
+        return ReportPanel(title: "What Changed", summary: "The last three months against the three before: the biggest moves in income and spending.") {
             if !hasData {
-                ReportEmpty(message: "Needs transactions in this period or the one before it.", height: 190)
+                ReportEmpty(message: "Needs transactions in the last six months to compare.", height: 190)
             } else {
                 HStack(spacing: 10) {
                     delta("Income", now.income, before.income, goodWhenUp: true)
@@ -190,8 +195,135 @@ struct WhatChangedReport: View {
         let change = now - before
         let good = (change >= 0) == goodWhenUp
         return ReportFigure(label: title, value: ReportFormat.money(now),
-                            note: before == 0 ? "nothing in the period before"
+                            note: before == 0 ? "nothing in the 3 months before"
                                               : "\(change >= 0 ? "▲" : "▼") \(ReportFormat.money(abs(change))) (\(ReportFormat.percent(abs(change) / before * 100))) vs before",
                             color: change == 0 ? .primary : (good ? Theme.green : Theme.red))
+    }
+}
+
+// MARK: Income and spending across the windows
+
+struct IncomeSpendingWindowsReport: View {
+    @Environment(\.reportInputs) private var inputs
+
+    private struct Bar: Identifiable {
+        let date: Date
+        let kind: String
+        let value: Double
+        let projected: Bool
+        var id: String { "\(date.timeIntervalSince1970)-\(kind)-\(projected)" }
+    }
+
+    var body: some View {
+        let windows = ReportInputs.windows()
+        let figures = windows.map { window -> (String, Double, Double) in
+            let list = inputs.real(since: window.start)
+            return (window.title, list.filter { $0.amount > 0 }.reduce(0) { $0 + $1.amount.doubleValue }, list.filter { $0.amount < 0 }.reduce(0) { $0 - $1.amount.doubleValue })
+        }
+        let totals = inputs.monthlyTotals()
+        let empty = totals.allSatisfy { $0.income == 0 && $0.spending == 0 }
+        let calendar = Calendar.current
+        let recent = totals.suffix(4).dropLast()
+        let income = recent.reduce(0) { $0 + $1.income } / Double(max(recent.count, 1))
+        let spending = recent.reduce(0) { $0 + $1.spending } / Double(max(recent.count, 1))
+        var bars: [Bar] = totals.flatMap { [Bar(date: $0.date, kind: "Income", value: $0.income, projected: false), Bar(date: $0.date, kind: "Spending", value: $0.spending, projected: false)] }
+        if let last = totals.last {
+            for month in 1...ReportTrends.futureMonths {
+                guard let date = calendar.date(byAdding: .month, value: month, to: last.date) else { continue }
+                bars.append(Bar(date: date, kind: "Income", value: income, projected: true))
+                bars.append(Bar(date: date, kind: "Spending", value: spending, projected: true))
+            }
+        }
+
+        return ReportPanel(title: "Income & Spending", summary: "What came in and went out this month, over the last three and six months and over the last year, with twelve months of bars and the next six projected.") {
+            if empty {
+                ReportEmpty(message: "Income and spending appear here once you record some transactions.", height: 300, shape: .bars)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    ForEach(figures, id: \.0) { title, income, spending in
+                        let net = income - spending
+                        VStack(alignment: .leading, spacing: 7) {
+                            Text(title.uppercased()).font(.caption2).foregroundStyle(.secondary)
+                            figure("Income", income, Theme.green)
+                            figure("Spending", spending, Theme.red)
+                            figure("Kept", net, net >= 0 ? Theme.green : Theme.red, bold: true)
+                            Text(income > 0 ? "\(ReportFormat.percent(net / income * 100)) savings rate" : "no income").font(.caption2).foregroundStyle(.secondary)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+                Chart(bars) { bar in
+                    BarMark(x: .value("Month", bar.date, unit: .month), y: .value("Amount", bar.value))
+                        .foregroundStyle(by: .value("Kind", bar.kind))
+                        .position(by: .value("Kind", bar.kind))
+                        .opacity(bar.projected ? 0.4 : 1)
+                        .cornerRadius(2)
+                }
+                .chartForegroundStyleScale(["Income": Theme.green, "Spending": Theme.red])
+                .chartLegend(position: .bottom, alignment: .leading)
+                .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
+                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
+                .frame(height: 190)
+                ReportKey(items: [.init(color: .secondary, text: "Faded: next 6 months", dashed: true)])
+            }
+        }
+    }
+
+    private func figure(_ title: String, _ value: Double, _ color: Color, bold: Bool = false) -> some View {
+        HStack {
+            Text(title).foregroundStyle(bold ? .primary : .secondary)
+            Spacer()
+            Text(ReportFormat.money(value)).fontWeight(bold ? .semibold : .regular).foregroundStyle(color)
+        }
+        .font(.callout)
+    }
+}
+
+// MARK: Spending by category across the windows
+
+struct SpendingByCategoryWindowsReport: View {
+    @Environment(\.reportInputs) private var inputs
+
+    var body: some View {
+        let windows = ReportInputs.windows()
+        let tables = windows.map { window in
+            Dictionary(uniqueKeysWithValues: ReportInputs.categories(inputs.real(since: window.start), income: false).map { ($0.name, $0) })
+        }
+        let year = ReportInputs.categories(inputs.real(since: windows[3].start), income: false)
+        let total = year.reduce(0) { $0 + $1.amount }
+
+        ReportPanel(title: "Spending by Category", summary: "Every category's spending this month, over three and six months and over the last year, and its share of the year.",
+                    headline: year.isEmpty ? nil : ReportFormat.money(total), headlineNote: year.isEmpty ? nil : "spent in the last year") {
+            if year.isEmpty {
+                ReportEmpty(message: "Spending by category appears here once you record some spending.", height: 300, shape: .table)
+            } else {
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 9) {
+                    GridRow {
+                        Text("CATEGORY")
+                        ForEach(windows) { Text($0.title.uppercased()).gridColumnAlignment(.trailing) }
+                        Text("SHARE OF YEAR").gridColumnAlignment(.leading)
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    Divider().gridCellColumns(windows.count + 2)
+                    ForEach(year.prefix(10)) { line in
+                        GridRow {
+                            Label { Text(line.name).lineLimit(1) } icon: { Image(systemName: line.symbol).foregroundStyle(Color(hex: line.colorHex)) }
+                            ForEach(tables.indices, id: \.self) { index in
+                                let amount = tables[index][line.name]?.amount ?? 0
+                                Text(amount > 0 ? ReportFormat.money(amount) : "—").foregroundStyle(amount > 0 ? .primary : .tertiary)
+                            }
+                            HStack(spacing: 6) {
+                                ProgressView(value: total > 0 ? line.amount / total : 0).tint(Color(hex: line.colorHex)).frame(width: 70)
+                                Text(ReportFormat.percent(total > 0 ? line.amount / total * 100 : 0)).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .font(.callout)
+                    }
+                }
+            }
+        }
     }
 }

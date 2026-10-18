@@ -67,30 +67,45 @@ struct SpendingByPayeeReport: View {
     @Environment(\.reportInputs) private var inputs
 
     var body: some View {
-        let spending = inputs.inPeriod.filter { $0.amount < 0 }
-        let total = spending.reduce(Decimal(0)) { $0 - $1.amount }
-        let groups = Dictionary(grouping: spending, by: payeeName)
-            .map { name, list in (name, list.count, list.reduce(Decimal(0)) { $0 - $1.amount }) }
-            .sorted { $0.2 > $1.2 }
+        let windows = Array(ReportInputs.windows().enumerated()).filter { [0, 1, 3].contains($0.offset) }.map(\.element)
+        func totals(_ start: Date) -> [String: (count: Int, amount: Decimal)] {
+            var table: [String: (count: Int, amount: Decimal)] = [:]
+            for transaction in inputs.real(since: start) where transaction.amount < 0 {
+                var entry = table[payeeName(transaction)] ?? (0, 0)
+                entry.count += 1
+                entry.amount -= transaction.amount
+                table[payeeName(transaction)] = entry
+            }
+            return table
+        }
+        let tables = windows.map { totals($0.start) }
+        let year = tables.last ?? [:]
+        let rows = year.sorted { $0.value.amount > $1.value.amount }.prefix(8)
 
-        return ReportPanel(title: "Spending by Payee", summary: "Who you pay the most in \(inputs.periodName), and how often.") {
-            if groups.isEmpty {
-                ReportEmpty(message: "No spending in this period.", height: 170)
+        return ReportPanel(title: "Spending by Payee", summary: "Who you pay the most: this month, the last three months and the last year.") {
+            if rows.isEmpty {
+                ReportEmpty(message: "Payees appear here once you record some spending.", height: 220, shape: .table)
             } else {
-                VStack(spacing: 9) {
-                    ForEach(groups.prefix(8), id: \.0) { name, count, amount in
-                        let share = total > 0 ? (amount / total).doubleValue : 0
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack {
+                Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
+                    GridRow {
+                        Text("PAYEE")
+                        ForEach(windows) { Text($0.title.uppercased()).gridColumnAlignment(.trailing) }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    Divider().gridCellColumns(windows.count + 1)
+                    ForEach(Array(rows), id: \.key) { name, entry in
+                        GridRow {
+                            HStack(spacing: 5) {
                                 Text(name).lineLimit(1)
-                                Text("\(count)×").font(.caption).foregroundStyle(.secondary)
-                                Spacer()
-                                Text(amount, format: .appCurrency)
-                                Text(share.formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(.secondary).frame(width: 38, alignment: .trailing)
+                                Text("\(entry.count)×").font(.caption).foregroundStyle(.secondary)
                             }
-                            .font(.callout)
-                            ProgressView(value: share).tint(Theme.red.opacity(0.8))
+                            ForEach(tables.indices, id: \.self) { index in
+                                let amount = tables[index][name]?.amount ?? 0
+                                Text(amount > 0 ? amount.formatted(.appCurrency) : "—").foregroundStyle(amount > 0 ? .primary : .tertiary)
+                            }
                         }
+                        .font(.callout)
                     }
                 }
             }
@@ -104,8 +119,8 @@ struct TopSpendingReport: View {
     @Environment(\.reportInputs) private var inputs
 
     var body: some View {
-        let biggest = inputs.inPeriod.filter { $0.amount < 0 }.sorted { $0.amount < $1.amount }.prefix(8)
-        return ReportPanel(title: "Top Spending", summary: "The biggest single transactions in \(inputs.periodName).") {
+        let biggest = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount < 0 }.sorted { $0.amount < $1.amount }.prefix(8)
+        return ReportPanel(title: "Top Spending", summary: "The biggest single transactions in the last three months.") {
             if biggest.isEmpty {
                 ReportEmpty(message: "No spending in this period.", height: 170)
             } else {
@@ -143,7 +158,7 @@ struct PaymentMethodReport: View {
     }
 
     var body: some View {
-        let spending = inputs.inPeriod.filter { $0.amount < 0 }
+        let spending = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount < 0 }
         var table: [String: Double] = [:]
         for transaction in spending {
             let name = transaction.customMethod?.name ?? transaction.paymentType?.group.title ?? "Not recorded"
@@ -152,7 +167,7 @@ struct PaymentMethodReport: View {
         let slices = table.map { Slice(name: $0.key, value: $0.value) }.sorted { $0.value > $1.value }
         let total = slices.reduce(0) { $0 + $1.value }
 
-        return ReportPanel(title: "Spending by Payment Method", summary: "How you paid in \(inputs.periodName): cards, bank, cash, digital and your own methods.") {
+        return ReportPanel(title: "Spending by Payment Method", summary: "How you paid over the last three months: cards, bank, cash, digital and your own methods.") {
             if slices.isEmpty {
                 ReportEmpty(message: "No spending in this period.", height: 170)
             } else {

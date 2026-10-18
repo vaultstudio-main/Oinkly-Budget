@@ -51,13 +51,9 @@ enum ReportCards {
         case "Bills/Next 6 Months of Bills": AnyView(NextSixMonthsBillsReport())
         case "Bills/Bills by Category": AnyView(BillsByCategoryReport())
 
-        case "Next 6 Months/Cash Balance": AnyView(CashBalanceProjectionReport())
-        case "Next 6 Months/Spending": AnyView(SpendingProjectionReport())
-        case "Next 6 Months/Income": AnyView(IncomeProjectionReport())
-        case "Next 6 Months/Savings Rate": AnyView(SavingsRateReport())
-        case "Next 6 Months/Loan Balances": AnyView(LoanBalancesProjectionReport())
-        case "Next 6 Months/Credit Card Balances": AnyView(CardBalancesProjectionReport())
-        case "Next 6 Months/Goal Finish Dates": AnyView(GoalFinishDatesReport())
+        case "Debt & Loans/Loan Balances Ahead": AnyView(LoanBalancesProjectionReport())
+        case "Debt & Loans/Card Balances Ahead": AnyView(CardBalancesProjectionReport())
+        case "Savings & Goals/Goal Finish Dates": AnyView(GoalFinishDatesReport())
 
         case "Investments/Portfolio Value": AnyView(PortfolioValueReport())
         case "Investments/Allocation": AnyView(InvestmentAllocationReport())
@@ -67,6 +63,8 @@ enum ReportCards {
         case "Investments/Where It Is": AnyView(InvestmentBucketsReport())
         case "Investments/Growth by Account": AnyView(InvestmentGrowthReport())
 
+        case "Overview/Income & Spending": AnyView(IncomeSpendingWindowsReport())
+        case "Overview/Spending by Category": AnyView(SpendingByCategoryWindowsReport())
         case "Overview/Year-End Summary": AnyView(YearEndSummaryReport())
         case "Overview/Report Card": AnyView(ReportCardReport())
         case "Overview/What Changed": AnyView(WhatChangedReport())

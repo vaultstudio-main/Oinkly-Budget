@@ -14,16 +14,16 @@ struct IncomeByCategoryReport: View {
     }
 
     var body: some View {
-        let income = inputs.inPeriod.filter { $0.amount > 0 }
+        let income = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount > 0 }
         var table: [String: Double] = [:]
         for transaction in income { table[transaction.category?.name ?? "Uncategorized", default: 0] += transaction.amount.doubleValue }
         let slices = table.map { Slice(name: $0.key, value: $0.value) }.sorted { $0.value > $1.value }
         let total = slices.reduce(0) { $0 + $1.value }
 
-        return ReportPanel(title: "Income by Category", summary: "Each source of income in \(inputs.periodName) and its share.",
-                    headline: slices.isEmpty ? nil : ReportFormat.money(total), headlineNote: slices.isEmpty ? nil : "in this period") {
+        return ReportPanel(title: "Income by Category", summary: "Each source of income over the last three months and its share.",
+                    headline: slices.isEmpty ? nil : ReportFormat.money(total), headlineNote: slices.isEmpty ? nil : "in the last 3 months") {
             if slices.isEmpty {
-                ReportEmpty(message: "No income in this period.", height: 170)
+                ReportEmpty(message: "Income appears here once you record some.", height: 170)
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -58,7 +58,7 @@ struct IncomeByPayerReport: View {
     var body: some View {
         let calendar = Calendar.current
         let months = ReportInputs.months()
-        let income = inputs.inPeriod.filter { $0.amount > 0 }
+        let income = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount > 0 }
         let groups = Dictionary(grouping: income) { $0.payee.trimmingCharacters(in: .whitespaces).isEmpty ? "No payer" : $0.payee.trimmingCharacters(in: .whitespaces) }
             .map { name, list in (name, list.count, list.reduce(Decimal(0)) { $0 + $1.amount }) }
             .sorted { $0.2 > $1.2 }
@@ -68,9 +68,9 @@ struct IncomeByPayerReport: View {
                 .map { calendar.component(.month, from: $0.date) + 100 * calendar.component(.year, from: $0.date) }).count
         }
 
-        return ReportPanel(title: "Income by Payer", summary: "Who pays you in \(inputs.periodName), and how steady each source has been over the last year.") {
+        return ReportPanel(title: "Income by Payer", summary: "Who paid you over the last three months, and how steady each source has been over the last year.") {
             if groups.isEmpty {
-                ReportEmpty(message: "No income in this period.", height: 170)
+                ReportEmpty(message: "Income appears here once you record some.", height: 170)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
