@@ -18,8 +18,13 @@ enum DocumentBuilders {
             ["Amount", money(t.amount)],
         ]
         let category = t.account?.supportsHoldings == true ? InvestmentType.of(t).title
-            : (t.fixedCategoryTitle ?? (t.category?.isLive == true ? (t.category?.name ?? "") : ""))
+            : (t.fixedCategoryTitle ?? t.splitTitle ?? (t.category?.isLive == true ? (t.category?.name ?? "") : ""))
         if !category.isEmpty { rows.append(["Category", category]) }
+        if t.isSplit {
+            for part in t.splits.sorted(by: { $0.order < $1.order }) {
+                rows.append(["   \(part.category?.name ?? "Uncategorized")", money(part.amount)])
+            }
+        }
         if !t.paymentTitle.isEmpty { rows.append(["Payment method", t.paymentTitle]) }
         if !t.checkNumber.isEmpty { rows.append(["Check number", t.checkNumber]) }
         rows.append(["Status", t.state.title])

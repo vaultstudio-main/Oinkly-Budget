@@ -17,17 +17,24 @@ enum TransactionCSV {
 
         var lines = [header.map(escape).joined(separator: ",")]
         for t in transactions {
-            let fields = [
-                day.string(from: t.date),
-                t.account?.name ?? "",
-                t.payee,
-                t.category?.isLive == true ? (t.category?.name ?? "") : "",
-                t.memo,
-                "\(t.amount)",
-                t.status.rawValue,
-                t.transferID?.uuidString ?? "",
-            ]
-            lines.append(fields.map(escape).joined(separator: ","))
+            // A split goes out as one row per part, with the same date and payee, so the rows add up by category.
+            let ordered = t.isSplit ? t.splits.sorted { $0.order < $1.order } : []
+            let parts: [(category: Category?, amount: Decimal, memo: String)] = ordered.isEmpty
+                ? [(t.category, t.amount, t.memo)]
+                : ordered.map { ($0.category, $0.amount, $0.memo.isEmpty ? t.memo : $0.memo) }
+            for part in parts {
+                let fields = [
+                    day.string(from: t.date),
+                    t.account?.name ?? "",
+                    t.payee,
+                    part.category?.isLive == true ? (part.category?.name ?? "") : "",
+                    part.memo,
+                    "\(part.amount)",
+                    t.status.rawValue,
+                    t.transferID?.uuidString ?? "",
+                ]
+                lines.append(fields.map(escape).joined(separator: ","))
+            }
         }
         return lines.joined(separator: "\n") + "\n"
     }

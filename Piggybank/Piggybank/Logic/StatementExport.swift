@@ -104,6 +104,7 @@ enum StatementBuilder {
     private static func categoryTitle(_ transaction: Transaction) -> String {
         if transaction.account?.supportsHoldings == true { return InvestmentType.of(transaction).title }
         if let fixed = transaction.fixedCategoryTitle { return fixed }
+        if let split = transaction.splitTitle { return split }
         return transaction.category?.isLive == true ? (transaction.category?.name ?? "") : ""
     }
 

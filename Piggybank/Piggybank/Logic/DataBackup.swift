@@ -151,6 +151,15 @@ struct BackupFile: Codable {
         var paidDueDate: Date?
         /// Added in 1.1; absent in older files.
         var isOpeningDeposit: Bool?
+        /// The parts of a split transaction. Added in 1.1; absent in older files and for ordinary transactions.
+        var splits: [SplitRecord]?
+    }
+
+    struct SplitRecord: Codable {
+        var categoryKey: String?
+        var amount: String
+        var memo: String
+        var order: Int
     }
 
     struct HoldingRecord: Codable {
@@ -265,7 +274,11 @@ enum DataBackup {
                     checkNumber: t.checkNumber, createdAt: t.createdAt, receiptData: t.receiptData,
                     noReceipt: t.noReceipt, isBillPayment: t.isBillPayment, isAtmWithdrawal: t.isAtmWithdrawal,
                     paidBillIndex: t.paidBill?.isLive == true ? billIDs[t.paidBill!.persistentModelID] : nil,
-                    paidDueDate: t.paidDueDate, isOpeningDeposit: t.isOpeningDeposit))
+                    paidDueDate: t.paidDueDate, isOpeningDeposit: t.isOpeningDeposit,
+                    splits: t.splits.isEmpty ? nil : t.splits.sorted { $0.order < $1.order }.map {
+                        .init(categoryKey: $0.category?.isLive == true ? $0.category?.systemKey : nil,
+                              amount: text($0.amount), memo: $0.memo, order: $0.order)
+                    }))
             }
             for h in account.holdings.live {
                 file.holdings.append(.init(
@@ -431,6 +444,10 @@ enum DataBackup {
             t.paidDueDate = record.paidDueDate
             t.isOpeningDeposit = record.isOpeningDeposit ?? false
             context.insert(t)
+            for part in record.splits ?? [] {
+                context.insert(TransactionSplit(transaction: t, category: part.categoryKey.flatMap { byKey[$0] },
+                                                amount: decimal(part.amount), memo: part.memo, order: part.order))
+            }
             restoredTransactions.append((t, record))
         }
 

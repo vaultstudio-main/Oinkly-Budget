@@ -25,6 +25,8 @@ enum CleanUp {
         var transactionCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var billCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var payeeCategories: [(id: PersistentIdentifier, category: Category?)] = []
+        /// A part of a split transaction and the category it had before.
+        var splitCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var deletedCategory: (name: String, symbol: String, colorHex: String, limit: Decimal, isIncome: Bool, key: String?)?
         var count: Int { max(payees.count, transactionCategories.count) }
     }
@@ -132,6 +134,10 @@ enum CleanUp {
                 change.transactionCategories.append((transaction.persistentModelID, source))
                 transaction.category = target
             }
+            for part in source.splits where part.transaction?.isLive == true {
+                change.splitCategories.append((part.persistentModelID, source))
+                part.category = target
+            }
             for bill in source.bills.live {
                 change.billCategories.append((bill.persistentModelID, source))
                 bill.category = target
@@ -146,7 +152,9 @@ enum CleanUp {
             }
         }
         context.saveNow()
-        change.summary = "Moved \(change.transactionCategories.count) transaction\(change.transactionCategories.count == 1 ? "" : "s") to “\(target.name)”."
+        let parts = change.splitCategories.count
+        change.summary = "Moved \(change.transactionCategories.count) transaction\(change.transactionCategories.count == 1 ? "" : "s")"
+            + (parts > 0 ? " and \(parts) split part\(parts == 1 ? "" : "s")" : "") + " to “\(target.name)”."
         return change
     }
 
@@ -166,8 +174,12 @@ enum CleanUp {
             for index in change.transactionCategories.indices where change.transactionCategories[index].category?.isLive != true {
                 change.transactionCategories[index].category = restored
             }
+            for index in change.splitCategories.indices where change.splitCategories[index].category?.isLive != true {
+                change.splitCategories[index].category = restored
+            }
         }
         for (id, category) in change.transactionCategories { if let t: Transaction = fetch(Transaction.self, id), t.isLive { t.category = category } }
+        for (id, category) in change.splitCategories { if let part: TransactionSplit = fetch(TransactionSplit.self, id) { part.category = category } }
         for (id, category) in change.billCategories { if let b: Bill = fetch(Bill.self, id), b.isLive { b.category = category } }
         for (id, category) in change.payeeCategories { if let p: Payee = fetch(Payee.self, id), p.isLive { p.lastCategory = category } }
         context.saveNow()

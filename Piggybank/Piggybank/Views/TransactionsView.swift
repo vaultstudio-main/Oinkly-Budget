@@ -154,7 +154,7 @@ private struct TransactionsTable: View {
                     if let type = investmentType(transaction) {
                         Text(type.title)
                     } else {
-                        Text(transaction.fixedCategoryTitle ?? transaction.category?.name ?? "")
+                        Text(transaction.categoryTitle)
                     }
                 }
                 TableColumn("Method") { Text($0.paymentTitle) }

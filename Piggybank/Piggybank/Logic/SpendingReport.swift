@@ -32,8 +32,12 @@ enum SpendingReport {
 
     /// Money out in an expense category, or money in under an income category.
     private static func fits(_ transaction: Transaction, income: Bool) -> Bool {
-        guard let category = transaction.category else { return false }
-        return income ? (transaction.amount > 0 && category.isIncome) : (transaction.amount < 0 && !category.isIncome)
+        transaction.categoryParts.contains { fits($0.category, $0.amount, income: income) }
+    }
+
+    private static func fits(_ category: Category?, _ amount: Decimal, income: Bool) -> Bool {
+        guard let category else { return false }
+        return income ? (amount > 0 && category.isIncome) : (amount < 0 && !category.isIncome)
     }
 
     /// Categorized expenses dated in one calendar month.
@@ -71,10 +75,13 @@ enum SpendingReport {
     private static func totals(of expenses: [Transaction], income: Bool) -> [CategoryTotal] {
         var sums: [PersistentIdentifier: (Category, Decimal)] = [:]
         for transaction in expenses {
-            guard let category = transaction.category else { continue }
-            let id = category.persistentModelID
-            // Spending is stored negative; income positive. Both are reported as positive totals.
-            sums[id] = (category, (sums[id]?.1 ?? 0) + (income ? transaction.amount : -transaction.amount))
+            // Each part of a split counts under its own category.
+            for part in transaction.categoryParts where fits(part.category, part.amount, income: income) {
+                guard let category = part.category else { continue }
+                let id = category.persistentModelID
+                // Spending is stored negative; income positive. Both are reported as positive totals.
+                sums[id] = (category, (sums[id]?.1 ?? 0) + (income ? part.amount : -part.amount))
+            }
         }
         return sums.values
             .map { CategoryTotal(category: $0.0, total: $0.1) }

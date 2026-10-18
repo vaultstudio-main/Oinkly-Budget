@@ -40,11 +40,13 @@ struct ReportInputs {
     static func categories(_ transactions: [Transaction], income: Bool) -> [CategoryLine] {
         var table: [String: CategoryLine] = [:]
         for transaction in transactions where income ? transaction.amount > 0 : transaction.amount < 0 {
-            let name = transaction.category?.name ?? "Uncategorized"
-            var line = table[name] ?? CategoryLine(name: name, symbol: transaction.category?.symbol ?? "questionmark.circle",
-                                                  colorHex: transaction.category?.colorHex ?? "8E8E93", amount: 0)
-            line.amount += abs(transaction.amount.doubleValue)
-            table[name] = line
+            for part in transaction.categoryParts {
+                let name = part.category?.name ?? "Uncategorized"
+                var line = table[name] ?? CategoryLine(name: name, symbol: part.category?.symbol ?? "questionmark.circle",
+                                                      colorHex: part.category?.colorHex ?? "8E8E93", amount: 0)
+                line.amount += abs(part.amount.doubleValue)
+                table[name] = line
+            }
         }
         return table.values.sorted { $0.amount > $1.amount }
     }

@@ -17,9 +17,11 @@ private struct BudgetHistory {
         let ids = Set(categories.map(\.persistentModelID))
         for category in categories { table[category.persistentModelID] = Array(repeating: 0, count: months.count) }
         for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 {
-            guard let id = transaction.category?.persistentModelID, ids.contains(id),
-                  transaction.date >= months[0], let index = months.lastIndex(where: { $0 <= transaction.date }) else { continue }
-            table[id]?[index] -= transaction.amount.doubleValue
+            guard transaction.date >= months[0], let index = months.lastIndex(where: { $0 <= transaction.date }) else { continue }
+            for part in transaction.categoryParts {
+                guard let id = part.category?.persistentModelID, ids.contains(id) else { continue }
+                table[id]?[index] -= part.amount.doubleValue
+            }
         }
         spent = table
     }

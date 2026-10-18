@@ -231,6 +231,13 @@ enum TestData {
             tx(cash, monthDay(back, 16), "Bean There Coffee", "custom-coffee-runs", -Decimal(9 + drift), method: .cash)
             tx(cash, monthDay(back, 25), "Corner Barber", "salon-barber", -28, method: .cash)
 
+            // One shop split across three categories.
+            if let split = tx(checking, monthDay(back, 12), "Big Box Store", nil, -120, method: .debitCard) {
+                Splits.apply([SplitDraft(category: cat("groceries"), amount: 70),
+                              SplitDraft(category: cat("shopping"), amount: 30),
+                              SplitDraft(category: cat("pets"), amount: 20)], to: split, isPayment: true, in: context)
+            }
+
             // Moving money.
             if let date = Optional(monthDay(back, 2)), date <= today {
                 let move = Transfers.move(from: checking, to: savings, amount: 400, date: date, state: .reconciled,

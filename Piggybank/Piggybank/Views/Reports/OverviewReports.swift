@@ -22,7 +22,7 @@ struct YearEndSummaryReport: View {
         let debtPaid = (debt.first?.value ?? 0) - (debt.last?.value ?? 0)
         var byCategory: [String: Double] = [:]
         for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 {
-            byCategory[transaction.category?.name ?? "Uncategorized", default: 0] -= transaction.amount.doubleValue
+            for part in transaction.categoryParts { byCategory[part.category?.name ?? "Uncategorized", default: 0] -= part.amount.doubleValue }
         }
         let topCategory = byCategory.max { $0.value < $1.value }
         let bestMonth = totals.max { $0.income - $0.spending < $1.income - $1.spending }
@@ -106,7 +106,9 @@ struct ReportCardReport: View {
             let start = ReportInputs.months().last ?? .now
             var spent: [PersistentIdentifier: Decimal] = [:]
             for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 && transaction.date >= start {
-                if let id = transaction.category?.persistentModelID { spent[id, default: 0] -= transaction.amount }
+                for part in transaction.categoryParts {
+                    if let id = part.category?.persistentModelID { spent[id, default: 0] -= part.amount }
+                }
             }
             let within = budgets.filter { (spent[$0.persistentModelID] ?? 0) <= $0.monthlyLimit }.count
             grades.append(Grade(title: "Budgets", value: "\(within) of \(budgets.count)", note: "within budget this month", score: Double(within) / Double(budgets.count)))
@@ -154,7 +156,10 @@ struct WhatChangedReport: View {
             var byCategory: [String: Double] = [:]
             for transaction in list {
                 let amount = transaction.amount.doubleValue
-                if amount > 0 { income += amount } else { spending -= amount; byCategory[transaction.category?.name ?? "Uncategorized", default: 0] -= amount }
+                if amount > 0 { income += amount } else {
+                    spending -= amount
+                    for part in transaction.categoryParts { byCategory[part.category?.name ?? "Uncategorized", default: 0] -= part.amount.doubleValue }
+                }
             }
             return (income, spending, byCategory)
         }

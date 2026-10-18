@@ -156,15 +156,17 @@ enum Reports {
             } else {
                 totals.spending -= amount
                 if let index { buckets[index].spending -= amount }
-                if let category = transaction.category {
-                    let key = category.systemKey ?? category.name
-                    var line = spending[key] ?? (category.name, category.symbol, category.colorHex, 0)
-                    line.amount -= amount
-                    spending[key] = line
-                } else {
-                    var line = spending["uncategorized"] ?? ("Uncategorized", "questionmark.circle", "8E8E93", 0)
-                    line.amount -= amount
-                    spending["uncategorized"] = line
+                for part in transaction.categoryParts {
+                    if let category = part.category {
+                        let key = category.systemKey ?? category.name
+                        var line = spending[key] ?? (category.name, category.symbol, category.colorHex, 0)
+                        line.amount -= part.amount
+                        spending[key] = line
+                    } else {
+                        var line = spending["uncategorized"] ?? ("Uncategorized", "questionmark.circle", "8E8E93", 0)
+                        line.amount -= part.amount
+                        spending["uncategorized"] = line
+                    }
                 }
             }
             totals.count += 1

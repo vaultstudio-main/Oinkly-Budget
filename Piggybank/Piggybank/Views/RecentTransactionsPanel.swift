@@ -26,7 +26,7 @@ struct RecentTransactionsPanel: View {
             badge(transaction)
             VStack(alignment: .leading, spacing: 2) {
                 Text(transaction.payee.isEmpty ? "—" : transaction.payee).fontWeight(.medium).lineLimit(1)
-                Text([transaction.account?.name, transaction.fixedCategoryTitle ?? transaction.category?.name].compactMap { $0 }.joined(separator: " · "))
+                Text([transaction.account?.name, transaction.fixedCategoryTitle ?? transaction.splitTitle ?? transaction.category?.name].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

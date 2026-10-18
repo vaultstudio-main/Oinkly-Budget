@@ -144,6 +144,7 @@ extension Category {
                 byKey[definition.key] = primary
                 for duplicate in matches.dropFirst() {
                     for transaction in Array(duplicate.transactions) { transaction.category = primary }
+                    for part in Array(duplicate.splits) { part.category = primary }
                     for payee in Array(duplicate.payees) { payee.lastCategory = primary }
                     context.delete(duplicate)
                     report.merged += 1
@@ -176,6 +177,7 @@ extension Category {
         for stray in all where stray.systemKey == nil {
             if let key = legacyNames[stray.name], let target = byKey[key] {
                 for transaction in Array(stray.transactions) { transaction.category = target }
+                for part in Array(stray.splits) { part.category = target }
                 for payee in Array(stray.payees) { payee.lastCategory = target }
                 context.delete(stray)
                 report.migrated += 1

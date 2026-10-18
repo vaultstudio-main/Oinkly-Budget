@@ -16,7 +16,9 @@ struct IncomeByCategoryReport: View {
     var body: some View {
         let income = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount > 0 }
         var table: [String: Double] = [:]
-        for transaction in income { table[transaction.category?.name ?? "Uncategorized", default: 0] += transaction.amount.doubleValue }
+        for transaction in income {
+            for part in transaction.categoryParts { table[part.category?.name ?? "Uncategorized", default: 0] += part.amount.doubleValue }
+        }
         let slices = table.map { Slice(name: $0.key, value: $0.value) }.sorted { $0.value > $1.value }
         let total = slices.reduce(0) { $0 + $1.value }
 

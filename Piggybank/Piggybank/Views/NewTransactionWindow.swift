@@ -28,6 +28,8 @@ struct NewTransactionWindow: View {
     @State private var paymentChoice: PaymentChoice?
     @State private var checkNumber = ""
     @State private var investmentType = InvestmentType.contribution
+    @State private var isSplitting = false
+    @State private var parts: [SplitDraft] = []
 
     private var suggestions: [Payee] {
         let matches = PayeeMemory.matches(for: payee, in: payees)
@@ -48,7 +50,10 @@ struct NewTransactionWindow: View {
 
     private var exceedsLimit: Bool { account?.wouldExceedLimit(adding: accountChange) == true }
 
-    private var canSave: Bool { (amount ?? 0) > 0 && account != nil }
+    private var canSave: Bool {
+        guard (amount ?? 0) > 0, account != nil else { return false }
+        return !isSplitting || Splits.isValid(parts, total: amount ?? 0)
+    }
 
     /// Investment accounts take a Type (contribution, gain, fee…) instead of a category and payment method.
     private var isInvestment: Bool { account?.supportsHoldings == true }
@@ -63,6 +68,16 @@ struct NewTransactionWindow: View {
         }
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
+            // The parts' categories have to fit the new direction too.
+            for index in parts.indices where parts[index].category?.isIncome == new { parts[index].category = nil }
+        }
+        .onChange(of: isSplitting) { _, on in
+            if on {
+                parts = Splits.starting(category: category, total: amount)
+            } else {
+                category = parts.first?.category ?? category
+                parts = []
+            }
         }
         // Typing a payee you've used before fills in the rest the way you left it, as long as nothing else is filled in yet.
         .onChange(of: payee) { _, new in
@@ -74,7 +89,7 @@ struct NewTransactionWindow: View {
         } message: {
             Text(limitMessage ?? "")
         }
-        .frame(width: 480, height: 700)
+        .frame(width: 480, height: isSplitting ? 700 + CGFloat(max(parts.count, 2)) * 70 + 40 : 700)
         .background(Theme.background)
         .onAppear {
             if account == nil {
@@ -123,9 +138,12 @@ struct NewTransactionWindow: View {
                         }
                     }
                     if !isInvestment {
-                        Picker("Category", selection: $category) {
-                            CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
+                        if !isSplitting {
+                            Picker("Category", selection: $category) {
+                                CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
+                            }
                         }
+                        Toggle("Split across categories", isOn: $isSplitting)
                     }
                     if !isInvestment {
                         if let locked = account?.lockedPaymentType {
@@ -144,6 +162,12 @@ struct NewTransactionWindow: View {
                     FormTextField("Memo", text: $memo)
                     Picker("Status", selection: $state) {
                         ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                    }
+                }
+
+                if isSplitting && !isInvestment {
+                    Section("Split") {
+                        SplitEditor(parts: $parts, total: amount ?? 0, categories: categories, isPayment: isPayment)
                     }
                 }
 
@@ -214,13 +238,14 @@ struct NewTransactionWindow: View {
             }
             let signed = isPayment ? -amount : amount
             PayeeMemory.record(name: payee, category: category, amount: signed, memo: memo, method: paymentChoice, in: modelContext)
-            let transaction = Transaction(account: account, date: date, payee: payee, category: category, memo: memo, amount: signed)
+            let transaction = Transaction(account: account, date: date, payee: payee, category: isSplitting ? nil : category, memo: memo, amount: signed)
             transaction.state = state
             transaction.paymentChoice = paymentChoice
             transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             transaction.receiptData = account.supportsReceipts ? receipt : nil
             transaction.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
             modelContext.insert(transaction)
+            if isSplitting { Splits.apply(parts, to: transaction, isPayment: isPayment, in: modelContext) }
         }
 
         modelContext.saveNow()
@@ -229,6 +254,8 @@ struct NewTransactionWindow: View {
             self.amount = nil
             payee = ""
             category = nil
+            isSplitting = false
+            parts = []
             memo = ""
             state = .unreconciled
             checkNumber = ""

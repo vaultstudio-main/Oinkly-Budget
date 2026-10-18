@@ -143,6 +143,9 @@ private struct RegisterContent: View {
                             Label(fixed, systemImage: "lock.fill")
                                 .foregroundStyle(.secondary)
                                 .help("Payments and transfers always use this category, and it can't be changed.")
+                        } else if let split = row.transaction.splitTitle {
+                            Label(split, systemImage: "arrow.triangle.branch")
+                                .help("Divided across several categories. Double-click to see the parts.")
                         } else {
                             Text(row.transaction.category?.name ?? "")
                         }
@@ -293,6 +296,8 @@ struct EditTransactionSheet: View {
     @State private var receipt: Data?
     @State private var noReceipt: Bool
     @State private var limitMessage: String?
+    @State private var isSplitting: Bool
+    @State private var parts: [SplitDraft]
 
     init(transaction: Transaction, account: Account, categories: [Category]) {
         self.transaction = transaction
@@ -311,6 +316,8 @@ struct EditTransactionSheet: View {
         _investmentType = State(initialValue: InvestmentType.of(transaction))
         _receipt = State(initialValue: transaction.receiptData)
         _noReceipt = State(initialValue: transaction.noReceipt)
+        _isSplitting = State(initialValue: transaction.isSplit)
+        _parts = State(initialValue: transaction.isSplit ? Splits.drafts(of: transaction) : [])
     }
 
     private var isInvestment: Bool { selectedAccount.supportsHoldings && !transaction.isTransfer }
@@ -353,7 +360,14 @@ struct EditTransactionSheet: View {
         return matches
     }
 
-    private var canSave: Bool { amountIsLocked || (amount ?? 0) > 0 }
+    private var canSave: Bool {
+        if amountIsLocked { return true }
+        guard (amount ?? 0) > 0 else { return false }
+        return !isSplitting || Splits.isValid(parts, total: amount ?? 0)
+    }
+
+    /// Only an ordinary payment or deposit can be divided across categories.
+    private var offersSplit: Bool { !amountIsLocked && !isInvestment && transaction.canSplit }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -423,9 +437,12 @@ struct EditTransactionSheet: View {
                             Label(fixed, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
                     } else {
-                        Picker("Category", selection: $category) {
-                            CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
+                        if !isSplitting {
+                            Picker("Category", selection: $category) {
+                                CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
+                            }
                         }
+                        if offersSplit { Toggle("Split across categories", isOn: $isSplitting) }
                     }
 
                     if !selectedAccount.supportsHoldings {
@@ -462,6 +479,12 @@ struct EditTransactionSheet: View {
                     }
                 }
 
+                if isSplitting && offersSplit {
+                    Section("Split") {
+                        SplitEditor(parts: $parts, total: amount ?? 0, categories: categories, isPayment: isPayment)
+                    }
+                }
+
                 if showsReceipt {
                     Section("Receipt") {
                         ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
@@ -483,9 +506,18 @@ struct EditTransactionSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 480, height: showsReceipt ? 760 : 620)
+        .frame(width: 480, height: (showsReceipt ? 760 : 620) + (isSplitting ? CGFloat(max(parts.count, 2)) * 70 + 40 : 0))
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
+            for index in parts.indices where parts[index].category?.isIncome == new { parts[index].category = nil }
+        }
+        .onChange(of: isSplitting) { _, on in
+            if on {
+                parts = Splits.starting(category: category, total: amount)
+            } else {
+                category = parts.first?.category ?? category
+                parts = []
+            }
         }
         .onChange(of: selectedAccount) { limitMessage = nil }
     }
@@ -528,7 +560,14 @@ struct EditTransactionSheet: View {
             if !amountIsLocked { transaction.amount = abs(amount ?? 0) }
             investmentType.apply(to: transaction, categories: categories)
         } else {
-            if transaction.fixedCategoryTitle == nil { transaction.category = category }
+            if transaction.fixedCategoryTitle == nil {
+                if isSplitting && offersSplit {
+                    Splits.apply(parts, to: transaction, isPayment: isPayment, in: modelContext)
+                } else {
+                    Splits.removeAll(from: transaction, in: modelContext)
+                    transaction.category = category
+                }
+            }
             if isAtm || isOpening {
                 // Method stays as recorded.
             } else if let locked = selectedAccount.lockedPaymentType, !transaction.isTransfer {
@@ -539,7 +578,7 @@ struct EditTransactionSheet: View {
                 transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             }
             if !amountIsLocked { transaction.amount = signedAmount }
-            if !isAtm, !isOpening, !transaction.isTransfer { PayeeMemory.record(name: payee, category: category, amount: signedAmount, in: modelContext) }
+            if !isAtm, !isOpening, !transaction.isTransfer { PayeeMemory.record(name: payee, category: isSplitting ? nil : category, amount: signedAmount, in: modelContext) }
         }
         if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
         modelContext.saveNow()

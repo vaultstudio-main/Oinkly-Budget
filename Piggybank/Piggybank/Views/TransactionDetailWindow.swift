@@ -58,7 +58,12 @@ struct TransactionDetailWindow: View {
                         if investment {
                             row("Type", InvestmentType.of(transaction).title)
                         } else {
-                            row("Category", transaction.fixedCategoryTitle ?? transaction.category?.name ?? "None")
+                            row("Category", transaction.fixedCategoryTitle ?? transaction.splitTitle ?? transaction.category?.name ?? "None")
+                            if transaction.isSplit {
+                                ForEach(transaction.splits.sorted { $0.order < $1.order }) { part in
+                                    row("   \(part.category?.name ?? "None")", part.amount.formatted(.appCurrency))
+                                }
+                            }
                             row("Method", account.lockedPaymentType?.title ?? transaction.paymentTitle)
                             if !transaction.checkNumber.isEmpty { row("Check number", transaction.checkNumber) }
                         }

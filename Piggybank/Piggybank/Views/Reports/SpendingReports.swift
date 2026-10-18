@@ -2,7 +2,10 @@ import SwiftUI
 import SwiftData
 import Charts
 
-private func categoryName(_ transaction: Transaction) -> String { transaction.category?.name ?? "Uncategorized" }
+/// What a transaction's category reads as in a list: "Split (3)" for a split, else the category name.
+private func categoryName(_ transaction: Transaction) -> String { transaction.splitTitle ?? transaction.category?.name ?? "Uncategorized" }
+/// One category's name for totals, so each part of a split counts under its own category.
+private func partName(_ category: Category?) -> String { category?.name ?? "Uncategorized" }
 private func payeeName(_ transaction: Transaction) -> String {
     let name = transaction.payee.trimmingCharacters(in: .whitespaces)
     return name.isEmpty ? "No payee" : name
@@ -26,7 +29,9 @@ struct SpendingTrendReport: View {
         var table: [String: [Double]] = [:]
         for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 {
             guard transaction.date >= months[0], let index = months.lastIndex(where: { $0 <= transaction.date }) else { continue }
-            table[categoryName(transaction), default: Array(repeating: 0, count: months.count)][index] -= transaction.amount.doubleValue
+            for part in transaction.categoryParts {
+                table[partName(part.category), default: Array(repeating: 0, count: months.count)][index] -= part.amount.doubleValue
+            }
         }
         let top = table.sorted { $0.value.reduce(0, +) > $1.value.reduce(0, +) }.prefix(5)
         let calendar = Calendar.current
@@ -269,7 +274,10 @@ struct MonthAgainstMonthReport: View {
             var byCategory: [String: Double] = [:]
             for transaction in inputs.year where !transaction.isTransfer && transaction.date >= start && transaction.date < end {
                 let amount = transaction.amount.doubleValue
-                if amount > 0 { income += amount } else { spending -= amount; byCategory[categoryName(transaction), default: 0] -= amount }
+                if amount > 0 { income += amount } else {
+                    spending -= amount
+                    for part in transaction.categoryParts { byCategory[partName(part.category), default: 0] -= part.amount.doubleValue }
+                }
             }
             return (income, spending, byCategory)
         }
@@ -321,12 +329,13 @@ struct TaxRelatedReport: View {
         let start = months[0]
         var table: [String: (count: Int, amount: Decimal)] = [:]
         for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 && transaction.date >= start {
-            let name = categoryName(transaction)
-            guard transaction.category?.isTaxRelated == true else { continue }
-            var entry = table[name] ?? (0, 0)
-            entry.count += 1
-            entry.amount -= transaction.amount
-            table[name] = entry
+            for part in transaction.categoryParts where part.category?.isTaxRelated == true {
+                let name = partName(part.category)
+                var entry = table[name] ?? (0, 0)
+                entry.count += 1
+                entry.amount -= part.amount
+                table[name] = entry
+            }
         }
         let rows = table.sorted { $0.value.amount > $1.value.amount }
         let total = rows.reduce(Decimal(0)) { $0 + $1.value.amount }

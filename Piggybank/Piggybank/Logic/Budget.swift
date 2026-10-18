@@ -12,9 +12,11 @@ enum Budget {
     /// Total spent (as a positive number) in `category` during the month containing `month`.
     static func spent(in category: Category, transactions: [Transaction], month: Date = .now, calendar: Calendar = .current) -> Decimal {
         guard let interval = calendar.dateInterval(of: .month, for: month) else { return 0 }
-        return transactions
-            .filter { $0.amount < 0 && interval.contains($0.date) && $0.category?.persistentModelID == category.persistentModelID }
-            .reduce(0) { $0 - $1.amount }
+        var total: Decimal = 0
+        for transaction in transactions where transaction.amount < 0 && interval.contains(transaction.date) {
+            for part in transaction.categoryParts where part.category?.persistentModelID == category.persistentModelID { total -= part.amount }
+        }
+        return total
     }
 
     /// Spending for every category in one pass over the transactions. Looking each category up one at a time
@@ -24,8 +26,11 @@ enum Budget {
         var sums: [PersistentIdentifier: Decimal] = [:]
         for transaction in transactions {
             let amount = transaction.amount
-            guard amount < 0, interval.contains(transaction.date), let category = transaction.category else { continue }
-            sums[category.persistentModelID, default: 0] -= amount
+            guard amount < 0, interval.contains(transaction.date) else { continue }
+            for part in transaction.categoryParts {
+                guard let category = part.category else { continue }
+                sums[category.persistentModelID, default: 0] -= part.amount
+            }
         }
         return SpentTable(sums: sums)
     }
