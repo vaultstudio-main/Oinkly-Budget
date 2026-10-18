@@ -132,7 +132,7 @@ struct GoalsView: View {
     private func card(_ goal: Goal) -> some View {
         GoalCard(goal: goal, onOpen: { detail = goal }, onProgress: { sheet = .progress(goal) })
             .contextMenu {
-                if !goal.isArchived {
+                if !goal.isArchived && !goal.isLinked {
                     Button(goal.isPayoff ? "Add a Payment" : "Add to Savings", systemImage: "plus.circle") { sheet = .progress(goal) }
                 }
                 Button("Edit", systemImage: "pencil") { sheet = .edit(goal) }
@@ -143,7 +143,7 @@ struct GoalsView: View {
     private var empty: some View {
         ReportCard(title: "No Goals Yet") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Save toward something, like an emergency fund, a trip or a down payment, or set a goal to pay a debt down. Give it a target and a date, and add progress whenever you make some. Goals stand on their own and aren't tied to any account.")
+                Text("Save toward something, like an emergency fund, a trip or a down payment, or set a goal to pay a debt down. Give it a target and a date. Follow a savings or checking account, or a loan or card, and the goal keeps up on its own, or add progress yourself.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Button("Create Your First Goal") { sheet = .add }
@@ -203,7 +203,11 @@ private struct GoalCard: View {
                 }
                 .buttonStyle(.plain)
 
-                if !goal.isArchived {
+                if let account = goal.followedAccount {
+                    Label("Follows \(account.name)", systemImage: "link")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !goal.isArchived {
                     Button(action: onProgress) {
                         Label(goal.isPayoff ? "Make Progress: Add a Payment" : "Make Progress: Add to Savings", systemImage: "plus.circle.fill")
                             .font(.subheadline.weight(.semibold))
@@ -385,6 +389,16 @@ struct GoalDetailView: View {
                 } footer: {
                     Text("This goal is archived. It keeps its final amount and takes no new progress.")
                 }
+            } else if let account = goal.followedAccount {
+                Section {
+                    Label(account.name, systemImage: "link")
+                } header: {
+                    Text("Follows")
+                } footer: {
+                    Text(goal.isPayoff
+                         ? "Payments you make on this account, including with Pay a Bill, count toward the goal on their own."
+                         : "Money added to this account counts toward the goal on its own.")
+                }
             } else {
                 Section {
                     Button(goal.isPayoff ? "Add a Payment" : "Add to Savings", systemImage: "plus.circle.fill") { addingProgress = true }
@@ -466,6 +480,9 @@ struct GoalEditView: View {
     @State private var targetDate: Date
     @State private var notes: String
     @State private var confirmingDelete = false
+    @State private var accountID: PersistentIdentifier?
+    @State private var fromNow: Bool
+    @Query(sort: \Account.name) private var allAccounts: [Account]
 
     init(goal: Goal?) {
         self.goal = goal
@@ -480,11 +497,27 @@ struct GoalEditView: View {
         _hasDate = State(initialValue: goal?.targetDate != nil)
         _targetDate = State(initialValue: goal?.targetDate ?? Calendar.current.date(byAdding: .year, value: 1, to: .now) ?? .now)
         _notes = State(initialValue: goal?.notes ?? "")
+        _accountID = State(initialValue: goal?.followedAccount?.persistentModelID)
+        _fromNow = State(initialValue: goal?.followedAccount != nil && !(goal?.isPayoff ?? false) && (goal?.startingAmount ?? 0) != 0)
     }
+
+    /// Accounts this goal could follow: checking and savings for saving, cards and loans for debts. An account can
+    /// have one open goal, so any that another goal already follows are left out.
+    private var followable: [Account] {
+        let taken = Set(((try? modelContext.fetch(FetchDescriptor<Goal>())) ?? []).live
+            .filter { $0 !== goal && $0.isLinked }.compactMap { $0.followedAccount?.persistentModelID })
+        return allAccounts.live.filter { account in
+            guard !account.isClosed, !taken.contains(account.persistentModelID) else { return false }
+            return kind == .save ? account.type.group == .checkingSavings && account.type != .cash
+                                 : account.type.group == .creditCards || account.type.group == .loans
+        }
+    }
+
+    private var linked: Account? { followable.first { $0.persistentModelID == accountID } }
 
     private var canSave: Bool {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        if kind == .payoff { return (owed ?? 0) > (payoffTo ?? 0) }
+        if kind == .payoff { return (linked.map { Goal.owed(on: $0) } ?? owed ?? 0) > (payoffTo ?? 0) }
         return (target ?? 0) > 0
     }
 
@@ -497,7 +530,7 @@ struct GoalEditView: View {
                     }
                     .pickerStyle(.segmented)
                     .disabled(goal != nil)
-                    .onChange(of: kind) { _, _ in category = nil }
+                    .onChange(of: kind) { _, _ in category = nil; accountID = nil }
 
                     Picker(kind == .save ? "What are you saving for?" : "What kind of debt?", selection: $category) {
                         Text("Choose…").tag(GoalCategory?.none)
@@ -513,21 +546,48 @@ struct GoalEditView: View {
                 }
 
                 Section {
+                    Picker(kind == .save ? "Follow an account" : "Follow a loan or card", selection: $accountID) {
+                        Text("None, I'll add progress myself").tag(PersistentIdentifier?.none)
+                        ForEach(followable) { account in
+                            Text(account.name).tag(Optional(account.persistentModelID))
+                        }
+                    }
+                    if let linked, kind == .save {
+                        Toggle("Count only what's added from now on", isOn: $fromNow)
+                    }
+                } footer: {
+                    if let linked {
+                        Text(kind == .save
+                             ? (fromNow ? "Progress is the money added to \(linked.name) after today, starting from \(max(linked.balance, 0).formatted(.appCurrency))."
+                                        : "Progress is the whole balance of \(linked.name).")
+                             : "Progress is how far the balance of \(linked.name) comes down from \(Goal.owed(on: linked).formatted(.appCurrency)) owed today. Payments count on their own.")
+                    } else {
+                        Text("Link a goal to an account and it keeps up by itself. An account can have one goal at a time.")
+                    }
+                }
+
+                Section {
                     if kind == .save {
                         LabeledContent("Target amount") {
                             CurrencyField("Target amount", value: $target).labelsHidden().multilineTextAlignment(.trailing)
                         }
-                        LabeledContent("Already saved") {
-                            CurrencyField("Already saved", value: $starting).labelsHidden().multilineTextAlignment(.trailing)
+                        if linked == nil {
+                            LabeledContent("Already saved") {
+                                CurrencyField("Already saved", value: $starting).labelsHidden().multilineTextAlignment(.trailing)
+                            }
                         }
                     } else {
-                        LabeledContent("Amount owed") {
-                            CurrencyField("Amount owed", value: $owed).labelsHidden().multilineTextAlignment(.trailing)
+                        if let linked {
+                            LabeledContent("Amount owed today", value: Goal.owed(on: linked).formatted(.appCurrency))
+                        } else {
+                            LabeledContent("Amount owed") {
+                                CurrencyField("Amount owed", value: $owed).labelsHidden().multilineTextAlignment(.trailing)
+                            }
                         }
                         LabeledContent("Pay it down to") {
                             CurrencyField("Leave empty for paid off", value: $payoffTo).labelsHidden().multilineTextAlignment(.trailing)
                         }
-                        if let owed, owed > 0 {
+                        if let owed = linked.map({ Goal.owed(on: $0) }) ?? owed, owed > 0 {
                             LabeledContent("Amount to pay down", value: max(owed - (payoffTo ?? 0), 0).formatted(.appCurrency))
                         }
                     }
@@ -536,9 +596,12 @@ struct GoalEditView: View {
                         DatePicker("Target date", selection: $targetDate, in: Date.now..., displayedComponents: .date)
                     }
                 } footer: {
-                    Text(kind == .save
-                         ? "Add money to the goal from its card whenever you set some aside. It isn't tied to any account."
-                         : "Record payments from the goal's card as you make them. It isn't tied to any account. Leave \"Pay it down to\" empty to aim for paid off.")
+                    Text(linked != nil
+                         ? (kind == .save ? "The goal follows the account, so there is nothing to add by hand."
+                                          : "Leave \"Pay it down to\" empty to aim for paid off.")
+                         : (kind == .save
+                            ? "Add money to the goal from its card whenever you set some aside."
+                            : "Record payments from the goal's card as you make them. Leave \"Pay it down to\" empty to aim for paid off."))
                 }
 
                 Section("Notes") {
@@ -581,7 +644,17 @@ struct GoalEditView: View {
         let symbol = category?.symbol ?? goal?.symbol ?? (kind == .save ? "target" : "arrow.down.circle")
         let color = category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
         let floor = max(payoffTo ?? 0, 0)
-        let start = max(owed ?? 0, 0)
+        let account = linked
+        // A goal counts from the account's balance when it is linked, or when the link or the "from now on" choice
+        // changes. Otherwise its starting point stays where it was.
+        let keepsLink = account != nil && goal?.followedAccount?.persistentModelID == account?.persistentModelID
+        let sameStart = keepsLink && (kind == .payoff || fromNow == (goal.map { $0.startingAmount != 0 } ?? false))
+        let start: Decimal = {
+            if let account, !(sameStart && goal != nil) { return kind == .payoff ? Goal.owed(on: account) : (fromNow ? max(account.balance, 0) : 0) }
+            if account != nil, let goal { return goal.startingAmount }
+            return max(owed ?? 0, 0)
+        }()
+        let savedFrom: Decimal = account != nil ? start : max(starting ?? 0, 0)
 
         if let goal {
             // Only a change to the numbers the goal is measured by can reopen an archived goal.
@@ -592,13 +665,14 @@ struct GoalEditView: View {
             goal.symbol = symbol
             goal.colorHex = color
             goal.notes = notes
+            goal.account = account
             if goal.isPayoff {
                 goal.startingAmount = start
                 goal.goalBalance = floor
                 goal.targetAmount = max(start - floor, 0)
             } else {
                 goal.targetAmount = target ?? 0
-                goal.startingAmount = starting ?? 0
+                goal.startingAmount = savedFrom
             }
             let after = (goal.targetAmount, goal.startingAmount, goal.goalBalance)
             if goal.isArchived, before != after {
@@ -609,14 +683,42 @@ struct GoalEditView: View {
             }
         } else if kind == .payoff {
             modelContext.insert(Goal(name: clean, targetAmount: max(start - floor, 0), startingAmount: start, targetDate: date,
-                                     symbol: symbol, colorHex: color, notes: notes, kind: .payoff, goalBalance: floor,
+                                     symbol: symbol, colorHex: color, notes: notes, account: account, kind: .payoff, goalBalance: floor,
                                      categoryName: category?.title ?? ""))
         } else {
-            modelContext.insert(Goal(name: clean, targetAmount: target ?? 0, startingAmount: starting ?? 0, targetDate: date,
-                                     symbol: symbol, colorHex: color, notes: notes, categoryName: category?.title ?? ""))
+            modelContext.insert(Goal(name: clean, targetAmount: target ?? 0, startingAmount: savedFrom, targetDate: date,
+                                     symbol: symbol, colorHex: color, notes: notes, account: account, categoryName: category?.title ?? ""))
         }
         modelContext.saveNow()
         GoalArchiver.archiveReached(in: modelContext)
         dismiss()
+    }
+}
+
+// MARK: On an account
+
+/// A slim line under an account's details showing the goal that follows it, if there is one.
+struct LinkedGoalStrip: View {
+    let account: Account
+    @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
+
+    var body: some View {
+        if account.isLive, let goal = allGoals.live.first(where: { $0.followedAccount?.persistentModelID == account.persistentModelID }) {
+            let progress = goal.progress()
+            HStack(spacing: 12) {
+                CategoryBadge(symbol: goal.symbol, color: Color(hex: goal.colorHex), size: 28)
+                Text(goal.name).font(.subheadline.weight(.semibold))
+                ProgressView(value: progress.fraction)
+                    .tint(progress.isAchieved ? Theme.green : Color(hex: goal.colorHex))
+                    .frame(maxWidth: 260)
+                Text("\(goal.saved.formatted(.appCurrency)) \(goal.isPayoff ? "paid of" : "of") \(goal.targetAmount.formatted(.appCurrency))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+        }
     }
 }

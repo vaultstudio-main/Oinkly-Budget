@@ -10,8 +10,8 @@ final class Goal {
     var kindRaw: String = GoalKind.save.rawValue
     /// For saving goals, the balance to reach. For payoff goals, how much has to be paid down (owed at the start minus `goalBalance`).
     var targetAmount: Decimal = 0
-    /// Saving goals: already saved when the goal was made (used when no account is tracked).
-    /// Payoff goals: what was owed when the goal was made.
+    /// Saving goals: already saved when the goal was made, or for a linked goal the balance it counts from.
+    /// Payoff goals: what was owed when the goal was made (or linked).
     var startingAmount: Decimal = 0
     /// Payoff goals only: the balance still owed that counts as done. Zero means paid off.
     var goalBalance: Decimal = 0
@@ -28,7 +28,9 @@ final class Goal {
     /// The amount the goal ended at, frozen when it was archived.
     var finalAmount: Decimal?
 
-    /// No longer used: goals stand on their own and are not linked to accounts. Kept so existing data still loads.
+    /// The account this goal follows, if any: a checking or savings account for a saving goal, a card or loan for a debt
+    /// goal. At most one open goal follows an account. `startingAmount` is the balance (saving) or the amount owed (debt)
+    /// the goal counts from. Empty for a goal you add progress to by hand.
     var account: Account?
 
     @Relationship(deleteRule: .cascade, inverse: \GoalContribution.goal)

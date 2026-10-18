@@ -62,51 +62,44 @@ extension Goal {
     /// Everything you have put toward the goal so far.
     private var contributed: Decimal { contributions.live.reduce(0) { $0 + $1.amount } }
 
-    /// Progress so far. For saving, what you started with plus everything added. For a debt, what you've paid toward it.
+    /// The account this goal follows, if it is linked to one that still exists and the goal is still open.
+    /// A reached goal is frozen, so it stops following.
+    var followedAccount: Account? {
+        guard completedAt == nil, let account, account.isLive else { return nil }
+        return account
+    }
+
+    /// True while the goal's progress comes from an account's balance instead of amounts you add by hand.
+    var isLinked: Bool { followedAccount != nil }
+
+    /// How much is owed on a debt account right now (its balance is negative while money is owed).
+    static func owed(on account: Account) -> Decimal { max(-account.balance, 0) }
+
+    /// Progress so far. A linked goal reads it from the account: a saving goal is the balance above where it started,
+    /// a debt goal is how far the balance has come down since the goal was made. Otherwise, for saving, what you
+    /// started with plus everything added, and for a debt, what you've paid toward it.
     var saved: Decimal {
         if completedAt != nil, let finalAmount { return finalAmount }
+        if let account = followedAccount {
+            return isPayoff ? max(startingAmount - Goal.owed(on: account), 0) : max(account.balance - startingAmount, 0)
+        }
         return isPayoff ? max(contributed, 0) : startingAmount + contributed
     }
 
     /// What is still owed on a debt goal, counting down from what it started at.
-    var owedNow: Decimal { max(startingAmount - saved, 0) }
+    var owedNow: Decimal {
+        if let account = followedAccount { return Goal.owed(on: account) }
+        return max(startingAmount - saved, 0)
+    }
 
     func progress(now: Date = .now, calendar: Calendar = .current) -> GoalProgress {
         var pace: Decimal?
-        if !isArchived {
+        if !isArchived && !isLinked {
             let since = calendar.date(byAdding: .month, value: -3, to: now) ?? now
             let recent = contributions.live.filter { $0.date >= since && $0.date <= now }.reduce(Decimal(0)) { $0 + $1.amount }
             pace = recent / 3
         }
         return GoalProgress(target: targetAmount, saved: saved, targetDate: targetDate, monthlyPace: pace, now: now, calendar: calendar)
-    }
-}
-
-/// Goals used to be able to follow an account. They don't any more. This turns each old linked goal into a plain one that
-/// keeps the progress it had, then lets go of the account. Safe to run on every launch.
-enum GoalMigration {
-    @MainActor
-    @discardableResult
-    static func detachAccounts(in context: ModelContext) -> Int {
-        guard let goals = try? context.fetch(FetchDescriptor<Goal>()) else { return 0 }
-        var count = 0
-        for goal in goals.live {
-            guard let account = goal.account else { continue }
-            if account.isLive, goal.completedAt == nil {
-                if goal.isPayoff {
-                    let paid = max(goal.startingAmount - max(-account.balance, 0), 0)
-                    if paid > 0 {
-                        context.insert(GoalContribution(goal: goal, amount: paid, date: .now, note: "Paid down before goals became independent"))
-                    }
-                } else {
-                    goal.startingAmount = max(account.balance, 0)
-                }
-            }
-            goal.account = nil
-            count += 1
-        }
-        if count > 0 { context.saveNow() }
-        return count
     }
 }
 

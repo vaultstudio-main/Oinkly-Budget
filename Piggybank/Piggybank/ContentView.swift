@@ -40,7 +40,6 @@ struct ContentView: View {
             let accounts = (try? modelContext.fetch(FetchDescriptor<Account>())) ?? []
             isSettingUp = accounts.filter(\.isLive).addedByUser.isEmpty
             hasChecked = true
-            GoalMigration.detachAccounts(in: modelContext)
             await BillNotifier.refresh(in: modelContext)
             GoalArchiver.archiveReached(in: modelContext)
         }

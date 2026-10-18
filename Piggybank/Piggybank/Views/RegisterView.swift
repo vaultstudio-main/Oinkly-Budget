@@ -101,6 +101,7 @@ private struct RegisterContent: View {
         return VStack(spacing: 12) {
             header
             AccountDetailsPanel(account: account, month: month) { isEditingDetails = true }
+            LinkedGoalStrip(account: account)
             if account.supportsHoldings { HoldingsPanel(account: account) }
             Table(rows, selection: $selection) {
                 // Read-only here, so a stray click can't move a transaction to another day.
