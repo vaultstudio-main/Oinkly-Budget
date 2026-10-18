@@ -20,6 +20,9 @@ struct InvestmentGainsReport: View {
 struct InvestmentContributionsReport: View {
     var body: some View { WithInvestmentsData { InvestmentContributionsCard(data: $0) } }
 }
+struct InvestmentProjectionReport: View {
+    var body: some View { WithInvestmentsData { InvestmentProjectionCard(data: $0) } }
+}
 struct InvestmentGrowthReport: View {
     var body: some View { WithInvestmentsData { InvestmentGrowthCard(data: $0) } }
 }
@@ -246,6 +249,88 @@ struct InvestmentGainsCard: View {
                         .font(.callout)
                     }
                 }
+            }
+        }
+    }
+}
+
+// MARK: Projection of growth
+
+struct InvestmentProjectionCard: View {
+    let data: InvestmentsData
+
+    /// The yearly return used. It comes from the last twelve months of recorded growth; with none recorded, 6% is assumed.
+    private var rate: (value: Double, assumed: Bool) {
+        let before = data.totalValue - data.growth12 - data.contributed12
+        if data.growth12 != 0 && before > 0 { return (min(max(data.growth12 / before, -0.2), 0.3), false) }
+        return (0.06, true)
+    }
+
+    /// The value after `months` months at a yearly `annual` return, adding `monthly` each month.
+    private func value(after months: Int, annual: Double, monthly: Double) -> Double {
+        let step = annual / 12
+        var total = data.totalValue
+        for _ in 0..<months { total = total * (1 + step) + monthly }
+        return total
+    }
+
+    private struct Point: Identifiable {
+        let years: Double
+        let scenario: String
+        let value: Double
+        var id: String { "\(scenario)-\(years)" }
+    }
+
+    var body: some View {
+        let (annual, assumed) = rate
+        let monthly = data.contributed12 / 12
+        let scenarios: [(String, Double, Color)] = [("Cautious", annual - 0.03, .orange), ("Expected", annual, Theme.green), ("Optimistic", annual + 0.03, .teal)]
+        let horizons: [(String, Int)] = [("6 months", 6), ("1 year", 12), ("5 years", 60), ("10 years", 120)]
+        let points = scenarios.flatMap { name, rate, _ in
+            stride(from: 0, through: 120, by: 6).map { Point(years: Double($0) / 12, scenario: name, value: value(after: $0, annual: rate, monthly: monthly)) }
+        }
+
+        ReportPanel(title: "Projection of Growth", summary: "Where your investments could be in six months, a year, five and ten years, adding what you add now each month.",
+                    headline: data.accounts.isEmpty ? nil : ReportFormat.money(value(after: 120, annual: annual, monthly: monthly)),
+                    headlineNote: data.accounts.isEmpty ? nil : "expected in 10 years") {
+            if data.accounts.isEmpty {
+                ReportEmpty(message: "Add an investment account to see how it could grow.", height: 340, shape: .line)
+            } else {
+                Chart(points) { point in
+                    LineMark(x: .value("Years", point.years), y: .value("Value", point.value), series: .value("Scenario", point.scenario))
+                        .foregroundStyle(by: .value("Scenario", point.scenario))
+                        .lineStyle(StrokeStyle(lineWidth: 2.4, lineCap: .round, dash: point.scenario == "Expected" ? [] : [5, 4]))
+                        .interpolationMethod(.monotone)
+                }
+                .chartForegroundStyleScale(["Cautious": Color.orange, "Expected": Theme.green, "Optimistic": Color.teal])
+                .chartXAxis { AxisMarks(values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) { v in AxisValueLabel { if let n = v.as(Double.self) { Text(n == 0 ? "Now" : "\(Int(n))y") } } } }
+                .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
+                .chartLegend(position: .bottom, alignment: .leading)
+                .frame(height: 200)
+
+                Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
+                    GridRow {
+                        Text("IN")
+                        ForEach(scenarios, id: \.0) { Text($0.0.uppercased()).gridColumnAlignment(.trailing) }
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    Divider().gridCellColumns(4)
+                    ForEach(horizons, id: \.1) { label, months in
+                        GridRow {
+                            Text(label)
+                            ForEach(scenarios, id: \.0) { _, rate, color in
+                                Text(ReportFormat.money(value(after: months, annual: rate, monthly: monthly))).foregroundStyle(color)
+                            }
+                        }
+                        .font(.callout)
+                    }
+                }
+                Text(assumed
+                     ? "Assumes 6% a year, with the cautious and optimistic paths 3 points either side, until you've recorded some growth. Adding \(ReportFormat.money(monthly)) a month."
+                     : "Based on \(ReportFormat.percent(annual * 100, digits: 1)) a year, your return over the last 12 months, with the cautious and optimistic paths 3 points either side. Adding \(ReportFormat.money(monthly)) a month. A projection, not a promise.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }

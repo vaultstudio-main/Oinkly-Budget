@@ -168,6 +168,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Allocation", summary: "How your investments are spread.", symbol: "chart.pie", shape: .ring),
                 ReportItem(title: "Gains and Losses", summary: "Change in value for every holding.", symbol: "arrow.up.arrow.down", shape: .table),
                 ReportItem(title: "Contributions", summary: "Money you've added, month by month.", symbol: "plus.circle", shape: .bars),
+                ReportItem(title: "Projection of Growth", summary: "Six months to ten years out, three scenarios.", symbol: "forward", shape: .line, isWide: true),
                 ReportItem(title: "Where It Is", summary: "Retirement, brokerage, education and crypto.", symbol: "building.columns", shape: .ring, projects: false),
                 ReportItem(title: "Growth by Account", summary: "What each account grew over the last year.", symbol: "arrow.up.right", shape: .bars, projects: false),
             ]

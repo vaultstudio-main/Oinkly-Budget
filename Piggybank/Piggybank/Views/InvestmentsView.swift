@@ -2,80 +2,107 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// Retirement, brokerage and other investment accounts: value, growth and contributions over a quarter,
-/// six months or a year.
+/// Retirement, brokerage and other investment accounts: value, growth, contributions and where they are heading.
 struct InvestmentsView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
-    @State private var period: ReportPeriod = .quarterly
-    @State private var anchor = Date.now
-
     private var investmentAccounts: [Account] { accounts.filter { $0.type.group == .investments } }
 
-    private var earliest: Date? { modelContext.earliestTransactionDate(in: investmentAccounts) }
+    /// Investments as they stood the given number of months ago, up to now.
+    private func window(_ months: Int) -> Investments.Report {
+        let start = Calendar.current.date(byAdding: .month, value: -months, to: .now) ?? .now
+        return Investments.build(accounts, range: ReportRange(start: start, end: Date.now.addingTimeInterval(1)))
+    }
 
     var body: some View {
-        let range = Reports.range(period, anchor: anchor)
-        let report = Investments.build(accounts, range: range)
+        let hasAccounts = !investmentAccounts.isEmpty
+        let windows = hasAccounts ? [(3, window(3)), (6, window(6)), (12, window(12))] : []
+        let year = windows.last?.1
 
         ScrollView {
             VStack(spacing: 14) {
                 PageTitle("Investments")
-                if !investmentAccounts.isEmpty {
-                    PeriodControls(periods: ReportPeriod.longTerm, period: $period, anchor: $anchor, earliest: earliest)
+                if let year {
+                    tiles(year)
+                } else {
+                    PlaceholderTiles(titles: ["Value", "Growth", "Contributions", "Change"])
                 }
-                if investmentAccounts.isEmpty {
-                    PlaceholderTiles(titles: ["Value", "Growth", "Contributions", "Unrealized Gain"])
-                    deepDive
-                    ReportPanel(title: "Accounts (0)", summary: "Every investment account with its value, growth and share.") {
+                growthWindows(windows)
+                PortfolioValueReport()
+                InvestmentProjectionReport()
+                HStack(alignment: .top, spacing: 14) {
+                    InvestmentAllocationReport()
+                    InvestmentBucketsReport()
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 14) {
+                    InvestmentContributionsReport()
+                    InvestmentGrowthReport()
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                ReportPanel(title: "Returns by Holding", summary: "How each holding's price has moved over the last year.") {
+                    if let year, !year.holdings.isEmpty {
+                        holdingReturns(year)
+                    } else {
+                        ReportEmpty(message: "Holdings you add to an investment account are listed here.", height: 220, shape: .table)
+                    }
+                }
+                InvestmentGainsReport()
+                ReportPanel(title: "Accounts (\(year?.lines.count ?? 0))", summary: "Every investment account with its value, growth and share.") {
+                    if let year, !year.lines.isEmpty {
+                        list(year)
+                    } else {
                         ReportEmpty(message: "No investment accounts yet.", height: 220, shape: .table)
                     }
-                } else {
-                    tiles(report)
-                    if report.points.count > 1 { ReportCard(title: "Value") { chart(report) } }
-                    if !report.holdings.isEmpty { ReportCard(title: "Returns by Holding") { holdingReturns(report) } }
-                    if report.end > 0 { ReportCard(title: "Where It Is") { allocation(report) } }
-                    ReportCard(title: "Accounts (\(report.lines.count))") { list(report) }
-                    Text("Growth is what you record with the Interest & Dividends or Investment Gains categories (a loss is a negative amount). Every other deposit or withdrawal counts as a contribution. Return is weighted by when each contribution arrived.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-
-                    deepDive
                 }
+                Text("Growth is what you record with the Interest & Dividends or Investment Gains categories (a loss is a negative amount). Every other deposit or withdrawal counts as a contribution. Return is weighted by when each contribution arrived.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
             }
+            .environment(\.reportCardMinHeight, 290)
             .padding(16)
         }
         .background(Theme.background)
     }
 
-    // MARK: Deep dive
+    // MARK: Growth over time
 
-    /// The year behind the numbers above and six months ahead. These ignore the period picked at the top.
-    private var deepDive: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Text("DEEP DIVE").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                Text("last 12 months and the next 6").font(.caption).foregroundStyle(.tertiary)
-                Spacer()
+    /// How the investments did over the last three months, six months and year, side by side.
+    private func growthWindows(_ windows: [(Int, Investments.Report)]) -> some View {
+        ReportPanel(title: "Growth", summary: "What your investments grew, what you added and the return, over the last three months, six months and year.") {
+            if windows.isEmpty {
+                ReportEmpty(message: "Add an investment account to see its growth over time.", height: 190, shape: .tiles)
+            } else {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(windows, id: \.0) { months, report in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(months == 12 ? "LAST YEAR" : "LAST \(months) MONTHS").font(.caption2).foregroundStyle(.secondary)
+                            windowRow("Value then", report.start)
+                            windowRow("Added", report.contributions)
+                            windowRow("Growth", report.growth, colored: true)
+                            windowRow("Value now", report.end, bold: true)
+                            returnPill(report.returnRate)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                }
             }
-            .padding(.top, 8)
-            PortfolioValueReport()
-            HStack(alignment: .top, spacing: 14) {
-                InvestmentAllocationReport()
-                InvestmentBucketsReport()
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            HStack(alignment: .top, spacing: 14) {
-                InvestmentContributionsReport()
-                InvestmentGrowthReport()
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            InvestmentGainsReport()
         }
-        .environment(\.reportCardMinHeight, 290)
+    }
+
+    private func windowRow(_ title: String, _ value: Decimal, bold: Bool = false, colored: Bool = false) -> some View {
+        HStack {
+            Text(title).foregroundStyle(bold ? .primary : .secondary)
+            Spacer()
+            Text(value, format: .appCurrency)
+                .fontWeight(bold ? .semibold : .regular)
+                .foregroundStyle(colored ? (value >= 0 ? Theme.green : Theme.red) : .primary)
+        }
+        .font(.callout)
     }
 
     // MARK: Tiles

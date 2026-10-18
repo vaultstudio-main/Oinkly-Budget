@@ -63,6 +63,7 @@ enum ReportCards {
         case "Investments/Allocation": AnyView(InvestmentAllocationReport())
         case "Investments/Gains and Losses": AnyView(InvestmentGainsReport())
         case "Investments/Contributions": AnyView(InvestmentContributionsReport())
+        case "Investments/Projection of Growth": AnyView(InvestmentProjectionReport())
         case "Investments/Where It Is": AnyView(InvestmentBucketsReport())
         case "Investments/Growth by Account": AnyView(InvestmentGrowthReport())
 
