@@ -30,7 +30,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 | Good to know | Update: still no sync between devices; backup file moves data between computers; a shared data file lets two Mac logins on one Mac take turns. |
 | Requirements | Check the macOS minimum against the project setting before writing it. |
 
-**Feature blocks to write** (a short heading, two or three sentences and a screenshot each):
+**Feature blocks to write.** The complete, detailed feature list is `feature-master-list-1.1.md`; every feature in it that is built appears on this page, with its screenshot from the table below. (a short heading, two or three sentences and a screenshot each):
 
 1. **Goals that follow your accounts.** Savings and payoff goals tied to an account, with target date, status, monthly amount needed, pace and an estimated finish, in a Goal section on each account.
 2. **Reports and projections.** One period button, line charts, six-month projections on reports, Liabilities and Investments, and a reworked Summary with net worth over time.
@@ -100,7 +100,46 @@ Add any new page to the nav in the header and footer of every page, to `sitemap.
 
 ## Screenshots for the website
 
-Use the same test data and the same rules as `screenshot-plan.md`. The site wants about 14 to 18 images: Summary, Reports, a Goal section, Bills, Planning, Investments, Liabilities, Transactions, Register, Card, Mortgage, Import preview, Export sheet, Encryption settings, Widgets, and one each for splits, tags and recurring if built. Compress them (PNG optimised or WebP) so the product page stays fast.
+Every new feature gets at least one picture on the product page, and the key ones are also in the gallery. The full list of every screenshot (with setup steps) is the shot register in `feature-master-list-1.1.md`; this is the part the website uses. Images are 1600 px wide, light mode, from the test data, and compressed (optimised PNG or WebP). Every image needs alt text that describes what it shows. File names below are suggested.
+
+"features" means the image sits beside that feature's block on the product page. "gallery" means it is in the "A closer look" gallery (click to enlarge). "hero" means it is a large picture at the top of the page or on the home page.
+
+| ID | Shows | File | Where on the site |
+|---|---|---|---|
+| S-A1a | Register with the locked Deposit row | `web-opening-balance.png` | features |
+| S-A4a | Credit card details with the Goal section | `web-card-details.png` | gallery |
+| S-A4b | Loan details with the Goal section | `web-loan-details.png` | gallery |
+| S-A4c | Savings details with the Goal section | `web-savings-details.png` | gallery |
+| S-A6 | Whole window with the colored side panel and status bar | `web-welcome.png` | hero |
+| S-B1 | Register with the three status colors | `web-register.png` | features |
+| S-B3 | New Transaction with autofilled payee | `web-autofill.png` | features |
+| S-B4a | Export sheet | `web-export.png` | features |
+| S-B4b | A page of the PDF in Preview | `web-pdf.png` | features |
+| S-B5a | Import preview with counts | `web-import.png` | features |
+| S-B5b | How this file is read (mapping) | `web-import-mapping.png` | features |
+| S-B6a | Clean Up find and replace | `web-cleanup.png` | features |
+| S-B8a | Split editor | `web-split.png` | features |
+| S-B9a | Tag picker | `web-tags.png` | features |
+| S-B10a | Recurring rules screen | `web-recurring.png` | features |
+| S-C1 | Summary with Priority Bills | `web-priority-bills.png` | features |
+| S-C2 | Menu bar pop-up | `web-menu-bar.png` | features |
+| S-C3a | Both widgets on the desktop | `web-widgets.png` | features |
+| S-D1a | Goal editor with the account link | `web-goal-edit.png` | features |
+| S-D1b | Goal section close-up | `web-goal-section.png` | features |
+| S-D1c | Planning page | `web-goals.png` | gallery |
+| S-D3 | Budgets page | `web-budgets.png` | features |
+| S-E1a | A report with a projection | `web-reports.png` | gallery |
+| S-E2a | Summary, top | `web-summary.png` | hero |
+| S-E2b | Summary, lower | `web-summary-lower.png` | gallery |
+| S-E3a | Liabilities | `web-liabilities.png` | gallery |
+| S-E3b | Investments | `web-investments.png` | gallery |
+| S-F1a | Unlock screen | `web-unlock.png` | features |
+| S-F1b | Turn on encryption: passphrase | `web-encrypt.png` | features |
+| S-F4a | Shared file settings | `web-shared-file.png` | features |
+
+Also retake the existing gallery pictures that stay (Transactions, Bills, Register, Card, Mortgage, Reports, Liabilities, Investments, Planning, Summary), because the app's layout changed. Add `og:image` and favicon sizes while there.
+
+Shots the owner must take (Claude cannot drive them): the widgets on the desktop, the widget gallery, the Finder Backups folder, and the second Mac login's window.
 
 ## Order of work
 

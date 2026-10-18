@@ -13,47 +13,82 @@ Drafted 2026-10-18. Two sets: the screenshots inside Help, and the App Store scr
 
 ## A. Help screenshots
 
-Asset names go into `Assets.xcassets` as image sets. The 18 from 1.0 are all retaken. New ones are marked **new**.
+Every new or changed feature has a Help screenshot, so each topic can show what the text describes. The shot register in `feature-master-list-1.1.md` is the master (it also says which shots the website and the App Store use). The register has 66 shots; this is the same list from the Help side. Asset names go into `Assets.xcassets` as image sets, named exactly as shown.
 
-| Asset name | Topic | What to show |
-|---|---|---|
-| Help-welcome | Welcome | Summary with test data, side panel visible |
-| Help-sidebar | Finding Your Way | Side panel only, folders expanded |
-| Help-manage-accounts | Adding & Managing Accounts | Settings ▸ Accounts with a few accounts |
-| Help-opening-balance | Opening Balances **new** | A locked Deposit row in a register, and the account setup showing the opening balance |
-| Help-atm-withdrawal | Cash on Hand | ATM Withdrawal window filled in |
-| Help-cash-page | Cash on Hand **new** | Cash on Hand page with the New Cash Transaction button |
-| Help-card-charge | Credit Cards | New Credit Card Charge with available credit showing |
-| Help-card-details | Credit Cards | A credit card page with account details and the Goal section |
-| Help-loan-details | Loans & Mortgages | A loan page with progress and the Goal section |
-| Help-register | Transactions & Registers | Checking register with a month of transactions and the status colours |
-| Help-edit-transaction | Transactions & Registers | Edit Transaction sheet |
-| Help-split | Split Transactions **new** *(if built)* | A transaction split across three categories |
-| Help-tags | Tags **new** *(if built)* | Tags on a transaction and the tag filter on a report |
-| Help-recurring | Recurring Transactions **new** *(if built)* | The rules screen with three rules and one pending entry |
-| Help-receipt | Receipts | Receipt sheet with a photo or PDF |
-| Help-import | Importing a Statement **new** | The preview with new, duplicate and problem counts |
-| Help-import-mapping | Importing a Statement **new** | The column mapping screen |
-| Help-cleanup | Clean Up **new** | Settings ▸ Clean Up with a find and replace filled in |
-| Help-bills | The Bills Page | Calendar, Important list, Add a Bill |
-| Help-new-bill | The Bills Page | New Bill form with a category |
-| Help-pay-bill | Paying a Bill | Pay a Bill filled in |
-| Help-categories | Categories & Budgets | Settings ▸ Categories |
-| Help-budgets | Categories & Budgets **new** | Budgets page with the note about editing in Settings |
-| Help-summary | Summary **new** | The reworked Summary |
-| Help-reports | Reports | Reports page with the period button and a projection chart |
-| Help-goals | Goals | Planning page with a savings goal and a payoff goal |
-| Help-goal-section | Goals **new** | An account's Goal section close up |
-| Help-liabilities | Liabilities **new** | Liabilities page with projections |
-| Help-investments | Investments **new** | Investments page with growth and projection cards |
-| Help-export | Export to PDF and CSV **new** | The Export sheet |
-| Help-backup | Backup & Restore | Settings ▸ Import & Export |
-| Help-encryption | Encryption **new** | Settings encryption screen (no passphrase shown) |
-| Help-shared-file | Sharing One Data File **new** *(if built)* | The shared file settings and a "someone else has this file" prompt |
-| Help-widgets | Widgets **new** | The widgets on the desktop or in Notification Center |
-| Help-menu-bar | Menu Bar & Reminders | The menu bar pop-up open |
+| ID | Help asset | Shows | Setup |
+|---|---|---|---|
+| S-A1a | `Help-opening-balance` | Register with the locked Deposit row | Checking account register, scroll to the first row |
+| S-A1b | `Help-opening-balance-edit` | Edit Details with the opening balance | Account edit sheet |
+| S-A2 | `Help-sidebar` | Side panel with Primary Checking pinned | Whole sidebar |
+| S-A3 | `Help-routing` | Routing fields on a checking account | Account edit sheet, routing section |
+| S-A4a | `Help-card-details` | Credit card details with the Goal section | Sapphire Card |
+| S-A4b | `Help-loan-details` | Loan details with the Goal section | Student Loan |
+| S-A4c | `Help-savings-details` | Savings details with the Goal section | House Down Payment |
+| S-A5 | `Help-cash-page` | Cash on Hand with the New Cash Transaction button | Cash on Hand page |
+| S-A6 | `Help-welcome` | Whole window with the colored side panel and status bar | Summary |
+| S-B1 | `Help-register` | Register with the three status colors | Checking register |
+| S-B2 | `Help-edit-transaction` | Edit Transaction sheet with receipt | Right-click ▸ Edit Transaction |
+| S-B3 | `Help-autofill` | New Transaction with autofilled payee | Type "Bean There Coffee" |
+| S-B4a | `Help-export` | Export sheet | Account page ▸ Print PDF |
+| S-B4b | `Help-pdf` | A page of the PDF in Preview | Open the saved PDF |
+| S-B4c | `Help-account-toolbar` | Account page toolbar (Import CSV, Export CSV, Print PDF) | Any account |
+| S-B5a | `Help-import` | Import preview with counts | Import Statement with a sample file |
+| S-B5b | `Help-import-mapping` | How this file is read (mapping) | Same sheet, section open |
+| S-B5c | `Help-import-result` | Import result with Undo | After importing |
+| S-B5d | `Help-import-format` | Saved format name field | Save Format |
+| S-B6a | `Help-cleanup` | Clean Up find and replace | Settings ▸ Clean Up |
+| S-B6b | `Help-cleanup-payees` | Look-alike payees | Same tab |
+| S-B6c | `Help-cleanup-category` | Move a category's transactions | Same tab |
+| S-B7 | `Help-tax` | Budget editor with "Counts as tax-related" | Settings ▸ Categories |
+| S-B8a | `Help-split` | Split editor | New Transaction ▸ Split |
+| S-B8b | `Help-split-register` | Register row "Split (3)" | Register |
+| S-B8c | `Help-split-detail` | Detail window listing the parts | Double-click |
+| S-B9a | `Help-tags` | Tag picker | Edit Transaction |
+| S-B9b | `Help-tags-register` | Register with tag chips | Register |
+| S-B9c | `Help-tags-report` | A report filtered by a tag | Reports |
+| S-B9d | `Help-tags-settings` | Tags settings | Settings ▸ Tags |
+| S-B10a | `Help-recurring` | Recurring rules screen | Bills ▸ Recurring |
+| S-B10b | `Help-recurring-edit` | Rule editor | Add a rule |
+| S-B10c | `Help-recurring-pending` | Pending entry made by a rule | Register |
+| S-C1 | `Help-priority-bills` | Summary with Priority Bills | Summary |
+| S-C2 | `Help-menu-bar` | Menu bar pop-up | Click the menu bar item |
+| S-C3a | `Help-widgets` | Both widgets on the desktop | Desktop (owner takes this) |
+| S-C3b | `Help-widget-gallery` | Widget gallery | Edit widgets (owner takes this) |
+| S-D1a | `Help-goal-edit` | Goal editor with the account link | Planning ▸ New Goal |
+| S-D1b | `Help-goal-section` | Goal section close-up | Any linked account |
+| S-D1c | `Help-goals` | Planning page | Planning |
+| S-D2 | `Help-planning-loans` | Planning with loans and estimated dates | Planning, lower area |
+| S-D3 | `Help-budgets` | Budgets page | Overview ▸ Budgets |
+| S-E1a | `Help-reports` | A report with a projection | Reports ▸ Spending or Net Worth |
+| S-E1b | `Help-reports-period` | Period button open | Reports |
+| S-E1c | `Help-reports-empty` | Empty card with "needs more data" | Wipe, then Reports |
+| S-E2a | `Help-summary` | Summary, top | Summary |
+| S-E2b | `Help-summary-lower` | Summary, lower | Scroll down |
+| S-E3a | `Help-liabilities` | Liabilities | Liabilities |
+| S-E3b | `Help-investments` | Investments | Investments |
+| S-E4 | `Help-reports-pdf` | Reports with the Print PDF button | Reports |
+| S-F1a | `Help-unlock` | Unlock screen | Launch with encryption on |
+| S-F1b | `Help-encrypt` | Turn on encryption: passphrase | Settings ▸ Data & Backup |
+| S-F1c | `Help-recovery-key` | Recovery key screen | Next step (use a throwaway key) |
+| S-F1d | `Help-encryption-on` | Encryption settings when on | Settings |
+| S-F1e | `Help-encryption-off` | Turn off confirmation | Turn Off Encryption |
+| S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
+| S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before 1.1 | Finder (owner takes this) |
+| S-F4a | `Help-shared-file` | Shared file settings | Settings ▸ Data & Backup |
+| S-F4b | `Help-shared-busy` | "Someone else has this file" | Second login (owner takes this) |
+| S-F4c | `Help-shared-takeover` | Take over warning | Stale lock |
+| S-F4d | `Help-shared-second` | Second login's window | Second login (owner takes this) |
+| S-F5 | `Help-attachments` | Statement attached to an account | Account page |
+| S-G1 | `Help-window` | The Help window | Help ▸ OinklyBudget Help |
+| S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
+| S-G3 | `Help-export-defaults` | Export defaults | Settings |
+| S-G4 | `Help-checks` | Check printing | Account |
 
-Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summary, Help-goal-section, Help-import.
+Shots for planned features (splits, tags, recurring, shared file, attachments, export defaults, check printing, Reports and Summary PDF) are taken only if the feature ships.
+
+The 1.0 shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
+
+Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summary, Help-goal-section, Help-import, Help-encrypt.
 
 ## B. App Store screenshots
 
@@ -61,7 +96,7 @@ Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summar
 - Up to 10. The 1.0 set was 10 shots: summary, transactions, reports, liabilities, investments, bills, planning, checking, card, mortgage. Retake all 10 and replace any that no longer represent the app.
 - Order that sells the app: Summary, Reports, Account with a goal, Bills, Planning, Investments, Liabilities, a Register, Export or Import, Widgets.
 - Optional captions on each: one short line (for example "Know where your money goes" or "Your data stays on your Mac").
-- Add a widget shot and an encryption or privacy shot, since they are new in 1.1.
+- The App Store takes at most 10, so choose 10 from the shots marked "yes" in the register (candidates: S-A4a, S-A4b, S-A4c, S-A6, S-B1, S-B4a, S-B5a, S-B8a, S-B10a, S-C1, S-C3a, S-D1c, S-E1a, S-E2a, S-E3a, S-E3b, S-F1b, S-F4a). Pick the ones that show the biggest new features: Summary, a Goal section, Reports, Import, Encryption, Widgets, Export, Recurring or Splits if built, Liabilities, Investments.
 - Keep the window title and the sidebar the same in every shot so the set looks uniform.
 
 ## Order of work

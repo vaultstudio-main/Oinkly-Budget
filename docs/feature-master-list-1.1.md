@@ -1,0 +1,299 @@
+# 1.1 feature master list (everything different from 1.0)
+
+Drafted 2026-10-18 from the git history of `update-1.1` and the current app. This is the single source for four documents: the Help file, the screenshots, the website and the release notes. If a feature is not here, it is not documented anywhere, so add it here first.
+
+- **Status:** Built = in the app now. Planned = in the final plan, not built yet. If a planned feature is dropped, delete its rows here and in the four documents.
+- **How it works:** written for Help and the website. Check each line against the running app before publishing (button names, menu paths).
+- **Shots:** screenshot IDs. The full list, with setup and where each is used, is at the end of this file.
+
+---
+
+## A. Accounts
+
+### A1. Opening balance is a locked Deposit (Built)
+- When you give a bank or investment account an opening balance, the app creates a real transaction: payee Deposit, category Deposit, method Bank Deposit, memo "Opening balance", status Reconciled.
+- It is locked, like payments and transfers, so it can't be edited or deleted from the register. Change the amount in the account's Edit Details (opening balance field); the transaction updates, or is removed if you set it to zero.
+- Applies to checking, savings, investment and similar accounts, but not Cash on Hand.
+- A savings goal that creates its own account records its starting amount the same way.
+- Why: every account starts with a real entry, so the register and the balance always agree, and no empty deposit slip is left behind.
+- Shots: S-A1a (register with the locked Deposit), S-A1b (Edit Details with the opening balance field).
+
+### A2. Primary checking account (Built)
+- Mark one checking account as primary in Edit Details. It is pinned under Cash on Hand at the top of the side panel and labelled "Primary Checking".
+- Only one account can be primary; setting a new one clears the old one.
+- It travels with backups.
+- Shots: S-A2 (side panel with the primary account pinned).
+
+### A3. Routing numbers (Built)
+- Only checking accounts have routing numbers. Savings and others no longer ask for one.
+- A checking account can hold three: ACH routing, wire routing (may include letters) and digital routing.
+- Shown in the account's details with the others, masked rules unchanged for account numbers.
+- Shots: S-A3 (Edit Details, routing fields for a checking account).
+
+### A4. Account details layout and goal section (Built)
+- The details panel puts facts into even columns with no empty gaps: type, institution, balances, number, activity for the month, unreconciled and pending counts with amounts stacked.
+- Loans show the loan facts (original amount, monthly payment, paid off so far, still owed, interest rate, payments left, maturity date, payment due, this month's payment, started, payments to maturity, needed per month and a progress bar).
+- If a goal follows the account, a Goal section sits beside the details, the same on every kind of account (see D1).
+- Shots: S-A4a (credit card), S-A4b (loan), S-A4c (savings), all with the Goal section.
+
+### A5. Cash on Hand button (Built)
+- New Cash Transaction is a big blue button on the Cash on Hand page. It is no longer in the File menu.
+- Shots: S-A5.
+
+### A6. Side panel and window shell (Built)
+- Colored icons that match each account type; folders for Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets.
+- Fixed width, can't be dragged, and can't be collapsed.
+- A status bar along the bottom of every page: what you are looking at on the left, a Help link on the right.
+- Budgets appears in Overview.
+- Window title is "Oinkly Budget".
+- Shots: S-A6 (whole window).
+
+---
+
+## B. Transactions
+
+### B1. Status colors (Built)
+- Reconciled is green, Pending is yellow, Unreconciled is red, in the register and in the status menus.
+- Shots: S-B1 (register showing all three).
+
+### B2. Edit Transaction has everything New Transaction has (Built)
+- Date, payee, category, amount, method, memo, status and receipt (add, replace, remove or mark "no receipt"), in one sheet. Open it by right-click ▸ Edit Transaction, or Edit in the detail window.
+- Shots: S-B2.
+
+### B3. Autofill (Built)
+- Type a payee you have used before and the category, amount, memo and payment method fill in from the last time.
+- Only on an exact match of the payee; you can change anything afterwards.
+- Shots: S-B3 (New Transaction with an autofilled payee).
+
+### B4. Export and print (Built; Reports and Summary PDF planned)
+- Every account page has Print PDF and Export CSV. The Transactions page has them for all accounts. One transaction can be saved as a PDF from its detail window.
+- The Export sheet asks for: account (or all accounts), period (a month, a year, or from a date), and paper size. Then a save panel.
+- The PDF has a running balance and repeating headers. To print, open the PDF in Preview.
+- The CSV uses the layout Import Statement reads, so it round-trips.
+- Planned: Print PDF on Reports and Summary; default paper size and style in Settings.
+- Shots: S-B4a (Export sheet), S-B4b (a page of the PDF in Preview), S-B4c (account page buttons).
+
+### B5. Import Statement (Built)
+- Button on every account. Every row goes to that account.
+- Choose a CSV file. The sheet shows a preview table with counts: new, already there, problems.
+- If the headers aren't recognised, "How this file is read" lets you set: whether there is a header row, separator (comma, semicolon, tab, bar), date column and date format (with a warning when month-first and day-first are both possible), payee, memo, category, amount (single column, or separate debit and credit), "positive amounts are charges" for credit card files, and comma-decimal numbers (1.234,56).
+- Options: skip transactions already in OinklyBudget, tidy bank text in payee names, fill categories from payees you have used before.
+- Save a format with a name ("Chase checking"); it is detected automatically next time.
+- After importing: how many were added, skipped as duplicates, left out as unreadable, or had no matching category. "Undo" removes everything that import added.
+- Still CSV only. PDF statements can't be imported.
+- Shots: S-B5a (preview), S-B5b (how this file is read), S-B5c (result with Undo), S-B5d (saved format).
+
+### B6. Clean Up (Built)
+- Settings ▸ Clean Up. Three tools:
+  - **Find and replace payee names** across all transactions, with Replace All and Undo Last Change.
+  - **Look-alike payees:** groups of near-duplicates with counts; merge selected, or merge all into one name; rename one.
+  - **Move a category's transactions:** pick one or more custom categories, choose where the transactions go, optionally delete the old custom categories. Payments, transfers and ATM withdrawals keep their locked categories.
+- Shots: S-B6a (find and replace), S-B6b (look-alike payees), S-B6c (move transactions).
+
+### B7. Tax-related categories (Built)
+- Mark any category as tax-related ("Counts as tax-related" in the budget editor). Starter categories such as Charity, Healthcare and Taxes are flagged for you.
+- The tax report follows the flag instead of category names.
+- Shots: S-B7.
+
+### B8. Split transactions (Planned)
+- One payment across several categories; parts must add up to the total; shown once in the register as "Split (n)"; counted once per category in reports and budgets.
+- Shots: S-B8a (split editor), S-B8b (register row), S-B8c (detail window).
+
+### B9. Tags (Planned)
+- Labels with colours; many per transaction; shown as chips; report filter; Settings screen to rename, recolour, merge, delete.
+- Shots: S-B9a (tag picker), S-B9b (register with chips), S-B9c (report filtered by a tag), S-B9d (Tags settings).
+
+### B10. Recurring transactions (Planned)
+- Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
+- Shots: S-B10a (rules screen), S-B10b (rule editor), S-B10c (a pending entry made by a rule).
+
+---
+
+## C. Bills, reminders and the menu bar
+
+### C1. Priority Bills on the Summary (Built)
+- A card under the three top cards listing up to five important unpaid bills that are overdue or due in the next 20 days, soonest first, with amount and "Due in N days". Replaces the orange alert at the top of the Summary. The Bills page keeps its alert.
+- Make a bill important in its edit form.
+- Shots: S-C1.
+
+### C2. Menu bar (Built)
+- The menu bar pop-up shows this month's bills, with important ones for the next 30 days first. Settings: show in menu bar, open at login.
+- Shots: S-C2.
+
+### C3. Widgets (Built)
+- Two widgets, small and medium: Upcoming Bills (the next bills due, names and dates only) and Reminders (your own reminders and when they are next).
+- No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open OinklyBudget to show your bills here."
+- Add them from the widget gallery (edit widgets on the desktop or in Notification Center).
+- Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery).
+
+---
+
+## D. Planning, goals and budgets
+
+### D1. Goals follow accounts (Built)
+- When you make a goal, link it to an account. A savings goal follows a checking or savings balance (progress is the balance above where it started); a payoff goal follows a loan or card (progress is how far the balance has come down since the goal was made).
+- A linked goal takes no manual progress; the balance is the truth. Unlinked goals work as in 1.0.
+- A reached goal is frozen with its final amount and stops following.
+- On the linked account, a Goal section shows: goal name, target date, status (on track, behind, past the date, reached), needed per month, your pace (last three months), to catch up, estimated finish, paid off or saved, and a progress bar.
+- Create an account from a savings goal: give the account number, institution and the current savings, which becomes its locked opening Deposit.
+- Shots: S-D1a (goal editor with the account link), S-D1b (goal section on an account, three kinds), S-D1c (Planning page).
+
+### D2. Planning page: loans and estimated dates (Built)
+- Loans with maturity dates and estimated payoff dates are listed beside the goals, with whether the loan will be paid off before it matures; goals show an estimated finish date.
+- Shots: S-D2.
+
+### D3. Budgets page (Built)
+- Overview ▸ Budgets lists every category with a budget: budgeted, spent and left, with a progress bar. Categories with a zero budget are hidden; the count reflects what is shown.
+- A note and a link send you to Settings ▸ Categories to edit budgets. A button opens Categories. No custom categories can be added here.
+- Shots: S-D3.
+
+---
+
+## E. Reports, Summary and the money pages
+
+### E1. Reports (Built)
+- One period button (not tabs). Reports for net worth, cash flow, debt and loans, goals, budgets, spending, income, bills, investments, each with a line chart and a six-month projection (dashed).
+- Cards with too little data keep their full size and say what is needed.
+- Windows (3 months, 6 months, a year) side by side where useful.
+- Shots: S-E1a (a report with a projection), S-E1b (period button open), S-E1c (empty card with the needs-more-data message).
+
+### E2. Summary (Built)
+- Top cards: Income & Spending, Liabilities, Investments. Then Priority Bills, Net Worth Over Time (last 12 months and the next six), the Summary card (assets and liabilities breakdown), loans progress, savings goals, the last 15 transactions, income and spending flow, top spending categories.
+- Shots: S-E2a (top of page), S-E2b (lower page).
+
+### E3. Liabilities and Investments (Built)
+- Liabilities: a Paid Down card for 3 months, 6 months and a year, with projections.
+- Investments: a Growth card for 3 months, 6 months and a year, and a Projection of Growth. No sample data; placeholders keep their size.
+- Shots: S-E3a (Liabilities), S-E3b (Investments).
+
+### E4. Reports and Summary PDF (Planned)
+- A Print PDF button on each page. Shots: S-E4.
+
+---
+
+## F. Your data
+
+### F1. Encrypted data file (Built)
+- Settings ▸ Data & Backup ▸ Encryption. **Turn On** asks for a passphrase and shows a recovery key once (copy it, or save as a text file; tick "I have saved my recovery key"). The app then encrypts and restarts; the plain data file is removed only after the encrypted copy opens.
+- At each launch you type the passphrase, or choose "Remember on this Mac".
+- Change Passphrase is instant (the data isn't re-encrypted; the recovery key keeps working). New Recovery Key makes a new one and the old one stops working. Turn Off Encryption asks for the passphrase and returns to a plain file.
+- Backups made while encryption is on are encrypted too.
+- Limits (state them plainly): while the app is open it works on a readable copy that is removed when you quit, so this protects a copied file, a backup or a lost Mac without FileVault, not someone using your unlocked Mac. Without the passphrase and the recovery key, nobody can open the data, including the developer.
+- Shots: S-F1a (unlock screen), S-F1b (turn on: passphrase), S-F1c (recovery key), S-F1d (Encryption settings when on), S-F1e (turn off confirmation).
+
+### F2. Data & Backup settings (Built)
+- One Data & Backup tab: counts, Export Backup and Import Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.1 fields.
+- A reminder to back up after two and three years of history.
+- Shots: S-F2.
+
+### F3. Safe update (Built)
+- The first time 1.1 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before 1.1 (date)". It stays until you delete it.
+- Your data stays where 1.0 kept it; the new widgets don't move it.
+- Everything migrates automatically; opening a damaged file shows an error screen and never starts a blank database.
+- Shots: S-F3 (Finder showing the Backups folder).
+
+### F4. Shared data file (Planned)
+- Two Mac logins on one Mac share one data file, one at a time. Open Recent, Choose Folder, Move This File, Create a New File, Save Now, Close File So Someone Else Can Use It, Take Over a stale lock, Stop Sharing; the app tells you who has the file and since when.
+- Shots: S-F4a (settings), S-F4b (someone else has the file), S-F4c (take over warning), S-F4d (second login's view).
+
+### F5. Attachments beyond receipts (Planned)
+- PDF statements kept with an account. Shots: S-F5.
+
+---
+
+## G. Everyday polish
+
+### G1. Bigger Help and Release Notes windows (Built)
+- Open at 1100×780 and 860×780. Shots: S-G1 (Help window).
+
+### G2. Keyboard shortcuts and accessibility (Planned)
+- Reviewed shortcuts, more menu commands, VoiceOver and larger text across the new screens. Shots: S-G2 (shortcut list in Help).
+
+### G3. Default settings for export (Planned)
+- Default paper size and export style in Settings. Shots: S-G3.
+
+### G4. Check printing (Planned, optional)
+- Print checks on standard check stock. Shots: S-G4.
+
+---
+
+## Shot register (every screenshot for Help, website and the App Store)
+
+Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data), fixed window size, no real information. Website images are 1600 px wide; App Store images are 16:10 (see `screenshot-plan.md`). "Help asset" is the image set name in the asset catalog. A cell with a dash means not used there.
+
+| ID | Shows | Setup | Help asset | Website | Store |
+|---|---|---|---|---|---|
+| S-A1a | Register with the locked Deposit row | Checking account register, scroll to the first row | Help-opening-balance | features | – |
+| S-A1b | Edit Details with the opening balance | Account edit sheet | Help-opening-balance-edit | – | – |
+| S-A2 | Side panel with Primary Checking pinned | Whole sidebar | Help-sidebar | – | – |
+| S-A3 | Routing fields on a checking account | Account edit sheet, routing section | Help-routing | – | – |
+| S-A4a | Credit card details with the Goal section | Sapphire Card | Help-card-details | gallery | yes |
+| S-A4b | Loan details with the Goal section | Student Loan | Help-loan-details | gallery | yes |
+| S-A4c | Savings details with the Goal section | House Down Payment | Help-savings-details | gallery | yes |
+| S-A5 | Cash on Hand with the New Cash Transaction button | Cash on Hand page | Help-cash-page | – | – |
+| S-A6 | Whole window with the colored side panel and status bar | Summary | Help-welcome | hero | yes |
+| S-B1 | Register with the three status colors | Checking register | Help-register | features | yes |
+| S-B2 | Edit Transaction sheet with receipt | Right-click ▸ Edit Transaction | Help-edit-transaction | – | – |
+| S-B3 | New Transaction with autofilled payee | Type "Bean There Coffee" | Help-autofill | features | – |
+| S-B4a | Export sheet | Account page ▸ Print PDF | Help-export | features | yes |
+| S-B4b | A page of the PDF in Preview | Open the saved PDF | Help-pdf | features | – |
+| S-B4c | Account page toolbar (Import CSV, Export CSV, Print PDF) | Any account | Help-account-toolbar | – | – |
+| S-B5a | Import preview with counts | Import Statement with a sample file | Help-import | features | yes |
+| S-B5b | How this file is read (mapping) | Same sheet, section open | Help-import-mapping | features | – |
+| S-B5c | Import result with Undo | After importing | Help-import-result | – | – |
+| S-B5d | Saved format name field | Save Format | Help-import-format | – | – |
+| S-B6a | Clean Up find and replace | Settings ▸ Clean Up | Help-cleanup | features | – |
+| S-B6b | Look-alike payees | Same tab | Help-cleanup-payees | – | – |
+| S-B6c | Move a category's transactions | Same tab | Help-cleanup-category | – | – |
+| S-B7 | Budget editor with "Counts as tax-related" | Settings ▸ Categories | Help-tax | – | – |
+| S-B8a | Split editor | New Transaction ▸ Split | Help-split | features | yes |
+| S-B8b | Register row "Split (3)" | Register | Help-split-register | – | – |
+| S-B8c | Detail window listing the parts | Double-click | Help-split-detail | – | – |
+| S-B9a | Tag picker | Edit Transaction | Help-tags | features | – |
+| S-B9b | Register with tag chips | Register | Help-tags-register | – | – |
+| S-B9c | A report filtered by a tag | Reports | Help-tags-report | – | – |
+| S-B9d | Tags settings | Settings ▸ Tags | Help-tags-settings | – | – |
+| S-B10a | Recurring rules screen | Bills ▸ Recurring | Help-recurring | features | yes |
+| S-B10b | Rule editor | Add a rule | Help-recurring-edit | – | – |
+| S-B10c | Pending entry made by a rule | Register | Help-recurring-pending | – | – |
+| S-C1 | Summary with Priority Bills | Summary | Help-priority-bills | features | yes |
+| S-C2 | Menu bar pop-up | Click the menu bar item | Help-menu-bar | features | – |
+| S-C3a | Both widgets on the desktop | Desktop (owner takes this) | Help-widgets | features | yes |
+| S-C3b | Widget gallery | Edit widgets (owner takes this) | Help-widget-gallery | – | – |
+| S-D1a | Goal editor with the account link | Planning ▸ New Goal | Help-goal-edit | features | – |
+| S-D1b | Goal section close-up | Any linked account | Help-goal-section | features | – |
+| S-D1c | Planning page | Planning | Help-goals | gallery | yes |
+| S-D2 | Planning with loans and estimated dates | Planning, lower area | Help-planning-loans | – | – |
+| S-D3 | Budgets page | Overview ▸ Budgets | Help-budgets | features | – |
+| S-E1a | A report with a projection | Reports ▸ Spending or Net Worth | Help-reports | gallery | yes |
+| S-E1b | Period button open | Reports | Help-reports-period | – | – |
+| S-E1c | Empty card with "needs more data" | Wipe, then Reports | Help-reports-empty | – | – |
+| S-E2a | Summary, top | Summary | Help-summary | hero | yes |
+| S-E2b | Summary, lower | Scroll down | Help-summary-lower | gallery | – |
+| S-E3a | Liabilities | Liabilities | Help-liabilities | gallery | yes |
+| S-E3b | Investments | Investments | Help-investments | gallery | yes |
+| S-E4 | Reports with the Print PDF button | Reports | Help-reports-pdf | – | – |
+| S-F1a | Unlock screen | Launch with encryption on | Help-unlock | features | – |
+| S-F1b | Turn on encryption: passphrase | Settings ▸ Data & Backup | Help-encrypt | features | yes |
+| S-F1c | Recovery key screen | Next step (use a throwaway key) | Help-recovery-key | – | – |
+| S-F1d | Encryption settings when on | Settings | Help-encryption-on | – | – |
+| S-F1e | Turn off confirmation | Turn Off Encryption | Help-encryption-off | – | – |
+| S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
+| S-F3 | Finder: Backups ▸ Before 1.1 | Finder (owner takes this) | Help-safety-copy | – | – |
+| S-F4a | Shared file settings | Settings ▸ Data & Backup | Help-shared-file | features | yes |
+| S-F4b | "Someone else has this file" | Second login (owner takes this) | Help-shared-busy | – | – |
+| S-F4c | Take over warning | Stale lock | Help-shared-takeover | – | – |
+| S-F4d | Second login's window | Second login (owner takes this) | Help-shared-second | – | – |
+| S-F5 | Statement attached to an account | Account page | Help-attachments | – | – |
+| S-G1 | The Help window | Help ▸ OinklyBudget Help | Help-window | – | – |
+| S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
+| S-G3 | Export defaults | Settings | Help-export-defaults | – | – |
+| S-G4 | Check printing | Account | Help-checks | – | – |
+
+Also retake the 1.0 shots that stay: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
+
+## Rules for keeping this list true
+
+- Add a row here the moment a feature is built or changed. The four documents follow this file.
+- When a screen changes after its screenshot is taken, retake the screenshot.
+- Shots marked "owner takes this" need panels or other apps Claude can't drive.

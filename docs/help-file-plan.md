@@ -18,44 +18,60 @@ Drafted 2026-10-18. Help is written last (step 6 of the final plan) so it descri
 - Say the honest limits: encryption protects the file at rest, a forgotten passphrase with no recovery key cannot be recovered, shared file is one person at a time.
 - No financial figures from the owner's real data. Use the test data set only.
 
-## Topic list
+## Every feature gets a topic, and every topic explains how it works
 
-Existing topics that need edits are marked **edit**. New topics are marked **new**. Topics for features not yet built are marked *(if built)*; delete them if the feature is dropped.
+The master list is `feature-master-list-1.1.md`. Each feature there (A1 to G4) must appear in Help. A topic is not finished until it has all of these:
 
-| Group | Topic | Change | What to cover |
+1. **What it is**, in one or two sentences.
+2. **How it works**, step by step: where to click (menu path or page), what each field or button does, and what happens next. The "How it works" bullets in the master list are the starting text; add steps and examples.
+3. **The rules and limits**: what is locked and why, what can't be done, what is not protected (encryption), what can't be undone.
+4. **An example** with real-looking numbers from the test data.
+5. **A screenshot** for each screen the text describes (asset names in the master list's shot register). A topic about a dialog shows the dialog.
+6. **Related topics** by name, so people can follow on.
+
+Topics for planned features are written only if the feature ships.
+
+### Topic map (master list section to Help topic)
+
+| Master list | Help group | Help topic | Edit or new |
 |---|---|---|---|
-| Start Here | Welcome | edit | New first-minutes list (accounts, a first transaction, bills, goals), mention Clean Up and autofill |
-| Start Here | Finding Your Way | edit | Locked sidebar, Budgets in Overview, Planning, account folders and colours |
-| Accounts | Adding & Managing Accounts | edit | Opening balance becomes a locked Deposit, primary checking, routing numbers (ACH, wire may contain letters, digital), savings goal that creates an account |
-| Accounts | Opening Balances | **new** | Why the opening Deposit is locked, how to change the amount, which accounts have one |
-| Accounts | Cash on Hand | edit | New Cash Transaction button now lives on the Cash on Hand page |
-| Accounts | Credit Cards, Loans & Mortgages | edit | New account details layout, the Goal section beside the details |
-| Everyday Money | Transactions & Registers | edit | Status colours (green reconciled, yellow pending, red unreconciled), autofill memo and method from the last use of a payee |
-| Everyday Money | Split Transactions | **new** *(if built)* | Splitting one payment across categories, the total must match, how it shows in the register and reports |
-| Everyday Money | Tags | **new** *(if built)* | Adding tags, colours, filtering reports by tag |
-| Everyday Money | Recurring Transactions | **new** *(if built)* | Making a rule, pending entries you confirm, the management screen, the forecast |
-| Everyday Money | Receipts, Attachments | edit | Receipts as before; PDF statements kept with an account *(if built)* |
-| Everyday Money | Transfers | keep | |
-| Everyday Money | Importing a Statement | **new** | Import Statement on an account, preview, column mapping, saved mappings, duplicates, undo, with one worked example |
-| Everyday Money | Clean Up | **new** | Find and replace for payees and categories, duplicate payees (Settings ▸ Clean Up) |
-| Bills | The Bills Page, Paying a Bill | keep | Check wording against the app |
-| Planning & Reports | Categories & Budgets | edit | Budgets page, zero budgets hidden, tax-related toggle, where to edit budgets (Settings) |
-| Planning & Reports | Summary | edit | Reworked net worth and summary cards, line charts with projections |
-| Planning & Reports | Reports | edit | Period button instead of tabs, six-month projections, placeholders that say "needs more data" |
-| Planning & Reports | Goals | edit | Linking a goal to an account, savings and payoff goals, target dates, pace, catch-up, estimated finish |
-| Planning & Reports | Liabilities, Investments | edit | Projections and growth cards |
-| Exporting & Printing | Export to PDF and CSV | **new** | Every account, the Transactions page, Reports and Summary PDFs, paper size and style settings, how to print (open the PDF in Preview) |
-| Exporting & Printing | Printing Checks | **new** *(if built)* | |
-| Data & Settings | Backup & Restore | edit | `.pig` files, encrypted backups, where the automatic safety copy is (Application Support/Backups/Before 1.1) and that it can be deleted |
-| Data & Settings | Encryption | **new** | Turning it on, passphrase, recovery key, remember on this Mac, the honest limits, no recovery without the key |
-| Data & Settings | Sharing One Data File | **new** *(if built)* | Two Mac logins, one at a time, choose folder, who has it, close the file, take over a stale lock, what happens after a crash |
-| Data & Settings | Widgets | **new** | Adding the bills and reminders widgets, what they show (no amounts), refreshing |
-| Data & Settings | Menu Bar & Reminders | edit | Check against the app |
-| Data & Settings | Settings | edit | New tabs (Clean Up, Data), updated list |
-| Reference | Keyboard Shortcuts | edit | Rebuilt from the shortcut review (step 3) |
-| Reference | Accessibility | **new** | VoiceOver and larger text notes from step 3 |
-| Reference | Why Can't I Change That? | edit | Add the new locked things |
-| Reference | Your Data & Privacy | edit | Add encryption and the shared file |
+| A1 Opening balance | Accounts | Opening Balances | new |
+| A2 Primary checking | Accounts | Adding & Managing Accounts (section: Primary Checking) | edit |
+| A3 Routing numbers | Accounts | Adding & Managing Accounts (section: Routing Numbers) | edit |
+| A4 Details and Goal section | Accounts | Credit Cards, Loans & Mortgages, plus a new Savings & Checking Accounts topic | edit and new |
+| A5 Cash on Hand button | Accounts | Cash on Hand | edit |
+| A6 Side panel and shell | Start Here | Finding Your Way | edit |
+| B1 Status colors | Everyday Money | Transactions & Registers (section: Statuses) | edit |
+| B2 Edit Transaction | Everyday Money | Transactions & Registers (section: Editing) | edit |
+| B3 Autofill | Everyday Money | Autofill | new |
+| B4 Export and print | Exporting & Printing | Export to PDF and CSV | new |
+| B5 Import Statement | Exporting & Printing | Importing a Statement (with a worked example and a "Column mapping" subtopic) | new |
+| B6 Clean Up | Data & Settings | Clean Up (three subtopics: payees, look-alikes, categories) | new |
+| B7 Tax-related | Planning & Reports | Categories & Budgets (section: Tax-Related) | edit |
+| B8 Splits | Everyday Money | Split Transactions | new, if built |
+| B9 Tags | Everyday Money | Tags | new, if built |
+| B10 Recurring | Everyday Money | Recurring Transactions | new, if built |
+| C1 Priority Bills | Bills | The Bills Page (section: Priority Bills on the Summary) | edit |
+| C2 Menu bar | Data & Settings | Menu Bar & Reminders | edit |
+| C3 Widgets | Data & Settings | Widgets | new |
+| D1 Goals follow accounts | Planning & Reports | Goals (rewritten: linking, statuses, pace, catch up, estimated finish, creating an account from a goal) | edit |
+| D2 Planning page | Planning & Reports | Goals (section: Loans and Estimated Dates) | edit |
+| D3 Budgets page | Planning & Reports | Categories & Budgets (section: The Budgets Page) | edit |
+| E1 Reports | Planning & Reports | Reports (period button, projections, empty cards) | edit |
+| E2 Summary | Planning & Reports | Summary (each card explained) | edit |
+| E3 Liabilities, Investments | Planning & Reports | Liabilities, Investments | edit |
+| E4 Reports and Summary PDF | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |
+| F1 Encryption | Data & Settings | Encryption (turn on, unlock, remember, change passphrase, recovery key, turn off, honest limits) | new |
+| F2 Data & Backup | Data & Settings | Backup & Restore | edit |
+| F3 Safe update | Data & Settings | Updating to 1.1 (the safety copy, where it is, deleting it) | new |
+| F4 Shared file | Data & Settings | Sharing One Data File | new, if built |
+| F5 Attachments | Everyday Money | Receipts & Attachments | edit, if built |
+| G1 Windows | Start Here | Welcome (mention Help and Release Notes) | edit |
+| G2 Shortcuts, accessibility | Reference | Keyboard Shortcuts, Accessibility | edit and new |
+| G3 Export defaults | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |
+| G4 Check printing | Exporting & Printing | Printing Checks | new, if built |
+
+Also update, always: Welcome (first-minutes list), Settings (new tab list: General, Reminders, Accounts, Categories, Clean Up, Payment Methods, Data & Backup), Why Can't I Change That? (locked opening Deposit, locked split totals *(if built)*, a goal-linked account's goal), and Your Data & Privacy (encryption, shared file, widgets, safety copy).
 
 ## Order of writing
 
