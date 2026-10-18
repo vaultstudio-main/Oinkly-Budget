@@ -28,7 +28,7 @@ Before this step the whole app had four accessibility labels. Added labels to th
 
 | Item | Notes |
 |---|---|
-| **Edit menu is removed** | The menu trimmer hides Edit, View and Window to keep the menu bar short, and handles copy, paste and undo with a key monitor. That works for typing but gives VoiceOver and menu-only users no Edit menu, no Find and no Undo item. Recommend bringing back a small Edit menu (Undo, Redo, Cut, Copy, Paste, Select All). This was a deliberate earlier choice, so it needs the owner's decision. |
+| **Edit menu** | **Done.** A small Edit menu is back with Undo, Redo, Cut, Copy, Paste and Select All, so VoiceOver and menu-only users have them. Find, spelling, substitutions, dictation and emoji stay hidden. |
 | Chart descriptions | **Done at card level.** Every report and trend card now reads its title, what it shows and its headline figure as one item, and VoiceOver can move card by card. The charts inside keep Swift Charts' automatic audio graphs. A hand-written description for each chart could still improve it, if VoiceOver testing shows the need. |
 | Table rows | Not checked: needs a person with VoiceOver on. Register rows read their cells in order. |
 | Larger text | **Correction:** macOS has no system-wide text size setting that scales a Mac app's fonts, so the 21 fixed font sizes and about 99 fixed widths are not a problem in the way they would be on iPhone. What matters on the Mac is a readable minimum size (the smallest text, `caption2`, is used in 60 places at the system's smallest standard size), contrast, and windows that resize without cutting things off (the main window has a 1000 by 600 minimum). |

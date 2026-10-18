@@ -2,10 +2,11 @@ import AppKit
 import SwiftData
 import UserNotifications
 
-/// Keeps the Mac menu bar to the Apple menu, Piggybank, File and Help. SwiftUI adds Edit, View and Window on its own
-/// and rebuilds them from time to time, so this removes them again whenever they come back.
+/// Keeps the Mac menu bar short: the Apple menu, OinklyBudget, File, a small Edit, Transaction, Go and Help. SwiftUI adds
+/// View and Window on its own and rebuilds menus from time to time, so this removes them again whenever they come back.
+/// Edit stays for Undo, Redo, Cut, Copy, Paste and Select All, so VoiceOver and keyboard users have them in a menu.
 enum MenuTrimmer {
-    private static let removed: Set<String> = ["Edit", "View", "Window"]
+    private static let removed: Set<String> = ["View", "Window"]
     private static var isInstalled = false
 
     static func install() {
@@ -37,6 +38,29 @@ enum MenuTrimmer {
         }
         trimAppMenu(menu)
         trimFileMenu(menu)
+        trimEditMenu(menu)
+    }
+
+    /// Edit keeps Undo, Redo, Cut, Copy, Paste and Select All. Find, spelling, substitutions, dictation and emoji are
+    /// removed, and no divider is left hanging.
+    private static func trimEditMenu(_ mainMenu: NSMenu) {
+        guard let edit = mainMenu.items.first(where: { $0.submenu?.title == "Edit" })?.submenu else { return }
+        let keepPrefixes = ["Undo", "Redo", "Cut", "Copy", "Paste", "Select All"]
+        for item in edit.items where !item.isSeparatorItem && !keepPrefixes.contains(where: { item.title.hasPrefix($0) }) {
+            edit.removeItem(item)
+        }
+        // "Paste and Match Style" and "Paste as Plain Text" are not wanted either.
+        for item in edit.items where item.title.hasPrefix("Paste") && item.title != "Paste" { edit.removeItem(item) }
+        while let first = edit.items.first, first.isSeparatorItem { edit.removeItem(first) }
+        while let last = edit.items.last, last.isSeparatorItem { edit.removeItem(last) }
+        var index = 1
+        while index < edit.items.count {
+            if edit.items[index].isSeparatorItem && edit.items[index - 1].isSeparatorItem {
+                edit.removeItem(at: index)
+            } else {
+                index += 1
+            }
+        }
     }
 
     /// File keeps only the ways to add things. Close and Close All come back with every window, so they are removed
