@@ -10,6 +10,7 @@ The Xcode project is in `Piggybank/`. The product plan is in `docs/`. The websit
 |---|---|
 | `main` | Version 1.0, the version in App Review. Only fixes for 1.0 go here. |
 | `update-1.1` | All work for version 1.1. Merged into `main` when 1.1 is done. |
+| next | 1.2 work starts after 1.1 ships. Plan: [docs/oinklybudget-1.2-plan.md](docs/oinklybudget-1.2-plan.md). |
 | `checkpoint` | An older snapshot. Not in use. |
 
 Switch with Xcode's Source Control ▸ Switch, or `git switch main` / `git switch update-1.1`. Tag the 1.0 submission commit `v1.0` and the 1.1 release `v1.1`.
@@ -68,6 +69,7 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Other "Should have" items as time allows
 
 ### Not in 1.1
+- Goals tied to accounts, and the stored-field changes (see the 1.2 plan: [docs/oinklybudget-1.2-plan.md](docs/oinklybudget-1.2-plan.md))
 - Quicken, QIF, OFX and QFX import
 - Print command, ⌘P and page setup (use Export to PDF)
 - Bank linking, accounts, cloud sync, two people editing at the same moment
