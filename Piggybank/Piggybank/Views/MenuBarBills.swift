@@ -22,7 +22,8 @@ struct MenuBarLabel: View {
     }
 }
 
-/// The menu bar item's pop-up: important bills at the top, then everything due in the next 30 days. Works with no window open.
+/// The menu bar item's pop-up: important bills due in the next 30 days at the top, then the rest of this month's bills.
+/// Works with no window open.
 struct MenuBarBills: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allBills: [Bill]
@@ -34,13 +35,16 @@ struct MenuBarBills: View {
     var body: some View {
         let bills = allBills.live
         let upcoming = Bills.upcoming(bills, days: Self.windowDays)
-        // Important bills lead; the rest follow in date order.
+        // Important bills lead, and look 30 days ahead. Everything else is just this calendar month.
+        let monthEnd = Calendar.current.dateInterval(of: .month, for: .now)?.end ?? .distantFuture
+        let monthName = Date.now.formatted(.dateTime.month(.wide))
         let important = upcoming.filter(\.bill.isImportant)
-        let others = upcoming.filter { !$0.bill.isImportant }
+        let others = upcoming.filter { !$0.bill.isImportant && $0.date < monthEnd }
         let alertIDs = Set(Bills.alerts(bills).map(\.id))
         let needsAttention = important.contains { !$0.isPaid && ($0.isOverdue || alertIDs.contains($0.id)) }
 
-        let open = upcoming.filter { !$0.isPaid }
+        let shown = important + others
+        let open = shown.filter { !$0.isPaid }.sorted { $0.date < $1.date }
         let dueTotal = open.reduce(Decimal(0)) { $0 + $1.bill.amount }
         let overdue = open.filter(\.isOverdue).count
         let next = open.first { !$0.isOverdue } ?? open.first
@@ -60,8 +64,8 @@ struct MenuBarBills: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(open.isEmpty
-                         ? "Nothing due in the next 30 days"
-                         : "\(open.count) bill\(open.count == 1 ? "" : "s") due in the next 30 days")
+                         ? "Nothing due in \(monthName)"
+                         : "\(open.count) bill\(open.count == 1 ? "" : "s") to pay")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -70,7 +74,7 @@ struct MenuBarBills: View {
 
             if !open.isEmpty {
                 HStack(spacing: 10) {
-                    stat("Due soon", dueTotal.formatted(.appCurrency),
+                    stat("To pay", dueTotal.formatted(.appCurrency),
                          color: .primary)
                     stat(overdue > 0 ? "Overdue" : "Next bill",
                          overdue > 0 ? "\(overdue) bill\(overdue == 1 ? "" : "s")"
@@ -81,7 +85,7 @@ struct MenuBarBills: View {
 
             if !important.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Important bills", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "star.fill")
+                    Label("Important · next 30 days", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "star.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.orange)
                     ForEach(important) { row($0, highlight: true) }
@@ -91,12 +95,12 @@ struct MenuBarBills: View {
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("COMING UP · NEXT 30 DAYS")
+                Text("THIS MONTH · \(monthName.uppercased())")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
                 if others.isEmpty {
                     Text(bills.isEmpty ? "No bills yet. Add some in OinklyBudget ▸ Bills."
-                         : (important.isEmpty ? "Nothing due in the next 30 days." : "No other bills in the next 30 days."))
+                         : (important.isEmpty ? "Nothing else due in \(monthName)." : "No other bills due in \(monthName)."))
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                 } else {
