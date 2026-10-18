@@ -72,12 +72,7 @@ enum ReleaseNotes {
 
 /// Help ▸ Release Notes. Every release, newest first, as bullet points.
 struct ReleaseNotesWindow: View {
-    private var currentVersion: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "Version \(short) (\(build))"
-    }
+    private var currentVersion: String { AppVersion.label }
 
     var body: some View {
         ScrollView {

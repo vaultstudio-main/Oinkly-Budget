@@ -23,14 +23,12 @@
 /* Begin PBXCopyFilesBuildPhase section */
 		C0DE0000000000000000000B /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
 			dstPath = "";
-			dstSubfolderSpec = 13;
+			dstSubfolder = PlugIns;
 			files = (
 				C0DE0000000000000000000C /* OinklyBudgetWidgets.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
 
@@ -65,10 +63,8 @@
 		};
 		C0DE00000000000000000006 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -128,8 +124,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-			);
 			fileSystemSynchronizedGroups = (
 				C0DE00000000000000000003 /* PiggybankWidgets */,
 				C0DE00000000000000000004 /* Shared */,
@@ -185,20 +179,10 @@
 		};
 		C0DE00000000000000000007 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		C0DE0000000000000000000E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = C0DE00000000000000000001 /* OinklyBudgetWidgets */;
-			targetProxy = C0DE0000000000000000000D /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXSourcesBuildPhase section */
 		B1B483293077491F001D82A7 /* Sources */ = {
@@ -208,12 +192,18 @@
 		};
 		C0DE00000000000000000005 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0DE0000000000000000000E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0DE00000000000000000001 /* OinklyBudgetWidgets */;
+			targetProxy = C0DE0000000000000000000D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		B1B4833C3077491F001D82A7 /* Debug configuration for PBXNativeTarget "Piggybank" */ = {
@@ -238,6 +228,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.1;
+				OINKLY_BUILD_NAME = Acorn;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget;
 				PRODUCT_NAME = OinklyBudget;
 				REGISTER_APP_GROUPS = YES;
@@ -274,6 +265,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.1;
+				OINKLY_BUILD_NAME = Acorn;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget;
 				PRODUCT_NAME = OinklyBudget;
 				REGISTER_APP_GROUPS = YES;

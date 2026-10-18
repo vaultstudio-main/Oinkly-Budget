@@ -399,12 +399,7 @@ struct DataSettingsView: View {
     @State private var pendingBackup: BackupFile?
     @State private var pendingBackupName = ""
 
-    private var version: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = info?["CFBundleVersion"] as? String ?? "1"
-        return "\(short) (\(build))"
-    }
+    private var version: String { AppVersion.display }
 
     @AppStorage(BackupExporter.lastBackupKey) private var lastBackupInterval: Double = 0
     @AppStorage(BackupReminder.snoozeKey) private var snoozedInterval: Double = 0
@@ -450,6 +445,9 @@ struct DataSettingsView: View {
 
             Section("About") {
                 LabeledContent("Version", value: version)
+                if let developerBuild = AppVersion.developerBuild {
+                    LabeledContent("Build (debug only)", value: developerBuild)
+                }
             }
         }
         .formStyle(.grouped)
