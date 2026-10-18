@@ -76,16 +76,15 @@ private struct RegisterContent: View {
                 MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
                 Spacer()
             }
-            // Moving data in and out is one group of labelled buttons; printing a statement is its own icon button.
+            // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
             Button("Import…", systemImage: "square.and.arrow.down") {
                 if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
             }
             .help("Import a bank statement (CSV) into this account")
             Button("Export CSV…", systemImage: "square.and.arrow.up") { savingAs = .csv }
                 .help("Save this account's transactions as a CSV spreadsheet")
-            Button { savingAs = .pdf } label: { Image(systemName: "printer") }
-                .help("Print to PDF: save this account's transactions as a statement to read or print")
-                .accessibilityLabel("Print to PDF")
+            Button("Print to PDF…", systemImage: "printer") { savingAs = .pdf }
+                .help("Save this account's transactions as a PDF statement to read or print")
         }
     }
 
