@@ -145,6 +145,7 @@ struct CreditCardChargeView: View {
         if suggestion.lastAmount != 0 { amount = abs(suggestion.lastAmount) }
         let last = suggestion.lastCategory
         category = last?.isIncome == false ? last : nil
+        if memo.isEmpty, let previous = PayeeMemory.lastTransaction(for: suggestion.name, in: modelContext) { memo = previous.memo }
     }
 
     private func save() {

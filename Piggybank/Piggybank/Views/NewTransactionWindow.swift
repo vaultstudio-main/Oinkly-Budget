@@ -64,6 +64,11 @@ struct NewTransactionWindow: View {
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
         }
+        // Typing a payee you've used before fills in the rest the way you left it, as long as nothing else is filled in yet.
+        .onChange(of: payee) { _, new in
+            guard !isInvestment, amount == nil, category == nil, let known = PayeeMemory.exactMatch(for: new, in: payees) else { return }
+            apply(known)
+        }
         .alert("Exceeds Credit Limit", isPresented: Binding(get: { limitMessage != nil }, set: { if !$0 { limitMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -173,6 +178,11 @@ struct NewTransactionWindow: View {
         // Only a category that fits the direction is filled in.
         let last = suggestion.lastCategory
         category = last?.isIncome == !isPayment ? last : nil
+        // The memo and payment method from the last time, unless already filled in or locked by the account.
+        if let previous = PayeeMemory.lastTransaction(for: suggestion.name, in: modelContext) {
+            if memo.isEmpty { memo = previous.memo }
+            if paymentChoice == nil, account?.lockedPaymentType == nil { paymentChoice = previous.paymentChoice }
+        }
     }
 
     private func save(keepOpen: Bool) {

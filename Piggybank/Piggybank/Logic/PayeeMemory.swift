@@ -22,6 +22,19 @@ enum PayeeMemory {
         return payees.first { normalized($0.name) == query }
     }
 
+    /// The newest ordinary transaction with this payee name, for filling in the memo and payment method the way you
+    /// used them last time.
+    @MainActor
+    static func lastTransaction(for name: String, in context: ModelContext) -> Transaction? {
+        let query = normalized(name)
+        guard !query.isEmpty else { return nil }
+        var descriptor = FetchDescriptor<Transaction>(
+            predicate: #Predicate<Transaction> { $0.payee.localizedStandardContains(query) },
+            sortBy: [SortDescriptor(\.date, order: .reverse), SortDescriptor(\.createdAt, order: .reverse)])
+        descriptor.fetchLimit = 40
+        return ((try? context.fetch(descriptor)) ?? []).first { $0.isLive && !$0.isTransfer && normalized($0.payee) == query }
+    }
+
     /// Creates or updates the memorized payee for a just-entered transaction.
     static func record(name: String, category: Category?, amount: Decimal, in context: ModelContext) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)

@@ -151,6 +151,7 @@ struct MissingReceiptsReport: View {
 // MARK: Duplicate payees
 
 struct DuplicatePayeesReport: View {
+    @Environment(\.openSettings) private var openSettings
     @Query(sort: \Payee.name) private var allPayees: [Payee]
 
     /// "Starbucks #1234", "STARBUCKS" and "Starbucks Coffee" all look alike once case, digits and punctuation are gone.
@@ -181,6 +182,11 @@ struct DuplicatePayeesReport: View {
                             Text("\(names.count) names for one payee").font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    Button("Clean Up Payees") {
+                        UserDefaults.standard.set("cleanup", forKey: MacSettingsView.tabKey)
+                        openSettings()
+                    }
+                    .controlSize(.small)
                 }
             }
         }

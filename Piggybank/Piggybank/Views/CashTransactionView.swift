@@ -122,6 +122,7 @@ struct CashTransactionView: View {
         }
         let last = suggestion.lastCategory
         category = last?.isIncome == !isPayment ? last : nil
+        if memo.isEmpty, let previous = PayeeMemory.lastTransaction(for: suggestion.name, in: modelContext) { memo = previous.memo }
     }
 
     private func save() {
