@@ -534,19 +534,29 @@ struct DataSettingsView: View {
 
 /// The Mac Settings window (OinklyBudget ▸ Settings…, ⌘,).
 struct MacSettingsView: View {
+    /// The tab to show; the Budgets page sets it before opening Settings.
+    static let tabKey = "settingsTab"
+    @AppStorage(MacSettingsView.tabKey) private var tab = "general"
+
     var body: some View {
-        TabView {
+        TabView(selection: $tab) {
             GeneralSettingsView()
+                .tag("general")
                 .tabItem { Label("General", systemImage: "gearshape") }
             RemindersSettingsView()
+                .tag("reminders")
                 .tabItem { Label("Reminders", systemImage: "bell") }
             AccountsSettingsView()
+                .tag("accounts")
                 .tabItem { Label("Accounts", systemImage: "building.columns") }
             CategoriesSettingsView()
+                .tag("categories")
                 .tabItem { Label("Categories", systemImage: "tag") }
             PaymentMethodsSettingsView()
+                .tag("payments")
                 .tabItem { Label("Payment Methods", systemImage: "creditcard") }
             DataSettingsView()
+                .tag("data")
                 .tabItem { Label("Data & Backup", systemImage: "externaldrive") }
         }
         .frame(width: 640, height: 560)

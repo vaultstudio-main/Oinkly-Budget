@@ -22,7 +22,7 @@ enum ReleaseNotes {
             ]),
             ("Accounts", [
                 "Checking, savings, cash, credit cards, loans, mortgages, investments and assets, all in one place.",
-                "New Cash Transaction records cash you spend or receive, and only affects Cash on Hand. ATM Withdrawal moves cash from a checking or savings account into Cash on Hand. Every withdrawal reads the same: payee ATM Withdrawal, category ATM, method Cash, memo Cash, no receipt, always reconciled.",
+                "The New Cash Transaction button on the Cash on Hand account records cash you spend or receive, and only affects Cash on Hand. ATM Withdrawal moves cash from a checking or savings account into Cash on Hand. Every withdrawal reads the same: payee ATM Withdrawal, category ATM, method Cash, memo Cash, no receipt, always reconciled.",
                 "Cash on Hand is built in and can't be deleted: an account for the money you carry, with no bank details, always cash, with receipts like checking.",
                 "Credit cards keep a card number, credit limit, APR, minimum payment and payment due date.",
                 "New Credit Card Charge adds debt to a card, and refuses a charge that would reach its credit limit.",

@@ -56,7 +56,7 @@ struct AtmWithdrawalView: View {
                 CurrencyField("Amount", value: $amount)
                 DatePicker("Date", selection: $date, displayedComponents: .date)
                 LabeledContent("Status") {
-                    Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                    Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(ReconcileState.reconciled.color)
                 }
             }
 

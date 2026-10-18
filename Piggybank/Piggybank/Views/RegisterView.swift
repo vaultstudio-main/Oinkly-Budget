@@ -101,7 +101,17 @@ private struct RegisterContent: View {
         return VStack(spacing: 12) {
             header
             AccountDetailsPanel(account: account, month: month) { isEditingDetails = true }
-            LinkedGoalStrip(account: account)
+            if account.isLoan || account.isCreditCard { LinkedGoalStrip(account: account) }
+            if account.isCashOnHand {
+                Button { openWindow(id: "cash-transaction") } label: {
+                    Label("New Cash Transaction", systemImage: "plus.circle.fill")
+                        .font(.title3.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .help("Record cash you spent or received")
+            }
             if account.supportsHoldings { HoldingsPanel(account: account) }
             Table(rows, selection: $selection) {
                 // Read-only here, so a stray click can't move a transaction to another day.
@@ -185,7 +195,7 @@ private struct RegisterContent: View {
             }
             .overlay {
                 if !hasAny {
-                    ContentUnavailableView("No Transactions", systemImage: "list.bullet.rectangle", description: Text(account.isCreditCard ? "Use File ▸ New Credit Card Charge to add a charge, or Pay a Bill to pay the card." : (account.isLoan ? "Use File ▸ Pay a Bill to make a payment." : (account.isCashOnHand ? "Use File ▸ New Cash Transaction to record cash, or ATM Withdrawal to put cash here." : "Use File ▸ New Transaction to add one."))))
+                    ContentUnavailableView("No Transactions", systemImage: "list.bullet.rectangle", description: Text(account.isCreditCard ? "Use File ▸ New Credit Card Charge to add a charge, or Pay a Bill to pay the card." : (account.isLoan ? "Use File ▸ Pay a Bill to make a payment." : (account.isCashOnHand ? "Use the New Cash Transaction button to record cash, or File ▸ ATM Withdrawal to put cash here." : "Use File ▸ New Transaction to add one."))))
                 } else if rows.isEmpty {
                     ContentUnavailableView("No Transactions in \(month.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
                 }
@@ -441,7 +451,7 @@ struct EditTransactionSheet: View {
                             Label(memo, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
                         LabeledContent("Status") {
-                            Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                            Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(ReconcileState.reconciled.color)
                         }
                     } else {
                         FormTextField("Memo", text: $memo)

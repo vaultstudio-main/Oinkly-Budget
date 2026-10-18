@@ -14,6 +14,8 @@ struct AccountEditView: View {
     @State private var institution: String
     @State private var accountNumber: String
     @State private var routingNumber: String
+    @State private var wireRouting: String
+    @State private var digitalRouting: String
     @State private var loanPurpose: String
     @State private var vin: String
     @State private var originalLoanAmount: Decimal
@@ -41,7 +43,9 @@ struct AccountEditView: View {
         _type = State(initialValue: account?.type ?? initialType)
         _institution = State(initialValue: account?.institution ?? "")
         _accountNumber = State(initialValue: account?.accountNumber ?? "")
-        _routingNumber = State(initialValue: account?.routingNumber ?? "")
+        _routingNumber = State(initialValue: account?.achRouting ?? "")
+        _wireRouting = State(initialValue: account?.wireRouting ?? "")
+        _digitalRouting = State(initialValue: account?.digitalRouting ?? "")
         _loanPurpose = State(initialValue: account?.loanPurpose ?? "")
         _vin = State(initialValue: account?.vin ?? "")
         _originalLoanAmount = State(initialValue: account?.originalLoanAmount ?? 0)
@@ -222,17 +226,10 @@ struct AccountEditView: View {
                         .onChange(of: type) { _, new in
                             accountNumber = Account.digits(accountNumber, limit: Account.numberLimit(for: new))
                         }
-                    if type.group != .loans && type.group != .creditCards {
-                        FormTextField("Routing number", text: $routingNumber, hint: "9 digits")
-                            .onChange(of: routingNumber) { _, new in
-                                let clean = Account.digits(new, limit: Account.routingNumberLength)
-                                if clean != new { routingNumber = clean }
-                            }
-                        if !routingNumber.isEmpty && routingNumber.count != Account.routingNumberLength {
-                            Text("A routing number has exactly 9 digits.")
-                                .font(.footnote)
-                                .foregroundStyle(.orange)
-                        }
+                    if type == .checking {
+                        routingField("Routing number (ACH)", $routingNumber)
+                        routingField("Wire transfer routing number", $wireRouting, letters: true)
+                        routingField("Digital routing number", $digitalRouting)
                     }
                 }
                 }
@@ -279,6 +276,21 @@ struct AccountEditView: View {
         }
     }
 
+    /// A routing number box that keeps to nine digits and says so when it is short.
+    @ViewBuilder
+    private func routingField(_ title: String, _ value: Binding<String>, letters: Bool = false) -> some View {
+        FormTextField(title, text: value, hint: letters ? "9 letters or digits, optional" : "9 digits, optional")
+            .onChange(of: value.wrappedValue) { _, new in
+                let clean = letters ? Account.routingCharacters(new) : Account.digits(new, limit: Account.routingNumberLength)
+                if clean != new { value.wrappedValue = clean }
+            }
+        if !value.wrappedValue.isEmpty && value.wrappedValue.count != Account.routingNumberLength {
+            Text(letters ? "This number has exactly 9 characters." : "A routing number has exactly 9 digits.")
+                .font(.footnote)
+                .foregroundStyle(.orange)
+        }
+    }
+
     private func save() {
         let target = account ?? Account(name: "", type: type)
         target.name = String(name.trimmingCharacters(in: .whitespaces).prefix(Account.maxNameLength))
@@ -286,7 +298,12 @@ struct AccountEditView: View {
         // Cash on hand has no bank details.
         target.institution = type == .cash ? "" : institution
         target.accountNumber = type == .cash ? "" : Account.digits(accountNumber, limit: Account.numberLimit(for: type))
-        target.routingNumber = type == .cash || type.group == .loans || type.group == .creditCards ? "" : Account.digits(routingNumber, limit: Account.routingNumberLength)
+        target.routingNumber = ""
+        if type == .checking {
+            target.achRouting = routingNumber
+            target.wireRouting = wireRouting
+            target.digitalRouting = digitalRouting
+        }
         target.vin = Account.typeHasVIN(type) ? Account.cleanVIN(vin) : ""
         target.photoData = (type.group == .loans || type.group == .assets) ? photoData : nil
         target.loanPurpose = type.group == .loans ? loanPurpose.trimmingCharacters(in: .whitespaces) : ""

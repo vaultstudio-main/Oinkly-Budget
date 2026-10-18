@@ -190,6 +190,9 @@ final class Account {
     var isDefault: Bool = false
     var institution: String = ""
     var accountNumber: String = ""
+    /// Checking accounts only. Holds up to three 9-character numbers (the wire number may contain letters, the others are digits) joined by "|": the routing (ACH) number, the wire
+    /// transfer number and the digital (online bank) number. Read and write them with `achRouting`, `wireRouting` and
+    /// `digitalRouting`. Packed into the one field so no database change is needed; 1.2 can split them into fields.
     var routingNumber: String = ""
     /// For loan accounts: what the loan is for, such as "2021 Honda Civic" or "123 Main St".
     var loanPurpose: String = ""
@@ -242,6 +245,32 @@ final class Account {
     /// Keeps names short enough for the sidebar and menu.
     static let maxNameLength = 30
     static let routingNumberLength = 9
+
+    /// Letters and digits only (some wire numbers contain letters), cut to nine characters.
+    static func routingCharacters(_ text: String) -> String {
+        String(text.filter { $0.isASCII && ($0.isLetter || $0.isNumber) }.prefix(routingNumberLength))
+    }
+
+    /// Only checking accounts have routing numbers.
+    var hasRoutingNumbers: Bool { type == .checking }
+
+    private func routingPart(_ index: Int) -> String {
+        let parts = routingNumber.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        return index < parts.count ? parts[index] : ""
+    }
+
+    private func setRoutingPart(_ index: Int, _ value: String) {
+        var parts = routingNumber.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
+        while parts.count < 3 { parts.append("") }
+        // Only the wire transfer number (the second) can contain letters.
+        parts[index] = index == 1 ? Account.routingCharacters(value) : Account.digits(value, limit: Account.routingNumberLength)
+        while parts.last == "" { parts.removeLast() }
+        routingNumber = parts.joined(separator: "|")
+    }
+
+    var achRouting: String { get { routingPart(0) } set { setRoutingPart(0, newValue) } }
+    var wireRouting: String { get { routingPart(1) } set { setRoutingPart(1, newValue) } }
+    var digitalRouting: String { get { routingPart(2) } set { setRoutingPart(2, newValue) } }
     /// Card numbers run 15 digits (Amex) to 16 (most cards), and up to 19 on some.
     static let maxCardNumberLength = 19
 

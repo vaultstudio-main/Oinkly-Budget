@@ -44,7 +44,7 @@ struct AccountDetailsPanel: View {
         return HStack(spacing: 4) {
             Text("\(count) transaction\(count == 1 ? "" : "s")")
             Text("·").foregroundStyle(.secondary)
-            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : (total < 0 ? Theme.red : Theme.green))
+            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : ReconcileState.unreconciled.color)
         }
     }
 
@@ -62,7 +62,61 @@ struct AccountDetailsPanel: View {
         return HStack(spacing: 4) {
             Text("\(count) transaction\(count == 1 ? "" : "s")")
             Text("·").foregroundStyle(.secondary)
-            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : .orange)
+            Text(total, format: .appCurrency).foregroundStyle(count == 0 ? Color.secondary : ReconcileState.pending.color)
+        }
+    }
+
+    @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
+
+    /// The open goal that follows this account, if any.
+    private var followingGoal: Goal? {
+        allGoals.live.first { $0.followedAccount?.persistentModelID == account.persistentModelID }
+    }
+
+    private func goalSummary(_ goal: Goal) -> some View {
+        let progress = goal.progress()
+        return VStack(alignment: .leading, spacing: 3) {
+            Text(goal.name).lineLimit(1)
+            ProgressView(value: progress.fraction)
+                .tint(progress.isAchieved ? Theme.green : Color(hex: goal.colorHex))
+                .frame(width: 110)
+            Text("\(goal.saved.formatted(.appCurrency)) of \(goal.targetAmount.formatted(.appCurrency))")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+        }
+    }
+
+    /// How a savings goal on this account is doing against its date: the date itself, how far ahead or behind, and what
+    /// it takes each month to finish on time.
+    private func goalPace(_ goal: Goal) -> some View {
+        let progress = goal.progress()
+        let needed = progress.neededPerMonth
+        let pace = progress.monthlyPace ?? 0
+        let shortfall = needed.map { max($0 - max(pace, 0), 0) }
+        return VStack(alignment: .leading, spacing: 10) {
+            if let date = goal.targetDate {
+                item("Target Date") { Text(date, format: .dateTime.month(.abbreviated).day().year()) }
+                item("Status") {
+                    switch progress.status {
+                    case .achieved: Label("Reached", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
+                    case .onTrack: Label("On track", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
+                    case .behind: Label("Behind", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    case .pastDue: Label("Past the date", systemImage: "exclamationmark.octagon.fill").foregroundStyle(Theme.red)
+                    case .noDate: EmptyView()
+                    }
+                }
+            }
+            if let needed {
+                item("Needed Per Month") { Text(needed, format: .appCurrency) }
+            }
+            item("Your Pace") { Text("\(max(pace, 0).formatted(.appCurrency))/mo") }
+            if let shortfall, shortfall > 0 {
+                item("To Catch Up") { Text("+\(shortfall.formatted(.appCurrency))/mo").foregroundStyle(.orange) }
+            }
+            if let projected = progress.projectedDate {
+                item("Estimated Finish") { Text(projected, format: .dateTime.month(.abbreviated).year()) }
+            }
         }
     }
 
@@ -240,7 +294,14 @@ struct AccountDetailsPanel: View {
                         if account.isCreditCard {
                             item("Credit Limit") { amount(account.creditLimit, set: account.creditLimit > 0) }
                         } else if !account.isCashOnHand {
-                            item("Opening Balance") { Text(account.openingBalance, format: .appCurrency) }
+                            item("Opening Balance") {
+                                Text(account.openingBalance, format: .appCurrency)
+                                if let goal = followingGoal {
+                                    Text("Goal target \(goal.targetAmount.formatted(.appCurrency))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                     GridRow {
@@ -250,8 +311,8 @@ struct AccountDetailsPanel: View {
                         }
                         if account.isCreditCard {
                             item("Interest Rate (APR)") { interest }
-                        } else if !account.isCashOnHand {
-                            item("Routing Number") { text(account.routingNumber) }
+                        } else if account.hasRoutingNumbers {
+                            item("Routing Number") { text(account.achRouting) }
                         }
                         item("Transactions (\(monthLabel))") { Text(monthTransactions.count, format: .number) }
                         item("In / Out (\(monthLabel))") { inOut }
@@ -280,6 +341,15 @@ struct AccountDetailsPanel: View {
                         }
                         item("Unreconciled") { unreconciled }
                         item("Pending") { pendingSummary }
+                        if !account.isCreditCard, let goal = followingGoal {
+                            item("Goal") { goalSummary(goal) }
+                        }
+                    }
+                    if account.hasRoutingNumbers, !account.wireRouting.isEmpty || !account.digitalRouting.isEmpty {
+                        GridRow {
+                            if !account.wireRouting.isEmpty { item("Wire Routing Number") { text(account.wireRouting) } }
+                            if !account.digitalRouting.isEmpty { item("Digital Routing Number") { text(account.digitalRouting) } }
+                        }
                     }
                     if !account.notes.isEmpty {
                         GridRow {
@@ -287,6 +357,9 @@ struct AccountDetailsPanel: View {
                                 .gridCellColumns(4)
                         }
                     }
+                }
+                if let goal = followingGoal, !account.isCreditCard, goal.targetDate != nil {
+                    goalPace(goal)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 10) {

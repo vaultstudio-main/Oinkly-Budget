@@ -95,7 +95,6 @@ enum TestData {
         let savings = account("Rainy Day Savings", .savings, 7_800)
         savings.institution = "Harbor Credit Union"
         savings.accountNumber = "004821907412"
-        savings.routingNumber = "021000021"
 
         let card = account("Sapphire Card", .creditCard, -1_150)
         card.institution = "Northgate Bank"

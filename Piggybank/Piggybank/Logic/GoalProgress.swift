@@ -94,7 +94,11 @@ extension Goal {
 
     func progress(now: Date = .now, calendar: Calendar = .current) -> GoalProgress {
         var pace: Decimal?
-        if !isArchived && !isLinked {
+        if let account = followedAccount {
+            // A linked goal's pace is how far the account's balance has moved in the last three months.
+            let since = calendar.date(byAdding: .month, value: -3, to: now) ?? now
+            pace = (account.balance - account.balance(asOf: since)) / 3
+        } else if !isArchived {
             let since = calendar.date(byAdding: .month, value: -3, to: now) ?? now
             let recent = contributions.live.filter { $0.date >= since && $0.date <= now }.reduce(Decimal(0)) { $0 + $1.amount }
             pace = recent / 3

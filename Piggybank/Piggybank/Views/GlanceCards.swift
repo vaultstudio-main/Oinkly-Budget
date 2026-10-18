@@ -229,7 +229,8 @@ struct GoalsProgressCard: View {
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
 
     private var goals: [Goal] {
-        let open = allGoals.live.filter { !$0.isArchived }
+        // A debt goal that follows a loan or card is already shown with the loans, so it is left out here.
+        let open = allGoals.live.filter { !$0.isArchived && !($0.isPayoff && $0.isLinked) }
         let dated = open.filter { $0.targetDate != nil }.sorted { $0.targetDate! < $1.targetDate! }
         return dated + open.filter { $0.targetDate == nil }.sorted { $0.name < $1.name }
     }

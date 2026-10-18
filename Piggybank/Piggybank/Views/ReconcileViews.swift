@@ -4,9 +4,9 @@ import SwiftData
 extension ReconcileState {
     var color: Color {
         switch self {
-        case .pending: .orange
-        case .unreconciled: .secondary
-        case .reconciled: .green
+        case .pending: .yellow
+        case .unreconciled: .red
+        case .reconciled: Theme.green
         }
     }
 }
@@ -58,7 +58,9 @@ struct ReconcileMenu: View {
         } label: {
             ReconcileBadge(state: transaction.state)
         }
-        .menuStyle(.borderlessButton)
+        // A plain button style keeps the label's own colour. The borderless menu style paints it grey.
+        .menuStyle(.button)
+        .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
         .help("Pending: not final at the bank yet. Unreconciled: not matched to a statement. Reconciled: matched to a statement.")

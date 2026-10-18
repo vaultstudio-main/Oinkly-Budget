@@ -81,7 +81,7 @@ enum HelpContent {
                 "• Every withdrawal reads the same: payee ATM Withdrawal, category ATM, method Cash, memo Cash, no receipt, always reconciled.",
                 "• Those fields are locked on purpose, because that's what cash from an ATM always is.",
                 "## Spending and receiving cash",
-                "Choose File ▸ New Cash Transaction… (⇧⌘N). It only ever affects Cash on Hand, and the method is always Cash. Pick Spent or Received, then the amount, date, payee, category and memo, and attach a receipt if you have one.",
+                "Open the Cash on Hand account and click the blue New Cash Transaction button. It only ever affects Cash on Hand, and the method is always Cash. Pick Spent or Received, then the amount, date, payee, category and memo, and attach a receipt if you have one.",
                 "• Cash on Hand isn't offered in New Transaction. Use New Cash Transaction for cash you spend or receive, and ATM Withdrawal for cash you take out of a bank account.",
             ], shots: [Shot(asset: "Help-atm-withdrawal", caption: "The ATM Withdrawal window.")]),
 
@@ -263,7 +263,6 @@ enum HelpContent {
         Group(title: "Reference", topics: [
             Topic(title: "Keyboard Shortcuts", symbol: "keyboard", lines: [
                 "• ⌘N  New Transaction",
-                "• ⇧⌘N  New Cash Transaction",
                 "• ⌥⌘N  New Credit Card Charge",
                 "• ⇧⌘A  ATM Withdrawal",
                 "• ⇧⌘T  Transfer",

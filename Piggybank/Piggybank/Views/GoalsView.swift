@@ -20,6 +20,14 @@ struct GoalsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
     private var goals: [Goal] { allGoals.live }
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+
+    /// Loans with a maturity date that no goal already follows. They sit with the goals so you can see whether the
+    /// loan will be paid off before it matures.
+    private var datedLoans: [Account] {
+        let followed = Set(goals.filter { !$0.isArchived }.compactMap { $0.followedAccount?.persistentModelID })
+        return allAccounts.live.filter { $0.isLoan && !$0.isClosed && $0.payoffDate != nil && !followed.contains($0.persistentModelID) && !$0.loanProgress.isPaidOff }
+    }
 
     /// Set by the Planning header's New Goal button. Reset as soon as the sheet opens.
     @Binding var isAdding: Bool
@@ -54,7 +62,7 @@ struct GoalsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                if goals.isEmpty {
+                if goals.isEmpty && datedLoans.isEmpty {
                     empty
                 } else {
                     StatGrid {
@@ -82,6 +90,15 @@ struct GoalsView: View {
 
                     ForEach(open) { goal in
                         if goal.isLive { card(goal) }
+                    }
+
+                    if !datedLoans.isEmpty {
+                        HStack {
+                            Text("LOANS WITH A MATURITY DATE").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        .padding(.top, 6)
+                        ForEach(datedLoans) { LoanPlanCard(account: $0) }
                     }
 
                     if !archived.isEmpty {
@@ -161,7 +178,7 @@ private struct GoalCardBackground<Content: View>: View {
 
     var body: some View {
         content
-            .padding(16)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
     }
@@ -176,11 +193,17 @@ private struct GoalCard: View {
         let progress = goal.progress()
         let color = Color(hex: goal.colorHex)
         GoalCardBackground {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 Button(action: onOpen) {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 12) {
-                            CategoryBadge(symbol: goal.symbol, color: color, size: 44)
+                            if let account = goal.followedAccount {
+                                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                                    .frame(width: 64, height: 44)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            } else {
+                                CategoryBadge(symbol: goal.symbol, color: color, size: 44)
+                            }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(goal.name).font(.headline)
                                 Text(subtitle(progress)).font(.caption).foregroundStyle(.secondary)
@@ -191,13 +214,23 @@ private struct GoalCard: View {
 
                         ProgressView(value: progress.fraction).tint(progress.isAchieved ? Theme.green : color)
 
-                        HStack {
+                        HStack(alignment: .firstTextBaseline) {
                             Text(goal.saved, format: .appCurrency).font(.title3.bold())
-                            Text("\(goal.isPayoff ? "paid of" : "of") \(goal.targetAmount.formatted(.appCurrency))").foregroundStyle(.secondary)
-                            Spacer()
+                            Text(goal.isPayoff ? "paid" : "saved").foregroundStyle(.secondary)
                             Text(progress.fraction, format: .percent.precision(.fractionLength(0))).foregroundStyle(.secondary)
+                            Spacer()
+                            if !progress.isAchieved {
+                                Text("\(progress.remaining.formatted(.appCurrency)) / \(goal.targetAmount.formatted(.appCurrency)) \(goal.isPayoff ? "left" : "to go")")
+                                    .font(.callout.weight(.medium))
+                            }
                         }
                         .font(.subheadline)
+
+                        if !progress.isAchieved, let projected = progress.projectedDate {
+                            Text("\(goal.isPayoff ? "Estimated payoff" : "Estimated finish") \(projected.formatted(.dateTime.month(.abbreviated).year()))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .contentShape(Rectangle())
                 }
@@ -369,6 +402,9 @@ struct GoalDetailView: View {
                     LabeledContent("Target", value: goal.targetAmount.formatted(.appCurrency))
                     LabeledContent("Still to go", value: progress.remaining.formatted(.appCurrency))
                 }
+                if let account = goal.followedAccount {
+                    LabeledContent("\(account.name) balance", value: account.balance.formatted(.appCurrency))
+                }
                 if let needed = progress.neededPerMonth {
                     LabeledContent("Needed per month", value: needed.formatted(.appCurrency))
                 }
@@ -429,14 +465,14 @@ struct GoalDetailView: View {
                 }
             }
 
-            Section {
-                Button("Edit Goal", systemImage: "pencil", action: onEdit)
-                Button("Delete Goal", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-            }
         }
         .formStyle(.grouped)
         .navigationTitle("Goal")
         .toolbar {
+            ToolbarItemGroup(placement: .destructiveAction) {
+                Button("Delete Goal", role: .destructive) { confirmingDelete = true }
+                Button("Edit Goal", action: onEdit)
+            }
             ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
         }
         .sheet(isPresented: $addingProgress) { GoalProgressSheet(goal: goal) }
@@ -482,6 +518,9 @@ struct GoalEditView: View {
     @State private var confirmingDelete = false
     @State private var accountID: PersistentIdentifier?
     @State private var fromNow: Bool
+    @State private var makeAccount = false
+    @State private var newInstitution = ""
+    @State private var newAccountNumber = ""
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
     init(goal: Goal?) {
@@ -555,14 +594,35 @@ struct GoalEditView: View {
                     if let linked, kind == .save {
                         Toggle("Count only what's added from now on", isOn: $fromNow)
                     }
+                    if kind == .save && accountID == nil && goal?.followedAccount == nil {
+                        Toggle("Create a savings account for this goal", isOn: $makeAccount)
+                    }
                 } footer: {
                     if let linked {
                         Text(kind == .save
                              ? (fromNow ? "Progress is the money added to \(linked.name) after today, starting from \(max(linked.balance, 0).formatted(.appCurrency))."
                                         : "Progress is the whole balance of \(linked.name).")
                              : "Progress is how far the balance of \(linked.name) comes down from \(Goal.owed(on: linked).formatted(.appCurrency)) owed today. Payments count on their own.")
+                    } else if makeAccount {
+                        Text("A new savings account named after the goal is made when you save, so this money has its own place. Fill in its details below.")
                     } else {
                         Text("Link a goal to an account and it keeps up by itself. An account can have one goal at a time.")
+                    }
+                }
+
+                if makeAccount && kind == .save && accountID == nil {
+                    Section {
+                        FormTextField("Institution", text: $newInstitution, hint: "Optional")
+                        FormTextField("Account number", text: $newAccountNumber, hint: "Optional, up to 17 digits")
+                            .onChange(of: newAccountNumber) { _, new in
+                                let clean = Account.digits(new, limit: Account.maxAccountNumberLength)
+                                if clean != new { newAccountNumber = clean }
+                            }
+                        LabeledContent("Starting balance", value: max(starting ?? 0, 0).formatted(.appCurrency))
+                    } header: {
+                        Text("New Savings Account")
+                    } footer: {
+                        Text("The starting balance is what you entered as already saved below.")
                     }
                 }
 
@@ -608,11 +668,6 @@ struct GoalEditView: View {
                     FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false).lineLimit(1...4)
                 }
 
-                if goal != nil {
-                    Section {
-                        Button("Delete Goal", systemImage: "trash", role: .destructive) { confirmingDelete = true }
-                    }
-                }
             }
             .formStyle(.grouped)
             .navigationTitle(goal == nil ? "New Goal" : "Edit Goal")
@@ -620,7 +675,7 @@ struct GoalEditView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 if goal != nil {
                     ToolbarItem(placement: .destructiveAction) {
-                        Button("Delete", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+                        Button("Delete Goal", role: .destructive) { confirmingDelete = true }
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).disabled(!canSave) }
@@ -644,7 +699,14 @@ struct GoalEditView: View {
         let symbol = category?.symbol ?? goal?.symbol ?? (kind == .save ? "target" : "arrow.down.circle")
         let color = category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
         let floor = max(payoffTo ?? 0, 0)
-        let account = linked
+        var account = linked
+        if account == nil, makeAccount, kind == .save {
+            let made = Account(name: String(clean.prefix(Account.maxNameLength)), type: .savings, openingBalance: max(starting ?? 0, 0))
+            made.institution = newInstitution.trimmingCharacters(in: .whitespaces)
+            made.accountNumber = Account.digits(newAccountNumber, limit: Account.maxAccountNumberLength)
+            modelContext.insert(made)
+            account = made
+        }
         // A goal counts from the account's balance when it is linked, or when the link or the "from now on" choice
         // changes. Otherwise its starting point stays where it was.
         let keepsLink = account != nil && goal?.followedAccount?.persistentModelID == account?.persistentModelID
@@ -720,5 +782,80 @@ struct LinkedGoalStrip: View {
             .padding(.vertical, 8)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
         }
+    }
+}
+
+// MARK: Loans on the Planning page
+
+/// A loan with a maturity date, shown beside the goals: how far along it is and whether it will be paid off before it matures.
+private struct LoanPlanCard: View {
+    let account: Account
+
+    var body: some View {
+        let loan = account.loanProgress
+        let estimate = loan.payoffDate()
+        GoalCardBackground {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                        .frame(width: 64, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(account.name).font(.headline)
+                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    badge(estimate)
+                }
+                if loan.hasOriginal {
+                    ProgressView(value: loan.fraction).tint(Theme.green)
+                }
+                HStack(alignment: .firstTextBaseline) {
+                    if loan.hasOriginal {
+                        Text(loan.paidOff, format: .appCurrency).font(.title3.bold())
+                        Text("paid").foregroundStyle(.secondary)
+                        Text(loan.fraction, format: .percent.precision(.fractionLength(0))).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text("\(loan.owed.formatted(.appCurrency)) owed").font(.callout.weight(.medium))
+                }
+                .font(.subheadline)
+                if let estimate {
+                    Text("Estimated payoff \(estimate.formatted(.dateTime.month(.abbreviated).year())) at \(loan.monthlyPayment.formatted(.appCurrency))/mo")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var subtitle: String {
+        var parts = [account.typeTitle]
+        if let date = account.payoffDate { parts.append("matures \(date.formatted(.dateTime.month(.abbreviated).year()))") }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Ahead of or behind the maturity date, by comparing the estimated payoff with it.
+    @ViewBuilder
+    private func badge(_ estimate: Date?) -> some View {
+        if let maturity = account.payoffDate, let estimate {
+            let months = Calendar.current.dateComponents([.month], from: estimate, to: maturity).month ?? 0
+            if months > 0 {
+                label("\(months) mo ahead", "checkmark.circle.fill", Theme.green)
+            } else if months < 0 {
+                label("\(-months) mo behind", "exclamationmark.triangle.fill", .orange)
+            } else {
+                label("On schedule", "checkmark.circle", Theme.green)
+            }
+        } else if account.payoffDate != nil, account.loanProgress.monthlyPayment <= 0 {
+            label("No payment set", "questionmark.circle", .secondary)
+        }
+    }
+
+    private func label(_ text: String, _ symbol: String, _ color: Color) -> some View {
+        HStack(spacing: 4) { Image(systemName: symbol); Text(text) }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .fixedSize()
     }
 }
