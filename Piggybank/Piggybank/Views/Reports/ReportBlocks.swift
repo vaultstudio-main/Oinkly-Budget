@@ -38,8 +38,13 @@ struct ReportPanel<Content: View>: View {
                     }
                 }
             }
+            // Title, what it shows and the headline figure read as one sentence.
+            .accessibilityElement(children: .combine)
             content
         }
+        // Each card is a group VoiceOver can move between, with its chart or figures inside.
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

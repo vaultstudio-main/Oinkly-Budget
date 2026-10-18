@@ -29,9 +29,9 @@ Before this step the whole app had four accessibility labels. Added labels to th
 | Item | Notes |
 |---|---|
 | **Edit menu is removed** | The menu trimmer hides Edit, View and Window to keep the menu bar short, and handles copy, paste and undo with a key monitor. That works for typing but gives VoiceOver and menu-only users no Edit menu, no Find and no Undo item. Recommend bringing back a small Edit menu (Undo, Redo, Cut, Copy, Paste, Select All). This was a deliberate earlier choice, so it needs the owner's decision. |
-| Chart descriptions | Swift Charts supplies automatic audio graphs, but most chart cards have no spoken summary. Add a one-line label to each report card from its headline. |
-| Table rows | Register rows read their cells in order. Check with VoiceOver that amount, status and category are announced clearly, and add row labels if not. |
-| Fixed-size text | 21 places use fixed font sizes and about 99 use fixed widths. Test with the system's larger text sizes and fix anything that is cut off. |
+| Chart descriptions | **Done at card level.** Every report and trend card now reads its title, what it shows and its headline figure as one item, and VoiceOver can move card by card. The charts inside keep Swift Charts' automatic audio graphs. A hand-written description for each chart could still improve it, if VoiceOver testing shows the need. |
+| Table rows | Not checked: needs a person with VoiceOver on. Register rows read their cells in order. |
+| Larger text | **Correction:** macOS has no system-wide text size setting that scales a Mac app's fonts, so the 21 fixed font sizes and about 99 fixed widths are not a problem in the way they would be on iPhone. What matters on the Mac is a readable minimum size (the smallest text, `caption2`, is used in 60 places at the system's smallest standard size), contrast, and windows that resize without cutting things off (the main window has a 1000 by 600 minimum). |
 | Colour-only meaning | Statuses have words and icons, amounts have signs, and tags have names. Budget bars show a percentage in text. Re-check the Goal section and chart legends. |
 | Focus order and focus ring | Tab through every sheet (New, Edit, Split, Recurring, Import, Export, Encryption). |
 | Reduce motion, increase contrast, dark mode | Check the transitions and the dim grey text on dark backgrounds. |

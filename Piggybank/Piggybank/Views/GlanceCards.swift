@@ -54,6 +54,7 @@ private struct GlanceRow: View {
             Text(amount, format: .appCurrency).foregroundStyle(color ?? .primary)
         }
         .font(.callout)
+        .accessibilityElement(children: .combine)
     }
 }
 
