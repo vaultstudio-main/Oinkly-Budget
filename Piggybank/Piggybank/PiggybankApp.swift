@@ -13,10 +13,14 @@ struct PiggybankApp: App {
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // With encryption on, the app runs on a working copy opened from the encrypted vault instead of this Mac's
         // own data file. See VaultSession.
+        // The first time this version opens the data file, keep a copy of it as it was.
+        StoreSafetyCopy.makeIfNeeded(localStore: VaultSession.localStoreURL(for: schema))
         let configuration: ModelConfiguration
         switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
         case .local:
-            configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+            // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
+            // that the widgets need would move the default data file to the group folder, and an update would open empty.
+            configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
         case .open(let workingStore):
             configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
         case .quit:

@@ -55,7 +55,7 @@ final class VaultSession {
 
     /// This Mac's own, unencrypted data file, as the app opened it before encryption was turned on.
     static func localStoreURL(for schema: Schema) -> URL {
-        ModelConfiguration(schema: schema, cloudKitDatabase: .none).url
+        ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none).url
     }
 
     // MARK: Launch
