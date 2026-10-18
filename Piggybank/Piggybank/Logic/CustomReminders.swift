@@ -79,7 +79,7 @@ struct CustomReminder: Codable, Identifiable, Equatable {
             ("Check my bills", make("Check my bills", "See what's due this week.", .weekly, weekday: 2, page: .bills)),
             ("Enter receipts", make("Enter receipts", "Add this week's receipts and transactions so nothing piles up.", .weekly, weekday: 1, page: .transactions)),
             ("Check my goals", make("Check my goals", "See how your goals are coming along.", .monthly, day: 15, page: .planning)),
-            ("Back up my data", make("Back up my data", "Make a backup in Settings ▸ Data or Import & Export.", .monthly, day: 1, page: .none)),
+            ("Back up my data", make("Back up my data", "Make a backup in Settings ▸ Data & Backup.", .monthly, day: 1, page: .none)),
         ]
     }()
 }

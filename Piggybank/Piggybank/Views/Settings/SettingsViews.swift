@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 import SwiftData
 
 // MARK: General
@@ -390,6 +392,13 @@ struct DataSettingsView: View {
 
     @State private var confirmingErase = false
 
+    @State private var message: String?
+    @State private var messageIsError = false
+
+    // Restoring a backup replaces everything, so it waits for a yes.
+    @State private var pendingBackup: BackupFile?
+    @State private var pendingBackupName = ""
+
     private var version: String {
         let info = Bundle.main.infoDictionary
         let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -420,6 +429,17 @@ struct DataSettingsView: View {
             }
 
             Section {
+                backupRow("Export Backup…", detail: "Everything in OinklyBudget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save…") { exportBackup() }
+                backupRow("Restore from Backup…", detail: "Restore from a .pig backup file. This replaces everything currently in OinklyBudget, including custom categories, payment methods and preferences.", button: "Choose…") { chooseBackup() }
+                if let message {
+                    Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .foregroundStyle(messageIsError ? Color.orange : Theme.green)
+                }
+            } header: {
+                Text("Backup")
+            }
+
+            Section {
                 Button("Erase All Data…", role: .destructive) { confirmingErase = true }
                 Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
@@ -431,11 +451,77 @@ struct DataSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .confirmationDialog(
+            "Replace everything with this backup?",
+            isPresented: Binding(get: { pendingBackup != nil }, set: { if !$0 { pendingBackup = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Replace Everything", role: .destructive, action: restoreBackup)
+            Button("Cancel", role: .cancel) { pendingBackup = nil }
+        } message: {
+            Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in OinklyBudget is erased first, and this can't be undone.")
+        }
         .confirmationDialog("Erase everything and quit?", isPresented: $confirmingErase, titleVisibility: .visible) {
             Button("Erase Everything and Quit", role: .destructive, action: erase)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone.")
+        }
+    }
+
+    private func backupRow(_ title: String, detail: String, button: String, action: @escaping () -> Void) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body.weight(.medium))
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(button, action: action)
+        }
+    }
+
+    private func report(_ text: String, error: Bool = false) {
+        message = text
+        messageIsError = error
+    }
+
+    private func exportBackup() {
+        switch BackupExporter.exportWithPanel(from: modelContext) {
+        case .saved(let summary, let name): report("Saved a backup with \(summary) to \(name).")
+        case .failed(let reason): report("Couldn't save the backup: \(reason)", error: true)
+        case nil: break
+        }
+    }
+
+    private func chooseBackup() {
+        let panel = NSOpenPanel()
+        // .pig is the backup format. Older backups saved as plain .json still open.
+        panel.allowedContentTypes = [DataBackup.fileType, .json]
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a OinklyBudget backup file (.pig)."
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            pendingBackup = try DataBackup.decode(data)
+            pendingBackupName = url.lastPathComponent
+            message = nil
+        } catch {
+            report(error.localizedDescription, error: true)
+        }
+    }
+
+    private func restoreBackup() {
+        guard let file = pendingBackup else { return }
+        pendingBackup = nil
+        // Account pages that are open step away first, so nothing is showing data as it is erased.
+        DataDeletion.afterLeavingAccountPages {
+            do {
+                try DataBackup.restore(file, into: modelContext)
+                report("Restored \(file.summary).")
+            } catch {
+                modelContext.rollback()
+                report("Couldn't restore the backup: \(error.localizedDescription)", error: true)
+            }
         }
     }
 
@@ -463,9 +549,7 @@ struct MacSettingsView: View {
             PaymentMethodsSettingsView()
                 .tabItem { Label("Payment Methods", systemImage: "creditcard") }
             DataSettingsView()
-                .tabItem { Label("Data", systemImage: "externaldrive") }
-            ImportExportSettingsView()
-                .tabItem { Label("Import & Export", systemImage: "square.and.arrow.up.on.square") }
+                .tabItem { Label("Data & Backup", systemImage: "externaldrive") }
         }
         .frame(width: 640, height: 560)
     }

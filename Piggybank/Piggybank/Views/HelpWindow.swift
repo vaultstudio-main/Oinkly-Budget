@@ -223,18 +223,18 @@ enum HelpContent {
 
         Group(title: "Data & Settings", topics: [
             Topic(title: "Backup & Restore", symbol: "externaldrive", lines: [
-                "Settings ▸ Import & Export saves everything to one .pig file and restores it.",
+                "Settings ▸ Data & Backup saves everything to one .pig file and restores it.",
                 "## What's in a backup",
                 "Accounts, transactions, receipts and photos, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.",
                 "## Restoring",
-                "• Choose Import Backup…, or double-click a .pig file, or use Restore from a Backup on the setup screen.",
+                "• Choose Restore from Backup…, or double-click a .pig file, or use Restore from a Backup on the setup screen.",
                 "• Restoring replaces everything currently in the app.",
                 "## CSV",
-                "Export Transactions saves a spreadsheet. Import Transactions adds rows from a CSV, skipping ones already there if you want.",
+                "Open an account and choose Export… to save its transactions as a PDF statement or a CSV spreadsheet, or Import… to add a bank's CSV with a preview first. The Transactions page has Export… too.",
                 "## Erase All Data",
-                "Settings ▸ Data ▸ Erase All Data deletes your accounts, transactions, bills, goals, custom categories and payment methods, then quits. Open the app again to start fresh. Built-in categories and their budgets stay.",
+                "Settings ▸ Data & Backup ▸ Erase All Data deletes your accounts, transactions, bills, goals, custom categories and payment methods, then quits. Open the app again to start fresh. Built-in categories and their budgets stay.",
                 "Take a backup before anything you can't undo.",
-            ], shots: [Shot(asset: "Help-backup", caption: "Settings ▸ Import & Export.")]),
+            ], shots: [Shot(asset: "Help-backup", caption: "Settings ▸ Data & Backup.")]),
 
             Topic(title: "Menu Bar & Reminders", symbol: "menubar.rectangle", lines: [
                 "The pig in the menu bar shows your next bills at a glance, with a number when something is due within three days.",
@@ -256,8 +256,7 @@ enum HelpContent {
                 "• Accounts: add, edit and delete accounts.",
                 "• Categories: budgets and custom categories.",
                 "• Payment Methods: your own methods.",
-                "• Data: your counts, Erase All Data, and the version.",
-                "• Import & Export: backups and CSV.",
+                "• Data & Backup: your counts, backups and restore, Erase All Data, and the version.",
             ]),
         ]),
 

@@ -8,14 +8,6 @@ enum TransactionCSV {
 
     // MARK: Export
 
-    @MainActor
-    static func export(from context: ModelContext) throws -> String {
-        let transactions = try context.fetch(FetchDescriptor<Transaction>()).live
-            .filter { $0.account?.isLive == true }
-            .sorted { ($0.date, $0.createdAt) < ($1.date, $1.createdAt) }
-        return text(for: transactions)
-    }
-
     /// The given transactions as CSV, in the same layout the importer reads, so an export can be brought back in.
     @MainActor
     static func text(for transactions: [Transaction]) -> String {
