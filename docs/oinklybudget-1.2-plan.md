@@ -1,5 +1,7 @@
 # OinklyBudget 1.2: plan
 
+> **Merged into 1.1 on 2026-10-18.** Everything below now ships in 1.1. See `oinklybudget-1.1-merged-plan.md` for the order of work. This file stays for the details.
+
 Drafted 2026-10-18. Nothing here is started. Work on 1.2 begins right after 1.1 ships, and the shared data file is where it starts.
 
 ## Goal
