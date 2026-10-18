@@ -56,7 +56,7 @@ enum PaymentType: String, Codable, CaseIterable, Identifiable {
     // Cards
     case debitCard, creditCard, prepaidCard, giftCard, storeCard
     // Bank
-    case bankTransfer, wire, directDeposit, directDebit, billPay, autoPay, payrollDeduction
+    case bankTransfer, wire, directDeposit, bankDeposit, directDebit, billPay, autoPay, payrollDeduction
     // Digital & mobile
     case onlinePayment, mobilePay, applePay, googlePay, samsungPay, paypal, venmo, cashApp, zelle, appleCash, alipay, wechatPay, crypto
     // Credit & rewards
@@ -70,7 +70,7 @@ enum PaymentType: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .cash, .atm, .atmDeposit, .check, .cashiersCheck, .moneyOrder, .travelersCheck, .mobileCheckDeposit: .cash
         case .debitCard, .creditCard, .prepaidCard, .giftCard, .storeCard: .cards
-        case .bankTransfer, .wire, .directDeposit, .directDebit, .billPay, .autoPay, .payrollDeduction: .bank
+        case .bankTransfer, .wire, .directDeposit, .bankDeposit, .directDebit, .billPay, .autoPay, .payrollDeduction: .bank
         case .onlinePayment, .mobilePay, .applePay, .googlePay, .samsungPay, .paypal, .venmo, .cashApp, .zelle, .appleCash, .alipay, .wechatPay, .crypto: .digital
         case .buyNowPayLater, .installmentPlan, .storeCredit, .rewardsPoints: .credit
         case .barter, .other: .other
@@ -95,6 +95,7 @@ enum PaymentType: String, Codable, CaseIterable, Identifiable {
         case .bankTransfer: "Bank Transfer (ACH)"
         case .wire: "Wire Transfer"
         case .directDeposit: "Direct Deposit"
+        case .bankDeposit: "Bank Deposit"
         case .directDebit: "Direct Debit"
         case .billPay: "Bill Pay"
         case .autoPay: "Auto-Pay"
@@ -139,6 +140,7 @@ enum PaymentType: String, Codable, CaseIterable, Identifiable {
         case .bankTransfer: "arrow.left.arrow.right"
         case .wire: "bolt.horizontal"
         case .directDeposit: "tray.and.arrow.down"
+        case .bankDeposit: "building.columns"
         case .directDebit: "tray.and.arrow.up"
         case .billPay: "calendar.badge.clock"
         case .autoPay: "repeat"
@@ -237,10 +239,20 @@ extension Transaction {
         isLive && isTransfer && (account?.isDebt == true || payee.hasPrefix("Payment to ") || payee.hasPrefix("Payment from "))
     }
 
+    /// The deposit made when a goal creates its own savings account: payee Deposit, category Deposit, method Bank Deposit.
+    /// All three are locked, so it always reads the same.
+    var isOpeningDeposit: Bool {
+        isLive && payee == Transaction.depositName && paymentType == .bankDeposit && category?.systemKey == Transaction.depositCategoryKey
+    }
+
+    static let depositName = "Deposit"
+    static let depositCategoryKey = "deposit"
+
     /// The category a transfer shows. Payments to loans and cards are always "Payment", and other transfers "Transfer".
     /// Neither can be changed. Nil for ordinary transactions, which have a category you choose.
     var fixedCategoryTitle: String? {
         guard isLive else { return nil }
+        if isOpeningDeposit { return "Deposit" }
         if isAtmWithdrawal { return "ATM" }
         if isDebtPayment { return "Payment" }
         // A bill's payment is always locked to its category, or to Payment when the bill has none.

@@ -113,6 +113,7 @@ extension Category {
         income("support-received", "Alimony & Child Support", "FFCC00", "person.2"),
         income("cashback-rewards", "Cashback & Rewards", "34C759", "star.circle"),
         income("sale-of-items", "Sale of Items", "FF9500", "tag"),
+        income("deposit", "Deposit", "34C759", "arrow.down.to.line"),
         income("other-income", "Other Income", "8E8E93", "dollarsign.circle"),
     ]
 

@@ -469,9 +469,11 @@ struct GoalDetailView: View {
         .formStyle(.grouped)
         .navigationTitle("Goal")
         .toolbar {
-            ToolbarItemGroup(placement: .destructiveAction) {
-                Button("Delete Goal", role: .destructive) { confirmingDelete = true }
-                Button("Edit Goal", action: onEdit)
+            ToolbarItem(placement: .destructiveAction) {
+                HStack(spacing: 8) {
+                    Button("Delete Goal", role: .destructive) { confirmingDelete = true }
+                    Button("Edit Goal", action: onEdit)
+                }
             }
             ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
         }
@@ -522,6 +524,7 @@ struct GoalEditView: View {
     @State private var newInstitution = ""
     @State private var newAccountNumber = ""
     @Query(sort: \Account.name) private var allAccounts: [Account]
+    @Query(sort: \Category.name) private var allCategories: [Category]
 
     init(goal: Goal?) {
         self.goal = goal
@@ -693,6 +696,15 @@ struct GoalEditView: View {
         .macSheetFrame(minHeight: 640)
     }
 
+    /// The built-in Deposit category, made first if it isn't there yet.
+    private func depositCategory() -> Category? {
+        func find() -> Category? { allCategories.live.first { $0.systemKey == Transaction.depositCategoryKey } }
+        if let found = find() { return found }
+        Category.ensureSystemCategories(in: modelContext)
+        let key = Transaction.depositCategoryKey
+        return ((try? modelContext.fetch(FetchDescriptor<Category>(predicate: #Predicate<Category> { $0.systemKey == key }))) ?? []).first
+    }
+
     private func save() {
         let clean = String(name.trimmingCharacters(in: .whitespaces).prefix(40))
         let date = hasDate ? Calendar.current.startOfDay(for: targetDate) : nil
@@ -701,10 +713,17 @@ struct GoalEditView: View {
         let floor = max(payoffTo ?? 0, 0)
         var account = linked
         if account == nil, makeAccount, kind == .save {
-            let made = Account(name: String(clean.prefix(Account.maxNameLength)), type: .savings, openingBalance: max(starting ?? 0, 0))
+            let made = Account(name: String(clean.prefix(Account.maxNameLength)), type: .savings, openingBalance: 0)
             made.institution = newInstitution.trimmingCharacters(in: .whitespaces)
             made.accountNumber = Account.digits(newAccountNumber, limit: Account.maxAccountNumberLength)
             modelContext.insert(made)
+            // What's already saved goes in as a real deposit, with its payee, category and method locked.
+            if let saved = starting, saved > 0 {
+                let deposit = Transaction(account: made, date: .now, payee: Transaction.depositName, category: depositCategory(),
+                                          memo: "Opening balance", amount: saved, paymentType: .bankDeposit)
+                deposit.state = .reconciled
+                modelContext.insert(deposit)
+            }
             account = made
         }
         // A goal counts from the account's balance when it is linked, or when the link or the "from now on" choice

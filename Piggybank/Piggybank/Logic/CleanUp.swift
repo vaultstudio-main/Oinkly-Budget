@@ -87,7 +87,7 @@ enum CleanUp {
         let olds = Array(mapping.keys)
         let descriptor = FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { olds.contains($0.payee) })
         for transaction in ((try? context.fetch(descriptor)) ?? []) where transaction.isLive {
-            guard let new = mapping[transaction.payee] else { continue }
+            guard let new = mapping[transaction.payee], !transaction.isOpeningDeposit else { continue }
             change.payees.append((transaction.persistentModelID, transaction.payee))
             transaction.payee = new
         }

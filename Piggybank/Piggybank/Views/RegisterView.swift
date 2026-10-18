@@ -317,6 +317,8 @@ struct EditTransactionSheet: View {
     private var isInvestment: Bool { selectedAccount.supportsHoldings && !transaction.isTransfer }
     /// ATM withdrawals are always the same: payee, category, method, memo and status can't be changed.
     private var isAtm: Bool { transaction.isAtmWithdrawal }
+    /// The deposit a goal made when it created this account. Its payee, category and method are locked.
+    private var isOpening: Bool { transaction.isOpeningDeposit }
     private var amountIsLocked: Bool { transaction.isTransfer }
     private var payees: [Payee] { allPayees.live }
 
@@ -398,7 +400,7 @@ struct EditTransactionSheet: View {
                 }
 
                 Section("Details") {
-                    if isAtm {
+                    if isAtm || isOpening {
                         LabeledContent("Payee") {
                             Label(payee, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
@@ -428,7 +430,7 @@ struct EditTransactionSheet: View {
                     }
 
                     if !selectedAccount.supportsHoldings {
-                        if isAtm {
+                        if isAtm || isOpening {
                             LabeledContent("Payment method") {
                                 Label(transaction.paymentTitle, systemImage: "lock.fill").foregroundStyle(.secondary)
                             }
@@ -518,7 +520,7 @@ struct EditTransactionSheet: View {
             transaction.noReceipt = false
         }
         if !isAtm {
-            transaction.payee = payee
+            if !isOpening { transaction.payee = payee }
             transaction.memo = memo
             transaction.state = state
         }
@@ -528,7 +530,7 @@ struct EditTransactionSheet: View {
             investmentType.apply(to: transaction, categories: categories)
         } else {
             if transaction.fixedCategoryTitle == nil { transaction.category = category }
-            if isAtm {
+            if isAtm || isOpening {
                 // Method stays as recorded.
             } else if let locked = selectedAccount.lockedPaymentType, !transaction.isTransfer {
                 transaction.paymentChoice = .type(locked)
@@ -538,7 +540,7 @@ struct EditTransactionSheet: View {
                 transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             }
             if !amountIsLocked { transaction.amount = signedAmount }
-            if !isAtm, !transaction.isTransfer { PayeeMemory.record(name: payee, category: category, amount: signedAmount, in: modelContext) }
+            if !isAtm, !isOpening, !transaction.isTransfer { PayeeMemory.record(name: payee, category: category, amount: signedAmount, in: modelContext) }
         }
         if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
         modelContext.saveNow()
