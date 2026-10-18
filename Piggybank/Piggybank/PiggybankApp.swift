@@ -11,7 +11,17 @@ struct PiggybankApp: App {
         let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
-        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+        // With encryption on, the app runs on a working copy opened from the encrypted vault instead of this Mac's
+        // own data file. See VaultSession.
+        let configuration: ModelConfiguration
+        switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
+        case .local:
+            configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+        case .open(let workingStore):
+            configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
+        case .quit:
+            exit(0)
+        }
         StoreReset.performIfRequested(for: configuration)
         do {
             container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)

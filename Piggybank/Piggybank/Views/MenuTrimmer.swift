@@ -130,10 +130,36 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         // The widgets read a small snapshot of bill names and reminder times. Keep it current as data changes.
         Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
         NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
-            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+            Task { @MainActor in
+                WidgetSnapshotWriter.refreshSoon()
+                VaultSession.shared.noteSaved()
+            }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+            Task { @MainActor in
+                WidgetSnapshotWriter.refreshSoon()
+                // Hiding the app is a good moment to seal the encrypted data.
+                await VaultSession.shared.sealNow(final: false)
+            }
+        }
+        #if DEBUG
+        Task { @MainActor in VaultSession.shared.runTestCommands() }
+        #endif
+        // Say so when encrypted data had to be recovered after an unexpected close. It waits for the main window, so
+        // it never holds up start-up.
+        Task { @MainActor in
+            guard VaultSession.shared.notice != nil else { return }
+            var window: NSWindow?
+            for _ in 0..<80 where window == nil {
+                try? await Task.sleep(for: .milliseconds(500))
+                window = NSApp.windows.first { $0.title == "OinklyBudget" && $0.isVisible }
+            }
+            guard let window, let notice = VaultSession.shared.notice else { return }
+            VaultSession.shared.notice = nil
+            let alert = NSAlert()
+            alert.messageText = "Encrypted data"
+            alert.informativeText = notice
+            _ = await alert.beginSheetModal(for: window)
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in await PiggybankAppDelegate.refreshReminders() }
@@ -153,6 +179,17 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         guard let container else { return }
         await BillNotifier.refresh(in: container.mainContext)
         await CustomReminders.shared.apply()
+    }
+
+    /// Quitting seals the encrypted data and deletes the plain working copy first, so nothing readable is left behind.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let session = VaultSession.shared
+        guard session.isActive else { return .terminateNow }
+        Task { @MainActor in
+            await session.sealNow(final: true)
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     /// Closing the window leaves OinklyBudget running, so its menu bar item stays. Without a menu bar item there

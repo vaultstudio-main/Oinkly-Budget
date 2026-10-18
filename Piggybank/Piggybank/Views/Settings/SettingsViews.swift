@@ -439,6 +439,8 @@ struct DataSettingsView: View {
                 Text("Backup")
             }
 
+            EncryptionSection()
+
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
                 Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")

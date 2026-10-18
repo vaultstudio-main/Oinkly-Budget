@@ -34,7 +34,14 @@ enum BackupExporter {
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         do {
             let file = try DataBackup.make(from: context)
-            try DataBackup.encode(file).write(to: url, options: .atomic)
+            var bytes = try DataBackup.encode(file)
+            // With encryption on, backups are encrypted too, so a copied backup is as unreadable as the data.
+            if VaultSession.isEnabled {
+                guard let passphrase = VaultPrompt.askPassphrase(title: "Protect this backup", detail: "Enter your passphrase. The backup is encrypted with it, and you'll need it to restore the backup.", button: "Save Backup") else { return nil }
+                guard VaultSession.shared.confirm(passphrase) else { return .failed("That isn't your passphrase, so no backup was made.") }
+                bytes = try BackupCrypto.encrypt(bytes, passphrase: passphrase)
+            }
+            try bytes.write(to: url, options: .atomic)
             UserDefaults.standard.set(Date.now.timeIntervalSinceReferenceDate, forKey: lastBackupKey)
             return .saved(summary: file.summary, fileName: url.lastPathComponent)
         } catch {
