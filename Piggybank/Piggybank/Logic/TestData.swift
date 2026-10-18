@@ -66,7 +66,8 @@ enum TestData {
         // Budgets on the built-in categories.
         for (key, limit) in [("groceries", 520), ("dining-out", 220), ("gas-fuel", 160), ("entertainment", 100),
                              ("utilities", 260), ("phone-internet", 140), ("shopping", 180), ("subscriptions", 45),
-                             ("fitness", 45), ("pets", 80)] as [(String, Decimal)] {
+                             ("fitness", 45), ("pets", 80), ("healthcare", 120), ("charity", 60), ("clothing", 90),
+                             ("home-improvement", 150), ("books-media", 35), ("salon-barber", 40)] as [(String, Decimal)] {
             cat(key)?.monthlyLimit = limit
         }
 
@@ -82,19 +83,31 @@ enum TestData {
 
         // Accounts.
         func account(_ name: String, _ type: AccountType, _ opening: Decimal) -> Account {
-            let made = Account(name: name, type: type, openingBalance: opening)
+            // Bank and investment accounts start with a real, locked Deposit, the way the app now makes them.
+            let deposits = OpeningDeposit.applies(to: type) && opening > 0
+            let made = Account(name: name, type: type, openingBalance: deposits ? 0 : opening)
             context.insert(made)
+            if deposits { OpeningDeposit.set(opening, for: made, date: monthDay(monthsOfHistory, 1), in: context) }
             return made
         }
         let cash = Account.ensureDefault(in: context)
         let checking = account("Everyday Checking", .checking, 35_000)
         checking.institution = "Harbor Credit Union"
         checking.accountNumber = "004821907365"
-        checking.routingNumber = "021000021"
+        checking.achRouting = "021000021"
+        checking.wireRouting = "HARBUS33X"
+        checking.digitalRouting = "084009519"
         checking.notes = "Main account for pay and bills."
         let savings = account("Rainy Day Savings", .savings, 7_800)
         savings.institution = "Harbor Credit Union"
         savings.accountNumber = "004821907412"
+        // Savings set aside for goals. Each started with a deposit, and each has a goal that follows it.
+        let tripFund = account("Japan Trip Fund", .savings, 300)
+        tripFund.institution = "Harbor Credit Union"
+        tripFund.accountNumber = "004821907455"
+        let downFund = account("House Down Payment", .savings, 6_000)
+        downFund.institution = "Summit Online Bank"
+        downFund.accountNumber = "770014420981"
 
         let card = account("Sapphire Card", .creditCard, -1_150)
         card.institution = "Northgate Bank"
@@ -139,17 +152,42 @@ enum TestData {
         brokerage.institution = "Summit Invest"
         let retirement = account("401(k)", .retirement401k, 28_000)
         retirement.institution = "Acme Corp Plan"
+        let roth = account("Roth IRA", .rothIRA, 11_000)
+        roth.institution = "Summit Invest"
+        let college = account("College 529", .education529, 6_200)
+        college.institution = "State 529 Plan"
+        let crypto = account("Crypto Wallet", .crypto, 1_500)
+        crypto.institution = "CoinBase Exchange"
         let house = account("Family Home", .realEstate, 410_000)
         house.notes = "Estimated value."
         let car = account("Honda Civic", .vehicle, 17_500)
         car.vin = "2HGFC2F59NH512345"
 
         // Holdings.
-        for holding in [
+        let holdingList = [
             Holding(account: brokerage, name: "Total Market Index Fund", symbol: "VTI", shares: 24.5, price: 268.40, costBasis: 5_900),
             Holding(account: brokerage, name: "Apple Inc.", symbol: "AAPL", shares: 10, price: 227.10, costBasis: 1_700),
+            Holding(account: brokerage, name: "NVIDIA Corp.", symbol: "NVDA", shares: 18, price: 131.60, costBasis: 1_450),
             Holding(account: retirement, name: "Target Date 2055 Fund", symbol: "TDFXX", shares: 410, price: 38.20, costBasis: 13_800),
-        ] { context.insert(holding) }
+            Holding(account: retirement, name: "Total Bond Index Fund", symbol: "VBTLX", shares: 520, price: 9.62, costBasis: 5_400),
+            Holding(account: roth, name: "S&P 500 Index Fund", symbol: "VFIAX", shares: 31, price: 521.30, costBasis: 13_200),
+            Holding(account: roth, name: "International Stock Index", symbol: "VXUS", shares: 120, price: 64.80, costBasis: 7_100),
+            Holding(account: college, name: "Age-Based 529 Portfolio", symbol: "529AB", shares: 310, price: 24.90, costBasis: 7_000),
+            Holding(account: crypto, name: "Bitcoin", symbol: "BTC", shares: 0.02, price: 67_000, costBasis: 1_200),
+            Holding(account: crypto, name: "Ethereum", symbol: "ETH", shares: 0.35, price: 2_600, costBasis: 1_000),
+        ]
+        for holding in holdingList { context.insert(holding) }
+        // A year of prices for each holding, drifting up with some dips, so returns by holding have something to show.
+        let drift: [Double] = [0, 0.012, 0.031, 0.02, 0.045, 0.06, 0.052, 0.078, 0.095, 0.083, 0.11, 0.124, 0.139]
+        for holding in holdingList {
+            let now = holding.price
+            let shares = holding.shares
+            for back in 0...12 {
+                let price = now * Decimal(1 + drift[12 - back] - drift[12])
+                context.insert(HoldingEvent(holding: holding, date: monthDay(back, 1), shares: back > 8 ? shares * Decimal(0.9) : shares,
+                                            price: back == 0 ? now : price))
+            }
+        }
 
         // Everyday transactions.
         @discardableResult
@@ -227,6 +265,56 @@ enum TestData {
                 tx(brokerage, monthDay(back, 12), "Market gain", nil, 184).map { InvestmentType.gain.apply(to: $0, categories: categories) }
             }
             tx(brokerage, monthDay(back, 12), "Dividend", nil, 21.40).map { InvestmentType.dividend.apply(to: $0, categories: categories) }
+            // Growth every month, with the odd loss, and money going into the other investment accounts.
+            let gain = Decimal(95 + (back * 41) % 240)
+            if back % 6 == 5 {
+                tx(brokerage, monthDay(back, 20), "Market loss", nil, 210).map { InvestmentType.loss.apply(to: $0, categories: categories) }
+            } else if back != 0 && back != 2 {
+                tx(brokerage, monthDay(back, 20), "Market gain", nil, gain).map { InvestmentType.gain.apply(to: $0, categories: categories) }
+            }
+            tx(retirement, monthDay(back, 22), "Fund growth", nil, Decimal(210 + (back * 29) % 160)).map { InvestmentType.gain.apply(to: $0, categories: categories) }
+            tx(roth, monthDay(back, 5), "IRA contribution", nil, 250).map { InvestmentType.contribution.apply(to: $0, categories: categories) }
+            tx(roth, monthDay(back, 22), "Fund growth", nil, Decimal(70 + (back * 31) % 110)).map { InvestmentType.gain.apply(to: $0, categories: categories) }
+            tx(college, monthDay(back, 6), "529 contribution", nil, 200).map { InvestmentType.contribution.apply(to: $0, categories: categories) }
+            tx(college, monthDay(back, 23), "Fund growth", nil, Decimal(28 + (back * 17) % 60)).map { InvestmentType.gain.apply(to: $0, categories: categories) }
+            if back <= 12 { tx(crypto, monthDay(back, 8), "Exchange deposit", nil, 100).map { InvestmentType.contribution.apply(to: $0, categories: categories) } }
+            if back % 4 == 3 {
+                tx(crypto, monthDay(back, 21), "Market loss", nil, Decimal(60 + (back * 7) % 90)).map { InvestmentType.loss.apply(to: $0, categories: categories) }
+            } else {
+                tx(crypto, monthDay(back, 21), "Market gain", nil, Decimal(40 + (back * 53) % 180)).map { InvestmentType.gain.apply(to: $0, categories: categories) }
+            }
+
+            // Money set aside for goals: a trip started nine months ago, a down payment fourteen months ago.
+            if back <= 8, monthDay(back, 3) <= today {
+                _ = Transfers.move(from: checking, to: tripFund, amount: 300, date: monthDay(back, 3), state: .reconciled,
+                                   payeeOut: "Transfer to Japan Trip Fund", payeeIn: "Transfer from Everyday Checking", in: context)
+            }
+            if back <= 14, monthDay(back, 4) <= today {
+                _ = Transfers.move(from: checking, to: downFund, amount: 500, date: monthDay(back, 4), state: .reconciled,
+                                   payeeOut: "Transfer to House Down Payment", payeeIn: "Transfer from Everyday Checking", in: context)
+            }
+            tx(downFund, monthDay(back, 28), "Interest", "interest-dividends", 19.40)
+            tx(tripFund, monthDay(back, 28), "Interest", "interest-dividends", 2.10)
+
+            // The same shops written different ways, for the duplicate payee report and Clean Up.
+            if back <= 5 {
+                let whole = ["Whole Foods Market", "WHOLE FOODS MKT", "Whole Foods #102"]
+                let star = ["Starbucks", "Starbucks #1234", "STARBUCKS COFFEE"]
+                tx(checking, monthDay(back, 11), whole[back % 3], "groceries", -Decimal(54 + back * 6), method: .debitCard)
+                tx(card, monthDay(back, 13), star[back % 3], "coffee-snacks", -Decimal(6 + back), method: .creditCard)
+                tx(card, monthDay(back, 19), star[(back + 1) % 3], "coffee-snacks", -Decimal(7 + back), method: .creditCard)
+            }
+
+            // Spending people claim at tax time, and more kinds of income.
+            tx(checking, monthDay(back, 12), "Hope Food Bank", "charity", -50, method: .debitCard)
+            if back % 3 == 0 { tx(checking, monthDay(back, 17), "Family Clinic", "healthcare", -Decimal(40 + (back * 3) % 60), method: .debitCard) }
+            if back % 6 == 0 { tx(checking, monthDay(back, 21), "Bright Smiles Dental", "dental", -180, method: .debitCard) }
+            if back % 6 == 2 { tx(checking, monthDay(back, 10), "County Treasurer", "property-tax", -1_850, method: .bankTransfer) }
+            if back % 12 == 5 { tx(checking, monthDay(back, 14), "Community College", "education", -420, method: .debitCard) }
+            let month = cal.component(.month, from: monthDay(back, 1))
+            if month == 12 { tx(checking, monthDay(back, 20), "Acme Corp Bonus", "bonus", 2_000, method: .directDeposit) }
+            if month == 3 { tx(checking, monthDay(back, 18), "IRS Refund", "tax-refund", 1_240, method: .directDeposit) }
+            if back % 3 == 1 { tx(checking, monthDay(back, 24), "Side Gig Client", "freelance-income", Decimal(450 + (back * 13) % 300), method: .bankTransfer) }
         }
 
         // Everyday purchases, every day of the history, to put real volume in the store.
@@ -291,20 +379,43 @@ enum TestData {
         BillPayment.record(from: checking, debt: mortgage, bill: mortgage.loanBill, amount: 1_640, date: day(-2),
                            state: .reconciled, paymentChoice: .type(.bankTransfer), in: context)
 
-        // Goals.
-        let trip = Goal(name: "Japan Trip", targetAmount: 4_000, startingAmount: 300, targetDate: cal.date(byAdding: .month, value: 9, to: today),
-                        symbol: "airplane", colorHex: "FF9500", notes: "Flights plus two weeks.", categoryName: "Vacation & Travel")
-        let emergency = Goal(name: "Emergency Fund", targetAmount: 10_000, startingAmount: 3_500, targetDate: cal.date(byAdding: .month, value: 14, to: today),
-                             symbol: "shield.lefthalf.filled", colorHex: "34C759", categoryName: "Emergency Fund")
-        let payoff = Goal(name: "Pay Off Sapphire Card", targetAmount: 2_400, startingAmount: 2_400, targetDate: cal.date(byAdding: .month, value: 6, to: today),
-                          symbol: "creditcard", colorHex: "FF2D55", kind: .payoff, goalBalance: 0, categoryName: "Credit Card")
+        try context.save()
+
+        // The last three weeks are mostly not matched to a statement yet, so reconciliation has something to show.
+        var counter = 0
+        for item in try context.fetch(FetchDescriptor<Transaction>()) where item.date >= day(-21) && !item.isTransfer && item.status == .reconciled {
+            counter += 1
+            if counter % 3 == 0 { item.state = .unreconciled }
+        }
+
+        // Goals. Most follow an account, so their progress moves on its own as you add transactions. Two don't, and
+        // one is already reached.
+        func owed(_ account: Account) -> Decimal { max(-account.balance, 0) }
+        let emergency = Goal(name: "Emergency Fund", targetAmount: 30_000, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: 14, to: today),
+                             symbol: "shield.lefthalf.filled", colorHex: "34C759", notes: "Six months of spending.", account: savings,
+                             categoryName: "Emergency Fund")
+        let trip = Goal(name: "Japan Trip", targetAmount: 4_000, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: 9, to: today),
+                        symbol: "airplane", colorHex: "FF9500", notes: "Flights plus two weeks.", account: tripFund,
+                        categoryName: "Vacation & Travel")
+        // Counts only what has been added since three months ago.
+        let downPayment = Goal(name: "House Down Payment", targetAmount: 40_000, startingAmount: max(downFund.balance(asOf: day(-90)), 0),
+                         targetDate: cal.date(byAdding: .year, value: 3, to: today), symbol: "house", colorHex: "AF52DE",
+                         account: downFund, categoryName: "Home Down Payment")
+        let cardStart = owed(card) + 900
+        let payoffCard = Goal(name: "Pay Off Sapphire Card", targetAmount: cardStart, startingAmount: cardStart,
+                              targetDate: cal.date(byAdding: .month, value: 8, to: today), symbol: "creditcard", colorHex: "FF2D55",
+                              account: card, kind: .payoff, goalBalance: 0, categoryName: "Credit Card")
+        let studentStart = owed(student) + 2_200
+        let payoffStudent = Goal(name: "Student Loan Gone", targetAmount: studentStart, startingAmount: studentStart,
+                                 targetDate: cal.date(byAdding: .year, value: 4, to: today), symbol: "graduationcap", colorHex: "5AC8FA",
+                                 account: student, kind: .payoff, goalBalance: 0, categoryName: "Student Loan")
+        let wedding = Goal(name: "Anniversary Gift", targetAmount: 1_200, startingAmount: 150, targetDate: cal.date(byAdding: .month, value: 5, to: today),
+                           symbol: "heart", colorHex: "FF2D55", notes: "Added by hand, no account.", categoryName: "Holidays & Gifts")
         let laptop = Goal(name: "New Laptop", targetAmount: 1_500, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: -1, to: today),
-                          symbol: "laptopcomputer", colorHex: "007AFF", categoryName: "Electronics")
-        for goal in [trip, emergency, payoff, laptop] { context.insert(goal) }
+                          symbol: "laptopcomputer", colorHex: "007AFF", categoryName: "Gadgets & Tech")
+        for goal in [emergency, trip, downPayment, payoffCard, payoffStudent, wedding, laptop] { context.insert(goal) }
         for back in 0...2 {
-            context.insert(GoalContribution(goal: trip, amount: 300, date: monthDay(back, 4), note: "Monthly set aside"))
-            context.insert(GoalContribution(goal: emergency, amount: 450, date: monthDay(back, 4), note: "From paycheck"))
-            context.insert(GoalContribution(goal: payoff, amount: 250, date: monthDay(back, 26), note: "Extra payment"))
+            context.insert(GoalContribution(goal: wedding, amount: 140, date: monthDay(back, 6), note: "Monthly set aside"))
         }
         for (index, amount) in [500, 500, 500].enumerated() {
             context.insert(GoalContribution(goal: laptop, amount: Decimal(amount), date: monthDay(index + 2, 10), note: "Saved up"))

@@ -46,7 +46,7 @@ struct TestingWindow: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                row("Fill with Test Data", "Made-up accounts, over two years of transactions (thousands of them), bills, goals, holdings and a receipt, so every screen has something to show.", .load)
+                row("Fill with Test Data", "Made-up accounts and over two years of transactions (thousands of them), bills, loans, cards, investments with holdings and price history, goals that follow accounts, look-alike payees and a mix of reconciled and unreconciled entries, so every page and report has something to show.", .load)
                 row("Wipe Everything", "Deletes the whole database, however big, and quits. Open the app again and it starts empty.", .wipe)
             }
 
