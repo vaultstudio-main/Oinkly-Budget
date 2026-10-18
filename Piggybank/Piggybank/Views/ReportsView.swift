@@ -8,6 +8,7 @@ struct ReportsView: View {
     // Opens on the current year. The tabs still go down to a single month.
     @State private var period: ReportPeriod = .yearly
     @State private var anchor = Date.now
+    @State private var section = ReportSection.overview
 
     /// The date of the oldest transaction: one row, not a pass over everything.
     private var earliest: Date? {
@@ -17,7 +18,7 @@ struct ReportsView: View {
     }
 
     var body: some View {
-        ReportsContent(period: $period, anchor: $anchor, earliest: earliest)
+        ReportsContent(period: $period, anchor: $anchor, section: $section, earliest: earliest)
     }
 }
 
@@ -29,11 +30,14 @@ private struct ReportsContent: View {
 
     @Binding var period: ReportPeriod
     @Binding var anchor: Date
+    @Binding var section: ReportSection
     let earliest: Date?
+    @State private var pageWidth: CGFloat = 1000
 
-    init(period: Binding<ReportPeriod>, anchor: Binding<Date>, earliest: Date?) {
+    init(period: Binding<ReportPeriod>, anchor: Binding<Date>, section: Binding<ReportSection>, earliest: Date?) {
         _period = period
         _anchor = anchor
+        _section = section
         self.earliest = earliest
         let range = Reports.range(period.wrappedValue, anchor: anchor.wrappedValue)
         let from = Reports.previous(of: range, period: period.wrappedValue).start
@@ -43,30 +47,125 @@ private struct ReportsContent: View {
 
     var body: some View {
         let range = Reports.range(period, anchor: anchor)
-        let report = Reports.build(transactions, period: period, range: range)
 
         ScrollView {
             VStack(spacing: 14) {
                 PageTitle("Reports")
-                controls(range: range)
-                if report.totals.count == 0 {
-                    PlaceholderTiles(titles: ["Income", "Spending", "Net", "Savings Rate"])
-                    ReportCard(title: "Income vs Spending") {
-                        NoDataNote(message: "No data for \(Reports.label(period, range: range)). Pick another period, or add some transactions.")
-                    }
-                    ReportCard(title: "Spending by Category") {
-                        NoDataNote(message: "No data yet. Spending by category shows up here once you add transactions.")
-                    }
-                } else {
-                    tiles(report)
-                    ReportCard(title: "Income vs Spending") { chart(report) }
-                    ReportCard(title: "Spending by Category") { categories(report) }
-                }
+                sectionPicker
+                if section.usesPeriod { controls(range: range) }
+                placeholders
             }
             .padding(16)
         }
         .background(Theme.background)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }
         .animation(.smooth, value: period)
+    }
+
+    // MARK: Sections and placeholders
+
+    /// The reports on the Overview that are built from the chosen period.
+    @ViewBuilder
+    private var overviewReports: some View {
+        let range = Reports.range(period, anchor: anchor)
+        let report = Reports.build(transactions, period: period, range: range)
+        VStack(spacing: 14) {
+            if report.totals.count == 0 {
+                PlaceholderTiles(titles: ["Income", "Spending", "Net", "Savings Rate"])
+                ReportCard(title: "Income vs Spending") {
+                    NoDataNote(message: "No data for \(Reports.label(period, range: range)). Pick another period, or add some transactions.")
+                }
+                ReportCard(title: "Spending by Category") {
+                    NoDataNote(message: "No data yet. Spending by category shows up here once you add transactions.")
+                }
+            } else {
+                tiles(report)
+                ReportCard(title: "Income vs Spending") { chart(report) }
+                ReportCard(title: "Spending by Category") { categories(report) }
+            }
+        }
+    }
+
+    private var sectionPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(ReportSection.allCases) { item in
+                        Button { section = item } label: {
+                            Label(item.rawValue, systemImage: item.symbol)
+                                .font(.callout.weight(section == item ? .semibold : .regular))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(section == item ? Color.accentColor.opacity(0.22) : Theme.panel, in: Capsule())
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            Text(section.blurb).font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    /// Reports laid out in rows: wide ones alone, the rest packed `columns` across. Any card left over stretches to
+    /// fill its row, so no space is wasted.
+    private func rows(of items: [ReportItem], columns: Int) -> [[ReportItem]] {
+        var rows: [[ReportItem]] = []
+        var buffer: [ReportItem] = []
+        for item in items {
+            if item.isWide {
+                if !buffer.isEmpty { rows.append(buffer); buffer = [] }
+                rows.append([item])
+            } else {
+                buffer.append(item)
+                if buffer.count == columns { rows.append(buffer); buffer = [] }
+            }
+        }
+        if !buffer.isEmpty { rows.append(buffer) }
+        return rows
+    }
+
+    @ViewBuilder
+    private func card(_ item: ReportItem) -> some View {
+        if let kind = item.trend {
+            TrendChartCard(kind: kind, height: item.isWide ? 220 : 190)
+        } else {
+            ReportPlaceholderCard(report: item)
+        }
+    }
+
+    private func grid(_ items: [ReportItem]) -> some View {
+        // Three across when the page is wide enough.
+        let columns = pageWidth >= 1000 ? 3 : 2
+        return VStack(spacing: 14) {
+            ForEach(Array(rows(of: items, columns: columns).enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(row) { card($0) }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// Everything in this section except the real reports the Overview draws itself.
+    private var placeholders: some View {
+        let all = section.reports.filter { !$0.isBuilt }
+        let charts = section == .overview ? all.filter { $0.trend != nil } : []
+        let rest = section == .overview ? all.filter { $0.trend == nil } : all
+        return VStack(spacing: 14) {
+            if !charts.isEmpty { grid(charts) }
+            if section == .overview { overviewReports }
+            if !rest.isEmpty {
+                if section == .overview {
+                    HStack {
+                        Text("MORE REPORTS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .padding(.top, 6)
+                }
+                grid(rest)
+            }
+        }
     }
 
     // MARK: Controls
