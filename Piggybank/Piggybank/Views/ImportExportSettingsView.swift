@@ -16,17 +16,8 @@ struct ImportExportSettingsView: View {
     @State private var pendingBackup: BackupFile?
     @State private var pendingBackupName = ""
 
-    // A spreadsheet is read first, then added once you've said which account the loose rows belong to.
-    @State private var pendingCSV: TransactionCSV.Parsed?
-    @State private var pendingCSVName = ""
-    @State private var defaultAccount: Account?
-    @State private var skipDuplicates = true
-
-    private var rowsNeedingDefault: Int {
-        guard let pendingCSV else { return 0 }
-        let names = Set(accounts.map { $0.name.lowercased() })
-        return pendingCSV.rows.filter { !names.contains($0.accountName.lowercased()) }.count
-    }
+    // A bank's spreadsheet opens in the import sheet, where it is previewed before anything is added.
+    @State private var pendingImport: PendingImport?
 
     var body: some View {
         Form {
@@ -39,31 +30,9 @@ struct ImportExportSettingsView: View {
 
             Section {
                 actionRow("Import Backup…", detail: "Restore from a .pig backup file. This replaces everything currently in OinklyBudget, including custom categories, payment methods and preferences.") { chooseBackup() }
-                actionRow("Import Transactions (CSV)…", detail: "Add transactions from a spreadsheet. Needs a Date column and an Amount column (or Debit and Credit).") { chooseCSV() }
+                actionRow("Import Transactions (CSV)…", detail: "Add transactions from a bank's spreadsheet (CSV). You see a preview first, and can match the columns if they aren't recognised. To import into one account, open it and choose Import Statement.") { chooseCSV() }
             } header: {
                 Text("Import")
-            }
-
-            if let pendingCSV, pendingCSV.problem == nil {
-                Section("Ready to import: \(pendingCSVName)") {
-                    LabeledContent("Transactions found", value: "\(pendingCSV.rows.count)")
-                    if pendingCSV.skipped > 0 {
-                        LabeledContent("Rows that couldn't be read", value: "\(pendingCSV.skipped)")
-                    }
-                    if rowsNeedingDefault > 0 {
-                        Picker(pendingCSV.hasAccountColumn ? "Rows with no matching account go to" : "Add them to", selection: $defaultAccount) {
-                            ForEach(accounts) { Text($0.name).tag(Optional($0)) }
-                        }
-                    }
-                    Toggle("Skip ones already in OinklyBudget", isOn: $skipDuplicates)
-                    HStack {
-                        Spacer()
-                        Button("Cancel") { self.pendingCSV = nil }
-                        Button("Import \(pendingCSV.rows.count) Transactions", action: importCSV)
-                            .buttonStyle(.borderedProminent)
-                            .disabled(pendingCSV.rows.isEmpty || (rowsNeedingDefault > 0 && defaultAccount == nil))
-                    }
-                }
             }
 
             if let message {
@@ -84,9 +53,7 @@ struct ImportExportSettingsView: View {
         } message: {
             Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in OinklyBudget is erased first, and this can't be undone.")
         }
-        .onAppear {
-            if defaultAccount == nil { defaultAccount = accounts.first }
-        }
+        .sheet(item: $pendingImport) { ImportStatementSheet(account: nil, fileURL: $0.url) }
     }
 
     private func actionRow(_ title: String, detail: String, action: @escaping () -> Void) -> some View {
@@ -172,46 +139,8 @@ struct ImportExportSettingsView: View {
     }
 
     private func chooseCSV() {
-        let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.commaSeparatedText, .plainText]
-        panel.allowsMultipleSelection = false
-        panel.message = "Choose a spreadsheet (CSV) of transactions."
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        guard let data = try? Data(contentsOf: url),
-              let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) else {
-            report("Couldn't read that file.", error: true)
-            return
-        }
-        let parsed = TransactionCSV.read(text)
-        if let problem = parsed.problem {
-            pendingCSV = nil
-            report(problem, error: true)
-            return
-        }
-        if parsed.rows.isEmpty {
-            pendingCSV = nil
-            report("No transactions could be read from that file.", error: true)
-            return
-        }
-        pendingCSV = parsed
-        pendingCSVName = url.lastPathComponent
-        if defaultAccount == nil { defaultAccount = accounts.first }
+        guard let url = StatementFilePicker.choose() else { return }
         message = nil
-    }
-
-    private func importCSV() {
-        guard let pendingCSV else { return }
-        do {
-            let result = try TransactionCSV.add(pendingCSV.rows, defaultAccount: defaultAccount, skipDuplicates: skipDuplicates, in: modelContext)
-            var parts = ["Added \(result.added) transaction\(result.added == 1 ? "" : "s")"]
-            if result.duplicates > 0 { parts.append("skipped \(result.duplicates) already there") }
-            if pendingCSV.skipped > 0 { parts.append("\(pendingCSV.skipped) rows couldn't be read") }
-            if result.uncategorized > 0 { parts.append("\(result.uncategorized) had a category that didn't match") }
-            report(parts.joined(separator: ", ") + ".")
-            self.pendingCSV = nil
-        } catch {
-            modelContext.rollback()
-            report("Couldn't import: \(error.localizedDescription)", error: true)
-        }
+        pendingImport = PendingImport(url: url)
     }
 }

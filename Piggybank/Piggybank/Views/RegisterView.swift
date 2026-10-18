@@ -33,6 +33,7 @@ private struct RegisterContent: View {
     @State private var limitMessage: String?
     @State private var editingDate: Transaction?
     @State private var isExporting = false
+    @State private var pendingImport: PendingImport?
     @Environment(\.openWindow) private var openWindow
 
     init(account: Account, month: Binding<Date>) {
@@ -75,6 +76,10 @@ private struct RegisterContent: View {
                 MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
                 Spacer()
             }
+            Button("Import…", systemImage: "square.and.arrow.down") {
+                if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
+            }
+            .help("Import a bank statement (CSV) into this account")
             Button("Export…", systemImage: "square.and.arrow.up") { isExporting = true }
                 .help("Save this account's transactions as a PDF statement or a CSV spreadsheet")
         }
@@ -213,6 +218,7 @@ private struct RegisterContent: View {
             : "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(month.formatted(.dateTime.month(.wide).year())) · \(account.name)")
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
         .sheet(isPresented: $isExporting) { ExportSheet(account: account, startingMonth: month) }
+        .sheet(item: $pendingImport) { ImportStatementSheet(account: account, fileURL: $0.url) }
         .sheet(item: $editingDate) { transaction in
             if transaction.isLive { EditTransactionSheet(transaction: transaction, account: account, categories: categories) }
         }

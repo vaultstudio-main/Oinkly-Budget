@@ -47,11 +47,11 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Reports, budget, bills, net worth to PDF (lower priority)
 
 ### CSV import that handles any bank file
-- [ ] Preview before importing
-- [ ] Column mapping, saved per bank
-- [ ] Date and amount formats, extra header and summary lines, delimiter and encoding
-- [ ] Duplicate handling and Undo import
-- [ ] Import Statement… on every account
+- [ ] Preview before importing (built; reader checked on sample files, sheet not yet tried in the app)
+- [ ] Column mapping, saved per bank (built; reader checked on sample files, sheet not yet tried in the app)
+- [ ] Date and amount formats, extra header and summary lines, delimiter and encoding (built; reader checked on sample files, sheet not yet tried in the app)
+- [ ] Duplicate handling and Undo import (built; reader checked on sample files, sheet not yet tried in the app)
+- [ ] Import Statement… on every account (built; reader checked on sample files, sheet not yet tried in the app)
 
 ### Widgets
 - [ ] Upcoming bills widget (names and dates only)
