@@ -445,9 +445,7 @@ struct DataSettingsView: View {
 
             Section("About") {
                 LabeledContent("Version", value: version)
-                if let developerBuild = AppVersion.developerBuild {
-                    LabeledContent("Build (debug only)", value: developerBuild)
-                }
+                LabeledContent("Build", value: AppVersion.buildLabel)
             }
         }
         .formStyle(.grouped)

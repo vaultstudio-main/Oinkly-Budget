@@ -28,8 +28,7 @@ enum AboutInfo {
 /// OinklyBudget ▸ About OinklyBudget. The text lives in `AboutInfo` above.
 struct AboutWindow: View {
     private var version: String {
-        // The build number isn't shown to the people using the app. Debug builds add the build's name.
-        [AppVersion.label, AppVersion.developerBuild].compactMap { $0 }.joined(separator: " · ")
+        AppVersion.fullLabel
     }
 
     var body: some View {

@@ -228,7 +228,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.1;
-				OINKLY_BUILD_NAME = Acorn;
+				OINKLY_BUILD_NAME = "Ridiculous Speed";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget;
 				PRODUCT_NAME = OinklyBudget;
 				REGISTER_APP_GROUPS = YES;
@@ -265,7 +265,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 1.1;
-				OINKLY_BUILD_NAME = Acorn;
+				OINKLY_BUILD_NAME = "Ridiculous Speed";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget;
 				PRODUCT_NAME = OinklyBudget;
 				REGISTER_APP_GROUPS = YES;
