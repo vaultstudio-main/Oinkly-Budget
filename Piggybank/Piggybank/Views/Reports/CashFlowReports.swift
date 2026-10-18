@@ -96,7 +96,8 @@ private func cashForecast(accounts: [Account], bills: [Bill], context: ModelCont
     let since = calendar.date(byAdding: .month, value: -3, to: calendar.dateInterval(of: .month, for: .now)?.start ?? .now) ?? .now
     let descriptor = FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { $0.paidBill != nil && $0.date >= since && $0.amount < 0 })
     let paid = ((try? context.fetch(descriptor)) ?? []).live.reduce(Decimal(0)) { $0 - $1.amount }
-    return ReportMath.forecast(accounts: accounts, bills: bills.live, snapshot: snapshot, billPayments: paid)
+    let rules = (try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []
+    return ReportMath.forecast(accounts: accounts, bills: bills.live, rules: rules, snapshot: snapshot, billPayments: paid)
 }
 
 struct CashFlowForecastReport: View {
@@ -109,7 +110,7 @@ struct CashFlowForecastReport: View {
         let forecast = snapshot.map { cashForecast(accounts: allAccounts.live, bills: allBills, context: modelContext, snapshot: $0) }
         let end = forecast?.weeks.last
 
-        ReportPanel(title: "Cash Flow Forecast", summary: "Your checking and savings, week by week for six months. Bills land on their due dates; income and everyday spending follow the last three months.",
+        ReportPanel(title: "Cash Flow Forecast", summary: "Your checking and savings, week by week for six months. Bills and your repeating transactions land on their due dates; the rest of the income and everyday spending follows the last three months.",
                     headline: end.map { ReportFormat.money($0.balance) }, headlineNote: end == nil ? nil : "in 6 months") {
             if let forecast, forecast.weeks.count > 2 {
                 Chart {

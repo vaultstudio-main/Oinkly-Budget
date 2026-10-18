@@ -22,6 +22,8 @@ enum TestData {
             }
         }
         for item in try context.fetch(FetchDescriptor<Payee>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<Tag>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<RecurringTransaction>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
@@ -426,6 +428,21 @@ enum TestData {
         let laptop = Goal(name: "New Laptop", targetAmount: 1_500, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: -1, to: today),
                           symbol: "laptopcomputer", colorHex: "007AFF", categoryName: "Gadgets & Tech")
         for goal in [emergency, trip, downPayment, payoffCard, payoffStudent, wedding, laptop] { context.insert(goal) }
+
+        // Repeating transactions: one that has come due (so it makes a pending entry), one coming up, a deposit and a reminder.
+        let calendar = Calendar.current
+        func inDays(_ days: Int) -> Date { calendar.date(byAdding: .day, value: days, to: calendar.startOfDay(for: today)) ?? today }
+        let streaming = RecurringTransaction(payee: "Streamly Family Plan", account: checking, category: cat("subscriptions"), amount: -22.99,
+                                             frequency: .monthly, startDate: inDays(-2))
+        streaming.paymentTypeRaw = PaymentType.debitCard.rawValue
+        let sideGig = RecurringTransaction(payee: "Side Gig Retainer", account: checking, category: cat("freelance-income"), amount: 250,
+                                           frequency: .everyTwoWeeks, startDate: inDays(5))
+        sideGig.paymentTypeRaw = PaymentType.bankTransfer.rawValue
+        let taxReserve = RecurringTransaction(payee: "Quarterly Tax Reserve", account: savings, category: nil, amount: -500,
+                                              frequency: .everyThreeMonths, startDate: inDays(-1))
+        taxReserve.autoEnter = false
+        for rule in [streaming, sideGig, taxReserve] { context.insert(rule) }
+        Recurring.run(in: context)
         for back in 0...2 {
             context.insert(GoalContribution(goal: wedding, amount: 140, date: monthDay(back, 6), note: "Monthly set aside"))
         }

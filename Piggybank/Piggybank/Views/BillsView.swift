@@ -24,6 +24,11 @@ struct BillsView: View {
     @State private var month = Calendar.current.startOfDay(for: .now)
     @State private var selectedDay: Date?
     @State private var sheet: BillSheet?
+    private enum Tab: String, CaseIterable, Identifiable {
+        case bills = "Bills", recurring = "Recurring"
+        var id: Self { self }
+    }
+    @State private var tab = Tab.bills
 
     private var calendar: Calendar { .current }
 
@@ -35,7 +40,19 @@ struct BillsView: View {
         let upcoming = Bills.upcoming(bills).filter(\.bill.isImportant)
         Group {
             VStack(spacing: 0) {
-            PageTitle("Bills").padding([.horizontal, .top], 16)
+            HStack {
+                PageTitle("Bills")
+                Picker("", selection: $tab) {
+                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 220)
+            }
+            .padding([.horizontal, .top], 16)
+            if tab == .recurring {
+                RecurringView()
+            } else {
             HStack(alignment: .top, spacing: 0) {
                 ScrollView {
                     VStack(spacing: 14) {
@@ -55,6 +72,7 @@ struct BillsView: View {
                     .padding(16)
                 }
                 .frame(width: 360)
+            }
             }
             }
             .background(Theme.background)

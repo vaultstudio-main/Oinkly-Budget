@@ -36,6 +36,8 @@ struct PiggybankApp: App {
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
         SchemaUpgrade.run(in: container.mainContext)
+        // Repeating transactions that came due while the app was closed.
+        Recurring.run(in: container.mainContext)
         PiggybankAppDelegate.container = container
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)

@@ -117,6 +117,10 @@ struct MacRootView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankWillDeleteAccounts)) { _ in selection = .summary }
+        // Coming back to the app after a day or more adds anything that has come due.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Recurring.run(in: modelContext)
+        }
         .focusedSceneValue(\.selectedAccountID, selectedAccountID)
         .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }

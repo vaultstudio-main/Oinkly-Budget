@@ -36,6 +36,7 @@ private struct RegisterContent: View {
     @State private var editingDate: Transaction?
     @State private var savingAs: ExportSheet.Kind?
     @State private var pendingImport: PendingImport?
+    @State private var makingRecurring: Transaction?
     @Environment(\.openWindow) private var openWindow
 
     init(account: Account, month: Binding<Date>) {
@@ -220,6 +221,9 @@ private struct RegisterContent: View {
                         openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
                     }
                     Button("Edit Transaction", systemImage: "pencil") { editingDate = transaction }
+                    if transaction.canSplit, transaction.recurring == nil {
+                        Button("Make Recurring", systemImage: "arrow.triangle.2.circlepath") { makingRecurring = transaction }
+                    }
                 }
                 if !ids.isEmpty, !tags.isEmpty {
                     let chosen = monthTransactions.filter { ids.contains($0.persistentModelID) }
@@ -257,6 +261,7 @@ private struct RegisterContent: View {
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
         .sheet(item: $savingAs) { ExportSheet(account: account, kind: $0, startingMonth: month) }
         .sheet(item: $pendingImport) { ImportStatementSheet(account: account, fileURL: $0.url) }
+        .sheet(item: $makingRecurring) { RecurringRuleEditor(rule: nil, source: $0) }
         .sheet(item: $editingDate) { transaction in
             if transaction.isLive { EditTransactionSheet(transaction: transaction, account: account, categories: categories) }
         }

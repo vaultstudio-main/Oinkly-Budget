@@ -145,7 +145,7 @@ enum ReportMath {
 
     /// The balance of your checking and savings each week for six months. Income and everyday spending continue at the
     /// average of the last three months; bills are put in on the days they are due.
-    static func forecast(accounts: [Account], bills: [Bill], snapshot: LedgerSnapshot, billPayments: Decimal,
+    static func forecast(accounts: [Account], bills: [Bill], rules: [RecurringTransaction] = [], snapshot: LedgerSnapshot, billPayments: Decimal,
                          now: Date = .now, calendar: Calendar = .current) -> Forecast {
         var result = Forecast()
         let liquid = accounts.live.filter { $0.type.group == .checkingSavings && !$0.isClosed }
@@ -154,10 +154,15 @@ enum ReportMath {
         // Averages over the last three full months, as weekly amounts.
         let count = snapshot.income.count
         guard count >= 4 else { return result }
-        let incomeMonthly = (1...3).reduce(Decimal(0)) { $0 + snapshot.income[count - 1 - $1] } / 3
+        // Repeating transactions are put in on their own dates below, so what they usually add up to is taken out of the
+        // averages. Otherwise they would count twice.
+        let liveRules = rules.live.filter { $0.isActive && $0.account?.isLive == true && $0.account?.type.group == .checkingSavings }
+        let ruleIncomeMonthly = liveRules.filter { $0.amount > 0 }.reduce(Decimal(0)) { $0 + Recurring.monthlyAmount(of: $1) }
+        let ruleSpendingMonthly = liveRules.filter { $0.amount < 0 }.reduce(Decimal(0)) { $0 - Recurring.monthlyAmount(of: $1) }
+        let incomeMonthly = max((1...3).reduce(Decimal(0)) { $0 + snapshot.income[count - 1 - $1] } / 3 - ruleIncomeMonthly, 0)
         let spendingMonthly = (1...3).reduce(Decimal(0)) { $0 + snapshot.spending[count - 1 - $1] } / 3
         let billsMonthly = billPayments / 3
-        let otherMonthly = max(spendingMonthly - billsMonthly, 0)
+        let otherMonthly = max(spendingMonthly - billsMonthly - ruleSpendingMonthly, 0)
         let perWeek = 12.0 / 52.0
         result.weeklyIncome = incomeMonthly.doubleValue * perWeek
         result.weeklyOtherSpending = otherMonthly.doubleValue * perWeek
@@ -168,17 +173,26 @@ enum ReportMath {
         let thirty = calendar.date(byAdding: .day, value: 30, to: today) ?? today
         result.billsNext30 = due.filter { $0.date <= thirty }.reduce(0) { $0 + $1.bill.amount.doubleValue }
         result.incomeNext30 = result.weeklyIncome * 30 / 7
+        // Each rule's entries on their due dates, from today to the end of the forecast.
+        var ruleEntries: [(date: Date, amount: Double)] = []
+        for rule in liveRules {
+            for date in Recurring.dates(of: rule, through: end, calendar: calendar) where date >= today {
+                ruleEntries.append((date, rule.amount.doubleValue))
+            }
+        }
+        result.incomeNext30 += ruleEntries.filter { $0.date <= thirty && $0.amount > 0 }.reduce(0) { $0 + $1.amount }
+        result.billsNext30 += ruleEntries.filter { $0.date <= thirty && $0.amount < 0 }.reduce(0) { $0 - $1.amount }
 
         var balance = result.startBalance
         result.weeks.append(ForecastWeek(date: today, balance: balance))
         var weekStart = today
         while let next = calendar.date(byAdding: .day, value: 7, to: weekStart), next <= end {
             let billsThisWeek = due.filter { $0.date >= weekStart && $0.date < next }.reduce(0) { $0 + $1.bill.amount.doubleValue }
-            balance += result.weeklyIncome - result.weeklyOtherSpending - billsThisWeek
+            let rulesThisWeek = ruleEntries.filter { $0.date >= weekStart && $0.date < next }.reduce(0) { $0 + $1.amount }
+            balance += result.weeklyIncome - result.weeklyOtherSpending - billsThisWeek + rulesThisWeek
             result.weeks.append(ForecastWeek(date: next, balance: balance))
             weekStart = next
         }
-        result.incomeNext30 = result.weeklyIncome * 30 / 7
         return result
     }
 

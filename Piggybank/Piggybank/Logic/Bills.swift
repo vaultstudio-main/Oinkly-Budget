@@ -18,7 +18,7 @@ enum BillFrequency: String, CaseIterable, Identifiable {
     }
 
     /// The date `step` repeats after `start`. Counting from the first date keeps "the 31st" on the last day of short months.
-    fileprivate func date(_ step: Int, after start: Date, calendar: Calendar) -> Date? {
+    func date(_ step: Int, after start: Date, calendar: Calendar) -> Date? {
         switch self {
         case .once: step == 0 ? start : nil
         case .weekly: calendar.date(byAdding: .day, value: 7 * step, to: start)

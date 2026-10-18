@@ -25,6 +25,9 @@ enum CleanUp {
         var transactionCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var billCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var payeeCategories: [(id: PersistentIdentifier, category: Category?)] = []
+        /// A repeating rule and the payee or category it had before.
+        var rulePayees: [(id: PersistentIdentifier, name: String)] = []
+        var ruleCategories: [(id: PersistentIdentifier, category: Category?)] = []
         /// A part of a split transaction and the category it had before.
         var splitCategories: [(id: PersistentIdentifier, category: Category?)] = []
         var deletedCategory: (name: String, symbol: String, colorHex: String, limit: Decimal, isIncome: Bool, key: String?)?
@@ -94,6 +97,13 @@ enum CleanUp {
             transaction.payee = new
         }
 
+        // Repeating rules follow, so the entries they make carry the new name.
+        for rule in ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live {
+            guard let new = mapping[rule.payee] else { continue }
+            change.rulePayees.append((rule.persistentModelID, rule.payee))
+            rule.payee = new
+        }
+
         // The memorized payee list: keep one entry per new name.
         let memory = ((try? context.fetch(FetchDescriptor<Payee>())) ?? []).filter(\.isLive)
         for (old, new) in mapping {
@@ -133,6 +143,10 @@ enum CleanUp {
             for transaction in movable(in: source, context: context) {
                 change.transactionCategories.append((transaction.persistentModelID, source))
                 transaction.category = target
+            }
+            for rule in source.recurringRules.live {
+                change.ruleCategories.append((rule.persistentModelID, source))
+                rule.category = target
             }
             for part in source.splits where part.transaction?.isLive == true {
                 change.splitCategories.append((part.persistentModelID, source))
@@ -179,6 +193,8 @@ enum CleanUp {
             }
         }
         for (id, category) in change.transactionCategories { if let t: Transaction = fetch(Transaction.self, id), t.isLive { t.category = category } }
+        for (id, name) in change.rulePayees { if let rule: RecurringTransaction = fetch(RecurringTransaction.self, id), rule.isLive { rule.payee = name } }
+        for (id, category) in change.ruleCategories { if let rule: RecurringTransaction = fetch(RecurringTransaction.self, id), rule.isLive { rule.category = category } }
         for (id, category) in change.splitCategories { if let part: TransactionSplit = fetch(TransactionSplit.self, id) { part.category = category } }
         for (id, category) in change.billCategories { if let b: Bill = fetch(Bill.self, id), b.isLive { b.category = category } }
         for (id, category) in change.payeeCategories { if let p: Payee = fetch(Payee.self, id), p.isLive { p.lastCategory = category } }

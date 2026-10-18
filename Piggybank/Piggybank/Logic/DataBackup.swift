@@ -13,6 +13,8 @@ struct BackupFile: Codable {
     var categories: [CategoryRecord] = []
     /// Tags. Added in 1.1; absent in older files.
     var tags: [TagRecord]?
+    /// Repeating transactions. Added in 1.1; absent in older files.
+    var recurring: [RuleRecord]?
     var accounts: [AccountRecord] = []
     var payees: [PayeeRecord] = []
     var transactions: [TransactionRecord] = []
@@ -40,6 +42,7 @@ struct BackupFile: Codable {
         paymentMethods = try c.decodeIfPresent([PaymentMethodRecord].self, forKey: .paymentMethods) ?? []
         settings = try c.decodeIfPresent(SettingsRecord.self, forKey: .settings)
         tags = try c.decodeIfPresent([TagRecord].self, forKey: .tags)
+        recurring = try c.decodeIfPresent([RuleRecord].self, forKey: .recurring)
     }
 
     struct SettingsRecord: Codable {
@@ -158,6 +161,24 @@ struct BackupFile: Codable {
         var splits: [SplitRecord]?
         /// Names of the tags on this transaction. Added in 1.1; absent in older files.
         var tagNames: [String]?
+        /// Position in `recurring` of the rule that made this transaction.
+        var recurringIndex: Int?
+    }
+
+    struct RuleRecord: Codable {
+        var accountID: Int
+        var payee: String
+        var categoryKey: String?
+        var memo: String
+        var amount: String
+        var paymentTypeRaw: String
+        var frequencyRaw: String
+        var startDate: Date
+        var endDate: Date?
+        var nextDate: Date
+        var autoEnter: Bool
+        var isActive: Bool
+        var createdAt: Date
     }
 
     struct TagRecord: Codable {
@@ -267,6 +288,18 @@ enum DataBackup {
                   isPrimaryChecking: a.isPrimaryChecking)
         }
 
+        let liveRules = try context.fetch(FetchDescriptor<RecurringTransaction>(sortBy: [SortDescriptor(\.createdAt)])).live
+            .filter { $0.account?.isLive == true && ids[$0.account!.persistentModelID] != nil }
+        let ruleIDs = Dictionary(uniqueKeysWithValues: liveRules.enumerated().map { ($1.persistentModelID, $0) })
+        if !liveRules.isEmpty {
+            file.recurring = liveRules.map { r in
+                .init(accountID: ids[r.account!.persistentModelID]!, payee: r.payee,
+                      categoryKey: r.category?.isLive == true ? r.category?.systemKey : nil, memo: r.memo, amount: text(r.amount),
+                      paymentTypeRaw: r.paymentTypeRaw, frequencyRaw: r.frequencyRaw, startDate: r.startDate, endDate: r.endDate,
+                      nextDate: r.nextDate, autoEnter: r.autoEnter, isActive: r.isActive, createdAt: r.createdAt)
+            }
+        }
+
         file.payees = try context.fetch(FetchDescriptor<Payee>()).live.map {
             .init(name: $0.name, lastCategoryKey: $0.lastCategory?.isLive == true ? $0.lastCategory?.systemKey : nil,
                   lastAmount: text($0.lastAmount), lastMemo: $0.lastMemo, lastMethodRaw: $0.lastMethodRaw)
@@ -292,7 +325,8 @@ enum DataBackup {
                         .init(categoryKey: $0.category?.isLive == true ? $0.category?.systemKey : nil,
                               amount: text($0.amount), memo: $0.memo, order: $0.order)
                     },
-                    tagNames: t.tags.isEmpty ? nil : t.tagNames))
+                    tagNames: t.tags.isEmpty ? nil : t.tagNames,
+                    recurringIndex: t.recurring.flatMap { $0.isLive ? ruleIDs[$0.persistentModelID] : nil }))
             }
             for h in account.holdings.live {
                 file.holdings.append(.init(
@@ -371,6 +405,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<Account>()) { context.delete(item) }   // takes holdings with it
         for item in try context.fetch(FetchDescriptor<Payee>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Tag>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<RecurringTransaction>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
@@ -447,6 +482,23 @@ enum DataBackup {
             restoredTags[Tags.key(record.name)] = tag
         }
 
+        var restoredRules: [RecurringTransaction] = []
+        for record in file.recurring ?? [] {
+            guard let account = accounts[record.accountID] else { continue }
+            let rule = RecurringTransaction(payee: record.payee, account: account, category: record.categoryKey.flatMap { byKey[$0] },
+                                            amount: decimal(record.amount), frequency: BillFrequency(rawValue: record.frequencyRaw) ?? .monthly,
+                                            startDate: record.startDate)
+            rule.memo = record.memo
+            rule.paymentTypeRaw = record.paymentTypeRaw
+            rule.endDate = record.endDate
+            rule.nextDate = record.nextDate
+            rule.autoEnter = record.autoEnter
+            rule.isActive = record.isActive
+            rule.createdAt = record.createdAt
+            context.insert(rule)
+            restoredRules.append(rule)
+        }
+
         var restoredTransactions: [(Transaction, BackupFile.TransactionRecord)] = []
         for record in file.transactions {
             guard let account = accounts[record.accountID] else { continue }
@@ -466,6 +518,7 @@ enum DataBackup {
             t.paidDueDate = record.paidDueDate
             t.isOpeningDeposit = record.isOpeningDeposit ?? false
             context.insert(t)
+            if let index = record.recurringIndex, restoredRules.indices.contains(index) { t.recurring = restoredRules[index] }
             for name in record.tagNames ?? [] {
                 if let tag = restoredTags[Tags.key(name)] { t.tags.append(tag) }
             }
