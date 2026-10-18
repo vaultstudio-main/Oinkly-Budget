@@ -130,10 +130,33 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         // The widgets read a small snapshot of bill names and reminder times. Keep it current as data changes.
         Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
         NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
-            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+            Task { @MainActor in
+                WidgetSnapshotWriter.refreshSoon()
+                SharedDataSession.shared.noteSaved()
+            }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+            Task { @MainActor in
+                WidgetSnapshotWriter.refreshSoon()
+                // Hiding the app is a good moment to bring the shared file up to date.
+                await SharedDataSession.shared.checkInNow(release: false)
+            }
+        }
+        // Tell the person about anything the shared data had to do at launch, such as keeping unsaved work. It waits
+        // for the main window so it never holds up the start-up, and shows as a sheet on that window.
+        Task { @MainActor in
+            guard SharedDataSession.shared.notice != nil else { return }
+            var window: NSWindow?
+            for _ in 0..<80 where window == nil {
+                try? await Task.sleep(for: .milliseconds(500))
+                window = NSApp.windows.first { $0.title == "OinklyBudget" && $0.isVisible }
+            }
+            guard let window, let notice = SharedDataSession.shared.notice else { return }
+            SharedDataSession.shared.notice = nil
+            let alert = NSAlert()
+            alert.messageText = "Shared data"
+            alert.informativeText = notice
+            _ = await alert.beginSheetModal(for: window)
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in await PiggybankAppDelegate.refreshReminders() }
@@ -153,6 +176,17 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         guard let container else { return }
         await BillNotifier.refresh(in: container.mainContext)
         await CustomReminders.shared.apply()
+    }
+
+    /// Quitting writes the shared data back and lets go of the lock first, so the next person can open it at once.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let session = SharedDataSession.shared
+        guard session.isActive, !session.isReadOnly else { return .terminateNow }
+        Task { @MainActor in
+            await session.checkInNow(release: true)
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     /// Closing the window leaves OinklyBudget running, so its menu bar item stays. Without a menu bar item there

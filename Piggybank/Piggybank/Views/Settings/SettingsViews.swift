@@ -394,6 +394,9 @@ struct DataSettingsView: View {
 
     @State private var message: String?
     @State private var messageIsError = false
+    @State private var confirmingShare = false
+    @State private var confirmingStopSharing = false
+    private var shared: SharedDataSession { SharedDataSession.shared }
 
     // Restoring a backup replaces everything, so it waits for a yes.
     @State private var pendingBackup: BackupFile?
@@ -439,8 +442,15 @@ struct DataSettingsView: View {
                 Text("Backup")
             }
 
+            sharedSection
+
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
+                    .disabled(shared.isActive)
+                if shared.isActive {
+                    Text("Erase All Data is off while a shared data file is in use. Stop sharing first.")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
                 Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -466,6 +476,61 @@ struct DataSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone.")
+        }
+    }
+
+    // MARK: Shared data file
+
+    @ViewBuilder
+    private var sharedSection: some View {
+        Section {
+            if shared.isActive || SharedDataSession.isConfigured && shared.isReadOnly {
+                LabeledContent("Shared folder") {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(shared.folderPath).textSelection(.enabled).lineLimit(2).multilineTextAlignment(.trailing)
+                        Button("Show in Finder") { NSWorkspace.shared.open(URL(fileURLWithPath: shared.folderPath)) }
+                            .buttonStyle(.link)
+                    }
+                }
+                if shared.isReadOnly {
+                    Label("Opened to look only. Changes made here are not saved to the shared file.", systemImage: "eye")
+                        .foregroundStyle(.orange)
+                } else {
+                    LabeledContent("You have it open since", value: (shared.openSince ?? .now).formatted(date: .abbreviated, time: .shortened))
+                    LabeledContent("Last saved to the shared file", value: shared.lastSaved.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Not yet")
+                }
+                if let message = shared.errorMessage { Text(message).font(.footnote).foregroundStyle(.orange) }
+                HStack {
+                    if !shared.isReadOnly {
+                        Button("Save Now") { Task { await shared.checkInNow(release: false) } }
+                        Button("Close File So Someone Else Can Use It") { Task { await shared.closeForOthers() } }
+                    }
+                    Spacer()
+                    Button("Stop Sharing", role: .destructive) { confirmingStopSharing = true }
+                }
+                Text("OinklyBudget works on a private copy and saves it to the shared folder every couple of minutes, when you hide the app and when you quit. Only one person can have the file open at a time.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            } else {
+                backupRow("Share Data File", detail: "Let more than one Mac login on this Mac use the same data, one at a time. Choose a folder every login can open, such as one in /Users/Shared. Your data on this Mac is copied into it and stays here untouched.", button: "Choose Folder") { confirmingShare = true }
+                if let message = shared.errorMessage { Text(message).font(.footnote).foregroundStyle(.orange) }
+            }
+        } header: {
+            Text("Shared Data File")
+        }
+        .confirmationDialog("Share your data through a folder?", isPresented: $confirmingShare, titleVisibility: .visible) {
+            Button("Choose Folder") {
+                let store = PiggybankAppDelegate.container?.configurations.first?.url
+                shared.chooseFolderAndEnable(currentStore: store, context: modelContext)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("OinklyBudget copies your data into the folder you choose, checks the copy, and restarts. Your data on this Mac is not changed or removed. If the folder already holds OinklyBudget data from someone else, that data is used instead. Make a backup first if you like (Backup, above).")
+        }
+        .confirmationDialog("Stop sharing?", isPresented: $confirmingStopSharing, titleVisibility: .visible) {
+            Button("Stop Sharing and Restart", role: .destructive) { Task { await shared.stopSharing() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The latest changes are saved to the shared folder first. Then OinklyBudget goes back to the data kept on this Mac, which is how it was when you started sharing. Changes made while sharing are not copied back to it.")
         }
     }
 

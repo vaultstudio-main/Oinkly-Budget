@@ -29,12 +29,12 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Status bar along the bottom of every page, app name centred in the top bar (built, needs more pages checked)
 
 ### Shared data file: two users on one Mac, one at a time
-- [ ] Prototype check-out and check-in on a file in `/Users/Shared`, tested with two real logins
-- [ ] Settings ▸ Data "Data File" section: current file, who has it open, choose, create, move, open recent, close for someone else
+- [ ] Prototype check-out and check-in on a folder in `/Users/Shared`: built and tested with scripts and in the app (crash recovery, second window, stop sharing); **not yet tested with two real Mac logins**
+- [ ] Settings ▸ Data & Backup "Shared Data File" section: choose folder, who has it open, save now, close for someone else, stop sharing (built; move, open recent and create-new are not)
 - [ ] Last-file bookmark, missing-file screen, never silently start an empty database
-- [ ] Lock file with who and since when, read-only open, take over a stale lock
-- [ ] Safe write-back, autosave, crash recovery
-- [ ] First launch copies existing 1.0 data (original kept untouched), with a `.pig` backup offered first
+- [x] Lock file with who and since when, look-only open, take over a stale lock (a lock from a dead process is stale at once)
+- [x] Safe write-back, autosave every couple of minutes, check-in on hide and quit, crash recovery (receipts travel with the file)
+- [x] Sharing copies this Mac's data into the folder after checking the copy; the original stays untouched
 
 ### Encrypted data file
 - [ ] Opt-in "Encrypt data file" with a passphrase (CryptoKit AES-GCM, no third-party code)
