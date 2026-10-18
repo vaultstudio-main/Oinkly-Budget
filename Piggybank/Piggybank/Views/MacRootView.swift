@@ -111,43 +111,16 @@ struct MacRootView: View {
                 }
                 .background(.bar)
             }
-            .navigationSplitViewColumnWidth(300)
+            .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
+            .fixedSidebarWidth(300)
             .toolbar(removing: .sidebarToggle)
         } detail: {
-            switch selection {
-            case .account(let id):
-                if let account = accounts.first(where: { $0.id == id }) {
-                    RegisterView(account: account).id(id)
-                } else {
-                    SummaryView()
-                }
-            case .reports:
-                ReportsView()
-            case .liabilities:
-                LiabilitiesView()
-            case .investments:
-                InvestmentsView()
-            case .bills:
-                BillsView()
-            case .planning:
-                PlanningView()
-            case .manageAccounts:
-                VStack(alignment: .leading, spacing: 0) {
-                    Text("Manage Accounts").font(.largeTitle.bold()).padding([.top, .horizontal], 16)
-                    AccountsSettingsView()
-                }
-                .background(Theme.background)
-            case .transactions:
-                TransactionsView()
-            case .summary, nil:
-                if accounts.isEmpty {
-                    ContentUnavailableView("No Accounts", systemImage: "building.columns", description: Text("Open Settings (⌘,) ▸ Accounts to add one."))
-                } else {
-                    SummaryView()
-                }
-            }
+            StatusBarHost(fallback: pageName, page: detailPage)
         }
         .navigationTitle("OinklyBudget")
+        // The name sits in the middle of the top bar, matching the bar along the bottom.
+        .toolbar(removing: .title)
+        .toolbar { AppNameToolbarItem() }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
             switch note.userInfo?["page"] as? String {
             case "summary": selection = .summary
@@ -166,6 +139,57 @@ struct MacRootView: View {
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
     }
 
+    @ViewBuilder
+    private var detailPage: some View {
+        switch selection {
+        case .account(let id):
+            if let account = accounts.first(where: { $0.id == id }) {
+                RegisterView(account: account).id(id)
+            } else {
+                SummaryView()
+            }
+        case .reports:
+            ReportsView()
+        case .liabilities:
+            LiabilitiesView()
+        case .investments:
+            InvestmentsView()
+        case .bills:
+            BillsView()
+        case .planning:
+            PlanningView()
+        case .manageAccounts:
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Manage Accounts").font(.largeTitle.bold()).padding([.top, .horizontal], 16)
+                AccountsSettingsView()
+            }
+            .background(Theme.background)
+        case .transactions:
+            TransactionsView()
+        case .summary, nil:
+            if accounts.isEmpty {
+                ContentUnavailableView("No Accounts", systemImage: "building.columns", description: Text("Open Settings (⌘,) ▸ Accounts to add one."))
+            } else {
+                SummaryView()
+            }
+        }
+    
+    }
+
+    private var pageName: String {
+        switch selection {
+        case .account(let id): accounts.first { $0.id == id }?.name ?? "Summary"
+        case .reports: "Reports"
+        case .liabilities: "Liabilities"
+        case .investments: "Investments"
+        case .bills: "Bills"
+        case .planning: "Planning"
+        case .manageAccounts: "Manage Accounts"
+        case .transactions: "Transactions"
+        case .summary, nil: "Summary"
+        }
+    }
+
     private func expansion(of group: AccountGroup) -> Binding<Bool> {
         Binding(
             get: { !collapsed.contains(group) },
@@ -177,4 +201,21 @@ struct MacRootView: View {
 #Preview {
     MacRootView()
         .modelContainer(for: [Account.self, Category.self, Transaction.self, Payee.self], inMemory: true)
+}
+
+/// The app's name in the middle of the top bar. Newer macOS puts toolbar items in a glass capsule, which would make
+/// a plain name look like a button, so the capsule is turned off there.
+private struct AppNameToolbarItem: ToolbarContent {
+    var body: some ToolbarContent {
+        if #available(macOS 26.0, *) {
+            ToolbarItem(placement: .principal) { name }
+                .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .principal) { name }
+        }
+    }
+
+    private var name: some View {
+        Text("OinklyBudget").font(.headline).foregroundStyle(.secondary)
+    }
 }

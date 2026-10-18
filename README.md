@@ -21,9 +21,9 @@ Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-feat
 Rough size: 12 to 16 weeks part-time.
 
 ### Fixes from complaints (do first)
-- [ ] Receipt picker on the Edit Transaction sheet (add, replace, remove, "no receipt")
-- [ ] Side panel opens at one fixed width and can't be dragged
-- [ ] Footer bar on every page: decide whether to remove or restyle it
+- [x] Receipt picker on the Edit Transaction sheet (add, replace, remove, "no receipt")
+- [x] Side panel opens at one fixed width and can't be dragged
+- [ ] Status bar along the bottom of every page, app name centred in the top bar (built, needs more pages checked)
 
 ### Shared data file: two users on one Mac, one at a time
 - [ ] Prototype check-out and check-in on a file in `/Users/Shared`, tested with two real logins

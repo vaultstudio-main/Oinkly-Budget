@@ -98,10 +98,12 @@ private struct TransactionsTable: View {
     @Query private var rows: [Transaction]
     @Environment(\.openWindow) private var openWindow
     private let isSearching: Bool
+    private let periodLabel: String
 
     init(month: Date, accountID: Account.ID?, search: String) {
         let text = search.trimmingCharacters(in: .whitespaces)
         isSearching = !text.isEmpty
+        periodLabel = text.isEmpty ? month.formatted(.dateTime.month(.wide).year()) : "Search results"
         let start = month
         let end = Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month
         let predicate: Predicate<Transaction>
@@ -196,5 +198,6 @@ private struct TransactionsTable: View {
             }
             .font(.callout)
         }
+        .statusBarText("\(list.count.formatted()) transaction\(list.count == 1 ? "" : "s") · \(periodLabel) · All accounts")
     }
 }

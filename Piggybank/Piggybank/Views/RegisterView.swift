@@ -208,6 +208,9 @@ private struct RegisterContent: View {
         }
         .padding(16)
         .background(Theme.background)
+        .statusBarText(account.isLoan
+            ? "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(account.name)"
+            : "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(month.formatted(.dateTime.month(.wide).year())) · \(account.name)")
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
         .sheet(isPresented: $isExporting) { ExportSheet(account: account, startingMonth: month) }
         .sheet(item: $editingDate) { transaction in
@@ -261,6 +264,8 @@ struct EditTransactionSheet: View {
     @State private var memo: String
     @State private var amount: Decimal
     @State private var investmentType: InvestmentType
+    @State private var receipt: Data?
+    @State private var noReceipt: Bool
     @State private var limitMessage: String?
 
     init(transaction: Transaction, account: Account, categories: [Category]) {
@@ -275,8 +280,12 @@ struct EditTransactionSheet: View {
         _memo = State(initialValue: transaction.memo)
         _amount = State(initialValue: transaction.amount)
         _investmentType = State(initialValue: InvestmentType.of(transaction))
+        _receipt = State(initialValue: transaction.receiptData)
+        _noReceipt = State(initialValue: transaction.noReceipt)
     }
 
+    /// Receipts can be added or changed here the same way as when a transaction is first entered.
+    private var showsReceipt: Bool { account.supportsReceipts && !transaction.receiptLocked }
     private var isInvestment: Bool { account.supportsHoldings && !transaction.isTransfer }
     /// ATM withdrawals are always the same: payee, category, method and memo can't be changed.
     private var isAtm: Bool { transaction.isAtmWithdrawal }
@@ -363,6 +372,12 @@ struct EditTransactionSheet: View {
                         if let limitMessage { Text(limitMessage).foregroundStyle(.orange) }
                     }
                 }
+
+                if showsReceipt {
+                    Section("Receipt") {
+                        ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
+                    }
+                }
             }
             .formStyle(.grouped)
 
@@ -373,7 +388,7 @@ struct EditTransactionSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 460, height: 520)
+        .frame(width: 460, height: showsReceipt ? 680 : 520)
     }
 
     private func save() {
@@ -383,6 +398,10 @@ struct EditTransactionSheet: View {
             return
         }
         transaction.date = date
+        if showsReceipt {
+            transaction.receiptData = receipt
+            transaction.noReceipt = receipt == nil && noReceipt
+        }
         if !isAtm {
             transaction.payee = payee
             transaction.memo = memo
