@@ -2,6 +2,10 @@
 
 Drafted 2026-10-18. This answers the biggest unknown in `shared-data-file-design.md`: when one Mac login creates a shared folder and a data file, can a different login on the same Mac replace that file, rename it, delete it and add to the receipts folder? It uses the real app's sandbox but never touches your data.
 
+## Round 2 is no longer needed (2026-10-18)
+
+The owner chose an automatic handoff (design decision D16): a second login makes the first one save and close, with no prompts. That works without knowing whether one login can see another login's process, so round 2 below is optional. It would only let the app take over a crashed login's lock instantly instead of after a 20 second wait. Skip it unless you want the extra detail.
+
 ## What was set up (round 2, 2026-10-18)
 
 Round 1 passed (see the results below). Round 2 uses the fixed folder the owner chose and the process check that round 1 couldn't reach.
