@@ -289,19 +289,15 @@ private struct RegisterContent: View {
         return monthTransactions.first { $0.persistentModelID == id && $0.isLive }
     }
 
-    /// What the menu bar's File, Transaction and Print commands do here.
+    /// What the menu bar's Transaction commands do here.
     private var registerActions: RegisterActions {
         let chosen = selectedTransaction
         return RegisterActions(
             hasSelection: chosen != nil,
             canMakeRecurring: chosen.map { $0.canSplit && $0.recurring == nil } ?? false,
-            canImport: true,
             edit: { if let chosen { editingDate = chosen } },
             details: { if let chosen { openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: chosen.persistentModelID)) } },
-            makeRecurring: { if let chosen, chosen.canSplit, chosen.recurring == nil { makingRecurring = chosen } },
-            importStatement: { if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) } },
-            exportCSV: { savingAs = .csv },
-            printPDF: { savingAs = .pdf })
+            makeRecurring: { if let chosen, chosen.canSplit, chosen.recurring == nil { makingRecurring = chosen } })
     }
 
     private func requestDelete() {

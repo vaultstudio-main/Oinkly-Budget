@@ -214,7 +214,7 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 ### G2. Keyboard shortcuts and accessibility (Built in part)
 - New Go menu: ⌘1 to ⌘8 for Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets.
 - New Transaction menu for the selected transaction: ⌘E Edit Transaction, ⌘I View Details, ⇧⌘R Make Recurring. These do what right-click does, so the keyboard and VoiceOver can reach them.
-- File menu: ⇧⌘I Import Statement, ⇧⌘E Export CSV, ⌘P Print PDF, for the account on screen.
+- Importing, exporting and printing stay on each page's own buttons (Import CSV, Export CSV, Print PDF). The File menu only has the commands that add things.
 - Existing shortcuts stay: ⌘N, ⌥⌘N, ⇧⌘A, ⇧⌘T, ⇧⌘B, ⌥⌘U, ⇧⌘/, ⌘, and ⌘Q.
 - VoiceOver labels on icon-only buttons, headings on page and card titles, and decorative pictures hidden. Chart descriptions, larger text and the Edit menu are still open; see `accessibility-audit.md`.
 - Shots: S-G2 (shortcut list in Help).

@@ -6,18 +6,14 @@ extension FocusedValues {
     @Entry var selectedAccountID: PersistentIdentifier?
 }
 
-/// What the menu bar can do in the register that is showing: edit or look at the selected transaction, make it
-/// recurring, and import, export or print the account. Set by the register; nil when no register is open.
+/// What the menu bar can do in the register that is showing: edit or look at the selected transaction, or make it
+/// recurring. Set by the register; nil when no register is open.
 struct RegisterActions {
     var hasSelection: Bool
     var canMakeRecurring: Bool
-    var canImport: Bool
     var edit: () -> Void
     var details: () -> Void
     var makeRecurring: () -> Void
-    var importStatement: () -> Void
-    var exportCSV: () -> Void
-    var printPDF: () -> Void
 }
 
 extension FocusedValues {
@@ -105,20 +101,9 @@ struct FileNewCommands: Commands {
             .keyboardShortcut("b", modifiers: [.command, .shift])
         }
 
-        // The account on screen: bring statements in and send them out.
-        CommandGroup(replacing: .importExport) {
-            Button("Import Statement…") { register?.importStatement() }
-                .keyboardShortcut("i", modifiers: [.command, .shift])
-                .disabled(register?.canImport != true)
-            Button("Export CSV…") { register?.exportCSV() }
-                .keyboardShortcut("e", modifiers: [.command, .shift])
-                .disabled(register == nil)
-        }
-        CommandGroup(replacing: .printItem) {
-            Button("Print PDF…") { register?.printPDF() }
-                .keyboardShortcut("p", modifiers: .command)
-                .disabled(register == nil)
-        }
+        // Importing, exporting and printing live on each page's own buttons, so the File menu doesn't repeat them.
+        CommandGroup(replacing: .importExport) {}
+        CommandGroup(replacing: .printItem) {}
 
         // Everything the right-click menu does on a transaction, for the keyboard and VoiceOver.
         CommandMenu("Transaction") {

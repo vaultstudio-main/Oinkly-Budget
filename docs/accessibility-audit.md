@@ -14,11 +14,8 @@ Added (built):
 | ⌘E | Edit Transaction | new Transaction menu |
 | ⌘I | View Details | Transaction menu |
 | ⇧⌘R | Make Recurring | Transaction menu |
-| ⇧⌘I | Import Statement | File menu |
-| ⇧⌘E | Export CSV | File menu |
-| ⌘P | Print PDF | File menu |
 
-The Transaction, Import, Export and Print commands act on the register that is showing, and are greyed out elsewhere. The Transaction commands act on the one selected row. Everything the right-click menu does on a transaction is now also in a menu, so keyboard-only and VoiceOver users can reach it.
+The Transaction commands act on the one selected row of the register that is showing, and are greyed out elsewhere. Import, export and print have no menu items; each page has its own buttons for them (removed from the File menu on request). Everything the right-click menu does on a transaction is now also in a menu, so keyboard-only and VoiceOver users can reach it.
 
 ## VoiceOver labels (built)
 
