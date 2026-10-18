@@ -120,6 +120,16 @@ enum Bills {
             }
     }
 
+    /// Important bills that are overdue or due in the next `days` days, soonest first, for the Summary page.
+    static func priority(_ bills: [Bill], days: Int = 20, limit: Int = 5, now: Date = .now, calendar: Calendar = .current) -> [Occurrence] {
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -30, to: today)!
+        let end = calendar.date(byAdding: .day, value: days, to: today)!
+        let found = occurrences(bills.live.filter(\.isImportant), from: start, through: end, now: now, calendar: calendar)
+            .filter { !$0.isPaid }
+        return Array(found.prefix(limit))
+    }
+
     /// The reminders the notification system should have scheduled for each unpaid due date coming up: one
     /// `remindDaysBefore` days ahead and, when that is not already the day itself, one on the due date, both at `hour`.
     /// Reminders whose time has already passed are left out.

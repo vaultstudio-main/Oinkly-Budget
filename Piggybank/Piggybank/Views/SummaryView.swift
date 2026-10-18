@@ -24,8 +24,8 @@ struct SummaryView: View {
         ScrollView {
             VStack(spacing: 12) {
                 header
-                BillAlertBanner()
                 GlanceCards(accounts: accounts, transactions: transactions)
+                PriorityBillsCard()
                 HStack(alignment: .top, spacing: 12) {
                     TrendChartCard(kind: .netWorth, height: 240)
                     SummaryBalanceCard(accounts: accounts)

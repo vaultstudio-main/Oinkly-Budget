@@ -543,13 +543,55 @@ struct BillAlertBanner: View {
         }
     }
 
-    private func when(_ item: Bills.Occurrence) -> String {
-        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: .now), to: item.date).day ?? 0
+    private func when(_ item: Bills.Occurrence) -> String { item.dueText }
+}
+
+extension Bills.Occurrence {
+    /// "Due in 3 days · Oct 21", "Due today", "Overdue by 2 days".
+    var dueText: String {
+        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: .now), to: date).day ?? 0
         switch days {
         case ..<0: return "Overdue by \(-days) day\(days == -1 ? "" : "s")"
         case 0: return "Due today"
         case 1: return "Due tomorrow"
-        default: return "Due in \(days) days · \(item.date.formatted(.dateTime.month(.abbreviated).day()))"
+        default: return "Due in \(days) days · \(date.formatted(.dateTime.month(.abbreviated).day()))"
+        }
+    }
+}
+
+/// The Summary page's list of the next few important bills: overdue ones and those due in the next 20 days.
+struct PriorityBillsCard: View {
+    @Query private var allBills: [Bill]
+
+    var body: some View {
+        let items = Bills.priority(allBills.live)
+        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
+                    headline: items.isEmpty ? nil : "\(items.count) bill\(items.count == 1 ? "" : "s")") {
+            if items.isEmpty {
+                Label("No priority bills due soon. Mark a bill Important on the Bills page to see it here.", systemImage: "checkmark.circle")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { Divider() }
+                        HStack {
+                            Image(systemName: item.isOverdue ? "exclamationmark.circle.fill" : "calendar")
+                                .foregroundStyle(item.isOverdue ? Theme.red : Color.orange)
+                                .frame(width: 22)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(item.bill.name).font(.body.weight(.semibold))
+                                Text(item.dueText)
+                                    .font(.caption)
+                                    .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
+                            }
+                            Spacer()
+                            Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
         }
     }
 }
