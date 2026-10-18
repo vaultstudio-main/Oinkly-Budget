@@ -252,8 +252,10 @@ private struct RegisterContent: View {
     }
 }
 
-/// Right-click ▸ Edit Transaction… in the register. Everything about a transaction is changed here, so nothing can be
-/// bumped by accident in the list itself.
+/// Right-click ▸ Edit Transaction… in the register. It has everything the New Transaction form has (account, date,
+/// type, amount, payee, category, method, memo, status and receipt), so a transaction can be changed in every way it
+/// could be entered. Only what is locked, such as a transfer's amount or an ATM withdrawal's details, stays fixed.
+/// Nothing in the list itself can be bumped by accident.
 struct EditTransactionSheet: View {
     let transaction: Transaction
     let account: Account
@@ -261,14 +263,19 @@ struct EditTransactionSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+    @Query(sort: \Payee.name) private var allPayees: [Payee]
 
+    @State private var selectedAccount: Account
     @State private var date: Date
+    @State private var isPayment: Bool
+    @State private var amount: Decimal?
     @State private var payee: String
     @State private var category: Category?
     @State private var paymentChoice: PaymentChoice?
     @State private var checkNumber: String
     @State private var memo: String
-    @State private var amount: Decimal
+    @State private var state: ReconcileState
     @State private var investmentType: InvestmentType
     @State private var receipt: Data?
     @State private var noReceipt: Bool
@@ -278,62 +285,140 @@ struct EditTransactionSheet: View {
         self.transaction = transaction
         self.account = account
         self.categories = categories
+        _selectedAccount = State(initialValue: account)
         _date = State(initialValue: transaction.date)
+        _isPayment = State(initialValue: transaction.amount <= 0)
+        _amount = State(initialValue: transaction.amount == 0 ? nil : abs(transaction.amount))
         _payee = State(initialValue: transaction.payee)
         _category = State(initialValue: transaction.category)
         _paymentChoice = State(initialValue: transaction.paymentChoice)
         _checkNumber = State(initialValue: transaction.checkNumber)
         _memo = State(initialValue: transaction.memo)
-        _amount = State(initialValue: transaction.amount)
+        _state = State(initialValue: transaction.state)
         _investmentType = State(initialValue: InvestmentType.of(transaction))
         _receipt = State(initialValue: transaction.receiptData)
         _noReceipt = State(initialValue: transaction.noReceipt)
     }
 
-    /// Receipts can be added or changed here the same way as when a transaction is first entered.
-    private var showsReceipt: Bool { account.supportsReceipts && !transaction.receiptLocked }
-    private var isInvestment: Bool { account.supportsHoldings && !transaction.isTransfer }
-    /// ATM withdrawals are always the same: payee, category, method and memo can't be changed.
+    private var isInvestment: Bool { selectedAccount.supportsHoldings && !transaction.isTransfer }
+    /// ATM withdrawals are always the same: payee, category, method, memo and status can't be changed.
     private var isAtm: Bool { transaction.isAtmWithdrawal }
     private var amountIsLocked: Bool { transaction.isTransfer }
+    private var payees: [Payee] { allPayees.live }
+
+    /// Accounts this transaction can move to: the same ones New Transaction offers, of the same kind (an investment
+    /// stays an investment). Transfers, ATM withdrawals and loan payments stay where they are.
+    private var accountChoices: [Account] {
+        guard !transaction.isTransfer, !isAtm, !account.isLoan else { return [] }
+        let live = allAccounts.live
+        return live.filter {
+            $0.id == account.id
+                || (!$0.isLoan && !$0.isCreditCard && !$0.isCashOnHand && $0.supportsHoldings == account.supportsHoldings)
+        }
+    }
+
+    private var showsReceipt: Bool { selectedAccount.supportsReceipts && !transaction.receiptLocked }
+
+    private var signedAmount: Decimal {
+        if amountIsLocked { return transaction.amount }
+        let value = amount ?? 0
+        return isPayment ? -value : value
+    }
+
+    /// The change this would make to the balance of the account it ends up in.
+    private var accountChange: Decimal {
+        selectedAccount.id == account.id ? signedAmount - transaction.amount : signedAmount
+    }
+
+    private var exceedsLimit: Bool { !amountIsLocked && selectedAccount.wouldExceedLimit(adding: accountChange) }
+
+    private var suggestions: [Payee] {
+        let matches = PayeeMemory.matches(for: payee, in: payees)
+        if matches.count == 1, PayeeMemory.normalized(matches[0].name) == PayeeMemory.normalized(payee) { return [] }
+        return matches
+    }
+
+    private var canSave: Bool { amountIsLocked || (amount ?? 0) > 0 }
 
     var body: some View {
         VStack(spacing: 0) {
             Form {
-                Section {
+                Section("Transaction") {
+                    if accountChoices.count > 1 {
+                        Picker("Account", selection: $selectedAccount) {
+                            ForEach(accountChoices) { Text($0.name).tag($0) }
+                        }
+                    } else {
+                        LabeledContent("Account") {
+                            Label(account.name, systemImage: "lock.fill").foregroundStyle(.secondary)
+                        }
+                    }
                     DatePicker("Date", selection: $date, displayedComponents: .date)
+                    if isInvestment {
+                        Picker("Type", selection: $investmentType) {
+                            ForEach(InvestmentType.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                        }
+                    } else if !amountIsLocked {
+                        Picker("Type", selection: $isPayment) {
+                            Text("Payment (money out)").tag(true)
+                            Text("Deposit (money in)").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    if amountIsLocked {
+                        LabeledContent("Amount") {
+                            Text(transaction.amount, format: .appCurrency).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        CurrencyField("Amount", value: $amount)
+                    }
+                    if exceedsLimit {
+                        Label("This would reach the credit limit on \(selectedAccount.name).", systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
+                    if amountIsLocked {
+                        Text("Part of a transfer or payment, so the amount is shared with the other account and the matching entry moves with the date. Delete it and enter it again to change the amount.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Details") {
                     if isAtm {
                         LabeledContent("Payee") {
                             Label(payee, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
                     } else {
-                        FormTextField(account.supportsHoldings ? "Description" : "Payee", text: $payee)
+                        FormTextField(isInvestment ? "Description" : "Payee", text: $payee)
+                        if !suggestions.isEmpty && !isInvestment {
+                            HStack {
+                                ForEach(suggestions) { suggestion in
+                                    Button(suggestion.name) { apply(suggestion) }
+                                        .buttonStyle(.bordered)
+                                        .controlSize(.small)
+                                }
+                            }
+                        }
                     }
 
                     if isInvestment {
-                        Picker("Type", selection: $investmentType) {
-                            ForEach(InvestmentType.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
-                        }
+                        EmptyView()
                     } else if let fixed = transaction.fixedCategoryTitle {
                         LabeledContent("Category") {
                             Label(fixed, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
                     } else {
                         Picker("Category", selection: $category) {
-                            CategoryOptions(
-                                categories: categories,
-                                only: amount > 0 ? .income : (amount < 0 ? .expense : nil),
-                                keeping: category
-                            )
+                            CategoryOptions(categories: categories, only: isPayment ? .expense : .income, keeping: category)
                         }
                     }
 
-                    if !account.supportsHoldings {
+                    if !selectedAccount.supportsHoldings {
                         if isAtm {
                             LabeledContent("Payment method") {
                                 Label(transaction.paymentTitle, systemImage: "lock.fill").foregroundStyle(.secondary)
                             }
-                        } else if let locked = account.lockedPaymentType, !transaction.isTransfer {
+                        } else if let locked = selectedAccount.lockedPaymentType, !transaction.isTransfer {
                             LabeledContent("Payment method") {
                                 Label(locked.title, systemImage: "lock.fill").foregroundStyle(.secondary)
                             }
@@ -351,31 +436,14 @@ struct EditTransactionSheet: View {
                         LabeledContent("Memo") {
                             Label(memo, systemImage: "lock.fill").foregroundStyle(.secondary)
                         }
+                        LabeledContent("Status") {
+                            Label(ReconcileState.reconciled.title, systemImage: "lock.fill").foregroundStyle(.secondary)
+                        }
                     } else {
                         FormTextField("Memo", text: $memo)
-                    }
-
-                    if amountIsLocked {
-                        LabeledContent("Amount") {
-                            Text(amount, format: .appCurrency).foregroundStyle(.secondary)
+                        Picker("Status", selection: $state) {
+                            ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                         }
-                    } else {
-                        LabeledContent("Amount") {
-                            CurrencyField("Amount", amount: $amount)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                        }
-                    }
-                } header: {
-                    Text("Edit Transaction")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if amountIsLocked {
-                            Text("Part of a transfer or payment, so the amount is shared with the other account and the matching entry moves with the date. Delete it and enter it again to change the amount.")
-                        } else {
-                            Text("Amounts are positive for deposits and negative for payments.")
-                        }
-                        if let limitMessage { Text(limitMessage).foregroundStyle(.orange) }
                     }
                 }
 
@@ -387,47 +455,76 @@ struct EditTransactionSheet: View {
             }
             .formStyle(.grouped)
 
+            if let limitMessage {
+                Text(limitMessage).font(.callout).foregroundStyle(.orange).padding(.horizontal, 16)
+            }
+
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Save") { save() }.keyboardShortcut(.defaultAction)
+                Button("Save") { save() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
             }
             .padding(16)
         }
-        .frame(width: 460, height: showsReceipt ? 680 : 520)
+        .frame(width: 480, height: showsReceipt ? 760 : 620)
+        .onChange(of: isPayment) { _, new in
+            if let category, category.isIncome == new { self.category = nil }
+        }
+        .onChange(of: selectedAccount) { limitMessage = nil }
+    }
+
+    private func apply(_ suggestion: Payee) {
+        payee = suggestion.name
+        if suggestion.lastAmount != 0 {
+            amount = abs(suggestion.lastAmount)
+            isPayment = suggestion.lastAmount < 0
+        }
+        // Only a category that fits the direction is filled in.
+        let last = suggestion.lastCategory
+        category = last?.isIncome == !isPayment ? last : nil
     }
 
     private func save() {
         guard transaction.isLive else { dismiss(); return }
-        if !amountIsLocked, account.wouldExceedLimit(adding: amount - transaction.amount) {
-            limitMessage = account.limitMessage
+        if !amountIsLocked, selectedAccount.wouldExceedLimit(adding: accountChange) {
+            limitMessage = selectedAccount.limitMessage
             return
         }
+        let moved = selectedAccount.id != account.id
+        if moved { transaction.account = selectedAccount }
         transaction.date = date
         if showsReceipt {
             transaction.receiptData = receipt
             transaction.noReceipt = receipt == nil && noReceipt
+        } else if moved {
+            // The new account doesn't keep receipts.
+            transaction.receiptData = nil
+            transaction.noReceipt = false
         }
         if !isAtm {
             transaction.payee = payee
             transaction.memo = memo
+            transaction.state = state
         }
         if isInvestment {
             // The type sets the sign and the category, so the size typed is what counts.
-            if !amountIsLocked { transaction.amount = abs(amount) }
+            if !amountIsLocked { transaction.amount = abs(amount ?? 0) }
             investmentType.apply(to: transaction, categories: categories)
         } else {
             if transaction.fixedCategoryTitle == nil { transaction.category = category }
             if isAtm {
                 // Method stays as recorded.
-            } else if let locked = account.lockedPaymentType, !transaction.isTransfer {
+            } else if let locked = selectedAccount.lockedPaymentType, !transaction.isTransfer {
                 transaction.paymentChoice = .type(locked)
                 transaction.checkNumber = ""
             } else {
                 transaction.paymentChoice = paymentChoice
                 transaction.checkNumber = paymentChoice?.isCheck == true ? checkNumber : ""
             }
-            if !amountIsLocked { transaction.amount = amount }
+            if !amountIsLocked { transaction.amount = signedAmount }
+            if !isAtm, !transaction.isTransfer { PayeeMemory.record(name: payee, category: category, amount: signedAmount, in: modelContext) }
         }
         if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
         modelContext.saveNow()
