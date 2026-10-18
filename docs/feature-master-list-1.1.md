@@ -121,10 +121,11 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Shots: S-C2.
 
 ### C3. Widgets (Built)
-- Two widgets, small and medium: Upcoming Bills (the next bills due, names and dates only) and Reminders (your own reminders and when they are next).
+- Two widgets in three sizes (small, medium, large): Upcoming Bills (the next bills due, names and dates only) and Reminders (your own reminders and when they are next).
+- **Choices.** Right-click a widget and choose Edit Widget. Upcoming Bills: Show (all bills or important bills only) and Look ahead (7, 14 or 30 days). Reminders: pick which reminders show, or leave empty for all of them. The large size lists about 9 bills or 8 reminders.
 - No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open OinklyBudget to show your bills here."
 - Add them from the widget gallery (edit widgets on the desktop or in Notification Center).
-- Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery).
+- Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery), S-C3c (Edit Widget choices).
 
 ---
 
@@ -272,6 +273,7 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-C2 | Menu bar pop-up | Click the menu bar item | Help-menu-bar | features | – |
 | S-C3a | Both widgets on the desktop | Desktop (owner takes this) | Help-widgets | features | yes |
 | S-C3b | Widget gallery | Edit widgets (owner takes this) | Help-widget-gallery | – | – |
+| S-C3c | Edit Widget choices | Right-click a widget (owner takes this) | Help-widget-choices | – | – |
 | S-D1a | Goal editor with the account link | Planning ▸ New Goal | Help-goal-edit | features | – |
 | S-D1b | Goal section close-up | Any linked account | Help-goal-section | features | – |
 | S-D1c | Planning page | Planning | Help-goals | gallery | yes |

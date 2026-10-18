@@ -66,7 +66,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Share one data file between two Mac logins on one Mac, one at a time *(if built)*: choose a folder, see who has the file and since when, close it for the next person, take over a stale lock, and recover after a crash.
 
 ### Widgets and the menu bar
-- Two widgets, small and medium: Upcoming Bills and Reminders. They show names and dates only, never amounts or account details.
+- Two widgets in small, medium and large: Upcoming Bills and Reminders. Edit a widget to choose which bills (all or important only) and how far ahead, or which reminders. They show names and dates only, never amounts or account details.
 - The menu bar pop-up shows this month's bills, with important bills for the next 30 days first.
 
 ### Around the app
