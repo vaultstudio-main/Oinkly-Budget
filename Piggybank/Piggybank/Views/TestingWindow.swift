@@ -47,10 +47,7 @@ struct TestingWindow: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 row("Fill with Test Data", "Made-up accounts, over two years of transactions (thousands of them), bills, goals, holdings and a receipt, so every screen has something to show.", .load)
-                row("Wipe Everything", SharedDataSession.shared.isActive
-                    ? "Off while a shared data file is in use. Stop sharing in Settings first."
-                    : "Deletes the whole database, however big, and quits. Open the app again and it starts empty.", .wipe)
-                    .disabled(SharedDataSession.shared.isActive)
+                row("Wipe Everything", "Deletes the whole database, however big, and quits. Open the app again and it starts empty.", .wipe)
             }
 
             VStack(alignment: .leading, spacing: 8) {

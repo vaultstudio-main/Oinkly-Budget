@@ -94,7 +94,9 @@ Pick from this list; each one is small to medium.
 - Accessibility pass (VoiceOver, larger text) for the new screens.
 - Settings for default report period, paper size and export style.
 
-## Shared data file: two users on one Mac
+## Shared data file: two users on one Mac (MOVED OUT OF 1.1, see the 1.2 plan)
+
+> **Update 2026-10-18:** this is no longer part of 1.1. A working prototype is saved on the `shared-data-prototype` branch. The text below is kept as the design record. Everything else in this plan that says it depends on the shared file (the encrypted data file) needs a rethink; see the README.
 
 Goal: two people on the same Mac can use the same OinklyBudget data file, **one at a time**. No sync, no cloud, no accounts inside the app. (Both editing at the same moment is a much harder problem and is not part of this. If you want that, say so, because it changes the design.)
 

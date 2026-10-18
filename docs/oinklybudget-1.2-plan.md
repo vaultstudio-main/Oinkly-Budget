@@ -30,6 +30,30 @@ Open questions (decide before building):
 
 Effort: about 3 to 4 days, plus testing on a copy of real data.
 
+## Shared data file: two Mac logins, one at a time
+
+Moved here from 1.1 on 2026-10-18. The design is in the 1.1 plan (the "Shared data file" section). A working prototype is saved on the `shared-data-prototype` branch (commits `572a337` and `ea179d4`).
+
+What the prototype already does:
+
+- A shared folder holds one finished data file, a lock and a note about the last save. The app works on a private copy and writes it back in one safe replace, so SQLite's side files never sit in the shared folder.
+- Receipts and photos travel with the data (SwiftData keeps them outside the database file).
+- The lock records who has it and since when. A lock left by a process that no longer exists is stale at once, and take over is offered.
+- Crash recovery keeps unsaved work, or saves it as a separate file if someone else saved meanwhile.
+- Saves go back every couple of minutes, when the app is hidden and when it quits. Settings has Choose Folder, Save Now, Close File So Someone Else Can Use It and Stop Sharing. Start-up asks first when someone else has the file.
+
+What it still needs:
+
+1. **A test with two real Mac logins** (permissions, fast user switching). This is the main unknown, and nothing else should be built before it.
+2. Open Recent, Move This File and Create a New File.
+3. Timing a save on a large data file.
+4. Cleaning up receipt files that are no longer used.
+5. Help pages and release notes.
+
+The encrypted data file (also deferred) was designed on top of this save path, so plan them together.
+
+Effort: about 2 to 3 weeks from the prototype.
+
 ## One database change, done once
 
 Several things want a stored field. Doing them together means one migration instead of several.

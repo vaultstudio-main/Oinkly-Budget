@@ -11,23 +11,8 @@ struct PiggybankApp: App {
         let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
-        // With a shared data folder set, the app opens a private working copy of the shared file instead of this
-        // Mac's own data. See SharedDataSession.
-        #if DEBUG
-        SharedDataSession.enableTestFolderIfRequested()
-        #endif
-        let choice = SharedDataSession.takeNextLaunchChoice()
-        let configuration: ModelConfiguration
-        switch SharedDataSession.shared.prepareAtLaunch(readOnly: choice.readOnly, takeOver: choice.takeOver) {
-        case .local:
-            configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
-            StoreReset.performIfRequested(for: configuration)
-        case .shared(let workingStore):
-            configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
-        case .needsDecision:
-            // The boot window asks what to do. Until then nothing is opened, so use a throwaway empty database.
-            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        }
+        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+        StoreReset.performIfRequested(for: configuration)
         do {
             container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)
         } catch {

@@ -19,7 +19,7 @@ Switch with Xcode's Source Control ▸ Switch, or `git switch main` / `git switc
 
 Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-features.md](docs/oinklybudget-1.1-update-plus-features.md). Drafted 2026-10-16. Tick a box when the feature is built and tested on this branch. The app version on this branch is 1.1 (build 2).
 
-Rough size: 12 to 16 weeks part-time.
+Rough size: 8 to 11 weeks part-time without the shared data file.
 
 ### Fixes from complaints (do first)
 - [x] Primary checking account: pinned under Cash on Hand outside any folder and labelled Primary Checking (kept as a setting on this Mac for now; move onto the account when the database next changes)
@@ -28,13 +28,8 @@ Rough size: 12 to 16 weeks part-time.
 - [x] Side panel opens at one fixed width and can't be dragged
 - [ ] Status bar along the bottom of every page, app name centred in the top bar (built, needs more pages checked)
 
-### Shared data file: two users on one Mac, one at a time
-- [ ] Prototype check-out and check-in on a folder in `/Users/Shared`: built and tested with scripts and in the app (crash recovery, second window, stop sharing); **not yet tested with two real Mac logins**
-- [ ] Settings ▸ Data & Backup "Shared Data File" section: choose folder, who has it open, save now, close for someone else, stop sharing (built; move, open recent and create-new are not)
-- [ ] Last-file bookmark, missing-file screen, never silently start an empty database
-- [x] Lock file with who and since when, look-only open, take over a stale lock (a lock from a dead process is stale at once)
-- [x] Safe write-back, autosave every couple of minutes, check-in on hide and quit, crash recovery (receipts travel with the file)
-- [x] Sharing copies this Mac's data into the folder after checking the copy; the original stays untouched
+### Shared data file: moved out of 1.1 for now
+Two Mac logins sharing one data file, one at a time. The working prototype is saved on the `shared-data-prototype` branch (check-out and check-in through a folder, locks, crash recovery, receipts travelling with the data, a start-up screen when someone else has it). It was tested with scripts and in the app but never with two real Mac logins, so it is not in 1.1. See the 1.2 plan.
 
 ### Encrypted data file
 - [ ] Opt-in "Encrypt data file" with a passphrase (CryptoKit AES-GCM, no third-party code)
@@ -69,6 +64,7 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Other "Should have" items as time allows
 
 ### Not in 1.1
+- The shared data file (prototype kept on the `shared-data-prototype` branch)
 - Goals tied to accounts, and the stored-field changes (see the 1.2 plan: [docs/oinklybudget-1.2-plan.md](docs/oinklybudget-1.2-plan.md))
 - Quicken, QIF, OFX and QFX import
 - Print command, ⌘P and page setup (use Export to PDF)
