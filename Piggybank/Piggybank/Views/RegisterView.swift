@@ -32,6 +32,7 @@ private struct RegisterContent: View {
     @State private var confirmingDelete = false
     @State private var limitMessage: String?
     @State private var editingDate: Transaction?
+    @State private var isExporting = false
     @Environment(\.openWindow) private var openWindow
 
     init(account: Account, month: Binding<Date>) {
@@ -74,6 +75,8 @@ private struct RegisterContent: View {
                 MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
                 Spacer()
             }
+            Button("Export…", systemImage: "square.and.arrow.up") { isExporting = true }
+                .help("Save this account's transactions as a PDF statement or a CSV spreadsheet")
         }
     }
 
@@ -206,6 +209,7 @@ private struct RegisterContent: View {
         .padding(16)
         .background(Theme.background)
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
+        .sheet(isPresented: $isExporting) { ExportSheet(account: account, startingMonth: month) }
         .sheet(item: $editingDate) { transaction in
             if transaction.isLive { EditTransactionSheet(transaction: transaction, account: account, categories: categories) }
         }

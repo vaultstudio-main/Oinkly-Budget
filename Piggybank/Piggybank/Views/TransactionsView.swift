@@ -14,6 +14,7 @@ struct TransactionsView: View {
     @State private var month = MonthFilter.start(of: .now)
     @State private var accountID: Account.ID?
     @State private var search = ""
+    @State private var isExporting = false
 
     /// The months you can step through: from the earliest transaction to the latest, always including this month.
     /// Two one-row lookups, not a pass over every transaction.
@@ -59,11 +60,16 @@ struct TransactionsView: View {
                 Spacer()
                 if search.isEmpty { ThisMonthButton(month: $month) }
                 accountPicker
+                Button("Export…", systemImage: "square.and.arrow.up") { isExporting = true }
+                    .help("Save transactions as a PDF statement or a CSV spreadsheet")
             }
             TransactionsTable(month: month, accountID: accountID, search: search)
         }
         .padding(16)
         .background(Theme.background)
+        .sheet(isPresented: $isExporting) {
+            ExportSheet(account: nil, startingMonth: month, startingAccountID: accountID)
+        }
     }
 
     /// A small search box under the title. It lives in the page, not the window toolbar, so the window chrome never moves.

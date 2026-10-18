@@ -16,7 +16,7 @@ Switch with Xcode's Source Control ▸ Switch, or `git switch main` / `git switc
 
 ## What is in 1.1
 
-Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-features.md](docs/oinklybudget-1.1-update-plus-features.md). Drafted 2026-10-16. Tick a box when the feature is built and tested on this branch.
+Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-features.md](docs/oinklybudget-1.1-update-plus-features.md). Drafted 2026-10-16. Tick a box when the feature is built and tested on this branch. The app version on this branch is 1.1 (build 2).
 
 Rough size: 12 to 16 weeks part-time.
 
@@ -40,9 +40,9 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Update the App Store export compliance answers
 
 ### Export to PDF and CSV (replaces printing)
-- [ ] Shared report page and Export sheet
-- [ ] Every account: Export to PDF and Export to CSV, with a date range
-- [ ] Main Transactions page: Export to PDF with a month selector
+- [ ] Shared PDF statement drawing and Export sheet (built; PDF layout checked on sample data, sheet not yet tried in the app)
+- [ ] Every account: Export… button in the register for PDF and CSV, with month, year, dates or all (built, needs testing in the app)
+- [ ] Main Transactions page: Export… for PDF and CSV with a month selector and account choice (built, needs testing in the app)
 - [ ] Single transaction to PDF
 - [ ] Reports, budget, bills, net worth to PDF (lower priority)
 
