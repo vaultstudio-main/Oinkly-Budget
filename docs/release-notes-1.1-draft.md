@@ -57,7 +57,6 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Import Statement on every account: preview the rows with counts of new, already-there and unreadable ones; set the columns, date format, separator and amount style if the file isn't recognised; save the format under a name and have it detected next time; skip transactions already in OinklyBudget; tidy bank text in payee names; and Undo removes everything an import added. CSV only.
 - Print PDF on Reports and Summary *(if built)*.
 - Default paper size and export style in Settings *(if built)*.
-- Print checks on check stock *(if built, optional)*.
 
 ### Your data
 - Encrypted data file (Settings ▸ Data & Backup ▸ Encryption): choose a passphrase, keep a recovery key, and your data file and backups can't be read without them. Change the passphrase, make a new recovery key, or turn it off any time. While the app is open it works on a readable copy that is removed when you quit, so this protects a copied file, a backup or a lost Mac without FileVault. If you lose both the passphrase and the recovery key, nobody can open the data.

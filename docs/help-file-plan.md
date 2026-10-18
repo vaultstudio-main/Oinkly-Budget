@@ -20,7 +20,7 @@ Drafted 2026-10-18. Help is written last (step 6 of the final plan) so it descri
 
 ## Every feature gets a topic, and every topic explains how it works
 
-The master list is `feature-master-list-1.1.md`. Each feature there (A1 to G4) must appear in Help. A topic is not finished until it has all of these:
+The master list is `feature-master-list-1.1.md`. Each feature there (A1 to G3) must appear in Help. A topic is not finished until it has all of these:
 
 1. **What it is**, in one or two sentences.
 2. **How it works**, step by step: where to click (menu path or page), what each field or button does, and what happens next. The "How it works" bullets in the master list are the starting text; add steps and examples.
@@ -68,7 +68,6 @@ Topics for planned features are written only if the feature ships.
 | G1 Windows | Start Here | Welcome (mention Help and Release Notes) | edit |
 | G2 Shortcuts, accessibility | Reference | Keyboard Shortcuts, Accessibility | edit and new |
 | G3 Export defaults | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |
-| G4 Check printing | Exporting & Printing | Printing Checks | new, if built |
 
 Also update, always: Welcome (first-minutes list), Settings (new tab list: General, Reminders, Accounts, Categories, Clean Up, Payment Methods, Data & Backup), Why Can't I Change That? (locked opening Deposit, locked split totals *(if built)*, a goal-linked account's goal), and Your Data & Privacy (encryption, shared file, widgets, safety copy).
 

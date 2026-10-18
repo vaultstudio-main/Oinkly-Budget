@@ -9,10 +9,10 @@ The direction stays the same: a full desktop program, no bank linking, no accoun
 | # | Step | Effort | Status |
 |---|---|---|---|
 | 1 | Database V2 | ~1 week | **Done** |
-| 2 | Splits, recurring transactions, tags | 2–3 weeks | **Next** |
-| 3 | Shortcuts and accessibility pass | ~3 days | Waiting |
-| 4 | Exports and extras | ~1 week | Waiting |
-| 5 | Shared data file | 2–3 weeks | Waiting. Needs a two-real-Mac-login test. |
+| 2 | Splits, recurring transactions, tags | 2–3 weeks | **Done** |
+| 3 | Shortcuts and accessibility pass | ~3 days | **Done** (the owner's VoiceOver pass is still open) |
+| 4 | Exports and extras | ~1 week | **Done** |
+| 5 | Shared data file | 2–3 weeks | **Next.** Needs a two-real-Mac-login test. |
 | 6 | Help, screenshots, release notes, TestFlight, submission | 1–2 weeks | Last |
 
 About 8 to 11 weeks in all. The shared data file was moved down to step 5 at the owner's request. Book the two-login test before step 5 starts, because that test is the biggest unknown in the plan.
@@ -45,12 +45,12 @@ Review keyboard shortcuts and add menu commands. VoiceOver and larger text acros
 
 ## Step 4: exports and extras
 
-- Print PDF on Reports and Summary (the builders exist, no button yet).
-- Settings for default paper size and export style.
-- Check printing (optional).
-- Widget options, only if time allows.
+- Print PDF on Reports and Summary. **Done.**
+- Settings for default paper size and export style. **Done.**
+- Widget options (choices and a large size). **Done.**
+- Step 4 is finished.
 
-Check printing is the first to drop if the schedule slips.
+Check printing was dropped on 2026-10-18 (few people write checks now, and it can't be tested without real stock and a printer). The finished work is saved on the `check-printing` branch for a later version.
 
 **Decided 2026-10-18:** the app stores only receipt photos and PDF bills. "Attachments beyond receipts" (PDF statements kept with an account) is dropped.
 
@@ -94,7 +94,7 @@ Two people on the same Mac, in separate Mac logins, use one data file, one at a 
 - **Shared data file:** a damaged file (two logins and SQLite side files), lost edits if someone takes over a lock, stale locks after crashes. Check out and check in, copy first and verify, back up first, and crash tests reduce these.
 - **Late discovery:** it comes after the other features, so a problem found by the two-login test lands close to release.
 - **Migration:** an existing database that can't open is the worst outcome. Done and tested, with the safety copy as a backstop.
-- **Scope:** drop check printing first.
+- **Scope:** keep it to the plan. Anything new goes after the shared data file.
 - **Review:** the new version goes through App Review again. Keep release notes clear and the app free of crashes.
 
 ## Loose ends

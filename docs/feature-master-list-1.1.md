@@ -225,8 +225,8 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Saved in the backup file with the other preferences.
 - Shots: S-G3.
 
-### G4. Check printing (Planned, optional)
-- Print checks on standard check stock. Shots: S-G4.
+### G4. Check printing (not in 1.1, decided)
+- Dropped from 1.1 on 2026-10-18: it can't print the magnetic line, is untested on real stock and printers, and few people write checks now. The work is saved on the `check-printing` branch for a later version.
 
 ---
 
@@ -301,7 +301,6 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-G1 | The Help window | Help ▸ OinklyBudget Help | Help-window | – | – |
 | S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
 | S-G3 | Export defaults | Settings | Help-export-defaults | – | – |
-| S-G4 | Check printing | Account | Help-checks | – | – |
 
 Also retake the 1.0 shots that stay: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 
