@@ -125,10 +125,11 @@ private struct SharingPermissionTest: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Sharing permission test").font(.headline)
-            Text("Run this in each Mac login against the same folder (for example one in /Users/Shared). It never touches your data.")
+            Text("Run this in each Mac login. The first button uses the fixed shared folder with no panel; the others use a folder you choose. It never touches your data.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             HStack {
+                Button("Run in /Users/Shared/OinklyBudget") { spike.runInFixedFolder() }
                 Button("Choose Folder…") { spike.chooseFolder() }
                 Button("Run Test") { spike.run() }.disabled(!spike.hasFolder)
                 Button("Clean Up") { spike.cleanUp() }.disabled(!spike.hasFolder)

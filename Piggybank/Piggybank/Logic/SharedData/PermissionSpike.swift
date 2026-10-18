@@ -63,6 +63,16 @@ final class PermissionSpike {
 
     private var overridePath: String?
 
+    /// The folder the real feature will use. The app has a narrow sandbox exception for exactly this path, so no panel is needed.
+    static let fixedFolderPath = "/Users/Shared/OinklyBudget"
+
+    /// Runs the test in the fixed folder, with no panel.
+    func runInFixedFolder() {
+        overridePath = Self.fixedFolderPath
+        run()
+        overridePath = nil
+    }
+
     private func openFolder() -> URL? {
         if let overridePath {
             folderPath = overridePath
@@ -129,6 +139,15 @@ final class PermissionSpike {
             lines = ["Choose a folder first."]
             return
         }
+        // With the launch-argument path the folder may not exist yet, which tests whether the app can make it itself.
+        if overridePath != nil, !facts(parent.path).exists {
+            if mkdir(parent.path, 0o777) == 0 {
+                chmod(parent.path, 0o777)
+                lines.append("[OK] The app created the top folder itself: \(describe(parent.path))")
+            } else {
+                lines.append("[FAIL] The app could not create the top folder \(parent.path): \(errorText(errno))")
+            }
+        }
         add("INFO", "Login: \(me) (uid \(getuid())) on \(ProcessInfo.processInfo.hostName)")
         add("INFO", "Process id: \(getpid())")
         add("INFO", "Chosen folder: \(parent.path) — \(describe(parent.path))")
@@ -138,9 +157,10 @@ final class PermissionSpike {
         let root = parent.appendingPathComponent(Self.testFolderName, isDirectory: true).path
         testFolder(root)
         testFile(root + "/data-file.txt")
+        // Before this login writes its own lock, so the lock another login left is still there to be checked.
+        testProcessCheck(root + "/lock.json")
         testExclusiveLock(root + "/lock.json")
         testSupportFolder(root + "/support")
-        testProcessCheck(root + "/lock.json")
         appendLog(root + "/log.txt")
         writeReport(root + "/report-\(me).txt")
         add("INFO", "Done. A copy of this report is in the folder as report-\(me).txt")
@@ -163,7 +183,12 @@ final class PermissionSpike {
             add("INFO", "Subfolder already exists: \(describe(path))")
         }
         // The creating login's umask trims the mode, and /Users/Shared is sticky, so ask explicitly for open permissions.
-        if chmod(path, 0o777) == 0 {
+        let current = facts(path)
+        if current.uid != getuid() {
+            // Only the login that made the folder may change its permissions, and it already set them. That's all that's needed.
+            add(current.mode == "777" && !current.sticky ? "OK" : "FAIL",
+                "The subfolder belongs to \(current.owner), who set its permissions. Now: \(describe(path))")
+        } else if chmod(path, 0o777) == 0 {
             add("OK", "Set the subfolder to open permissions. Now: \(describe(path))")
         } else {
             add("FAIL", "Could not set open permissions on the subfolder: \(errorText(errno)) — now \(describe(path))")
@@ -285,7 +310,7 @@ final class PermissionSpike {
     /// Can this login tell whether another login's app is still running? This decides how fast a crashed login's lock
     /// can be taken over.
     private func testProcessCheck(_ lockPath: String) {
-        add("STEP", "5. Is another login's app still running?")
+        add("STEP", "2b. Is the login that holds the lock still running?")
         add("INFO", kill(getpid(), 0) == 0 ? "Checking my own process works" : "Checking my own process FAILED: \(errorText(errno))")
         guard let data = FileManager.default.contents(atPath: lockPath),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

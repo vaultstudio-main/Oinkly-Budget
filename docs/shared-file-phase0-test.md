@@ -2,34 +2,26 @@
 
 Drafted 2026-10-18. This answers the biggest unknown in `shared-data-file-design.md`: when one Mac login creates a shared folder and a data file, can a different login on the same Mac replace that file, rename it, delete it and add to the receipts folder? It uses the real app's sandbox but never touches your data.
 
-## What was set up
+## What was set up (round 2, 2026-10-18)
 
-- A debug build of the app is copied to `/Users/Shared/OinklyBudget-TestApp/OinklyBudget.app`, readable by every login. Run this copy in **both** logins so both run exactly the same build.
-- The Mac has two accounts (`dstibich` and `lstibich`) and fast user switching is on.
-- The test lives in OinklyBudget ▸ Testing ▸ **Sharing permission test**. It writes only into a test folder it makes, called `OinklyBudget-PermissionTest`, inside the folder you choose.
+Round 1 passed (see the results below). Round 2 uses the fixed folder the owner chose and the process check that round 1 couldn't reach.
+
+- A new debug build is at `/Users/Shared/OinklyBudget-TestApp-3/OinklyBudget.app`. It has the narrow sandbox exception for `/Users/Shared/OinklyBudget`, so **no panel is needed**.
+- Run this copy in **both** logins. Quit any older copy first.
+
+**Round 1 results (panel and `/Users/Shared`):** both logins could replace each other's data file (rename over it and `replaceItemAt`), append to it, take over the lock, replace and delete each other's receipt files, and append to one log. The subfolder stayed open (777, not sticky). The one failure was a login trying to change permissions on a folder it didn't create, which is not needed.
 
 ## Steps
 
-Run in this order. Do not log either account out; use fast user switching (the user menu in the menu bar, or Control Center).
+**A. The other login is still running**
+1. Login 1 (`dstibich`): open the `-3` copy. OinklyBudget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Leave the app open. Switch users.
+2. Login 2 (`lstibich`): open the same copy. OinklyBudget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Look at the lines under **2b**. Leave the app open. Switch back.
 
-**Login 1 (`dstibich`, the first run)**
-1. Open `/Users/Shared/OinklyBudget-TestApp/OinklyBudget.app`. (Use this copy, not the one from Xcode.)
-2. Choose OinklyBudget ▸ Testing. In **Sharing permission test**, press **Choose Folder…**, pick `/Users/Shared`, then **Use This Folder**.
-3. Press **Run Test**. Every line should say OK or INFO. Press **Copy Results** if you want to keep them.
-4. Leave the app open. Switch users.
+**B. The other login's app has closed**
+3. Login 1: **Run in /Users/Shared/OinklyBudget** again, then quit the app with ⌘Q.
+4. Login 2: **Run in /Users/Shared/OinklyBudget** again, and look at **2b**.
 
-**Login 2 (`lstibich`)**
-5. Open the same app (`/Users/Shared/OinklyBudget-TestApp/OinklyBudget.app`). If macOS refuses to open it, right-click it and choose Open. It starts with an empty app; that is fine.
-6. OinklyBudget ▸ Testing ▸ **Choose Folder…**, pick `/Users/Shared`, **Use This Folder**, then **Run Test**.
-7. This run is the important one. Anything that says **FAIL** matters, especially "COULD NOT REPLACE it", "Could not take over the lock" or "Could not delete".
-8. Switch back to login 1.
-
-**Login 1 again**
-9. Press **Run Test** once more. It now handles files login 2 made.
-
-**Then**
-10. In either login, tell me it's done. I read the saved reports directly from `/Users/Shared/OinklyBudget-PermissionTest/` (`report-dstibich.txt`, `report-lstibich.txt`).
-11. Press **Clean Up** in each login when finished (the folder may stay if the other login's files remain; I can remove it).
+**Then** tell me it's done. I read the saved reports from `/Users/Shared/OinklyBudget/OinklyBudget-PermissionTest/`. Press **Clean Up** in each login afterwards.
 
 ## What the lines mean
 

@@ -6,5 +6,10 @@
 	<array>
 		<string>$(TeamIdentifierPrefix)dev.vaultstudio.oinklybudget</string>
 	</array>
+	<key>com.apple.security.temporary-exception.files.absolute-path.read-write</key>
+	<array>
+		<string>/Users/Shared/OinklyBudget/</string>
+		<string>/Users/Shared/OinklyBudget</string>
+	</array>
 </dict>
 </plist>

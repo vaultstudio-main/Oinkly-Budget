@@ -58,7 +58,7 @@ Per login, in that login's own container: the working copy, the marker, the reme
 ### 6.1 Permissions between logins (the biggest unknown)
 
 - `/Users/Shared` is a "sticky" folder: only the owner of a file may rename or delete it. A second login could then **not** replace the first login's data file. The app must therefore make its **own subfolder** with open permissions (no sticky bit), which the prototype does (`0777`), and make every file readable and writable by all (`0666`).
-- The app is sandboxed, so each login reaches the folder through a **security-scoped bookmark** from an Open panel. Bookmarks are per login, so each person chooses the folder once.
+- The app is sandboxed. Under the owner's decision (D15, 12b) the folder is fixed and reached through a narrow sandbox exception, with a one-click panel and bookmark as the fallback if App Review refuses the exception.
 - Whether the sandbox lets the app change permissions on a folder another login created, and whether the replace works across logins, **has never been tested with two real logins**. This is the first thing to test (Phase 0).
 - The "is that process still running" check (`kill(pid, 0)`) may not work from the sandbox. If it can't tell, only the heartbeat decides a lock is stale (3 minutes).
 
@@ -111,7 +111,7 @@ One system, not two. Four data locations, one pipeline:
 
 **Settings ▸ Data & Backup ▸ Shared Data File** (a new section):
 
-- **Not sharing:** a short explanation and **Share This Data…** (choose or make a folder; copies this Mac's data into it; never moves or changes the original).
+- **Not sharing:** a short explanation and **Share This Data…**, which shows the warning in 12b and then copies this Mac's data into `/Users/Shared/OinklyBudget` (never moves or changes the original).
 - **Sharing:** the folder path with Show in Finder, who has the file and since when, last saved time, and the buttons **Save Now**, **Close File So Someone Else Can Use It**, **Open Recent** (a pop-up of folders used before), **Move This File…**, **Create a New Data File…**, **Check Sharing** (a diagnostic, see 11), and **Stop Sharing**.
 - **Read-only:** a clear banner when the file was opened read-only.
 
@@ -160,6 +160,7 @@ One system, not two. Four data locations, one pipeline:
 | D11 | Open Recent, Move This File, Create a New File | A) All three in 1.1. B) Open Recent only. | **A.** They were on the prototype's list. Move and Create are small once the pipeline is one system. |
 | D12 | Receipt clean-up | A) Remove unused ones at a clean close after 30 days. B) Never remove. | **A.** Otherwise the shared folder grows forever. |
 | D13 | Ask the other login to let go ("Ask to Close") | A) Not in 1.1. B) A request file that the holder's app sees and answers. | **A.** The holder may be switched away and unable to answer, so it doesn't help in the main case. Read-only and take-over cover it. |
+| D15 | How the shared folder is chosen | A) A fixed folder, `/Users/Shared/OinklyBudget`, made by the app with a narrow sandbox exception, no panel. B) The same folder proposed, with the system panel pointing at it for one click. C) The person chooses any folder. | **A** (chosen by the owner, 2026-10-18; see 12b). B is the fallback if App Review refuses the exception. C is dropped: a person could pick a protected, network or cloud folder. |
 | D14 | What if the two-login test fails or finds permission problems | A) Fix and retry. B) Ship 1.1 without sharing and leave it for 1.2. | **Plan for B as the fallback.** Sharing is the last step, so dropping it does not disturb the rest. Decide at the gate after Phase 1. |
 
 ### 12a. Answers so far (2026-10-18)
@@ -172,6 +173,28 @@ Answered by the owner:
 - **D8: Last 5 saves plus one per day for a week**, with Restore a Previous Save.
 
 Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D5 (read-only open), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.1), D12 (remove unused receipts at a clean close after 30 days), D13 (no Ask to Close), D14 (fall back to shipping 1.1 without sharing if the permissions test fails).
+
+### 12b. The fixed shared folder (decision D15, 2026-10-18)
+
+The owner does not want people choosing a folder, because they might pick a protected area. So the shared folder is **always** `/Users/Shared/OinklyBudget`. The app makes it and every login on the Mac uses it.
+
+**How it works with the sandbox.** A sandboxed app can't touch `/Users/Shared` unless the person grants it through the system's panel. Tested on 2026-10-18: with no exception the app is refused ("Operation not permitted"). With a narrow temporary-exception entitlement, `com.apple.security.temporary-exception.files.absolute-path.read-write`, listing exactly two paths, `/Users/Shared/OinklyBudget` (the folder itself) and `/Users/Shared/OinklyBudget/` (everything inside), the app **can create the folder and work inside it with no panel**, and nothing else in `/Users/Shared` is reachable. Each login's sandbox gets the same exception, so the second login needs no panel either.
+
+**The risk.** Apple discourages temporary exceptions in Mac App Store apps and may ask why. Mitigations:
+- The exception is as narrow as it can be (one folder).
+- The App Review notes explain it: it is the only way for two Mac logins to share one data file, nothing is sent anywhere, and the feature is off until the person turns it on.
+- If review refuses it, the app switches to option B: it proposes the same folder and shows the system panel pointing at it, and refuses any other folder. The sharing code doesn't change, only how access to the folder is granted, so this is a small change.
+
+**What the person sees when turning sharing on.** A plain warning before anything is copied:
+
+> **Share your data with other users of this Mac?**
+> OinklyBudget will copy your data into **/Users/Shared/OinklyBudget**. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can log in to this Mac can read it **unless you turn on encryption** (Settings ▸ Data & Backup ▸ Encrypt Data). Your original data is not changed or removed.
+> [Share] [Encrypt First…] [Cancel]
+
+**Rules that follow from it.**
+- The folder is on this Mac's own disk by construction, so network and cloud folders (D10) can't happen.
+- The first login to turn sharing on creates the folder with open permissions (777, not sticky). Another login joining finds it ready. If the folder exists but is not open (for example someone made it by hand), Check Sharing says exactly what to change.
+- **Move This File** and **Create a New Data File** (D11) now mean choosing another file inside the shared folder, not another place on disk. **Open Recent** lists the data files in the shared folder.
 
 ## 13. Order of work, with a stop point
 
