@@ -33,6 +33,7 @@ struct AccountEditView: View {
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var openingBalance: Decimal
     @State private var notes: String
+    @State private var isPrimary: Bool
 
     init(account: Account?, initialType: AccountType = .checking) {
         self.account = account
@@ -59,6 +60,7 @@ struct AccountEditView: View {
         _photoData = State(initialValue: account?.photoData)
         _openingBalance = State(initialValue: account?.openingBalance ?? 0)
         _notes = State(initialValue: account?.notes ?? "")
+        _isPrimary = State(initialValue: account.map { PrimaryChecking.isPrimary($0, stored: PrimaryChecking.current) } ?? false)
     }
 
     private var isDebt: Bool { type.group.isLiability }
@@ -82,6 +84,12 @@ struct AccountEditView: View {
                         }
                     }
                     .disabled(account?.isDefault == true)
+                    if type == .checking {
+                        Toggle("Primary checking account", isOn: $isPrimary)
+                        Text("Your main checking account is pinned to the top of the account list, under Cash on Hand, and marked Primary Checking. Only one account can be primary.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     HStack {
                         Text("Kind")
                         Spacer()
@@ -305,6 +313,11 @@ struct AccountEditView: View {
         if account == nil { modelContext.insert(target) }
         LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
         modelContext.saveNow()
+        if type == .checking && isPrimary {
+            PrimaryChecking.set(target)
+        } else if PrimaryChecking.isStored(target, stored: PrimaryChecking.current) {
+            PrimaryChecking.set(nil)
+        }
         dismiss()
     }
 }

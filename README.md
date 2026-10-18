@@ -21,6 +21,8 @@ Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-feat
 Rough size: 12 to 16 weeks part-time.
 
 ### Fixes from complaints (do first)
+- [x] Primary checking account: pinned under Cash on Hand outside any folder and labelled Primary Checking (kept as a setting on this Mac for now; move onto the account when the database next changes)
+- [x] Edit Transaction matches New Transaction (account, type, status/reconcile, receipt and the rest)
 - [x] Receipt picker on the Edit Transaction sheet (add, replace, remove, "no receipt")
 - [x] Side panel opens at one fixed width and can't be dragged
 - [ ] Status bar along the bottom of every page, app name centred in the top bar (built, needs more pages checked)
@@ -39,12 +41,11 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Encrypted `.pig` backups
 - [ ] Update the App Store export compliance answers
 
-### Export to PDF and CSV (replaces printing)
+### Print to PDF, and CSV export (printing and data are separate)
 - [ ] Shared PDF statement drawing and Export sheet (built; PDF layout checked on sample data, sheet not yet tried in the app)
-- [ ] Every account: Export… button in the register for PDF and CSV, with month, year, dates or all (built, needs testing in the app)
-- [ ] Main Transactions page: Export… for PDF and CSV with a month selector and account choice (built, needs testing in the app)
-- [ ] Single transaction to PDF
-- [ ] Reports, budget, bills, net worth to PDF (lower priority)
+- [ ] Every account: Export CSV… (labelled button) and a printer icon for Print to PDF, each with month, year, dates or all (built, needs testing in the app)
+- [ ] Single transaction to PDF, with its receipt (built; layout checked on sample data, not yet tried in the app)
+- [ ] Reports, budget, bills, net worth to PDF: builders written, but no buttons on the overview pages (removed on purpose); decide where, if anywhere, these go
 
 ### CSV import that handles any bank file
 - [ ] Preview before importing (built; reader checked on sample files, sheet not yet tried in the app)

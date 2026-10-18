@@ -20,6 +20,7 @@ struct MacRootView: View {
     @State private var selection: SidebarItem? = .summary
     @State private var collapsed = Set<AccountGroup>()
     @State private var editingAccount: Account?
+    @AppStorage(PrimaryChecking.key) private var primaryStored = ""
 
     private var selectedAccountID: Account.ID? {
         if case .account(let id) = selection { id } else { nil }
@@ -45,43 +46,17 @@ struct MacRootView: View {
                         .tag(SidebarItem.planning)
                 }
                 Section("Accounts") {
-                    // Cash on hand sits at the top by itself, not inside a folder.
-                    ForEach(accounts.filter(\.isCashOnHand)) { account in
-                        if account.isLive {
-                            Label {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(account.name)
-                                    Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
-                                }
-                            } icon: {
-                                Image(systemName: account.type.symbol)
-                            }
-                            .tag(SidebarItem.account(account.id))
-                            .contextMenu {
-                                Button("Edit Details…") { editingAccount = account }
-                            }
-                        }
-                    }
+                    // Cash on hand sits at the top by itself, not inside a folder, and the primary checking account
+                    // is pinned right under it.
+                    ForEach(accounts.filter(\.isCashOnHand)) { sidebarRow($0) }
+                    ForEach(accounts.filter { PrimaryChecking.isPrimary($0, stored: primaryStored) && !$0.isCashOnHand }) { sidebarRow($0) }
                     ForEach(AccountGroup.allCases) { group in
-                        let members = accounts.filter { $0.type.group == group && !$0.isCashOnHand }
+                        let members = accounts.filter {
+                            $0.type.group == group && !$0.isCashOnHand && !PrimaryChecking.isPrimary($0, stored: primaryStored)
+                        }
                         if !members.isEmpty {
                             DisclosureGroup(isExpanded: expansion(of: group)) {
-                                ForEach(members) { account in
-                                    if account.isLive {
-                                    Label {
-                                        VStack(alignment: .leading, spacing: 1) {
-                                            Text(account.name)
-                                            Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
-                                        }
-                                    } icon: {
-                                        Image(systemName: account.type.symbol)
-                                    }
-                                    .tag(SidebarItem.account(account.id))
-                                    .contextMenu {
-                                        Button("Edit Details…") { editingAccount = account }
-                                    }
-                                    }
-                                }
+                                ForEach(members) { sidebarRow($0) }
                             } label: {
                                 Label(group.title, systemImage: "folder")
                             }
@@ -174,6 +149,34 @@ struct MacRootView: View {
             }
         }
     
+    }
+
+    @ViewBuilder
+    private func sidebarRow(_ account: Account) -> some View {
+        if account.isLive {
+            let isPrimary = PrimaryChecking.isPrimary(account, stored: primaryStored)
+            Label {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(account.name)
+                    Text(isPrimary ? "Primary Checking" : account.typeTitle)
+                        .font(.caption.weight(isPrimary ? .semibold : .regular))
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: account.type.symbol)
+            }
+            .tag(SidebarItem.account(account.id))
+            .contextMenu {
+                Button("Edit Details…") { editingAccount = account }
+                if account.type == .checking {
+                    if isPrimary {
+                        Button("Remove Primary Checking") { PrimaryChecking.set(nil) }
+                    } else {
+                        Button("Make Primary Checking") { PrimaryChecking.set(account) }
+                    }
+                }
+            }
+        }
     }
 
     private var pageName: String {
