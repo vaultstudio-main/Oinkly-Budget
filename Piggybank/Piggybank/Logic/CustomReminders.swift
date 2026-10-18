@@ -113,6 +113,7 @@ final class CustomReminders {
 
     /// Replaces the scheduled notifications with the current set.
     func apply() async {
+        WidgetSnapshotWriter.refreshSoon()
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
         center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter { $0.hasPrefix(Self.idPrefix) })

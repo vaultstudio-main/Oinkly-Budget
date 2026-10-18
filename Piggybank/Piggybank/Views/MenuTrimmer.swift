@@ -127,6 +127,14 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         UNUserNotificationCenter.current().delegate = self
         MenuTrimmer.install()
         Task { @MainActor in await Self.refreshReminders() }
+        // The widgets read a small snapshot of bill names and reminder times. Keep it current as data changes.
+        Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+        NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
+            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
+        }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in await PiggybankAppDelegate.refreshReminders() }
         }
@@ -135,6 +143,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
             while true {
                 try? await Task.sleep(for: .seconds(6 * 3600))
                 await Self.refreshReminders()
+                WidgetSnapshotWriter.refresh()
             }
         }
     }
@@ -153,8 +162,14 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         return !showsMenuBarItem
     }
 
-    /// Double-clicking a .pig file in Finder offers to restore it.
+    /// Double-clicking a .pig file in Finder offers to restore it. A tap on a widget arrives here too, as an
+    /// oinklybudget:// link naming the page to open.
     func application(_ application: NSApplication, open urls: [URL]) {
+        if let link = urls.first(where: { $0.scheme == WidgetSnapshot.scheme }), let page = link.host {
+            NSApp.activate(ignoringOtherApps: true)
+            NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+            return
+        }
         guard let url = urls.first(where: { $0.pathExtension.lowercased() == DataBackup.fileExtension }) else { return }
         Task { @MainActor in await BackupOpener.offerRestore(of: url) }
     }

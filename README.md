@@ -55,9 +55,11 @@ Rough size: 12 to 16 weeks part-time.
 - [ ] Import Statement… on every account (built; reader checked on sample files, sheet not yet tried in the app)
 
 ### Widgets
-- [ ] Upcoming bills widget (names and dates only)
-- [ ] Reminders and events widget
-- [ ] App Group and snapshot writer; no amounts or account details anywhere
+- [ ] Upcoming bills widget, names and dates only (built; embeds and signs; not yet seen on the desktop)
+- [ ] Reminders widget, your own reminders only (built; same)
+- [x] App Group and snapshot writer; no amounts or account details anywhere
+- [x] Menu bar pop-up shows the next 30 days with important bills at the top
+- [x] No ellipsis on on-screen buttons (File menu keeps its standard ones)
 
 ### Reports and everyday features (pick from the list)
 - [ ] More reports and report options
