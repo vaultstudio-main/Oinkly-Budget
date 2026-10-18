@@ -1,0 +1,210 @@
+# Shared data file: design (step 5)
+
+Drafted 2026-10-18. Nothing here is built yet. This is the design for the last and riskiest feature of 1.1. It lists how the feature works, every decision that is still open (with options and a recommendation), how it fits the V2 database and the encryption vault, what can go wrong, how each failure is handled, and the order of work with a stop point after the first risky test. The decisions are in section 12. Build starts after they are answered.
+
+## 1. Goal and limits
+
+**Goal.** Two or more people who each have their own Mac login on **one Mac** can use the same OinklyBudget data file, **one at a time**. There is no cloud, no sync, no account in the app and no network.
+
+**What it is not.**
+- Not two people editing at the same moment. Both at once needs merging, which is a different and much riskier feature. Not planned.
+- Not sync between different Macs or an iPhone.
+- Not a way to put the live database in a cloud-synced or network folder (see decision D10).
+
+**The promise (from the data integrity plan).** Sharing never loses a client's information: the shared file is only ever replaced with a file that has been checked, there is always a previous copy, a crash keeps unsaved work, and a failure leaves the old file exactly as it was.
+
+## 2. What exists today
+
+- **The prototype** on branch `shared-data-prototype` (commits `572a337`, `ea179d4`) works on the old V1 database and no encryption. It has: a shared folder (`SharedDataFolder`) with one finished data file, a lock, an info note and a "previous save" copy; the session (`SharedDataSession`) that checks the file out to a private working copy at launch and checks it back in every couple of minutes, when hidden and at quit; crash recovery with a marker; a "someone has the file" decision screen; and a debug test folder.
+- **The vault** (`VaultSession`, on `update-1.1`) already does encryption with the same shape: an encrypted vault file, a private working copy, a sealing step, a marker, a timer. It was written to be reused here. Today the vault lives in this Mac's own Application Support.
+- **V2** (the new database shape) and the **safety copy** and **data file location fix** are in.
+
+So the work is: bring the prototype up to V2, make it and the vault one system instead of two, finish what the prototype lacks, and test it with two real logins.
+
+## 3. How it works (the core idea)
+
+The shared file is **checked out and checked in**, never opened live. SQLite makes side files while running, and two logins share no memory, so opening one live database from two logins would corrupt it.
+
+1. **A shared folder** holds a finished data file (or an encrypted vault), a lock, and a note about the last save.
+2. **Opening** takes the lock, then copies the finished file into a private working copy in the app's own storage. The app runs on the working copy like any database.
+3. **Saving** writes the working copy back to the shared folder as a complete new file in one safe replace, after checking it. The old file is kept as the previous save.
+4. **Closing** saves one last time and lets go of the lock.
+5. **A crash** leaves the working copy and a marker. The next launch keeps that work.
+
+This is the prototype's design and it stays.
+
+## 4. What lives in the shared folder
+
+```
+<Shared folder>/
+  OinklyBudget.store              the finished data file (plain mode)
+  .OinklyBudget_SUPPORT/          receipts and photos (SwiftData keeps them outside the file)
+  OinklyBudget.vault              the finished encrypted file (encrypted mode, replaces the .store)
+  OinklyBudget.vaultkeys          the wrapped key (encrypted mode); useless without the passphrase or recovery key
+  info.json                       format version, schema version, revision, saved at, saved by, app version, encrypted or not, file ID
+  lock.json                       who has it, since when, last heartbeat, process and Mac
+  previous saves/                 the last few finished files (see D8)
+  OinklyBudget (recovered ...)    a copy kept when a crash and someone else's save overlapped
+```
+
+New compared with the prototype: `schemaVersion`, `revision` (a counter that goes up by one at every save, replacing the date comparison the prototype used, which loses precision), `encrypted`, and a `fileID` so a folder swapped for a different one is noticed.
+
+## 5. Each login's own storage
+
+Per login, in that login's own container: the working copy, the marker, the remembered key (Keychain), the folder bookmark, and the app's settings (currency, appearance, reminders, paper and style). **Settings are per login on purpose**; the data is shared, not the preferences (see D9).
+
+## 6. The key risks, and what we know about them
+
+### 6.1 Permissions between logins (the biggest unknown)
+
+- `/Users/Shared` is a "sticky" folder: only the owner of a file may rename or delete it. A second login could then **not** replace the first login's data file. The app must therefore make its **own subfolder** with open permissions (no sticky bit), which the prototype does (`0777`), and make every file readable and writable by all (`0666`).
+- The app is sandboxed, so each login reaches the folder through a **security-scoped bookmark** from an Open panel. Bookmarks are per login, so each person chooses the folder once.
+- Whether the sandbox lets the app change permissions on a folder another login created, and whether the replace works across logins, **has never been tested with two real logins**. This is the first thing to test (Phase 0).
+- The "is that process still running" check (`kill(pid, 0)`) may not work from the sandbox. If it can't tell, only the heartbeat decides a lock is stale (3 minutes).
+
+### 6.2 Two copies starting together
+
+The prototype writes the lock and then looks again after 0.15 seconds. Better: create `lock.json` with an **exclusive create** (`O_CREAT | O_EXCL`), which only one process can win, and take over a stale lock by replacing it only if it still holds the stale token. No sleep-and-look.
+
+### 6.3 Sleep, fast user switching and idle logins
+
+- A login that is switched away can still be running with the app open and holding the lock. Its heartbeat keeps going, so it looks alive. The other login sees "Sam has this file" and can wait, open read-only, or (D4) take over.
+- A laptop that sleeps stops the heartbeat. After 3 minutes another login may take over. When the first one wakes, it must **notice at once** (check the lock on wake), stop saving, keep its working copy, and keep its unsaved work as a recovered copy. The prototype only notices at the next heartbeat.
+
+### 6.4 Receipts and photos
+
+SwiftData keeps large files outside the database, in a hidden folder beside it. They must travel with the data. The prototype copies only new files, which is safe, but never deletes, so unused receipts pile up. The design: copy new files **before** the database is replaced; remove files no longer used only at a clean close and only after they have been unused for 30 days (so the previous save still works).
+
+### 6.5 Size and speed
+
+Each save is a `VACUUM INTO` plus record counts plus an integrity check. That is fine for thousands of transactions and unknown for 100,000. Measure first (Phase 3). If slow: save less often (every 5 minutes), run the full integrity check only on close, and always run it off the main thread (the prototype does).
+
+### 6.6 Where the folder is
+
+A folder on this Mac's disk is fine. A network share, a cloud-synced folder (iCloud Drive, Dropbox) or an external drive that gets unplugged brings extra risks. See D10.
+
+## 7. Encryption and sharing together
+
+One system, not two. Four data locations, one pipeline:
+
+| Location | Plain or encrypted | The finished file is |
+|---|---|---|
+| This Mac only | plain | the default store (today's behaviour) |
+| This Mac only | encrypted | the vault in Application Support (today's behaviour) |
+| Shared folder | plain | `OinklyBudget.store` in the shared folder |
+| Shared folder | encrypted | `OinklyBudget.vault` and `.vaultkeys` in the shared folder |
+
+- **Opening** always ends in a private working copy and a lock (a lock only when shared).
+- In shared and encrypted mode, check-out **decrypts** into the working copy and check-in **seals** it back, so only ciphertext is ever in the shared folder.
+- Every login uses the **same passphrase and recovery key** (they unlock the same vault) but remembers the key in **its own Keychain**.
+- The honest limit stays: while the app is open, the working copy is readable in that login's private storage. Encryption protects the shared folder, a copied file and backups. It does not protect a Mac that is unlocked and in use, and does not hide data from another login that has the passphrase.
+
+**Code consequence.** Replace the two sessions with one `DataFileSession` that has a *source* (this Mac or a shared folder) and a *seal* (none or vault). `VaultSession` and `SharedDataSession` become small parts of it. The old ones keep working for the local cases until the new one replaces them, so the existing tested paths are not broken while building.
+
+## 8. The database upgrade (V1 to V2) in shared mode
+
+- Everyone on one Mac runs the **same app**, so version differences only happen during an update. Still: `info.json` records `formatVersion` and `schemaVersion`. An older app opening newer data refuses with a clear message. A newer app opening older shared data upgrades **the working copy** (the V1 to V2 step already exists) and the upgrade reaches the shared file at the next check-in, after the safety copy.
+- The first-time 1.1 safety copy (Application Support ▸ Backups ▸ Before 1.1) still happens for this login's own data. When joining an existing shared file, a copy of it is made first, in the shared folder's `previous saves`.
+- Table counts for verification must come from the database's own table list, not a fixed list, so V2's new tables are included automatically.
+
+## 9. What the person sees
+
+**Settings ▸ Data & Backup ▸ Shared Data File** (a new section):
+
+- **Not sharing:** a short explanation and **Share This Data…** (choose or make a folder; copies this Mac's data into it; never moves or changes the original).
+- **Sharing:** the folder path with Show in Finder, who has the file and since when, last saved time, and the buttons **Save Now**, **Close File So Someone Else Can Use It**, **Open Recent** (a pop-up of folders used before), **Move This File…**, **Create a New Data File…**, **Check Sharing** (a diagnostic, see 11), and **Stop Sharing**.
+- **Read-only:** a clear banner when the file was opened read-only.
+
+**At launch**, if someone else has the file: a screen with **Open Read-Only**, **Take Over** (only offered when allowed, with a warning), **Use This Mac's Own Data** (only if the person wants to leave sharing), and **Quit**. If the folder is missing: **Locate…**, **Choose Another…**, **Use This Mac's Own Data**. It never starts an empty database silently.
+
+**While running**: a small status in the bottom bar ("Shared · saved 3:12 PM") and a banner if the lock is taken or a save fails ("Your changes are safe on this Mac and will be tried again").
+
+## 10. Failure handling (what happens when something goes wrong)
+
+| What goes wrong | What happens | Tested by |
+|---|---|---|
+| Save fails (disk full, folder gone) | Old shared file untouched. Banner. Working copy kept and retried. | D5, new S1 |
+| App crashes mid-edit | Marker and working copy remain. Next launch keeps the work (or saves it as a recovered copy if someone else saved meanwhile). | D3 |
+| Crash during a save | Temp file ignored; shared file is the old one or the new one, never half. | new S2 |
+| Another login takes a stale lock | Original app goes read-only at its next check or on wake. Its unsaved work is kept as a recovered copy. | D3 |
+| Mac sleeps with the lock held | On wake, check the lock at once. If still ours, carry on. If taken, as above. | new S3 |
+| Folder moved or renamed | Bookmark resolves the move; if not, "folder missing" screen. | new S4 |
+| Folder on an unplugged drive | Same as missing. | new S4 |
+| Wrong permissions (the other login can't write) | **Check Sharing** says so in plain words at setup, and a failed first save from the second login shows the same message. | Phase 0 |
+| File from a newer app | Refused with a clear message. | new S5 |
+| Passphrase wrong or key file missing (encrypted) | Same screens as today's vault. Nothing changes. | C1 to C6 |
+| Two logins start at once | Exclusive lock create: one wins, the other sees "in use". | new S6 |
+| Verify fails (counts or integrity) | Nothing replaced. Message. Working copy kept. | A and D tests |
+| Damaged shared file | Open the previous save (one tap) or the previous saves folder. | new S7 |
+
+## 11. The tools to make it safe to trust
+
+- **Check Sharing:** shows the folder's owner and permissions, free space, whether a test file can be created, renamed and deleted by this login, whether the folder is on this Mac's disk, and the last few saves. It's the first thing to run when something doesn't work.
+- **Previous saves:** keeps the last few finished files with their time and who saved them (see D8), and a **Restore a Previous Save…** action.
+- **Save log:** a small text log in the shared folder (who, when, size, revision) so any odd change can be traced.
+
+## 12. Decisions needed (with options and my recommendation)
+
+| # | Decision | Options | Recommendation |
+|---|---|---|---|
+| D1 | Can sharing be used **without** encryption? | A) Yes, each is optional. B) Sharing requires encryption. | **A.** Encryption stays opt-in, as promised. Sharing plain data in a folder everyone on the Mac can read is the owner's choice and Help says so. |
+| D2 | **Stop Sharing**: what does this Mac's data become? | A) The latest shared data is copied to this Mac (after a safety copy of what was there). B) Go back to this Mac's old data, which may be out of date (the prototype). C) Ask each time. | **A.** B can silently bring back stale data, which is exactly the loss this feature must not cause. |
+| D3 | Starting data when sharing is first turned on | A) Copy this Mac's data into the folder (never move). B) Also offer to join a folder that already has data (replaces this login's data after a safety copy). | **Both**, with a clear choice and a safety copy. |
+| D4 | **Take over a lock that still looks alive** (someone idle in another login) | A) Never; only stale locks. B) Allowed with a strong warning, and the other app goes read-only and keeps its unsaved work as a recovered copy. | **B.** Otherwise a switched-away login blocks everyone. Their last auto-save is at most 2 minutes old. |
+| D5 | **Open read-only** while someone else has it | A) Yes. B) No. | **A.** It's safe and useful. Changes made are not saved to the shared file. |
+| D6 | How often to save back | A) Every 2 minutes if changed (prototype). B) Every 5 minutes. C) After every change. | **A**, then measure on a large file and move to B if saves are slow. C is too heavy. |
+| D7 | Heartbeat and stale limit | A) 60 seconds and 3 minutes (prototype). B) 30 seconds and 2 minutes. C) Longer. | **A.** Sleep makes shorter limits trigger false takeovers. |
+| D8 | History of finished saves kept in the folder | A) One previous save (prototype). B) The last 5 saves plus one per day for 7 days. C) None. | **B.** Costs disk space (about 6 to 12 copies) but makes any bad save recoverable. Receipts are shared, not copied, between these. |
+| D9 | Which settings are shared | A) Per login (currency, appearance, reminders, paper, style). B) Some in the file. | **A.** Preferences are personal. Reminder notifications go to the login that set them. |
+| D10 | Folder locations | A) Only this Mac's own disk; block network volumes and warn on cloud-synced folders. B) Allow anything. C) Block cloud folders too. | **A.** The finished file is written whole, so a sync service is less harmful than for a live database, but a synced folder can make "conflicted copies" and the lock would be wrong across Macs. |
+| D11 | Open Recent, Move This File, Create a New File | A) All three in 1.1. B) Open Recent only. | **A.** They were on the prototype's list. Move and Create are small once the pipeline is one system. |
+| D12 | Receipt clean-up | A) Remove unused ones at a clean close after 30 days. B) Never remove. | **A.** Otherwise the shared folder grows forever. |
+| D13 | Ask the other login to let go ("Ask to Close") | A) Not in 1.1. B) A request file that the holder's app sees and answers. | **A.** The holder may be switched away and unable to answer, so it doesn't help in the main case. Read-only and take-over cover it. |
+| D14 | What if the two-login test fails or finds permission problems | A) Fix and retry. B) Ship 1.1 without sharing and leave it for 1.2. | **Plan for B as the fallback.** Sharing is the last step, so dropping it does not disturb the rest. Decide at the gate after Phase 1. |
+
+### 12a. Answers so far (2026-10-18)
+
+Answered by the owner:
+
+- **D1: Yes.** Sharing works with or without encryption. Help states the difference plainly.
+- **D2: The latest shared data.** Stop Sharing copies the latest shared data to this Mac, after a safety copy of what it had.
+- **D4: Yes, with a strong warning.** A login can take over a lock that still looks alive. The other app goes read-only and keeps its unsaved work as a recovered copy.
+- **D8: Last 5 saves plus one per day for a week**, with Restore a Previous Save.
+
+Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D5 (read-only open), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.1), D12 (remove unused receipts at a clean close after 30 days), D13 (no Ask to Close), D14 (fall back to shipping 1.1 without sharing if the permissions test fails).
+
+## 13. Order of work, with a stop point
+
+| Phase | Work | Output | Effort |
+|---|---|---|---|
+| **0. Permissions spike** | Tiny throwaway test: create the folder, write and replace a file as login A, then replace it as login B, with the app's real sandbox. Run by the owner with two logins. | A yes or no on the biggest risk, with the exact folder settings that work. | 1 to 2 days (and a session with the owner) |
+| **1. Plain sharing on V2** | Bring the prototype to V2. Exclusive lock. Revision counter. Wake check. Check Sharing. Settings section and launch screens. | Plain shared data works for two logins. | about 1 week |
+| **Gate** | Owner runs the full two-login test (section 14). Decide go or fall back (D14). | Go or no go. | 2 days |
+| **2. One system with the vault** | `DataFileSession` with the four locations. Encrypted shared mode. Each login's key from its own Keychain. | Encrypted sharing works. | about 1 week |
+| **3. The rest** | Open Recent, Move, Create, previous saves and restore, receipt clean-up, save log, large-file timing and tuning. | Feature complete. | about 1 week |
+| **4. Hardening** | All shared-file tests from the data integrity plan, crash and large-data tests, then Help, screenshots and release notes. | Release candidate. | about 1 week |
+
+About 4 weeks in all, in line with the plan's estimate. The gate after Phase 1 is deliberate: if the permissions test fails, little was spent.
+
+## 14. The two-login test (the owner does this)
+
+Setup: a second macOS user on the same Mac (System Settings ▸ Users & Groups), and fast user switching on (Control Center ▸ Fast User Switching).
+
+1. Login A: share the data into a new folder (for example one inside `/Users/Shared`). Add a few transactions with receipts.
+2. Switch to login B (do not log A out). Open the app, choose the same folder once. Expected: told A has the file; open read-only works.
+3. Back in A: Close File So Someone Else Can Use It. In B: open it, add a transaction, close. In A: open again and see B's transaction and receipt.
+4. Crash test: in A, force quit the app while editing; reopen; the unsaved work is kept.
+5. Stale lock: in A, force quit; in B, open: told the lock is stale, take over works.
+6. Live lock take-over (if D4 is yes): A is open and idle, B takes over; A sees the banner and keeps its work as a recovered copy.
+7. Sleep: close the lid with A holding the lock for 5 minutes; open B; take over; wake A.
+8. Encrypted (after Phase 2): repeat 1 to 5 with encryption on; confirm the shared folder holds no readable data (`OinklyBudget.vault` only).
+9. Large file: a data set of about 20,000 transactions; time the saves.
+10. Permissions: confirm B can replace A's file and that nothing needs `sudo`.
+
+## 15. Tests this adds to the data integrity plan
+
+Section D (D1 to D6) stays. New: S1 save fails (disk full), S2 crash during a save, S3 sleep and wake, S4 folder moved or drive unplugged, S5 newer-format file, S6 simultaneous start, S7 restoring a previous save, S8 stop sharing leaves this Mac with the latest data, S9 joining an existing folder, S10 encrypted sharing leaves only ciphertext in the folder.
+
+## 16. What changes in the plan documents when this is built
+
+Help (a new topic: Sharing One Data File, with the two-login setup, the permissions notes and the honest limits), screenshots S-F4a to S-F4d, the website security and privacy text, release notes (a headline feature, with "one at a time" stated plainly), the data integrity plan record, and the App Review notes (still no network).
