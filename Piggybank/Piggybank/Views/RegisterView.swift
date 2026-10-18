@@ -32,7 +32,7 @@ private struct RegisterContent: View {
     @State private var confirmingDelete = false
     @State private var limitMessage: String?
     @State private var editingDate: Transaction?
-    @State private var isExporting = false
+    @State private var savingAs: ExportSheet.Kind?
     @State private var pendingImport: PendingImport?
     @Environment(\.openWindow) private var openWindow
 
@@ -76,12 +76,16 @@ private struct RegisterContent: View {
                 MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
                 Spacer()
             }
+            // Moving data in and out is one group of labelled buttons; printing a statement is its own icon button.
             Button("Import…", systemImage: "square.and.arrow.down") {
                 if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
             }
             .help("Import a bank statement (CSV) into this account")
-            Button("Export…", systemImage: "square.and.arrow.up") { isExporting = true }
-                .help("Save this account's transactions as a PDF statement or a CSV spreadsheet")
+            Button("Export CSV…", systemImage: "square.and.arrow.up") { savingAs = .csv }
+                .help("Save this account's transactions as a CSV spreadsheet")
+            Button { savingAs = .pdf } label: { Image(systemName: "printer") }
+                .help("Print to PDF: save this account's transactions as a statement to read or print")
+                .accessibilityLabel("Print to PDF")
         }
     }
 
@@ -217,7 +221,7 @@ private struct RegisterContent: View {
             ? "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(account.name)"
             : "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(month.formatted(.dateTime.month(.wide).year())) · \(account.name)")
         .sheet(isPresented: $isEditingDetails) { AccountEditView(account: account) }
-        .sheet(isPresented: $isExporting) { ExportSheet(account: account, startingMonth: month) }
+        .sheet(item: $savingAs) { ExportSheet(account: account, kind: $0, startingMonth: month) }
         .sheet(item: $pendingImport) { ImportStatementSheet(account: account, fileURL: $0.url) }
         .sheet(item: $editingDate) { transaction in
             if transaction.isLive { EditTransactionSheet(transaction: transaction, account: account, categories: categories) }

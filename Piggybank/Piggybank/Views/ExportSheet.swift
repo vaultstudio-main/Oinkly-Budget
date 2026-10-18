@@ -2,11 +2,18 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-/// Export transactions to a PDF statement or a CSV spreadsheet. Used from an account's register (that account only)
-/// and from the Transactions page (every account, or one chosen here). To print, open the PDF and print it from Preview.
+/// Save an account's transactions for a period, either as a PDF statement to read or print, or as a CSV spreadsheet
+/// (the layout the CSV import reads). They are two separate things with their own buttons: printing a statement is
+/// not the same as exporting data.
 struct ExportSheet: View {
-    /// The account being exported. Nil on the Transactions page, where the account is chosen in the sheet.
+    enum Kind: Identifiable {
+        case pdf, csv
+        var id: Self { self }
+    }
+
+    /// The account being saved. Nil lets the account be chosen in the sheet.
     let account: Account?
+    let kind: Kind
     var startingMonth: Date = MonthFilter.start(of: .now)
     var startingAccountID: Account.ID?
 
@@ -14,17 +21,11 @@ struct ExportSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
-    private enum Format: String, CaseIterable, Identifiable {
-        case pdf = "PDF", csv = "CSV"
-        var id: Self { self }
-    }
-
     private enum Scope: String, CaseIterable, Identifiable {
         case month = "Month", year = "Year", dates = "Dates", all = "All"
         var id: Self { self }
     }
 
-    @State private var format = Format.pdf
     @State private var scope = Scope.month
     @State private var month: Date
     @State private var year = Calendar.current.component(.year, from: .now)
@@ -34,8 +35,9 @@ struct ExportSheet: View {
     @State private var accountID: Account.ID?
     @State private var errorMessage: String?
 
-    init(account: Account?, startingMonth: Date = MonthFilter.start(of: .now), startingAccountID: Account.ID? = nil) {
+    init(account: Account?, kind: Kind = .pdf, startingMonth: Date = MonthFilter.start(of: .now), startingAccountID: Account.ID? = nil) {
         self.account = account
+        self.kind = kind
         self.startingMonth = startingMonth
         self.startingAccountID = startingAccountID
         _month = State(initialValue: MonthFilter.start(of: startingMonth))
@@ -92,21 +94,21 @@ struct ExportSheet: View {
         }
     }
 
-    private var title: String { chosenAccount.map { "Export \($0.name)" } ?? "Export Transactions" }
+    private var title: String {
+        let name = chosenAccount?.name ?? "Transactions"
+        return kind == .pdf ? "Print \(name) to PDF" : "Export \(name) as CSV"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title).font(.title2.bold()).padding(.bottom, 4)
-            Text("Save a PDF statement to read or print, or a spreadsheet (CSV) you can open in Numbers or Excel. To print, open the PDF and print it from Preview.")
+            Text(kind == .pdf
+                 ? "Saves a PDF statement you can read, keep or email. To print it on paper, open the PDF and print it from Preview."
+                 : "Saves these transactions as a spreadsheet (CSV) you can open in Numbers or Excel, or import again later.")
                 .font(.callout).foregroundStyle(.secondary)
                 .padding(.bottom, 14)
 
             Form {
-                Picker("Format", selection: $format) {
-                    ForEach(Format.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-
                 if account == nil {
                     Picker("Account", selection: $accountID) {
                         Text("All Accounts").tag(Account.ID?.none)
@@ -136,7 +138,7 @@ struct ExportSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if format == .pdf {
+                if kind == .pdf {
                     Picker("Paper", selection: $paper) {
                         ForEach(PaperSize.allCases) { Text($0.title).tag($0) }
                     }
@@ -153,7 +155,7 @@ struct ExportSheet: View {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Export…", action: export)
+                Button(kind == .pdf ? "Save PDF…" : "Save CSV…", action: export)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 12)
@@ -165,7 +167,7 @@ struct ExportSheet: View {
     private func fileName(_ chosen: Account?, _ period: ExportPeriod) -> String {
         let base = [chosen?.name ?? "Transactions", period.label].joined(separator: " – ")
         let cleaned = base.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
-        return cleaned + (format == .pdf ? ".pdf" : ".csv")
+        return cleaned + (kind == .pdf ? ".pdf" : ".csv")
     }
 
     private func export() {
@@ -173,13 +175,13 @@ struct ExportSheet: View {
         let chosen = chosenAccount
         let period = period
         let panel = NSSavePanel()
-        panel.allowedContentTypes = [format == .pdf ? .pdf : .commaSeparatedText]
+        panel.allowedContentTypes = [kind == .pdf ? .pdf : .commaSeparatedText]
         panel.nameFieldStringValue = fileName(chosen, period)
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let statement = StatementBuilder.make(account: chosen, period: period, in: modelContext)
         do {
-            switch format {
+            switch kind {
             case .pdf:
                 let data = StatementPDF.render(statement, paper: paper)
                 guard !data.isEmpty else { throw CocoaError(.fileWriteUnknown) }

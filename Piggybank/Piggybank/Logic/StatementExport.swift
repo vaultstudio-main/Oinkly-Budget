@@ -70,6 +70,7 @@ struct Statement {
     var showsBalance: Bool
     var openingBalance: Decimal?
     var lines: [StatementLine]
+    /// The transactions themselves, for writing a CSV.
     var transactions: [Transaction]
 
     var moneyIn: Decimal {
@@ -138,190 +139,41 @@ enum StatementBuilder {
     }
 }
 
-/// Draws a statement as a PDF: a title block, a summary, then a table that carries on over as many pages as it needs,
-/// repeating its column headings and ending each page with a footer. Plain black and grey, so it prints well.
+/// A statement as a document: the title block, the headline figures, then the table of transactions.
 @MainActor
 enum StatementPDF {
-    private struct Column {
-        var title: String
-        var width: CGFloat
-        var rightAligned = false
-        var text: (StatementLine) -> String
-    }
+    static func document(for s: Statement) -> ExportDocument {
+        let money: (Decimal) -> String = { $0.formatted(.appCurrency) }
+        let day = Date.FormatStyle.dateTime.month(.abbreviated).day().year()
 
-    private static let margin: CGFloat = 40
-    /// A fixed dark grey. System colours change with light and dark mode, which would make printed text pale.
-    private static let grey = NSColor(white: 0.38, alpha: 1)
-    private static let rowHeight: CGFloat = 15
-    private static let footerHeight: CGFloat = 28
+        var summary: [(label: String, value: String)]
+        if s.showsBalance, let opening = s.openingBalance {
+            summary = [("Opening balance", money(opening)), ("Money in", money(s.moneyIn)), ("Money out", money(s.moneyOut)),
+                       ("Closing balance", money(s.closingBalance ?? opening))]
+        } else {
+            summary = [("Transactions", s.lines.count.formatted()), ("In", money(s.moneyIn)), ("Out", money(s.moneyOut))]
+        }
+
+        var columns: [DocColumn] = [.fixed("Date", 66)]
+        if s.showsAccount { columns.append(.fixed("Account", 84)) }
+        columns += [.flexible("Payee", 0.58), .flexible("Memo", 0.42), .fixed("Category", 92), .fixed("Amount", 70, right: true)]
+        if s.showsBalance { columns.append(.fixed("Balance", 74, right: true)) }
+
+        let rows = s.lines.map { line -> [String] in
+            var row = [line.date.formatted(day)]
+            if s.showsAccount { row.append(line.account) }
+            row += [line.payee, line.memo, line.category, money(line.amount)]
+            if s.showsBalance { row.append(line.balance.map(money) ?? "") }
+            return row
+        }
+
+        var sections: [DocSection] = []
+        if !s.showsBalance { sections.append(.text("Transfers between accounts are not counted in In and Out.")) }
+        sections.append(.table(DocTable(columns: columns, rows: rows, emptyNote: "No transactions in this period.")))
+        return ExportDocument(title: s.title, subtitle: s.subtitle, summary: summary, sections: sections)
+    }
 
     static func render(_ statement: Statement, paper: PaperSize) -> Data {
-        let page = paper.size
-        let data = NSMutableData()
-        var box = CGRect(origin: .zero, size: page)
-        let info = [kCGPDFContextTitle: "\(statement.title), \(statement.subtitle)", kCGPDFContextCreator: "OinklyBudget"] as CFDictionary
-        guard let consumer = CGDataConsumer(data: data as CFMutableData),
-              let context = CGContext(consumer: consumer, mediaBox: &box, info) else { return Data() }
-
-        let columns = makeColumns(statement, usable: page.width - margin * 2)
-        let money: (Decimal) -> String = { $0.formatted(.appCurrency) }
-
-        // Where each page's rows come from. The first page has less room because of the title block.
-        let headerBlock = headerHeight(statement)
-        let bodyTop = margin + 14 + headerBlock + rowHeight + 4
-        let firstCapacity = max(Int((page.height - footerHeight - margin - bodyTop) / rowHeight), 1)
-        let laterTop = margin + rowHeight + 4
-        let laterCapacity = max(Int((page.height - footerHeight - margin - laterTop) / rowHeight), 1)
-        var pages: [Range<Int>] = []
-        var index = 0
-        var capacity = firstCapacity
-        repeat {
-            let end = min(index + capacity, statement.lines.count)
-            pages.append(index..<end)
-            index = end
-            capacity = laterCapacity
-        } while index < statement.lines.count
-
-        let made = Date.now.formatted(.dateTime.month(.abbreviated).day().year())
-        for (number, rows) in pages.enumerated() {
-            context.beginPDFPage(nil)
-            context.saveGState()
-            context.translateBy(x: 0, y: page.height)
-            context.scaleBy(x: 1, y: -1)
-            let previous = NSGraphicsContext.current
-            NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-
-            var y = margin
-            if number == 0 {
-                y = drawHeader(statement, at: y, width: page.width - margin * 2, money: money)
-            }
-            y = drawColumnHeadings(columns, at: y, context: context)
-            for line in statement.lines[rows] {
-                drawRow(line, columns: columns, at: y, money: money)
-                y += rowHeight
-            }
-            if statement.lines.isEmpty {
-                draw("No transactions in this period.", in: CGRect(x: margin, y: y + 8, width: page.width - margin * 2, height: 16),
-                     size: 10, color: grey)
-            }
-            drawFooter(left: "\(statement.title) · \(statement.subtitle) · made \(made)",
-                       right: "Page \(number + 1) of \(pages.count)", page: page)
-
-            NSGraphicsContext.current = previous
-            context.restoreGState()
-            context.endPDFPage()
-        }
-        context.closePDF()
-        return data as Data
-    }
-
-    // MARK: Layout
-
-    private static func makeColumns(_ s: Statement, usable: CGFloat) -> [Column] {
-        let day = Date.FormatStyle.dateTime.month(.abbreviated).day().year()
-        var fixed: [Column] = [Column(title: "Date", width: 66) { $0.date.formatted(day) }]
-        if s.showsAccount { fixed.append(Column(title: "Account", width: 84) { $0.account }) }
-        let flexIndex = fixed.count
-        let tail: [Column] = [
-            Column(title: "Category", width: 92) { $0.category },
-            Column(title: "Amount", width: 70, rightAligned: true) { $0.amount.formatted(.appCurrency) },
-        ] + (s.showsBalance ? [Column(title: "Balance", width: 74, rightAligned: true) { $0.balance?.formatted(.appCurrency) ?? "" }] : [])
-        let fixedWidth = fixed.reduce(0) { $0 + $1.width } + tail.reduce(0) { $0 + $1.width }
-        let flexible = max(usable - fixedWidth, 120)
-        let payee = Column(title: "Payee", width: flexible * 0.58) { $0.payee }
-        let memo = Column(title: "Memo", width: flexible * 0.42) { $0.memo }
-        var all = fixed
-        all.insert(payee, at: flexIndex)
-        all.insert(memo, at: flexIndex + 1)
-        // Category sits after the memo so the long text columns stay together; the amounts end the row.
-        all.append(contentsOf: tail)
-        return all
-    }
-
-    private static func headerHeight(_ s: Statement) -> CGFloat { 22 + 18 + 12 + 34 + 12 }
-
-    @discardableResult
-    private static func drawHeader(_ s: Statement, at top: CGFloat, width: CGFloat, money: (Decimal) -> String) -> CGFloat {
-        var y = top
-        draw(s.title, in: CGRect(x: margin, y: y, width: width, height: 24), size: 19, weight: .bold)
-        y += 22
-        draw(s.subtitle, in: CGRect(x: margin, y: y + 2, width: width, height: 16), size: 11, color: grey)
-        y += 18 + 12
-
-        var items: [(String, String)] = []
-        if s.showsBalance, let opening = s.openingBalance {
-            items.append(("Opening balance", money(opening)))
-            items.append(("Money in", money(s.moneyIn)))
-            items.append(("Money out", money(s.moneyOut)))
-            items.append(("Closing balance", money(s.closingBalance ?? opening)))
-        } else {
-            items.append(("Transactions", s.lines.count.formatted()))
-            items.append(("In", money(s.moneyIn)))
-            items.append(("Out", money(s.moneyOut)))
-            items.append(("", "Transfers between accounts are not counted"))
-        }
-        let cell = width / CGFloat(items.count)
-        for (offset, item) in items.enumerated() {
-            let x = margin + cell * CGFloat(offset)
-            if offset < 3 || s.showsBalance {
-                draw(item.0, in: CGRect(x: x, y: y, width: cell - 8, height: 12), size: 8, color: grey)
-                draw(item.1, in: CGRect(x: x, y: y + 12, width: cell - 8, height: 16), size: 12, weight: .semibold)
-            } else {
-                draw(item.1, in: CGRect(x: x, y: y + 12, width: cell - 8, height: 16), size: 7.5, color: grey)
-            }
-        }
-        return y + 34 + 12
-    }
-
-    private static func drawColumnHeadings(_ columns: [Column], at y: CGFloat, context: CGContext) -> CGFloat {
-        var x = margin
-        for column in columns {
-            draw(column.title.uppercased(), in: CGRect(x: x, y: y + 2, width: column.width - 6, height: rowHeight),
-                 size: 7.5, weight: .semibold, color: grey, right: column.rightAligned)
-            x += column.width
-        }
-        context.setStrokeColor(NSColor.black.withAlphaComponent(0.55).cgColor)
-        context.setLineWidth(0.8)
-        context.move(to: CGPoint(x: margin, y: y + rowHeight))
-        context.addLine(to: CGPoint(x: x - 6, y: y + rowHeight))
-        context.strokePath()
-        return y + rowHeight + 4
-    }
-
-    private static func drawRow(_ line: StatementLine, columns: [Column], at y: CGFloat, money: (Decimal) -> String) {
-        var x = margin
-        for column in columns {
-            draw(column.text(line), in: CGRect(x: x, y: y + 1.5, width: column.width - 6, height: rowHeight),
-                 size: 8.5, right: column.rightAligned)
-            x += column.width
-        }
-        if let context = NSGraphicsContext.current?.cgContext {
-            context.setStrokeColor(NSColor.black.withAlphaComponent(0.12).cgColor)
-            context.setLineWidth(0.5)
-            context.move(to: CGPoint(x: margin, y: y + rowHeight))
-            context.addLine(to: CGPoint(x: x - 6, y: y + rowHeight))
-            context.strokePath()
-        }
-    }
-
-    private static func drawFooter(left: String, right: String, page: CGSize) {
-        let y = page.height - margin + 6
-        let width = page.width - margin * 2
-        draw(left, in: CGRect(x: margin, y: y, width: width * 0.75, height: 12), size: 7.5, color: grey)
-        draw(right, in: CGRect(x: margin + width * 0.75, y: y, width: width * 0.25, height: 12), size: 7.5,
-             color: grey, right: true)
-    }
-
-    private static func draw(_ text: String, in rect: CGRect, size: CGFloat, weight: NSFont.Weight = .regular,
-                             color: NSColor = .black, right: Bool = false) {
-        let style = NSMutableParagraphStyle()
-        style.lineBreakMode = .byTruncatingTail
-        style.alignment = right ? .right : .left
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: size, weight: weight),
-            .foregroundColor: color,
-            .paragraphStyle: style,
-        ]
-        NSString(string: text).draw(in: rect, withAttributes: attributes)
+        DocumentPDF.render(document(for: statement), paper: paper)
     }
 }
