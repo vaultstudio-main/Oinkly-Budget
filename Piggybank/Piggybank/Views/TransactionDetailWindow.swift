@@ -88,7 +88,7 @@ struct TransactionDetailWindow: View {
             }
             Divider()
             HStack {
-                Button("Print to PDF…", systemImage: "printer") {
+                Button("Print PDF", systemImage: "printer") {
                     guard transaction.isLive else { return }
                     PDFSaver.save(DocumentBuilders.transaction(transaction),
                                   suggestedName: "\(transaction.payee.isEmpty ? "Transaction" : transaction.payee) – \(transaction.date.formatted(.dateTime.month(.abbreviated).day().year()))")

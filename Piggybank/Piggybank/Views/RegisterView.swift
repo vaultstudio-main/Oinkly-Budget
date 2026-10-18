@@ -83,7 +83,7 @@ private struct RegisterContent: View {
             .help("Import a bank statement (CSV) into this account")
             Button("Export CSV…", systemImage: "square.and.arrow.up") { savingAs = .csv }
                 .help("Save this account's transactions as a CSV spreadsheet")
-            Button("Print to PDF…", systemImage: "printer") { savingAs = .pdf }
+            Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
                 .help("Save this account's transactions as a PDF statement to read or print")
         }
     }
