@@ -78,13 +78,12 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-F4b | `Help-shared-busy` | "Someone else has this file" | Second login (owner takes this) |
 | S-F4c | `Help-shared-takeover` | Take over warning | Stale lock |
 | S-F4d | `Help-shared-second` | Second login's window | Second login (owner takes this) |
-| S-F5 | `Help-attachments` | Statement attached to an account | Account page |
 | S-G1 | `Help-window` | The Help window | Help ▸ OinklyBudget Help |
 | S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
 | S-G3 | `Help-export-defaults` | Export defaults | Settings |
 | S-G4 | `Help-checks` | Check printing | Account |
 
-Shots for planned features (splits, tags, recurring, shared file, attachments, export defaults, check printing, Reports and Summary PDF) are taken only if the feature ships.
+Shots for planned features (splits, tags, recurring, shared file, export defaults, check printing, Reports and Summary PDF) are taken only if the feature ships.
 
 The 1.0 shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 

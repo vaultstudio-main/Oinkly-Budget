@@ -46,12 +46,13 @@ Review keyboard shortcuts and add menu commands. VoiceOver and larger text acros
 ## Step 4: exports and extras
 
 - Print PDF on Reports and Summary (the builders exist, no button yet).
-- Attachments beyond receipts: PDF statements kept with an account.
 - Settings for default paper size and export style.
 - Check printing (optional).
 - Widget options, only if time allows.
 
-Attachments and check printing are the first to drop if the schedule slips.
+Check printing is the first to drop if the schedule slips.
+
+**Decided 2026-10-18:** the app stores only receipt photos and PDF bills. "Attachments beyond receipts" (PDF statements kept with an account) is dropped.
 
 ## Step 5: shared data file
 
@@ -93,7 +94,7 @@ Two people on the same Mac, in separate Mac logins, use one data file, one at a 
 - **Shared data file:** a damaged file (two logins and SQLite side files), lost edits if someone takes over a lock, stale locks after crashes. Check out and check in, copy first and verify, back up first, and crash tests reduce these.
 - **Late discovery:** it comes after the other features, so a problem found by the two-login test lands close to release.
 - **Migration:** an existing database that can't open is the worst outcome. Done and tested, with the safety copy as a backstop.
-- **Scope:** drop check printing and attachments first.
+- **Scope:** drop check printing first.
 - **Review:** the new version goes through App Review again. Keep release notes clear and the app free of crashes.
 
 ## Loose ends

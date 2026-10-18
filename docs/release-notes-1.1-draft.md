@@ -56,7 +56,6 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Print PDF and Export CSV on every account and on the Transactions page, with an Export sheet for account, period (month, year or from a date) and paper size. A single transaction can be saved as a PDF from its detail window. To print, open the PDF in Preview.
 - Import Statement on every account: preview the rows with counts of new, already-there and unreadable ones; set the columns, date format, separator and amount style if the file isn't recognised; save the format under a name and have it detected next time; skip transactions already in OinklyBudget; tidy bank text in payee names; and Undo removes everything an import added. CSV only.
 - Print PDF on Reports and Summary *(if built)*.
-- PDF statements kept with an account *(if built)*.
 - Default paper size and export style in Settings *(if built)*.
 - Print checks on check stock *(if built, optional)*.
 

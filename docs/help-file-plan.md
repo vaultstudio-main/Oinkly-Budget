@@ -65,7 +65,6 @@ Topics for planned features are written only if the feature ships.
 | F2 Data & Backup | Data & Settings | Backup & Restore | edit |
 | F3 Safe update | Data & Settings | Updating to 1.1 (the safety copy, where it is, deleting it) | new |
 | F4 Shared file | Data & Settings | Sharing One Data File | new, if built |
-| F5 Attachments | Everyday Money | Receipts & Attachments | edit, if built |
 | G1 Windows | Start Here | Welcome (mention Help and Release Notes) | edit |
 | G2 Shortcuts, accessibility | Reference | Keyboard Shortcuts, Accessibility | edit and new |
 | G3 Export defaults | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |

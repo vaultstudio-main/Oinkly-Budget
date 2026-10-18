@@ -55,7 +55,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 - **Shared data file:** the file lives where you choose, on your Mac. Nothing is uploaded. Where you place it is your decision, and a cloud-synced folder is governed by that service's policy.
 - **Widgets:** the widgets read a small file on your Mac with bill names, reminder titles and dates only. No amounts, no account details, nothing leaves the Mac.
 - **Safety copy:** the app keeps a copy of your data in its own folder when you update, until you delete it.
-- **Attachments:** update the photos and files text if PDF statements are kept with accounts.
+- **Files:** the app keeps receipt photos and PDF bills on transactions and nothing else. Say so where the privacy page describes photos and files.
 - Keep "collects nothing", "no network" and "no analytics". If anything in 1.1 ever changes these, stop and fix the plan before publishing.
 - Re-check `PrivacyInfo.xcprivacy` and the App Privacy answers in App Store Connect against this page.
 

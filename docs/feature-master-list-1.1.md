@@ -200,8 +200,8 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Two Mac logins on one Mac share one data file, one at a time. Open Recent, Choose Folder, Move This File, Create a New File, Save Now, Close File So Someone Else Can Use It, Take Over a stale lock, Stop Sharing; the app tells you who has the file and since when.
 - Shots: S-F4a (settings), S-F4b (someone else has the file), S-F4c (take over warning), S-F4d (second login's view).
 
-### F5. Attachments beyond receipts (Planned)
-- PDF statements kept with an account. Shots: S-F5.
+### F5. Only receipts are stored (decided)
+- The app stores receipt photos and PDF bills on transactions, and nothing else. PDF statements are not kept with accounts, and there are no other attachments. (Decided 2026-10-18.)
 
 ---
 
@@ -296,7 +296,6 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-F4b | "Someone else has this file" | Second login (owner takes this) | Help-shared-busy | – | – |
 | S-F4c | Take over warning | Stale lock | Help-shared-takeover | – | – |
 | S-F4d | Second login's window | Second login (owner takes this) | Help-shared-second | – | – |
-| S-F5 | Statement attached to an account | Account page | Help-attachments | – | – |
 | S-G1 | The Help window | Help ▸ OinklyBudget Help | Help-window | – | – |
 | S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
 | S-G3 | Export defaults | Settings | Help-export-defaults | – | – |
