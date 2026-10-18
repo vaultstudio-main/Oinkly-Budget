@@ -314,6 +314,19 @@ enum TestData {
         try context.save()
         GoalArchiver.archiveReached(in: context)
         try context.save()
+
+        // Things new in 1.1, so they have something to show: a primary checking account (a setting on this Mac) and a
+        // few reminders for the Reminders widget.
+        let primary = ((try? context.fetch(FetchDescriptor<Account>())) ?? []).live
+            .filter { $0.type == .checking }
+            .sorted { $0.name < $1.name }
+            .first
+        PrimaryChecking.set(primary)
+        MainActor.assumeIsolated {
+            if CustomReminders.shared.items.isEmpty {
+                CustomReminders.shared.items = CustomReminder.presets.prefix(3).map(\.reminder)
+            }
+        }
         NotificationCenter.default.post(name: .piggybankDataLoaded, object: nil)
     }
 

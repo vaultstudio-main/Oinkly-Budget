@@ -39,12 +39,12 @@ struct FileNewCommands: Commands {
             }
         }
 
-        // The Testing window (id "testing", Debug builds only) still exists but has no menu item for now. To bring
-        // the item back, add a Button here that calls openWindow(id: "testing"), inside #if DEBUG:
-        //
-        //     CommandGroup(after: .appInfo) {
-        //         Button("Testing…") { openWindow(id: "testing") }
-        //     }
+        // Debug builds only: OinklyBudget ▸ Testing opens the window that fills the app with test data or wipes it.
+        #if DEBUG
+        CommandGroup(after: .appInfo) {
+            Button("Testing") { openWindow(id: "testing") }
+        }
+        #endif
 
         CommandGroup(replacing: .newItem) {
             Button("New Transaction…") {
