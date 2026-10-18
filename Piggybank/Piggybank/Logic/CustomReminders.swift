@@ -18,7 +18,7 @@ enum ReminderPage: String, Codable, CaseIterable, Identifiable {
         case .summary: "Summary"
         case .transactions: "Transactions"
         case .reports: "Reports"
-        case .bills: "Bills"
+        case .bills: "Bills & Recurring"
         case .planning: "Planning"
         case .liabilities: "Liabilities"
         case .investments: "Investments"

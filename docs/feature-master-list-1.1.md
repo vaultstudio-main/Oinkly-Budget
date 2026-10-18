@@ -253,7 +253,7 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-B9b | Register with tag chips | Register | Help-tags-register | – | – |
 | S-B9c | A report filtered by a tag | Reports | Help-tags-report | – | – |
 | S-B9d | Tags settings | Settings ▸ Tags | Help-tags-settings | – | – |
-| S-B10a | Recurring rules screen | Bills ▸ Recurring | Help-recurring | features | yes |
+| S-B10a | Recurring rules screen | Bills & Recurring ▸ Recurring tab | Help-recurring | features | yes |
 | S-B10b | Rule editor | Add a rule | Help-recurring-edit | – | – |
 | S-B10c | Pending entry made by a rule | Register | Help-recurring-pending | – | – |
 | S-C1 | Summary with Priority Bills | Summary | Help-priority-bills | features | yes |
@@ -297,3 +297,7 @@ Also retake the 1.0 shots that stay: Help-atm-withdrawal, Help-card-charge, Help
 - Add a row here the moment a feature is built or changed. The four documents follow this file.
 - When a screen changes after its screenshot is taken, retake the screenshot.
 - Shots marked "owner takes this" need panels or other apps Claude can't drive.
+
+## Naming note
+
+The Bills page is now called **Bills & Recurring** (sidebar, page title, status bar and the reminder page chooser). It has two tabs: Bills and Recurring. Use that name everywhere in Help, screenshots, the website and the release notes. Where those documents say "the Bills page" for the calendar and bill list, it is the Bills tab of Bills & Recurring.

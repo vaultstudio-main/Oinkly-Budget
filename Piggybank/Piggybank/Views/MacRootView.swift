@@ -43,7 +43,7 @@ struct MacRootView: View {
                         .tag(SidebarItem.liabilities)
                     SidebarLabel(title: "Investments", symbol: "chart.line.uptrend.xyaxis", color: .purple)
                         .tag(SidebarItem.investments)
-                    SidebarLabel(title: "Bills", symbol: "calendar", color: .orange)
+                    SidebarLabel(title: "Bills & Recurring", symbol: "calendar", color: .orange)
                         .tag(SidebarItem.bills)
                     SidebarLabel(title: "Planning", symbol: "target", color: Theme.green)
                         .tag(SidebarItem.planning)
@@ -199,7 +199,7 @@ struct MacRootView: View {
         case .reports: "Reports"
         case .liabilities: "Liabilities"
         case .investments: "Investments"
-        case .bills: "Bills"
+        case .bills: "Bills & Recurring"
         case .planning: "Planning"
         case .budgets: "Budgets"
         case .manageAccounts: "Manage Accounts"

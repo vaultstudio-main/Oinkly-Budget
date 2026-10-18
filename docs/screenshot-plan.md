@@ -47,7 +47,7 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-B9b | `Help-tags-register` | Register with tag chips | Register |
 | S-B9c | `Help-tags-report` | A report filtered by a tag | Reports |
 | S-B9d | `Help-tags-settings` | Tags settings | Settings ▸ Tags |
-| S-B10a | `Help-recurring` | Recurring rules screen | Bills ▸ Recurring |
+| S-B10a | `Help-recurring` | Recurring rules screen | Bills & Recurring ▸ Recurring tab |
 | S-B10b | `Help-recurring-edit` | Rule editor | Add a rule |
 | S-B10c | `Help-recurring-pending` | Pending entry made by a rule | Register |
 | S-C1 | `Help-priority-bills` | Summary with Priority Bills | Summary |

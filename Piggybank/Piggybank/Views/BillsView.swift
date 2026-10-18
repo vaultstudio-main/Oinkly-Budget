@@ -41,7 +41,7 @@ struct BillsView: View {
         Group {
             VStack(spacing: 0) {
             HStack {
-                PageTitle("Bills")
+                PageTitle("Bills & Recurring")
                 Picker("", selection: $tab) {
                     ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
                 }

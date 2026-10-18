@@ -108,7 +108,7 @@ Each feature ends with: backup and restore, Clean Up, CSV and PDF export, test d
 - `DataBackup`, `CleanUp` (payee and category replace updates rules), `TestData`, the forecast in `ReportTrends`/`ReportMath`, `LedgerIndex` refresh after rule runs.
 
 **Decisions to confirm**
-1. Where the screen lives (Bills page tab, or its own sidebar item). Recommendation: a tab on the Bills page.
+1. Where the screen lives (Bills page tab, or its own sidebar item). Recommendation: a Recurring tab on the Bills & Recurring page.
 2. Notification when a pending transaction appears. Recommendation: none by default, optional later.
 3. A field that may be missing from V2: `lastRunDate` on the rule, or the scheduling is enough from `nextDate`. Recommendation: `nextDate` is enough; confirm in the first day.
 
