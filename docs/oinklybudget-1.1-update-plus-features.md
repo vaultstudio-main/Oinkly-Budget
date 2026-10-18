@@ -137,6 +137,30 @@ Decided: each person has their own Mac login, so the file lives in a shared plac
 
 About 4 to 5 weeks part-time: prototype (3 to 5 days), Settings ▸ Data section and bookmark (1 week), sharing and locks (1 week), safety and recovery (1 week), migration (3 to 5 days), Help and release (3 to 5 days).
 
+## Goals tied to accounts (moved here from 1.2)
+
+Goals used to be able to follow an account, and 1.0 stopped that (a step that runs at every launch, `GoalMigration.detachAccounts`, turns old linked goals into plain ones). The database still keeps the `account` field on each goal, so this needs **no database change on its own**.
+
+| Goal | What it would do |
+|---|---|
+| **Savings goal tied to a checking or savings account** | Progress follows the account's balance, so deposits count by themselves. A "count only what's added from now on" choice keeps an account that already holds money from starting the goal half full. |
+| **Debt payoff tied to a loan** | Progress is what the loan owed when the goal was made minus what it owes now. Payments recorded with Pay a Bill move the goal on their own. |
+
+How it should behave:
+
+- Linking is a choice when the goal is made. Goals that aren't linked keep working as they do now.
+- A linked goal can't also take manual progress, because the balance is the truth. Say so on the goal.
+- The unlinking step that runs at launch has to stop, and goals that were already unlinked stay as they are.
+- Show the linked account on the goal's card, and show the goal on the account's page.
+
+Open questions (decide before building):
+
+1. **Why were goals unlinked in 1.0?** If it was because linked goals confused people, keep linking clearly optional and labelled.
+2. **Two goals on one account** (a vacation and an emergency fund in one savings account): each would show the whole balance. Either allow one linked goal per account, or let a linked goal claim a set amount of the balance.
+3. **Closed or deleted accounts:** what a linked goal does when its account goes away. Suggestion: keep the goal, freeze its last amount, and say the account is gone.
+
+Effort: about 3 to 4 days, plus testing on a copy of real data.
+
 ## Fixes from complaints
 
 Things people (and the owner) have complained about. They are small, so they go in 1.1 ahead of the new features.
@@ -150,6 +174,8 @@ Things people (and the owner) have complained about. They are small, so they go 
 Also check these when the fixes are done: the new export sheets must not bring the bar back, and Help screenshots for the Edit Transaction sheet and the pages need retaking.
 
 ## Encrypted data file
+
+> **Update 2026-10-18:** the shared data file moved to 1.2, so encryption is built on this Mac's own data first. It uses the same shape the shared file needs: an encrypted **vault** file, a private **working copy** that the app opens, and a **check-in** that seals the working copy back into the vault. When the shared data file arrives, the vault simply lives in the shared folder instead of in this Mac's storage. Each login keeps its own working copy and its own remembered key.
 
 Complaint: the information database is not encrypted. Anyone who can open the data file (a shared Mac login, a copied backup, a stolen laptop without FileVault) can read it.
 
@@ -221,7 +247,8 @@ About 1 week part-time: extension target, App Group setup and snapshot writer (3
 0. **Complaint fixes (2 to 4 days):** receipt picker on Edit Transaction, fixed side panel width, and the footer bar change. Small and visible, so they go first, in parallel with the prototype if needed.
 1. **Shared data file prototype (3 to 5 days):** build check-out and check-in on a file in `/Users/Shared` and test it with two real Mac logins (including fast user switching): permissions, bookmarks per login, locks, crashes. This decides the design, and it is the riskiest work, so it goes first.
 2. **Shared data file build:** Settings ▸ Data section, last-file bookmark, missing-file screen, locks with who and when, read-only open, take-over for stale locks, safe write-back and crash recovery, and the first-run copy of existing data.
-3. **Encrypted data file:** passphrase and file format, Settings ▸ Data options, recovery key, encrypted `.pig` backups. Built on the shared file's check-out and check-in, so it comes straight after it.
+3. **Encrypted data file:** the vault (passphrase and recovery key slots, encrypted data file), unlock screen, Settings options, encrypted `.pig` backups. Built on this Mac's own data now, and written so the shared data file in 1.2 can reuse the vault, the working copy and the check-in as they are.
+3b. **Goals tied to accounts:** optional link on a savings goal or a debt payoff goal.
 4. **Export foundation:** shared report page and Export sheet, PDF and CSV export on every account, month selector on the Transactions page. Prove it on the register.
 5. **Export everywhere else:** single transaction, budget, bills, reports, net worth.
 6. **CSV import:** the reader and format options, preview and column mapping, saved mappings, undo, and the Import Statement button on every account. Test with real files from several banks.
@@ -238,13 +265,14 @@ About 1 week part-time: extension target, App Group setup and snapshot writer (3
 | Export to PDF and CSV (accounts, Transactions page, other screens) | 1.5 to 2 weeks |
 | New reports and options | 1 to 2 weeks |
 | Complaint fixes | 2 to 4 days |
-| Encrypted data file | 1 to 1.5 weeks |
+| Encrypted data file | 1.5 to 2 weeks (it now also carries the working copy and check-in the shared file will reuse) |
+| Goals tied to accounts | 3 to 4 days |
 | CSV import and per-account import | 1.5 to 2 weeks |
 | Widgets | about 1 week |
 | Each everyday feature | 3 days to 2 weeks (splits and recurring are the larger ones) |
 | Help, screenshots, release | 1 week |
 
-About 4 to 7 weeks part-time for export, reports and two or three everyday features, plus about 4 to 5 weeks for the shared data file, plus about 1 week for widgets, plus 1 to 1.5 weeks for the encrypted data file, plus 1.5 to 2 weeks for CSV import, plus 2 to 4 days for the complaint fixes, so about 12 to 16 weeks in total. All of it is in 1.1. If the schedule slips, drop items from "Should have" first and keep export, the shared data file, encryption, CSV import and widgets.
+About 4 to 7 weeks part-time for export, reports and two or three everyday features, plus about 1 week for widgets, plus 1.5 to 2 weeks for the encrypted data file, plus 3 to 4 days for goals tied to accounts, plus 1.5 to 2 weeks for CSV import, plus 2 to 4 days for the complaint fixes, so about 9 to 12 weeks in total. The shared data file is not part of 1.1 any more. If the schedule slips, drop items from "Should have" first and keep export, encryption, CSV import, widgets and linked goals.
 
 ## Release housekeeping
 

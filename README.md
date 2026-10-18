@@ -19,7 +19,7 @@ Switch with Xcode's Source Control ▸ Switch, or `git switch main` / `git switc
 
 Full plan, with notes, effort and risks: [docs/oinklybudget-1.1-update-plus-features.md](docs/oinklybudget-1.1-update-plus-features.md). Drafted 2026-10-16. Tick a box when the feature is built and tested on this branch. The app version on this branch is 1.1 (build 2).
 
-Rough size: 8 to 11 weeks part-time without the shared data file.
+Rough size: 9 to 12 weeks part-time. The shared data file is in 1.2.
 
 ### Fixes from complaints (do first)
 - [x] Primary checking account: pinned under Cash on Hand outside any folder and labelled Primary Checking (kept as a setting on this Mac for now; move onto the account when the database next changes)
@@ -31,11 +31,14 @@ Rough size: 8 to 11 weeks part-time without the shared data file.
 ### Shared data file: moved out of 1.1 for now
 Two Mac logins sharing one data file, one at a time. The working prototype is saved on the `shared-data-prototype` branch (check-out and check-in through a folder, locks, crash recovery, receipts travelling with the data, a start-up screen when someone else has it). It was tested with scripts and in the app but never with two real Mac logins, so it is not in 1.1. See the 1.2 plan.
 
-### Encrypted data file
-- [ ] Opt-in "Encrypt data file" with a passphrase (CryptoKit AES-GCM, no third-party code)
-- [ ] Recovery key, optional "Remember on this Mac" in the Keychain
-- [ ] Encrypted `.pig` backups
-- [ ] Update the App Store export compliance answers
+### Encrypted data file (vault, built so the 1.2 shared file can reuse it)
+- [x] Vault: an encrypted data file plus a small key file with a passphrase slot and a recovery-key slot (Apple's CryptoKit, system PBKDF2 and Apple Archive; nothing third-party)
+- [x] The app opens a private working copy of the vault, saves it back every couple of minutes, on hide and on quit, and deletes the readable copy on a clean quit
+- [x] Crash recovery keeps unsaved work
+- [x] Settings ▸ Data & Backup ▸ Encryption: turn on (passphrase, recovery key to save), remember on this Mac (Keychain), turn off (built; turn on and off checked in the app with test flags, the passphrase sheets not typed into by hand yet)
+- [x] Change passphrase and make a new recovery key (built; not yet tried by hand)
+- [x] Encrypted `.pig` backups, asked for a passphrase when saving and restoring (built; checked with scripts, not yet tried through the save panel)
+- [ ] Help page, release notes, and the App Store export compliance answers
 
 ### Print to PDF, and CSV export (printing and data are separate)
 - [ ] Shared PDF statement drawing and Export sheet (built; PDF layout checked on sample data, sheet not yet tried in the app)
@@ -57,6 +60,11 @@ Two Mac logins sharing one data file, one at a time. The working prototype is sa
 - [x] Menu bar pop-up shows the next 30 days with important bills at the top
 - [x] No ellipsis on on-screen buttons (File menu keeps its standard ones)
 
+### Goals tied to accounts (moved into 1.1 from 1.2)
+- [ ] Optional link from a savings goal to a checking or savings account (progress follows the balance)
+- [ ] Optional link from a debt payoff goal to a loan (payments recorded with Pay a Bill count automatically)
+- [ ] Stop the launch step that unlinks goals; show the linked account on the goal and the goal on the account
+
 ### Reports and everyday features (pick from the list)
 - [ ] More reports and report options
 - [ ] Recurring transactions
@@ -65,7 +73,7 @@ Two Mac logins sharing one data file, one at a time. The working prototype is sa
 
 ### Not in 1.1
 - The shared data file (prototype kept on the `shared-data-prototype` branch)
-- Goals tied to accounts, and the stored-field changes (see the 1.2 plan: [docs/oinklybudget-1.2-plan.md](docs/oinklybudget-1.2-plan.md))
+- Splits, recurring transactions, tags and the database change they need (see the 1.2 plan: [docs/oinklybudget-1.2-plan.md](docs/oinklybudget-1.2-plan.md))
 - Quicken, QIF, OFX and QFX import
 - Print command, ⌘P and page setup (use Export to PDF)
 - Bank linking, accounts, cloud sync, two people editing at the same moment
