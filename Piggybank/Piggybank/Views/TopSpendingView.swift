@@ -47,125 +47,86 @@ struct TopSpendingView: View {
         return result
     }
 
-    private let placeholderSlices: [Slice] = [
-        Slice(name: "A", value: 38, color: palette[0]),
-        Slice(name: "B", value: 24, color: palette[1]),
-        Slice(name: "C", value: 16, color: palette[2]),
-        Slice(name: "D", value: 12, color: palette[3]),
-        Slice(name: "E", value: 10, color: palette[4]),
-    ]
-
     var body: some View {
-        Group {
-            HStack(alignment: .top, spacing: 40) {
+        if hasData {
+            HStack(alignment: .top, spacing: 30) {
                 donut
                 details
             }
+        } else {
+            ReportEmpty(message: income
+                        ? "Your biggest income categories show up here once you've entered a few deposits with a category."
+                        : "Your biggest spending categories show up here once you've entered a few expenses with a category.",
+                        height: 260, shape: .ring)
         }
-        .animation(.smooth, value: hasData)
     }
 
     // MARK: Chart
 
     private var donut: some View {
-        let data = hasData ? slices : placeholderSlices
-        return Chart(data) { slice in
-            SectorMark(angle: .value(income ? "Earned" : "Spent", slice.value), innerRadius: .ratio(0.62), angularInset: 2)
+        let grand = totals.reduce(Decimal(0)) { $0 + $1.total }
+        return Chart(slices) { slice in
+            SectorMark(angle: .value(income ? "Earned" : "Spent", slice.value), innerRadius: .ratio(0.64), angularInset: 2)
                 .cornerRadius(4)
                 .foregroundStyle(slice.color)
         }
         .chartLegend(.hidden)
-        .opacity(hasData ? 1 : 0.28)
-        .frame(width: 200, height: 200)
-        .overlay { centerLabel }
-    }
-
-    @ViewBuilder
-    private var centerLabel: some View {
-        if hasData, let top = totals.first {
+        .frame(width: 210, height: 210)
+        .overlay {
             VStack(spacing: 2) {
-                Text("TOP CATEGORY").font(.caption2).foregroundStyle(.secondary)
-                Text(top.category.name).font(.headline).multilineTextAlignment(.center)
-                Text(top.total, format: .appCurrency).font(.subheadline).foregroundStyle(.secondary)
-            }
-            .frame(width: 110)
-        } else {
-            VStack(spacing: 2) {
-                Text("PLACEHOLDER").font(.caption2.weight(.semibold)).tracking(1.5).foregroundStyle(.secondary)
-                Text("No data yet").font(.headline)
+                Text(income ? "EARNED" : "SPENT").font(.caption2).foregroundStyle(.secondary)
+                Text(grand, format: .appCurrency).font(.title3.bold())
+                Text("last \(months) months").font(.caption2).foregroundStyle(.secondary)
             }
         }
     }
 
     // MARK: Details
 
-    @ViewBuilder
     private var details: some View {
-        if hasData { realDetails } else { placeholderDetails }
-    }
-
-    private var realDetails: some View {
         let grand = totals.reduce(Decimal(0)) { $0 + $1.total }
         return VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(totals.prefix(Self.palette.count).enumerated()), id: \.element.id) { index, item in
+                    let share = grand > 0 ? (item.total / grand).doubleValue : 0
                     HStack(spacing: 10) {
-                        Circle().fill(Self.palette[index]).frame(width: 10, height: 10)
-                        Text(item.category.name)
-                        Spacer(minLength: 12)
-                        Text(item.total, format: .appCurrency)
-                        Text(grand > 0 ? (item.total / grand).formatted(.percent.precision(.fractionLength(0))) : "")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 44, alignment: .trailing)
-                    }
-                    .font(.callout)
-                }
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("TOP CATEGORY BY MONTH").font(.caption).foregroundStyle(.secondary)
-                ForEach(SpendingReport.topByMonth(transactions, months: months, income: income)) { entry in
-                    HStack(spacing: 10) {
-                        Text(entry.month.formatted(.dateTime.month(.wide)))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 84, alignment: .leading)
-                        if let top = entry.top {
-                            CategoryBadge(category: top.category, size: 24)
-                            Text(top.category.name)
-                            Spacer(minLength: 12)
-                            Text(top.total, format: .appCurrency)
-                        } else {
-                            Text(income ? "No income" : "No spending").foregroundStyle(.secondary)
-                            Spacer(minLength: 0)
+                        CategoryBadge(category: item.category, size: 28)
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Text(item.category.name)
+                                Spacer(minLength: 12)
+                                Text(item.total, format: .appCurrency).fontWeight(.medium)
+                                Text(share.formatted(.percent.precision(.fractionLength(0))))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 40, alignment: .trailing)
+                            }
+                            .font(.callout)
+                            ProgressView(value: share).tint(Self.palette[index])
                         }
                     }
-                    .font(.callout)
                 }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
 
-    private var placeholderDetails: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ForEach([0.9, 0.7, 0.55, 0.4], id: \.self) { fraction in
-                HStack(spacing: 10) {
-                    Circle().fill(.secondary.opacity(0.2)).frame(width: 10, height: 10)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.secondary.opacity(0.15))
-                        .frame(height: 12)
-                        .frame(maxWidth: .infinity)
-                        .scaleEffect(x: fraction, anchor: .leading)
+            Text("TOP CATEGORY BY MONTH").font(.caption2).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                ForEach(SpendingReport.topByMonth(transactions, months: months, income: income)) { entry in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(entry.month.formatted(.dateTime.month(.wide))).font(.caption).foregroundStyle(.secondary)
+                        if let top = entry.top {
+                            HStack(spacing: 6) {
+                                CategoryBadge(category: top.category, size: 22)
+                                Text(top.category.name).font(.callout).lineLimit(1)
+                            }
+                            Text(top.total, format: .appCurrency).font(.callout.weight(.semibold))
+                        } else {
+                            Text(income ? "No income" : "No spending").font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
                 }
             }
-            Text(income
-                 ? "Your biggest income categories for the last \(months) months will appear here once you've entered a few deposits with a category."
-                 : "Your biggest spending categories for the last \(months) months will appear here once you've entered a few expenses with a category.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

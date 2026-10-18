@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Charts
 
 /// Small versions of the three reports, for the top of the Summary and Home screens.
 struct GlanceCards: View {
@@ -56,40 +57,94 @@ private struct GlanceRow: View {
     }
 }
 
-// MARK: Spending
+// MARK: Sparkline
+
+/// A small line with no axes: twelve months in solid and six projected, dashed.
+struct Sparkline: View {
+    let points: [TrendPoint]
+    let color: Color
+    var height: CGFloat = 70
+
+    var body: some View {
+        let history = points.filter { !$0.projected }
+        let future = points.filter(\.projected)
+        Chart {
+            ForEach(history) { point in
+                AreaMark(x: .value("Month", point.date, unit: .month), y: .value("Value", point.value)).foregroundStyle(color.opacity(0.12))
+                LineMark(x: .value("Month", point.date, unit: .month), y: .value("Value", point.value), series: .value("Part", "History"))
+                    .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: 2.2, lineCap: .round)).interpolationMethod(.monotone)
+            }
+            ForEach(future) { point in
+                LineMark(x: .value("Month", point.date, unit: .month), y: .value("Value", point.value), series: .value("Part", "Projection"))
+                    .foregroundStyle(color.opacity(0.8)).lineStyle(StrokeStyle(lineWidth: 2.2, dash: [4, 3])).interpolationMethod(.monotone)
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartYScale(domain: .automatic(includesZero: false))
+        .frame(height: height)
+    }
+}
+
+// MARK: Income and spending
 
 struct SpendingGlance: View {
     let transactions: [Transaction]
 
+    private struct Bar: Identifiable {
+        let date: Date
+        let kind: String
+        let value: Double
+        var id: String { "\(date.timeIntervalSince1970)-\(kind)" }
+    }
+
     var body: some View {
-        let range = Reports.range(.monthly, anchor: .now)
-        let report = Reports.build(transactions, period: .monthly, range: range)
-        let totals = report.totals
-        ReportCard(title: "\(Reports.label(.monthly, range: range)) · Income & Spending", fillsHeight: true) {
-            VStack(alignment: .leading, spacing: 8) {
-                if totals.count == 0 {
-                    Text("No transactions yet this month.").font(.callout).foregroundStyle(.secondary)
-                } else {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(totals.net, format: .appCurrency)
-                            .font(.title2.bold())
-                            .foregroundStyle(totals.net >= 0 ? Theme.green : Theme.red)
-                        Text("net").foregroundStyle(.secondary)
-                        Spacer()
-                        if let rate = totals.savingsRate {
-                            Text("\(percent(Double(truncating: rate as NSDecimalNumber))) kept").font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    GlanceRow("Income", totals.income, color: Theme.green)
-                    GlanceRow("Spending", totals.spending, color: Theme.red)
-                    if let change = Reports.change(from: report.previous.spending, to: totals.spending) {
-                        Text("Spending \(change >= 0 ? "up" : "down") \(percent(abs(change))) vs last month")
-                            .font(.caption)
-                            .foregroundStyle((change <= 0) ? Theme.green : Theme.red)
-                    }
+        let snapshot = LedgerIndex.shared.latest
+        let count = snapshot?.income.count ?? 0
+        let income = snapshot.map { $0.income.map(\.doubleValue) } ?? []
+        let spending = snapshot.map { $0.spending.map(\.doubleValue) } ?? []
+        let monthIncome = income.last ?? 0, monthSpending = spending.last ?? 0
+        let net = monthIncome - monthSpending
+        let empty = snapshot != nil && income.allSatisfy { $0 == 0 } && spending.allSatisfy { $0 == 0 }
+
+        ReportPanel(title: "Income & Spending", summary: "This month and the last six.",
+                    headline: snapshot == nil || empty ? nil : ReportFormat.money(net), headlineNote: snapshot == nil || empty ? nil : "kept this month") {
+            if snapshot == nil {
+                ReportCalculating(height: 150)
+            } else if empty {
+                ReportEmpty(message: "Income and spending appear here once you record some transactions.", height: 160, shape: .bars)
+            } else if let snapshot {
+                let starts = Array(snapshot.monthStarts.suffix(6))
+                let bars = starts.indices.flatMap { index -> [Bar] in
+                    let source = count - starts.count + index
+                    return [Bar(date: starts[index], kind: "Income", value: income[source]), Bar(date: starts[index], kind: "Spending", value: spending[source])]
+                }
+                Chart(bars) { bar in
+                    BarMark(x: .value("Month", bar.date, unit: .month), y: .value("Amount", bar.value))
+                        .foregroundStyle(by: .value("Kind", bar.kind))
+                        .position(by: .value("Kind", bar.kind))
+                        .cornerRadius(2)
+                }
+                .chartForegroundStyleScale(["Income": Theme.green, "Spending": Theme.red])
+                .chartLegend(.hidden)
+                .chartYAxis(.hidden)
+                .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.narrow)) } }
+                .frame(height: 70)
+                VStack(spacing: 5) {
+                    GlanceRow("Income", Decimal(monthIncome), color: Theme.green)
+                    GlanceRow("Spending", Decimal(monthSpending), color: Theme.red)
+                }
+                if count >= 2, spending[count - 2] > 0 {
+                    let change = (monthSpending - spending[count - 2]) / spending[count - 2]
+                    Text("Spending \(change >= 0 ? "up" : "down") \(percent(abs(change))) vs last month")
+                        .font(.caption)
+                        .foregroundStyle(change <= 0 ? Theme.green : Theme.red)
+                } else if monthIncome > 0 {
+                    Text("\(percent(net / monthIncome)) of income kept").font(.caption).foregroundStyle(.secondary)
                 }
             }
         }
+        .environment(\.reportCardMinHeight, 250)
     }
 }
 
@@ -100,35 +155,46 @@ struct LiabilitiesGlance: View {
 
     var body: some View {
         let report = LedgerIndex.shared.whileStale { Liabilities.build(accounts) }
-        ReportCard(title: "Liabilities", fillsHeight: true) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let report, report.lines.isEmpty {
-                    GlancePlaceholder(symbol: "scalemass", text: "No credit cards, mortgages or loans yet. Add one in Settings ▸ Accounts to track what you owe.")
-                } else if let report {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(report.totalOwed, format: .appCurrency).font(.title2.bold()).foregroundStyle(Theme.red)
-                    Text("owed").foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(report.outstanding) of \(report.lines.count) outstanding").font(.caption).foregroundStyle(.secondary)
+        let snapshot = LedgerIndex.shared.latest
+        let none = report?.lines.isEmpty == true
+
+        ReportPanel(title: "Liabilities", summary: "What you owe, and where it's heading.",
+                    headline: report == nil || none ? nil : ReportFormat.money(report?.totalOwed.doubleValue ?? 0),
+                    headlineNote: report == nil || none ? nil : "\(report?.outstanding ?? 0) of \(report?.lines.count ?? 0) outstanding") {
+            if report == nil {
+                ReportCalculating(height: 150)
+            } else if none {
+                ReportEmpty(message: "Add a credit card, mortgage or loan in Settings ▸ Accounts to track what you owe.", height: 160, shape: .line)
+            } else if let report {
+                if let snapshot {
+                    Sparkline(points: ReportTrends.debt(accounts: accounts, snapshot: snapshot), color: Theme.red)
                 }
                 if let fraction = report.payoffFraction {
                     ProgressView(value: fraction).tint(Theme.green)
                     Text("\(percent(fraction)) of borrowed loans paid off").font(.caption).foregroundStyle(.secondary)
                 }
-                if let ratio = report.debtToAssets {
-                    HStack {
-                        Text("Leverage").foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(percent(ratio)) of assets").foregroundStyle(ratio < 0.3 ? Theme.green : ratio < 0.6 ? .orange : Theme.red)
+                VStack(spacing: 5) {
+                    if let ratio = report.debtToAssets {
+                        HStack {
+                            Text("Leverage").foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(percent(ratio)) of assets").foregroundStyle(ratio < 0.3 ? Theme.green : ratio < 0.6 ? .orange : Theme.red)
+                        }
+                        .font(.callout)
                     }
-                    .font(.callout)
-                }
-                if report.monthlyPayments > 0 { GlanceRow("Monthly payments", report.monthlyPayments) }
-                } else {
-                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
+                    if report.monthlyPayments > 0 { GlanceRow("Monthly payments", report.monthlyPayments) }
+                    if let date = report.debtFreeDate {
+                        HStack {
+                            Text("Debt-free").foregroundStyle(.secondary)
+                            Spacer()
+                            Text(date.formatted(.dateTime.month(.abbreviated).year()))
+                        }
+                        .font(.callout)
+                    }
                 }
             }
         }
+        .environment(\.reportCardMinHeight, 250)
     }
 }
 
@@ -138,30 +204,43 @@ struct InvestmentsGlance: View {
     let accounts: [Account]
 
     var body: some View {
-        let range = Reports.range(.quarterly, anchor: .now)
+        let range = ReportRange(start: Calendar.current.date(byAdding: .month, value: -3, to: .now) ?? .now, end: Date.now.addingTimeInterval(1))
         let report = LedgerIndex.shared.whileStale { Investments.build(accounts, range: range) }
-        ReportCard(title: "\(Reports.label(.quarterly, range: range)) · Investments", fillsHeight: true) {
-            VStack(alignment: .leading, spacing: 8) {
-                if let report, report.lines.isEmpty {
-                    GlancePlaceholder(symbol: "chart.line.uptrend.xyaxis", text: "No investment accounts yet. Add a 401(k), IRA or brokerage in Settings ▸ Accounts to see how it grows.")
-                } else if let report {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(report.end, format: .appCurrency).font(.title2.bold())
-                    Spacer()
-                    if let rate = report.returnRate {
-                        Text("\(percent(rate, signed: true, digits: 1)) return")
-                            .font(.caption)
-                            .foregroundStyle(rate >= 0 ? Theme.green : Theme.red)
-                    }
+        let snapshot = LedgerIndex.shared.latest
+        let none = report?.lines.isEmpty == true
+
+        ReportPanel(title: "Investments", summary: "Value over the last year and six months ahead.",
+                    headline: report == nil || none ? nil : ReportFormat.money(report?.end.doubleValue ?? 0),
+                    headlineNote: report == nil || none ? nil : report?.returnRate.map { "\(percent($0, signed: true, digits: 1)) return, 3 months" }) {
+            if report == nil {
+                ReportCalculating(height: 150)
+            } else if none {
+                ReportEmpty(message: "Add a 401(k), IRA or brokerage in Settings ▸ Accounts to see how it grows.", height: 160, shape: .line)
+            } else if let report {
+                if let snapshot { Sparkline(points: history(snapshot), color: Theme.green) }
+                VStack(spacing: 5) {
+                    GlanceRow("Growth, 3 months", report.growth, color: report.growth >= 0 ? Theme.green : Theme.red)
+                    GlanceRow("Contributions, 3 months", report.contributions)
                 }
-                GlanceRow("Growth", report.growth, color: report.growth >= 0 ? Theme.green : Theme.red)
-                GlanceRow("Contributions", report.contributions)
                 Text("\(report.lines.count) account\(report.lines.count == 1 ? "" : "s")").font(.caption).foregroundStyle(.secondary)
-                } else {
-                    Text("Calculating…").font(.callout).foregroundStyle(.secondary)
-                }
             }
         }
+        .environment(\.reportCardMinHeight, 250)
+    }
+
+    /// Twelve months of total value and six projected at the pace of the last three.
+    private func history(_ snapshot: LedgerSnapshot) -> [TrendPoint] {
+        let owned = accounts.live.filter { $0.type.group == .investments && !$0.isClosed }
+        guard let first = owned.first else { return [] }
+        let months = ReportMath.history(of: first, snapshot: snapshot).count
+        let past = (0..<months).map { index -> TrendPoint in
+            let date = ReportMath.history(of: first, snapshot: snapshot)[index].date
+            let total = owned.reduce(0.0) { $0 + ReportMath.history(of: $1, snapshot: snapshot)[index].value }
+            return TrendPoint(date: date, value: total, projected: false)
+        }
+        guard past.count >= 4, let last = past.last else { return past }
+        let change = (last.value - past[past.count - 4].value) / 3
+        return past + ReportMath.future(from: last) { last.value + change * Double($0) }
     }
 }
 
