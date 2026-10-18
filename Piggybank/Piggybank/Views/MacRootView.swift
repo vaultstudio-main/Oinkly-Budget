@@ -167,7 +167,7 @@ struct MacRootView: View {
             }
             .tag(SidebarItem.account(account.id))
             .contextMenu {
-                Button("Edit Details…") { editingAccount = account }
+                Button("Edit Details") { editingAccount = account }
                 if account.type == .checking {
                     if isPrimary {
                         Button("Remove Primary Checking") { PrimaryChecking.set(nil) }

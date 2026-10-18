@@ -22,15 +22,23 @@ struct MenuBarLabel: View {
     }
 }
 
-/// The menu bar item's pop-up: priority bills, what is coming up, and a way into the app. Works with no window open.
+/// The menu bar item's pop-up: important bills at the top, then everything due in the next 30 days. Works with no window open.
 struct MenuBarBills: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allBills: [Bill]
+    @State private var contentHeight: CGFloat = 400
+
+    private static let windowDays = 30
+    private static let maxHeight: CGFloat = 640
 
     var body: some View {
         let bills = allBills.live
-        let alerts = Bills.alerts(bills)
-        let upcoming = Bills.upcoming(bills, days: 14)
+        let upcoming = Bills.upcoming(bills, days: Self.windowDays)
+        // Important bills lead; the rest follow in date order.
+        let important = upcoming.filter(\.bill.isImportant)
+        let others = upcoming.filter { !$0.bill.isImportant }
+        let alertIDs = Set(Bills.alerts(bills).map(\.id))
+        let needsAttention = important.contains { !$0.isPaid && ($0.isOverdue || alertIDs.contains($0.id)) }
 
         let open = upcoming.filter { !$0.isPaid }
         let dueTotal = open.reduce(Decimal(0)) { $0 + $1.bill.amount }
@@ -38,6 +46,7 @@ struct MenuBarBills: View {
         let next = open.first { !$0.isOverdue } ?? open.first
 
         // Fixed point sizes, so the pop-up looks the same however the system sizes menu bar windows.
+        ScrollView {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
                 Image(systemName: "calendar")
@@ -51,8 +60,8 @@ struct MenuBarBills: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(open.isEmpty
-                         ? "Nothing due in the next two weeks"
-                         : "\(open.count) bill\(open.count == 1 ? "" : "s") due in the next 14 days")
+                         ? "Nothing due in the next 30 days"
+                         : "\(open.count) bill\(open.count == 1 ? "" : "s") due in the next 30 days")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -70,32 +79,37 @@ struct MenuBarBills: View {
                 }
             }
 
-            if !alerts.isEmpty {
+            if !important.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Priority bills", systemImage: "exclamationmark.triangle.fill")
+                    Label("Important bills", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "star.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.orange)
-                    ForEach(alerts) { row($0, highlight: true) }
+                    ForEach(important) { row($0, highlight: true) }
                 }
                 .padding(12)
                 .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
             }
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("COMING UP · NEXT 14 DAYS")
+                Text("COMING UP · NEXT 30 DAYS")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
-                if upcoming.isEmpty {
-                    Text(bills.isEmpty ? "No bills yet. Add some in OinklyBudget ▸ Bills." : "Nothing due in the next two weeks.")
+                if others.isEmpty {
+                    Text(bills.isEmpty ? "No bills yet. Add some in OinklyBudget ▸ Bills."
+                         : (important.isEmpty ? "Nothing due in the next 30 days." : "No other bills in the next 30 days."))
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(upcoming) { row($0, highlight: false) }
+                    ForEach(others) { row($0, highlight: false) }
                 }
             }
         }
         .padding(18)
         .frame(width: 400)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+        }
+        // Tall lists scroll inside the pop-up instead of running off the screen.
+        .frame(width: 400, height: min(max(contentHeight, 160), Self.maxHeight))
     }
 
     private func stat(_ title: String, _ value: String, color: Color) -> some View {

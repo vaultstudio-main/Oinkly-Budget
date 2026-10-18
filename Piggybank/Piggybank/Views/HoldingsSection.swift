@@ -31,8 +31,8 @@ struct HoldingsPanel: View {
                         stat("Not In A Holding", summary.unallocated)
                     }
                     Spacer()
-                    Button("Update Account Value…") { sheet = .accountValue }
-                    Button("Add Holding…") { sheet = .add }
+                    Button("Update Account Value") { sheet = .accountValue }
+                    Button("Add Holding") { sheet = .add }
                 }
 
                 if holdings.isEmpty {

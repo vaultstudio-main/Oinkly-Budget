@@ -216,7 +216,7 @@ private struct BillRow: View {
             }
             .padding(.vertical, 8)
             .contextMenu {
-                Button("Edit…", systemImage: "pencil", action: onEdit)
+                Button("Edit", systemImage: "pencil", action: onEdit)
                 Button("Delete Bill", systemImage: "trash", role: .destructive) { onDelete(item.bill) }
             }
         }
@@ -434,7 +434,7 @@ struct BillEditView: View {
                             .foregroundStyle(.secondary)
                     }
                     PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                        Label(photoData == nil && inheritedPhoto == nil ? "Add Photo…" : "Change Photo…", systemImage: "photo")
+                        Label(photoData == nil && inheritedPhoto == nil ? "Add Photo" : "Change Photo", systemImage: "photo")
                     }
                     if photoData != nil {
                         Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }

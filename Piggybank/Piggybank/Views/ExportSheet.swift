@@ -155,7 +155,7 @@ struct ExportSheet: View {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(kind == .pdf ? "Save PDF…" : "Save CSV…", action: export)
+                Button(kind == .pdf ? "Save PDF" : "Save CSV", action: export)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 12)

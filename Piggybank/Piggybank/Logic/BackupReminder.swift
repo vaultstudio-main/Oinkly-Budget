@@ -109,7 +109,7 @@ struct BackupReminderBanner: View {
                     snoozedInterval = until.timeIntervalSinceReferenceDate
                 }
                 .buttonStyle(.borderless)
-                Button("Export Backup…") { export() }
+                Button("Export Backup") { export() }
                     .buttonStyle(.borderedProminent)
                     .tint(tint)
             }

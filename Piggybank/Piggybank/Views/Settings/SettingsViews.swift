@@ -72,7 +72,7 @@ struct AccountsSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Button { isAdding = true } label: { Label("Add Account…", systemImage: "plus.circle.fill") }
+                Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") }
             }
 
             Section {
@@ -262,7 +262,7 @@ struct PaymentMethodsSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Button("Add Payment Method…", systemImage: "plus.circle.fill") { isAdding = true }
+                Button("Add Payment Method", systemImage: "plus.circle.fill") { isAdding = true }
                 ForEach(custom) { method in
                     if method.isLive {
                         HStack {
@@ -429,8 +429,8 @@ struct DataSettingsView: View {
             }
 
             Section {
-                backupRow("Export Backup…", detail: "Everything in OinklyBudget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save…") { exportBackup() }
-                backupRow("Restore from Backup…", detail: "Restore from a .pig backup file. This replaces everything currently in OinklyBudget, including custom categories, payment methods and preferences.", button: "Choose…") { chooseBackup() }
+                backupRow("Export Backup", detail: "Everything in OinklyBudget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save") { exportBackup() }
+                backupRow("Restore from Backup", detail: "Restore from a .pig backup file. This replaces everything currently in OinklyBudget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
                 if let message {
                     Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .foregroundStyle(messageIsError ? Color.orange : Theme.green)
@@ -440,7 +440,7 @@ struct DataSettingsView: View {
             }
 
             Section {
-                Button("Erase All Data…", role: .destructive) { confirmingErase = true }
+                Button("Erase All Data", role: .destructive) { confirmingErase = true }
                 Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

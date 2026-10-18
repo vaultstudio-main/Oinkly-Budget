@@ -67,12 +67,12 @@ struct ReceiptPicker: View {
                     .foregroundStyle(.secondary)
             } else {
                 PhotosPicker(selection: $picked, matching: .images) {
-                    Label(data == nil ? "Add Receipt Photo…" : "Replace with Photo…", systemImage: "doc.text.viewfinder")
+                    Label(data == nil ? "Add Receipt Photo" : "Replace with Photo", systemImage: "doc.text.viewfinder")
                 }
                 Button {
                     choosingPDF = true
                 } label: {
-                    Label(data == nil ? "Attach PDF Bill…" : "Replace with PDF…", systemImage: "doc.richtext")
+                    Label(data == nil ? "Attach PDF Bill" : "Replace with PDF", systemImage: "doc.richtext")
                 }
             }
 

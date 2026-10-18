@@ -203,7 +203,7 @@ struct AccountEditView: View {
                                 .foregroundStyle(.secondary)
                         }
                         PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                            Label(photoData == nil ? "Choose Photo…" : "Change Photo…", systemImage: "photo")
+                            Label(photoData == nil ? "Choose Photo" : "Change Photo", systemImage: "photo")
                         }
                         if photoData != nil {
                             Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }

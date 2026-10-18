@@ -77,11 +77,11 @@ private struct RegisterContent: View {
                 Spacer()
             }
             // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
-            Button("Import…", systemImage: "square.and.arrow.down") {
+            Button("Import", systemImage: "square.and.arrow.down") {
                 if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
             }
             .help("Import a bank statement (CSV) into this account")
-            Button("Export CSV…", systemImage: "square.and.arrow.up") { savingAs = .csv }
+            Button("Export CSV", systemImage: "square.and.arrow.up") { savingAs = .csv }
                 .help("Save this account's transactions as a CSV spreadsheet")
             Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
                 .help("Save this account's transactions as a PDF statement to read or print")
@@ -197,10 +197,10 @@ private struct RegisterContent: View {
                     Button("View Details", systemImage: "doc.text.magnifyingglass") {
                         openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
                     }
-                    Button("Edit Transaction…", systemImage: "pencil") { editingDate = transaction }
+                    Button("Edit Transaction", systemImage: "pencil") { editingDate = transaction }
                 }
                 if !ids.isEmpty {
-                    Button(ids.count == 1 ? "Delete Transaction…" : "Delete \(ids.count) Transactions…", role: .destructive) {
+                    Button(ids.count == 1 ? "Delete Transaction" : "Delete \(ids.count) Transactions", role: .destructive) {
                         selection = ids
                         confirmingDelete = true
                     }

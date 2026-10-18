@@ -96,7 +96,7 @@ struct TransactionDetailWindow: View {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Edit…") { editing = true }
+                Button("Edit") { editing = true }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(12)

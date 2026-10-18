@@ -135,7 +135,7 @@ struct GoalsView: View {
                 if !goal.isArchived {
                     Button(goal.isPayoff ? "Add a Payment" : "Add to Savings", systemImage: "plus.circle") { sheet = .progress(goal) }
                 }
-                Button("Edit…", systemImage: "pencil") { sheet = .edit(goal) }
+                Button("Edit", systemImage: "pencil") { sheet = .edit(goal) }
                 Button("Delete Goal", systemImage: "trash", role: .destructive) { deleting = goal }
             }
     }
@@ -416,7 +416,7 @@ struct GoalDetailView: View {
             }
 
             Section {
-                Button("Edit Goal…", systemImage: "pencil", action: onEdit)
+                Button("Edit Goal", systemImage: "pencil", action: onEdit)
                 Button("Delete Goal", systemImage: "trash", role: .destructive) { confirmingDelete = true }
             }
         }

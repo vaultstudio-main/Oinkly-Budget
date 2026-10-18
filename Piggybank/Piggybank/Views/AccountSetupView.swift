@@ -114,7 +114,7 @@ struct AccountSetupView: View {
                     Button {
                         restoreFromBackup()
                     } label: {
-                        Label("Restore from a Backup…", systemImage: "square.and.arrow.down")
+                        Label("Restore from a Backup", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                     .controlSize(.large)

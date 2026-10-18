@@ -25,7 +25,7 @@ struct RemindersSettingsView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button("Edit…") { isNew = false; editing = item }
+                        Button("Edit") { isNew = false; editing = item }
                         Button(role: .destructive) {
                             reminders.items.removeAll { $0.id == item.id }
                         } label: { Image(systemName: "trash") }
@@ -37,7 +37,7 @@ struct RemindersSettingsView: View {
                         Button(preset.title) { var r = preset.reminder; r.id = UUID(); isNew = true; editing = r }
                     }
                     Divider()
-                    Button("Custom…") { isNew = true; editing = CustomReminder() }
+                    Button("Custom") { isNew = true; editing = CustomReminder() }
                 }
                 .menuStyle(.borderedButton)
                 .fixedSize()
