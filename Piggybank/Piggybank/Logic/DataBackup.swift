@@ -11,6 +11,8 @@ struct BackupFile: Codable {
     var version = BackupFile.currentVersion
     var exportedAt = Date.now
     var categories: [CategoryRecord] = []
+    /// Tags. Added in 1.1; absent in older files.
+    var tags: [TagRecord]?
     var accounts: [AccountRecord] = []
     var payees: [PayeeRecord] = []
     var transactions: [TransactionRecord] = []
@@ -37,6 +39,7 @@ struct BackupFile: Codable {
         goals = try c.decodeIfPresent([GoalRecord].self, forKey: .goals) ?? []
         paymentMethods = try c.decodeIfPresent([PaymentMethodRecord].self, forKey: .paymentMethods) ?? []
         settings = try c.decodeIfPresent(SettingsRecord.self, forKey: .settings)
+        tags = try c.decodeIfPresent([TagRecord].self, forKey: .tags)
     }
 
     struct SettingsRecord: Codable {
@@ -153,6 +156,13 @@ struct BackupFile: Codable {
         var isOpeningDeposit: Bool?
         /// The parts of a split transaction. Added in 1.1; absent in older files and for ordinary transactions.
         var splits: [SplitRecord]?
+        /// Names of the tags on this transaction. Added in 1.1; absent in older files.
+        var tagNames: [String]?
+    }
+
+    struct TagRecord: Codable {
+        var name: String
+        var colorHex: String
     }
 
     struct SplitRecord: Codable {
@@ -243,6 +253,9 @@ enum DataBackup {
                   isTaxRelated: $0.isTaxRelated)
         }
 
+        let liveTags = try context.fetch(FetchDescriptor<Tag>()).live
+        if !liveTags.isEmpty { file.tags = liveTags.map { .init(name: $0.name, colorHex: $0.colorHex) } }
+
         file.accounts = accounts.enumerated().map { index, a in
             .init(id: index, name: a.name, type: a.type.rawValue, openingBalance: text(a.openingBalance), isClosed: a.isClosed,
                   institution: a.institution, accountNumber: a.accountNumber, routingNumber: a.routingNumber,
@@ -278,7 +291,8 @@ enum DataBackup {
                     splits: t.splits.isEmpty ? nil : t.splits.sorted { $0.order < $1.order }.map {
                         .init(categoryKey: $0.category?.isLive == true ? $0.category?.systemKey : nil,
                               amount: text($0.amount), memo: $0.memo, order: $0.order)
-                    }))
+                    },
+                    tagNames: t.tags.isEmpty ? nil : t.tagNames))
             }
             for h in account.holdings.live {
                 file.holdings.append(.init(
@@ -356,6 +370,7 @@ enum DataBackup {
         try context.deleteAllTransactions()
         for item in try context.fetch(FetchDescriptor<Account>()) { context.delete(item) }   // takes holdings with it
         for item in try context.fetch(FetchDescriptor<Payee>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<Tag>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
@@ -425,6 +440,13 @@ enum DataBackup {
             methods[record.name] = method
         }
 
+        var restoredTags: [String: Tag] = [:]
+        for record in file.tags ?? [] {
+            let tag = Tag(name: record.name, colorHex: record.colorHex)
+            context.insert(tag)
+            restoredTags[Tags.key(record.name)] = tag
+        }
+
         var restoredTransactions: [(Transaction, BackupFile.TransactionRecord)] = []
         for record in file.transactions {
             guard let account = accounts[record.accountID] else { continue }
@@ -444,6 +466,9 @@ enum DataBackup {
             t.paidDueDate = record.paidDueDate
             t.isOpeningDeposit = record.isOpeningDeposit ?? false
             context.insert(t)
+            for name in record.tagNames ?? [] {
+                if let tag = restoredTags[Tags.key(name)] { t.tags.append(tag) }
+            }
             for part in record.splits ?? [] {
                 context.insert(TransactionSplit(transaction: t, category: part.categoryKey.flatMap { byKey[$0] },
                                                 amount: decimal(part.amount), memo: part.memo, order: part.order))

@@ -29,6 +29,7 @@ struct NewTransactionWindow: View {
     @State private var checkNumber = ""
     @State private var investmentType = InvestmentType.contribution
     @State private var isSplitting = false
+    @State private var tagNames: [String] = []
     @State private var parts: [SplitDraft] = []
 
     private var suggestions: [Payee] {
@@ -160,6 +161,7 @@ struct NewTransactionWindow: View {
                         }
                     }
                     FormTextField("Memo", text: $memo)
+                    TagField(names: $tagNames)
                     Picker("Status", selection: $state) {
                         ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                     }
@@ -231,6 +233,7 @@ struct NewTransactionWindow: View {
             transaction.receiptData = account.supportsReceipts ? receipt : nil
             transaction.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
             modelContext.insert(transaction)
+            Tags.apply(tagNames, to: transaction, in: modelContext)
         } else {
             if let locked = account.lockedPaymentType {
                 paymentChoice = .type(locked)
@@ -246,6 +249,7 @@ struct NewTransactionWindow: View {
             transaction.noReceipt = account.supportsReceipts && receipt == nil && noReceipt
             modelContext.insert(transaction)
             if isSplitting { Splits.apply(parts, to: transaction, isPayment: isPayment, in: modelContext) }
+            Tags.apply(tagNames, to: transaction, in: modelContext)
         }
 
         modelContext.saveNow()
@@ -256,6 +260,7 @@ struct NewTransactionWindow: View {
             category = nil
             isSplitting = false
             parts = []
+            tagNames = []
             memo = ""
             state = .unreconciled
             checkNumber = ""

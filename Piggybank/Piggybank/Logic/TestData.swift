@@ -231,6 +231,10 @@ enum TestData {
             tx(cash, monthDay(back, 16), "Bean There Coffee", "custom-coffee-runs", -Decimal(9 + drift), method: .cash)
             tx(cash, monthDay(back, 25), "Corner Barber", "salon-barber", -28, method: .cash)
 
+            // Tags on a few kinds of spending.
+            if back % 2 == 0 { tx(card, monthDay(back, 3), "Trail Shoes Co", "shopping", -Decimal(64 + drift * 4), method: .creditCard).map { Tags.apply(["Gifts"], to: $0, in: context) } }
+            if back < 3 { tx(checking, monthDay(back, 21), "Hardware Depot", "home-improvement", -Decimal(86 + drift * 9), method: .debitCard).map { Tags.apply(["Home Projects", "Tax Receipts"], to: $0, in: context) } }
+
             // One shop split across three categories.
             if let split = tx(checking, monthDay(back, 12), "Big Box Store", nil, -120, method: .debitCard) {
                 Splits.apply([SplitDraft(category: cat("groceries"), amount: 70),

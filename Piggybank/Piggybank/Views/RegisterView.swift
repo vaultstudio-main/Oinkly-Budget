@@ -27,6 +27,8 @@ private struct RegisterContent: View {
     @Query private var monthTransactions: [Transaction]
     @Query(sort: \Category.name) private var allCategories: [Category]
     private var categories: [Category] { allCategories.live }
+    @Query(sort: \Tag.name) private var allTags: [Tag]
+    private var tags: [Tag] { allTags.live }
     @State private var selection = Set<PersistentIdentifier>()
     @State private var isEditingDetails = false
     @State private var confirmingDelete = false
@@ -166,6 +168,13 @@ private struct RegisterContent: View {
                     Text(row.transaction.memo)
                 }
 
+                if !tags.isEmpty {
+                    TableColumn("Tags") { row in
+                        TagChips(transaction: row.transaction)
+                    }
+                    .width(min: 80, ideal: 150)
+                }
+
                 TableColumn("Amount") { row in
                     Text(row.transaction.amount, format: .appCurrency)
                         .foregroundStyle(amountColor(row.transaction.amount))
@@ -211,6 +220,19 @@ private struct RegisterContent: View {
                         openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: id))
                     }
                     Button("Edit Transaction", systemImage: "pencil") { editingDate = transaction }
+                }
+                if !ids.isEmpty, !tags.isEmpty {
+                    let chosen = monthTransactions.filter { ids.contains($0.persistentModelID) }
+                    Menu("Tags", systemImage: "tag") {
+                        ForEach(tags) { tag in
+                            let allHave = !chosen.isEmpty && chosen.allSatisfy { $0.tags.contains { $0 === tag } }
+                            Button {
+                                Tags.toggle(tag, on: chosen, in: modelContext)
+                            } label: {
+                                Label(tag.name, systemImage: allHave ? "checkmark.circle.fill" : "circle")
+                            }
+                        }
+                    }
                 }
                 if !ids.isEmpty {
                     Button(ids.count == 1 ? "Delete Transaction" : "Delete \(ids.count) Transactions", role: .destructive) {
@@ -298,6 +320,7 @@ struct EditTransactionSheet: View {
     @State private var limitMessage: String?
     @State private var isSplitting: Bool
     @State private var parts: [SplitDraft]
+    @State private var tagNames: [String]
 
     init(transaction: Transaction, account: Account, categories: [Category]) {
         self.transaction = transaction
@@ -318,6 +341,7 @@ struct EditTransactionSheet: View {
         _noReceipt = State(initialValue: transaction.noReceipt)
         _isSplitting = State(initialValue: transaction.isSplit)
         _parts = State(initialValue: transaction.isSplit ? Splits.drafts(of: transaction) : [])
+        _tagNames = State(initialValue: transaction.tagNames)
     }
 
     private var isInvestment: Bool { selectedAccount.supportsHoldings && !transaction.isTransfer }
@@ -473,6 +497,7 @@ struct EditTransactionSheet: View {
                         }
                     } else {
                         FormTextField("Memo", text: $memo)
+                        TagField(names: $tagNames)
                         Picker("Status", selection: $state) {
                             ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                         }
@@ -580,6 +605,7 @@ struct EditTransactionSheet: View {
             if !amountIsLocked { transaction.amount = signedAmount }
             if !isAtm, !isOpening, !transaction.isTransfer { PayeeMemory.record(name: payee, category: isSplitting ? nil : category, amount: signedAmount, in: modelContext) }
         }
+        Tags.apply(tagNames, to: transaction, in: modelContext)
         if transaction.isTransfer { Transfers.syncPeer(of: transaction, in: modelContext) }
         modelContext.saveNow()
         dismiss()

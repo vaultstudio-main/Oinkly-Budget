@@ -72,6 +72,7 @@ struct TransactionDetailWindow: View {
                         }
                         row("Status", transaction.state.title)
                         if !transaction.memo.isEmpty { row("Memo", transaction.memo) }
+                        if !transaction.tagNames.isEmpty { row("Tags", transaction.tagNames.joined(separator: ", ")) }
                     }
                     .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
 

@@ -552,6 +552,9 @@ struct MacSettingsView: View {
             CategoriesSettingsView()
                 .tag("categories")
                 .tabItem { Label("Categories", systemImage: "tag") }
+            TagsSettingsView()
+                .tag("tags")
+                .tabItem { Label("Tags", systemImage: "tag.fill") }
             CleanUpSettingsView()
                 .tag("cleanup")
                 .tabItem { Label("Clean Up", systemImage: "wand.and.sparkles") }

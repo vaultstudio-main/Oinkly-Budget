@@ -4,7 +4,7 @@ import SwiftData
 /// Transactions as a spreadsheet (CSV): export every transaction, or split a file into rows. Reading a bank's file into
 /// transactions is in `StatementImport.swift`.
 enum TransactionCSV {
-    static let header = ["Date", "Account", "Payee", "Category", "Memo", "Amount", "Status", "Transfer"]
+    static let header = ["Date", "Account", "Payee", "Category", "Memo", "Amount", "Status", "Transfer", "Tags"]
 
     // MARK: Export
 
@@ -32,6 +32,7 @@ enum TransactionCSV {
                     "\(part.amount)",
                     t.status.rawValue,
                     t.transferID?.uuidString ?? "",
+                    t.tagNames.joined(separator: "; "),
                 ]
                 lines.append(fields.map(escape).joined(separator: ","))
             }

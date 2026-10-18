@@ -9,6 +9,9 @@ struct ReportsView: View {
     @State private var pageWidth: CGFloat = 1000
     /// The last thirteen months, shared with the reports through the environment.
     @Query private var yearTransactions: [Transaction]
+    @Query(sort: \Tag.name) private var allTags: [Tag]
+    /// Only transactions with this tag count in the reports, when one is chosen.
+    @State private var tagFilter: Tag?
 
     init() {
         let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
@@ -19,15 +22,44 @@ struct ReportsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 14) {
-                PageTitle("Reports")
+                HStack {
+                    PageTitle("Reports")
+                    tagMenu
+                }
                 sectionPicker
                 grid(section.reports)
             }
             .padding(16)
         }
-        .environment(\.reportInputs, ReportInputs(year: yearTransactions.live))
+        .environment(\.reportInputs, ReportInputs(year: filtered))
         .background(Theme.background)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }
+    }
+
+    /// The year's transactions, narrowed to one tag when a tag is chosen.
+    private var filtered: [Transaction] {
+        let live = yearTransactions.live
+        guard let tag = tagFilter, tag.isLive else { return live }
+        return live.filter { $0.tags.contains { $0 === tag } }
+    }
+
+    @ViewBuilder
+    private var tagMenu: some View {
+        let tags = allTags.live
+        if !tags.isEmpty {
+            Menu {
+                Button("All Transactions") { tagFilter = nil }
+                Divider()
+                ForEach(tags) { tag in
+                    Button { tagFilter = tag } label: { Label(tag.name, systemImage: tagFilter === tag ? "checkmark" : "tag") }
+                }
+            } label: {
+                Label(tagFilter.flatMap { $0.isLive ? "Tag: \($0.name)" : nil } ?? "Tag: All", systemImage: "tag")
+            }
+            .menuStyle(.button)
+            .fixedSize()
+            .help("Only count transactions with this tag. Net worth and the balance charts always use every transaction.")
+        }
     }
 
     // MARK: Sections
