@@ -29,6 +29,7 @@ enum TestData {
         try context.save()
         Category.ensureSystemCategories(in: context)
         Account.ensureDefault(in: context)
+        SchemaUpgrade.seedTaxFlags(in: context, force: true)
         try context.save()
     }
 
@@ -431,7 +432,7 @@ enum TestData {
             .filter { $0.type == .checking }
             .sorted { $0.name < $1.name }
             .first
-        PrimaryChecking.set(primary)
+        PrimaryChecking.set(primary, in: context)
         MainActor.assumeIsolated {
             if CustomReminders.shared.items.isEmpty {
                 CustomReminders.shared.items = CustomReminder.presets.prefix(3).map(\.reminder)

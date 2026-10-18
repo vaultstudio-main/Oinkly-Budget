@@ -316,16 +316,13 @@ struct MonthAgainstMonthReport: View {
 struct TaxRelatedReport: View {
     @Environment(\.reportInputs) private var inputs
 
-    /// Categories people usually need at tax time. There is no tax flag on a category yet, so these are matched by name.
-    private static let keywords = ["tax", "charit", "donat", "medical", "health", "dental", "education", "tuition", "child", "mortgage", "property", "business", "office"]
-
     var body: some View {
         let months = ReportInputs.months()
         let start = months[0]
         var table: [String: (count: Int, amount: Decimal)] = [:]
         for transaction in inputs.year where !transaction.isTransfer && transaction.amount < 0 && transaction.date >= start {
             let name = categoryName(transaction)
-            guard Self.keywords.contains(where: { name.lowercased().contains($0) }) else { continue }
+            guard transaction.category?.isTaxRelated == true else { continue }
             var entry = table[name] ?? (0, 0)
             entry.count += 1
             entry.amount -= transaction.amount
@@ -334,10 +331,10 @@ struct TaxRelatedReport: View {
         let rows = table.sorted { $0.value.amount > $1.value.amount }
         let total = rows.reduce(Decimal(0)) { $0 + $1.value.amount }
 
-        return ReportPanel(title: "Tax-Related Spending", summary: "Over the last 12 months, spending in the categories people often claim: taxes, charity, medical, education and similar.",
+        return ReportPanel(title: "Tax-Related Spending", summary: "Over the last 12 months, spending in the categories you flag as tax-related in Settings ▸ Categories.",
                     headline: rows.isEmpty ? nil : total.formatted(.appCurrency), headlineNote: rows.isEmpty ? nil : "across \(rows.count) categories") {
             if rows.isEmpty {
-                ReportEmpty(message: "No spending in tax-related categories yet.", height: 170)
+                ReportEmpty(message: "No spending in categories flagged as tax-related yet. Flag them in Settings ▸ Categories.", height: 170)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow { Text("CATEGORY"); Text("TRANSACTIONS").gridColumnAlignment(.trailing); Text("TOTAL").gridColumnAlignment(.trailing) }
@@ -348,7 +345,7 @@ struct TaxRelatedReport: View {
                         GridRow { Text(name); Text("\(entry.count)"); Text(entry.amount, format: .appCurrency) }.font(.callout)
                     }
                 }
-                Text("Matched by category name. Check them against what you can actually claim.").font(.caption).foregroundStyle(.secondary)
+                Text("Charity, medical, dental, taxes and education are flagged to start with. Change them in Settings ▸ Categories.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }

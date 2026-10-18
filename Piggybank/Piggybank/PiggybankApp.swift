@@ -8,7 +8,7 @@ struct PiggybankApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
+        let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // With encryption on, the app runs on a working copy opened from the encrypted vault instead of this Mac's
@@ -31,6 +31,7 @@ struct PiggybankApp: App {
             StartupState.databaseError = error
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
+        SchemaUpgrade.run(in: container.mainContext)
         PiggybankAppDelegate.container = container
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)

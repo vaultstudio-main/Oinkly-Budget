@@ -295,7 +295,7 @@ final class VaultSession {
     /// encryption on, and `-vaultTestDisable <passphrase>` turns it off. The recovery key is written to the log.
     func runTestCommands() {
         let args = CommandLine.arguments
-        guard let schemaStore = Optional(VaultSession.localStoreURL(for: Schema(versionedSchema: PiggybankSchemaV1.self))) else { return }
+        guard let schemaStore = Optional(VaultSession.localStoreURL(for: Schema(versionedSchema: PiggybankSchemaV2.self))) else { return }
         if let index = args.firstIndex(of: "-vaultTestEnable"), index + 1 < args.count, !Self.isEnabled {
             let passphrase = args[index + 1]
             let remember = args.contains("-vaultTestRemember")

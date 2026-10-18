@@ -43,6 +43,7 @@ enum OpeningDeposit {
         let deposit = Transaction(account: account, date: date, payee: Transaction.depositName, category: category(in: context),
                                   memo: "Opening balance", amount: amount, paymentType: .bankDeposit)
         deposit.state = .reconciled
+        deposit.isOpeningDeposit = true
         context.insert(deposit)
         return deposit
     }

@@ -179,7 +179,12 @@ struct NewTransactionWindow: View {
         let last = suggestion.lastCategory
         category = last?.isIncome == !isPayment ? last : nil
         // The memo and payment method from the last time, unless already filled in or locked by the account.
-        if let previous = PayeeMemory.lastTransaction(for: suggestion.name, in: modelContext) {
+        if memo.isEmpty, !suggestion.lastMemo.isEmpty { memo = suggestion.lastMemo }
+        if paymentChoice == nil, account?.lockedPaymentType == nil, let type = PayeeMemory.builtInMethod(suggestion.lastMethodRaw) {
+            paymentChoice = .type(type)
+        } else if memo.isEmpty || (paymentChoice == nil && account?.lockedPaymentType == nil),
+                  let previous = PayeeMemory.lastTransaction(for: suggestion.name, in: modelContext) {
+            // Older entries (and your own methods) are found from the last transaction instead.
             if memo.isEmpty { memo = previous.memo }
             if paymentChoice == nil, account?.lockedPaymentType == nil { paymentChoice = previous.paymentChoice }
         }
@@ -208,7 +213,7 @@ struct NewTransactionWindow: View {
                 checkNumber = ""
             }
             let signed = isPayment ? -amount : amount
-            PayeeMemory.record(name: payee, category: category, amount: signed, in: modelContext)
+            PayeeMemory.record(name: payee, category: category, amount: signed, memo: memo, method: paymentChoice, in: modelContext)
             let transaction = Transaction(account: account, date: date, payee: payee, category: category, memo: memo, amount: signed)
             transaction.state = state
             transaction.paymentChoice = paymentChoice

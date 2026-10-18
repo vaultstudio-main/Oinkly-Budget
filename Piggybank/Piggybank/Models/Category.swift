@@ -23,6 +23,17 @@ final class Category {
     @Relationship(deleteRule: .nullify, inverse: \Bill.category)
     var bills: [Bill] = []
 
+    /// Spending here counts toward the tax-related report. Set by you.
+    var isTaxRelated: Bool = false
+
+    /// Parts of split transactions that went to this category.
+    @Relationship(deleteRule: .nullify, inverse: \TransactionSplit.category)
+    var splits: [TransactionSplit] = []
+
+    /// Repeating transactions that use this category.
+    @Relationship(deleteRule: .nullify, inverse: \RecurringTransaction.category)
+    var recurringRules: [RecurringTransaction] = []
+
     init(name: String, colorHex: String, symbol: String, monthlyLimit: Decimal, isIncome: Bool = false, systemKey: String? = nil) {
         self.name = name
         self.colorHex = colorHex

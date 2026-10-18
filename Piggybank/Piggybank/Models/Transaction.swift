@@ -195,6 +195,18 @@ final class Transaction {
     /// The bill this payment settled, and the due date it settled. Deleting the payment marks that due date unpaid again.
     var paidBill: Bill?
     var paidDueDate: Date?
+    /// The deposit an account starts with: payee Deposit, category Deposit, method Bank Deposit, all locked.
+    var isOpeningDeposit: Bool = false
+
+    /// How a split transaction is divided between categories. Empty for an ordinary one.
+    @Relationship(deleteRule: .cascade, inverse: \TransactionSplit.transaction)
+    var splits: [TransactionSplit] = []
+
+    /// Labels on this transaction.
+    var tags: [Tag] = []
+
+    /// The repeating rule that made it, if one did.
+    var recurring: RecurringTransaction?
     /// Breaks ties between transactions on the same date.
     var createdAt: Date = Date.now
 
@@ -241,7 +253,7 @@ extension Transaction {
 
     /// The deposit made when a goal creates its own savings account: payee Deposit, category Deposit, method Bank Deposit.
     /// All three are locked, so it always reads the same.
-    var isOpeningDeposit: Bool {
+    var hasOpeningDepositShape: Bool {
         isLive && payee == Transaction.depositName && paymentType == .bankDeposit && category?.systemKey == Transaction.depositCategoryKey
     }
 

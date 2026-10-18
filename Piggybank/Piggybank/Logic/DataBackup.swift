@@ -85,6 +85,8 @@ struct BackupFile: Codable {
         var monthlyLimit: String
         var isIncome: Bool
         var showOnBudgets: Bool
+        /// Added in 1.1; absent in older files.
+        var isTaxRelated: Bool?
     }
 
     struct AccountRecord: Codable {
@@ -110,12 +112,19 @@ struct BackupFile: Codable {
         var creditLimit: String?
         /// The built-in Cash on Hand.
         var isDefault: Bool?
+        /// Added in 1.1; absent in older files.
+        var wireRoutingNumber: String?
+        var digitalRoutingNumber: String?
+        var isPrimaryChecking: Bool?
     }
 
     struct PayeeRecord: Codable {
         var name: String
         var lastCategoryKey: String?
         var lastAmount: String
+        /// Added in 1.1; absent in older files.
+        var lastMemo: String?
+        var lastMethodRaw: String?
     }
 
     struct TransactionRecord: Codable {
@@ -140,6 +149,8 @@ struct BackupFile: Codable {
         var isAtmWithdrawal: Bool?
         var paidBillIndex: Int?
         var paidDueDate: Date?
+        /// Added in 1.1; absent in older files.
+        var isOpeningDeposit: Bool?
     }
 
     struct HoldingRecord: Codable {
@@ -219,7 +230,8 @@ enum DataBackup {
 
         file.categories = try context.fetch(FetchDescriptor<Category>()).live.map {
             .init(key: $0.systemKey, name: $0.name, colorHex: $0.colorHex, symbol: $0.symbol,
-                  monthlyLimit: text($0.monthlyLimit), isIncome: $0.isIncome, showOnBudgets: $0.showOnBudgets)
+                  monthlyLimit: text($0.monthlyLimit), isIncome: $0.isIncome, showOnBudgets: $0.showOnBudgets,
+                  isTaxRelated: $0.isTaxRelated)
         }
 
         file.accounts = accounts.enumerated().map { index, a in
@@ -228,12 +240,14 @@ enum DataBackup {
                   loanPurpose: a.loanPurpose, originalLoanAmount: text(a.originalLoanAmount),
                   monthlyPayment: text(a.monthlyPayment), payoffDate: a.payoffDate, loanStartDate: a.loanStartDate,
                   interestRate: a.interestRate, isLease: a.isLease, vin: a.vin, notes: a.notes, photoData: a.photoData,
-                  creditLimit: text(a.creditLimit), isDefault: a.isDefault)
+                  creditLimit: text(a.creditLimit), isDefault: a.isDefault,
+                  wireRoutingNumber: a.wireRoutingNumber, digitalRoutingNumber: a.digitalRoutingNumber,
+                  isPrimaryChecking: a.isPrimaryChecking)
         }
 
         file.payees = try context.fetch(FetchDescriptor<Payee>()).live.map {
             .init(name: $0.name, lastCategoryKey: $0.lastCategory?.isLive == true ? $0.lastCategory?.systemKey : nil,
-                  lastAmount: text($0.lastAmount))
+                  lastAmount: text($0.lastAmount), lastMemo: $0.lastMemo, lastMethodRaw: $0.lastMethodRaw)
         }
 
         let liveBills = try context.fetch(FetchDescriptor<Bill>()).live
@@ -251,7 +265,7 @@ enum DataBackup {
                     checkNumber: t.checkNumber, createdAt: t.createdAt, receiptData: t.receiptData,
                     noReceipt: t.noReceipt, isBillPayment: t.isBillPayment, isAtmWithdrawal: t.isAtmWithdrawal,
                     paidBillIndex: t.paidBill?.isLive == true ? billIDs[t.paidBill!.persistentModelID] : nil,
-                    paidDueDate: t.paidDueDate))
+                    paidDueDate: t.paidDueDate, isOpeningDeposit: t.isOpeningDeposit))
             }
             for h in account.holdings.live {
                 file.holdings.append(.init(
@@ -345,10 +359,12 @@ enum DataBackup {
             if let key = record.key, let existing = byKey[key] {
                 existing.monthlyLimit = decimal(record.monthlyLimit)
                 existing.showOnBudgets = record.showOnBudgets
+                existing.isTaxRelated = record.isTaxRelated ?? false
             } else if let key = record.key, key.hasPrefix(Category.customKeyPrefix) {
                 let made = Category(name: record.name, colorHex: record.colorHex, symbol: record.symbol,
                                     monthlyLimit: decimal(record.monthlyLimit), isIncome: record.isIncome, systemKey: key)
                 made.showOnBudgets = record.showOnBudgets
+                made.isTaxRelated = record.isTaxRelated ?? false
                 context.insert(made)
                 byKey[key] = made
             }
@@ -374,13 +390,19 @@ enum DataBackup {
             account.photoData = record.photoData
             account.creditLimit = record.creditLimit.map { decimal($0) } ?? 0
             account.isDefault = record.isDefault ?? false
+            account.wireRoutingNumber = record.wireRoutingNumber ?? ""
+            account.digitalRoutingNumber = record.digitalRoutingNumber ?? ""
+            account.isPrimaryChecking = record.isPrimaryChecking ?? false
             context.insert(account)
             accounts[record.id] = account
         }
 
         for record in file.payees {
-            context.insert(Payee(name: record.name, lastCategory: record.lastCategoryKey.flatMap { byKey[$0] },
-                                 lastAmount: decimal(record.lastAmount)))
+            let payee = Payee(name: record.name, lastCategory: record.lastCategoryKey.flatMap { byKey[$0] },
+                              lastAmount: decimal(record.lastAmount))
+            payee.lastMemo = record.lastMemo ?? ""
+            payee.lastMethodRaw = record.lastMethodRaw ?? ""
+            context.insert(payee)
         }
 
         var methods: [String: CustomPaymentMethod] = [:]
@@ -407,6 +429,7 @@ enum DataBackup {
             t.isBillPayment = record.isBillPayment ?? false
             t.isAtmWithdrawal = record.isAtmWithdrawal ?? false
             t.paidDueDate = record.paidDueDate
+            t.isOpeningDeposit = record.isOpeningDeposit ?? false
             context.insert(t)
             restoredTransactions.append((t, record))
         }

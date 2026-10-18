@@ -7,10 +7,12 @@ struct BudgetEditView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var limit: Decimal
+    @State private var isTaxRelated: Bool
 
     init(category: Category) {
         self.category = category
         _limit = State(initialValue: category.monthlyLimit)
+        _isTaxRelated = State(initialValue: category.isTaxRelated)
     }
 
     var body: some View {
@@ -27,8 +29,11 @@ struct BudgetEditView: View {
                         .labelsHidden()
                         .multilineTextAlignment(.trailing)
                 }
+                if !category.isIncome {
+                    Toggle("Counts as tax-related", isOn: $isTaxRelated)
+                }
                 Section {
-                    Text("Categories are built in and the same on every device. Only the budget amount can be changed.")
+                    Text("Categories are built in and the same on every device. Only the budget amount and the tax flag can be changed.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -42,6 +47,7 @@ struct BudgetEditView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         category.monthlyLimit = max(limit, 0)
+                        category.isTaxRelated = isTaxRelated
                         dismiss()
                     }
                 }
@@ -61,6 +67,7 @@ struct CustomBudgetEditView: View {
     @State private var name: String
     @State private var limit: Decimal?
     @State private var isIncome: Bool
+    @State private var isTaxRelated: Bool
     @State private var confirmingDelete = false
 
     init(category: Category?) {
@@ -68,6 +75,7 @@ struct CustomBudgetEditView: View {
         _name = State(initialValue: category?.name ?? "")
         _limit = State(initialValue: category.map(\.monthlyLimit))
         _isIncome = State(initialValue: category?.isIncome ?? false)
+        _isTaxRelated = State(initialValue: category?.isTaxRelated ?? false)
     }
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -87,6 +95,7 @@ struct CustomBudgetEditView: View {
                         }
                     if !isIncome {
                         CurrencyField("Monthly budget", value: $limit)
+                        Toggle("Counts as tax-related", isOn: $isTaxRelated)
                     }
                 }
                 if category != nil {
@@ -124,14 +133,17 @@ struct CustomBudgetEditView: View {
             let kindChanged = category.isIncome != isIncome
             category.name = clean
             category.monthlyLimit = amount
+            category.isTaxRelated = isIncome ? false : isTaxRelated
             category.isIncome = isIncome
             if kindChanged {
                 category.colorHex = colorHex
                 category.symbol = symbol
             }
         } else {
-            modelContext.insert(Category(name: clean, colorHex: colorHex, symbol: symbol, monthlyLimit: amount, isIncome: isIncome,
-                                         systemKey: Category.customKeyPrefix + UUID().uuidString))
+            let made = Category(name: clean, colorHex: colorHex, symbol: symbol, monthlyLimit: amount, isIncome: isIncome,
+                                systemKey: Category.customKeyPrefix + UUID().uuidString)
+            made.isTaxRelated = isIncome ? false : isTaxRelated
+            modelContext.insert(made)
         }
         modelContext.saveNow()
         dismiss()

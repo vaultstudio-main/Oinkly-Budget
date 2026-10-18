@@ -190,9 +190,8 @@ final class Account {
     var isDefault: Bool = false
     var institution: String = ""
     var accountNumber: String = ""
-    /// Checking accounts only. Holds up to three 9-character numbers (the wire number may contain letters, the others are digits) joined by "|": the routing (ACH) number, the wire
-    /// transfer number and the digital (online bank) number. Read and write them with `achRouting`, `wireRouting` and
-    /// `digitalRouting`. Packed into the one field so no database change is needed; 1.2 can split them into fields.
+    /// Checking accounts only: the ordinary (ACH) routing number. The wire and digital numbers have their own fields
+    /// further down.
     var routingNumber: String = ""
     /// For loan accounts: what the loan is for, such as "2021 Honda Civic" or "123 Main St".
     var loanPurpose: String = ""
@@ -231,6 +230,17 @@ final class Account {
     @Relationship(deleteRule: .cascade, inverse: \Holding.account)
     var holdings: [Holding] = []
 
+    /// The account pinned under Cash on Hand and labelled Primary Checking. Only a checking account, and at most one.
+    var isPrimaryChecking: Bool = false
+    /// Checking accounts only: the wire transfer number (it may contain letters) and the digital bank's number.
+    /// `routingNumber` is the ordinary (ACH) one.
+    var wireRoutingNumber: String = ""
+    var digitalRoutingNumber: String = ""
+
+    /// Repeating transactions that add to this account. Deleted with it.
+    @Relationship(deleteRule: .cascade, inverse: \RecurringTransaction.account)
+    var recurringRules: [RecurringTransaction] = []
+
     init(name: String, type: AccountType, openingBalance: Decimal = 0) {
         self.name = name
         self.type = type
@@ -254,23 +264,20 @@ final class Account {
     /// Only checking accounts have routing numbers.
     var hasRoutingNumbers: Bool { type == .checking }
 
-    private func routingPart(_ index: Int) -> String {
-        let parts = routingNumber.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
-        return index < parts.count ? parts[index] : ""
+    /// The ordinary (ACH) routing number, the wire transfer number and the digital bank's number.
+    var achRouting: String {
+        get { routingNumber }
+        set { routingNumber = Account.digits(newValue, limit: Account.routingNumberLength) }
     }
-
-    private func setRoutingPart(_ index: Int, _ value: String) {
-        var parts = routingNumber.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
-        while parts.count < 3 { parts.append("") }
-        // Only the wire transfer number (the second) can contain letters.
-        parts[index] = index == 1 ? Account.routingCharacters(value) : Account.digits(value, limit: Account.routingNumberLength)
-        while parts.last == "" { parts.removeLast() }
-        routingNumber = parts.joined(separator: "|")
+    /// The wire number can contain letters, so it is kept to letters and digits.
+    var wireRouting: String {
+        get { wireRoutingNumber }
+        set { wireRoutingNumber = Account.routingCharacters(newValue) }
     }
-
-    var achRouting: String { get { routingPart(0) } set { setRoutingPart(0, newValue) } }
-    var wireRouting: String { get { routingPart(1) } set { setRoutingPart(1, newValue) } }
-    var digitalRouting: String { get { routingPart(2) } set { setRoutingPart(2, newValue) } }
+    var digitalRouting: String {
+        get { digitalRoutingNumber }
+        set { digitalRoutingNumber = Account.digits(newValue, limit: Account.routingNumberLength) }
+    }
     /// Card numbers run 15 digits (Amex) to 16 (most cards), and up to 19 on some.
     static let maxCardNumberLength = 19
 

@@ -64,7 +64,7 @@ struct EncryptionSection: View {
         guard let passphrase = VaultPrompt.askPassphrase(title: "Turn off encryption", detail: "Enter your passphrase to confirm.", button: "Turn Off") else { return }
         guard session.confirm(passphrase) else { message = "That isn't your passphrase. Nothing was changed."; return }
         message = nil
-        let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
+        let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         Task {
             do { try await session.turnOff(current: passphrase, localStore: VaultSession.localStoreURL(for: schema)) }
             catch { message = "Couldn't turn off encryption: \(error.localizedDescription)" }
@@ -173,7 +173,7 @@ private struct EnableEncryptionSheet: View {
     private func finish(_ pending: VaultSession.Pending) {
         working = true
         errorMessage = nil
-        let schema = Schema(versionedSchema: PiggybankSchemaV1.self)
+        let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         Task {
             do {
                 try await VaultSession.shared.commitEnable(pending, localStore: VaultSession.localStoreURL(for: schema), remember: remember)

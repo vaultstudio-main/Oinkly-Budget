@@ -21,7 +21,7 @@ struct MacRootView: View {
     @State private var selection: SidebarItem? = .summary
     @State private var collapsed = Set<AccountGroup>()
     @State private var editingAccount: Account?
-    @AppStorage(PrimaryChecking.key) private var primaryStored = ""
+    @Environment(\.modelContext) private var modelContext
 
     private var selectedAccountID: Account.ID? {
         if case .account(let id) = selection { id } else { nil }
@@ -54,10 +54,10 @@ struct MacRootView: View {
                     // Cash on hand sits at the top by itself, not inside a folder, and the primary checking account
                     // is pinned right under it.
                     ForEach(accounts.filter(\.isCashOnHand)) { sidebarRow($0) }
-                    ForEach(accounts.filter { PrimaryChecking.isPrimary($0, stored: primaryStored) && !$0.isCashOnHand }) { sidebarRow($0) }
+                    ForEach(accounts.filter { PrimaryChecking.isPrimary($0) && !$0.isCashOnHand }) { sidebarRow($0) }
                     ForEach(AccountGroup.allCases) { group in
                         let members = accounts.filter {
-                            $0.type.group == group && !$0.isCashOnHand && !PrimaryChecking.isPrimary($0, stored: primaryStored)
+                            $0.type.group == group && !$0.isCashOnHand && !PrimaryChecking.isPrimary($0)
                         }
                         if !members.isEmpty {
                             DisclosureGroup(isExpanded: expansion(of: group)) {
@@ -164,7 +164,7 @@ struct MacRootView: View {
     @ViewBuilder
     private func sidebarRow(_ account: Account) -> some View {
         if account.isLive {
-            let isPrimary = PrimaryChecking.isPrimary(account, stored: primaryStored)
+            let isPrimary = PrimaryChecking.isPrimary(account)
             Label {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(account.name)
@@ -180,9 +180,9 @@ struct MacRootView: View {
                 Button("Edit Details") { editingAccount = account }
                 if account.type == .checking {
                     if isPrimary {
-                        Button("Remove Primary Checking") { PrimaryChecking.set(nil) }
+                        Button("Remove Primary Checking") { PrimaryChecking.set(nil, in: modelContext); modelContext.saveNow() }
                     } else {
-                        Button("Make Primary Checking") { PrimaryChecking.set(account) }
+                        Button("Make Primary Checking") { PrimaryChecking.set(account, in: modelContext); modelContext.saveNow() }
                     }
                 }
             }

@@ -65,7 +65,7 @@ struct AccountEditView: View {
         // An account whose money began as a deposit shows that amount here.
         _openingBalance = State(initialValue: account.flatMap { OpeningDeposit.existing(in: $0)?.amount } ?? account?.openingBalance ?? 0)
         _notes = State(initialValue: account?.notes ?? "")
-        _isPrimary = State(initialValue: account.map { PrimaryChecking.isPrimary($0, stored: PrimaryChecking.current) } ?? false)
+        _isPrimary = State(initialValue: account.map { PrimaryChecking.isPrimary($0) } ?? false)
     }
 
     private var isDebt: Bool { type.group.isLiability }
@@ -348,10 +348,11 @@ struct AccountEditView: View {
         LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
         modelContext.saveNow()
         if type == .checking && isPrimary {
-            PrimaryChecking.set(target)
-        } else if PrimaryChecking.isStored(target, stored: PrimaryChecking.current) {
-            PrimaryChecking.set(nil)
+            PrimaryChecking.set(target, in: modelContext)
+        } else if target.isPrimaryChecking {
+            PrimaryChecking.set(nil, in: modelContext)
         }
+        modelContext.saveNow()
         dismiss()
     }
 }
