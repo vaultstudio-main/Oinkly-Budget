@@ -230,7 +230,7 @@ enum HelpContent {
                 "• Choose Restore from Backup…, or double-click a .pig file, or use Restore from a Backup on the setup screen.",
                 "• Restoring replaces everything currently in the app.",
                 "## Bank files and PDF statements",
-                "Open an account and choose Import… to add a bank's CSV file, with a preview first and Undo if it's wrong. Choose Export CSV… to save its transactions as a spreadsheet. The printer button saves a PDF statement for a month, a year or any dates; open the PDF and print it from Preview.",
+                "Open an account and choose Import CSV to add a bank's statement saved as a CSV file. You see a preview first, and Undo if it's wrong. PDF statements can't be imported. Choose Export CSV to save the account's transactions as a spreadsheet. Choose Print PDF to save a statement for a month, a year or any dates; open the PDF and print it from Preview.",
                 "## Erase All Data",
                 "Settings ▸ Data & Backup ▸ Erase All Data deletes your accounts, transactions, bills, goals, custom categories and payment methods, then quits. Open the app again to start fresh. Built-in categories and their budgets stay.",
                 "Take a backup before anything you can't undo.",

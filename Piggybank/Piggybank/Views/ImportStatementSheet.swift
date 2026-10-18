@@ -60,7 +60,7 @@ struct ImportStatementSheet: View {
     private var setupView: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(account.map { "Import Statement into \($0.name)" } ?? "Import Transactions").font(.title2.bold())
+                Text(account.map { "Import CSV into \($0.name)" } ?? "Import CSV").font(.title2.bold())
                 Text(fileURL.lastPathComponent).foregroundStyle(.secondary)
             }
 
@@ -367,7 +367,7 @@ enum StatementFilePicker {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.commaSeparatedText, .plainText, .tabSeparatedText]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a statement or transaction list saved as a CSV file."
+        panel.message = "Choose a statement saved as a CSV file. PDF statements can't be imported."
         return panel.runModal() == .OK ? panel.url : nil
     }
 }

@@ -77,10 +77,10 @@ private struct RegisterContent: View {
                 Spacer()
             }
             // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
-            Button("Import", systemImage: "square.and.arrow.down") {
+            Button("Import CSV", systemImage: "square.and.arrow.down") {
                 if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
             }
-            .help("Import a bank statement (CSV) into this account")
+            .help("Import a bank statement saved as a CSV file into this account. PDF statements can't be imported.")
             Button("Export CSV", systemImage: "square.and.arrow.up") { savingAs = .csv }
                 .help("Save this account's transactions as a CSV spreadsheet")
             Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
