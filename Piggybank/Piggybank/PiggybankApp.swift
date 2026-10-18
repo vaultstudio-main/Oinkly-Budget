@@ -41,6 +41,9 @@ struct PiggybankApp: App {
         PiggybankAppDelegate.container = container
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)
+        #if DEBUG
+        PDFTestHook.runIfRequested(container: container)
+        #endif
     }
 
     var body: some Scene {

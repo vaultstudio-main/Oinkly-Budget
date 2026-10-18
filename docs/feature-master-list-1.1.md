@@ -166,8 +166,12 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Investments: a Growth card for 3 months, 6 months and a year, and a Projection of Growth. No sample data; placeholders keep their size.
 - Shots: S-E3a (Liabilities), S-E3b (Investments).
 
-### E4. Reports and Summary PDF (Planned)
-- A Print PDF button on each page. Shots: S-E4.
+### E4. Reports and Summary PDF (Built)
+- A Print PDF button on the Summary page and on the Reports page. On Reports it saves the section you are looking at (Overview, Spending, Income, Cash Flow, Net Worth, Debt & Loans, Savings & Goals, Budgets, Bills, Investments or Books & Records), and respects the tag filter.
+- The charts don't print well in black and white, so the PDF has the figures behind them as tables: net worth and debt by month with the next six months marked Projected, money in and out, spending and income by category, what you owe, goals, budgets, bills, investments and holdings, and tax-related spending.
+- The Summary PDF has the net worth breakdown by account, 12 months of net worth, money in and out, priority bills, what you owe, goals and top spending categories.
+- It uses the same look as account statements and the paper size of your region. To print, open the PDF in Preview.
+- Shots: S-E4.
 
 ---
 
