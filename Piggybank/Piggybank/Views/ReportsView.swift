@@ -27,6 +27,8 @@ struct ReportsView: View {
 private struct ReportsContent: View {
     @Query private var allTransactions: [Transaction]
     private var transactions: [Transaction] { allTransactions.live }
+    /// The last thirteen months, shared with the reports through the environment.
+    @Query private var yearTransactions: [Transaction]
 
     @Binding var period: ReportPeriod
     @Binding var anchor: Date
@@ -43,6 +45,9 @@ private struct ReportsContent: View {
         let from = Reports.previous(of: range, period: period.wrappedValue).start
         let to = range.end
         _allTransactions = Query(filter: #Predicate<Transaction> { $0.date >= from && $0.date < to })
+        let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+        let yearStart = Calendar.current.date(byAdding: .month, value: -13, to: thisMonth) ?? thisMonth
+        _yearTransactions = Query(filter: #Predicate<Transaction> { $0.date >= yearStart })
     }
 
     var body: some View {
@@ -57,6 +62,9 @@ private struct ReportsContent: View {
             }
             .padding(16)
         }
+        .environment(\.reportInputs, ReportInputs(year: yearTransactions.live, period: transactions, range: range,
+                                                  previous: Reports.previous(of: range, period: period),
+                                                  periodName: Reports.label(period, range: range)))
         .background(Theme.background)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }
         .animation(.smooth, value: period)

@@ -34,14 +34,14 @@ enum ReportTrends {
     // MARK: Debt
 
     /// What one debt does over the next six months if the monthly payment keeps being made.
-    private struct DebtPath {
+    struct DebtPath {
         /// Owed now, then after each of the next six payments.
         var owed: [Double]
         /// The payment made in each of the next six months. Zero once it is paid off.
         var payments: [Double]
     }
 
-    private static func debtPath(for account: Account) -> DebtPath {
+    static func debtPath(for account: Account) -> DebtPath {
         let rate = account.interestRate / 100 / 12
         let payment = account.monthlyPayment.doubleValue
         var owed = [Swift.max(-account.balance.doubleValue, 0)]

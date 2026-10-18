@@ -48,11 +48,34 @@ struct InvestmentsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
+
+                    deepDive
                 }
             }
             .padding(16)
         }
         .background(Theme.background)
+    }
+
+    // MARK: Deep dive
+
+    /// The year behind the numbers above and six months ahead. These ignore the period picked at the top.
+    private var deepDive: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Text("DEEP DIVE").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text("last 12 months and the next 6").font(.caption).foregroundStyle(.tertiary)
+                Spacer()
+            }
+            .padding(.top, 8)
+            PortfolioValueReport()
+            HStack(alignment: .top, spacing: 14) {
+                InvestmentAllocationReport()
+                InvestmentContributionsReport()
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            InvestmentGainsReport()
+        }
     }
 
     // MARK: Tiles

@@ -58,10 +58,10 @@ enum ReportSection: String, CaseIterable, Identifiable {
     }
 
     /// Sections whose reports cover a chosen period. The rest follow the last twelve months and look six months ahead.
-    /// Cash Flow, Net Worth, Debt, Goals and the projections don't use one.
+    /// Cash Flow, Net Worth, Debt, Goals, Budgets, Bills and the projections don't use one.
     var usesPeriod: Bool {
         switch self {
-        case .overview, .spending, .income, .budgets, .bills: true
+        case .overview, .spending, .income: true
         default: false
         }
     }

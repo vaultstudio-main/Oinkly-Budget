@@ -44,11 +44,40 @@ struct LiabilitiesView: View {
                         ReportCard(title: "Where the Debt Is") { breakdown(report) }
                     }
                     ReportCard(title: "All Liabilities (\(report.lines.count))") { list(report) }
+                    deepDive
                 }
             }
             .padding(16)
         }
         .background(Theme.background)
+    }
+
+    // MARK: Deep dive
+
+    /// How the debt pays off: the line of what's owed, the payoff schedule, interest and what extra payments would do.
+    /// These ignore the period picked at the top.
+    private var deepDive: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Text("PAYOFF DEEP DIVE").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text("last 12 months and the next 6").font(.caption).foregroundStyle(.tertiary)
+                Spacer()
+            }
+            .padding(.top, 8)
+            HStack(alignment: .top, spacing: 14) {
+                TrendChartCard(kind: .debt, height: 190)
+                TrendChartCard(kind: .debtToIncome, height: 190)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            LoanPayoffScheduleReport()
+            HStack(alignment: .top, spacing: 14) {
+                AheadOrBehindReport()
+                InterestPaidReport()
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            CreditCardUseReport()
+            DebtPayoffPlanReport()
+        }
     }
 
     // MARK: Tiles
