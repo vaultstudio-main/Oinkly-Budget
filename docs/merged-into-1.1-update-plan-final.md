@@ -1,0 +1,105 @@
+# OinklyBudget 1.1: merged update plan (final)
+
+Final plan, 2026-10-18. It replaces the earlier 1.1 plan, the 1.2 plan and the first merged plan. Those files are removed; they stay in git history if a detail is ever needed. Version 1.0 is in App Review on `main` and does not change. All work is on `update-1.1`.
+
+The direction stays the same: a full desktop program, no bank linking, no accounts, no network. 1.1 carries everything that was once split between 1.1 and 1.2, so Help describes the finished app once, and the database change happens once, early.
+
+## Order of work
+
+| # | Step | Effort | Status |
+|---|---|---|---|
+| 1 | Database V2 | ~1 week | **Done** |
+| 2 | Splits, recurring transactions, tags | 2–3 weeks | **Next** |
+| 3 | Shortcuts and accessibility pass | ~3 days | Waiting |
+| 4 | Exports and extras | ~1 week | Waiting |
+| 5 | Shared data file | 2–3 weeks | Waiting. Needs a two-real-Mac-login test. |
+| 6 | Help, screenshots, release notes, TestFlight, submission | 1–2 weeks | Last |
+
+About 8 to 11 weeks in all. The shared data file was moved down to step 5 at the owner's request. Book the two-login test before step 5 starts, because that test is the biggest unknown in the plan.
+
+## Already built in 1.1 (committed on `update-1.1`)
+
+- **Database V2:** frozen `PiggybankSchemaV1`, live `PiggybankSchemaV2`, a lightweight migration, a one-time step that unpacks routing numbers and flags opening deposits, an automatic safety copy before the first 1.1 open (Application Support/Backups), and the data file pinned to where 1.0 keeps it. Tested on a real 1.0 database and on an encrypted vault.
+- **Encrypted data file:** vault, private working copy and check-in, passphrase and recovery, encrypted `.pig` backups.
+- **Export and import:** PDF and CSV export (Export sheet), Import Statement on every account.
+- **Widgets:** upcoming bills and reminders, no financial data, through an App Group snapshot.
+- **Goals tied to accounts:** savings and debt payoff goals that follow an account, one goal section laid out the same on every account type.
+- **Planning and reports:** Budgets page, reports with a period button and six-month projections, Liabilities and Investments projections, Summary rework.
+- **Everyday:** Clean Up (find and replace), payee autofill, locked opening deposits, separate wire and digital routing numbers, status colours, locked sidebar, bottom status bar, full test data set (debug only).
+- **Windows:** bigger Help and Release Notes windows.
+
+## Step 2: splits, recurring transactions, tags
+
+The V2 models exist (`TransactionSplit`, `Tag`, `RecurringTransaction`); the screens and logic do not.
+
+- **Splits:** edited in the New and Edit Transaction windows; the parts must add up to the total. A split transaction shows once in the register and once per category in reports.
+- **Recurring:** a rule (paycheque, rent) creates a *pending* transaction on its due date, which you confirm or edit. It also feeds the cash flow forecast. A screen manages the rules.
+- **Tags:** many per transaction, with a colour. Shown in the register and used as a report filter.
+- Splits, tags and rules go into backup, restore and Clean Up.
+
+## Step 3: shortcuts and accessibility
+
+Review keyboard shortcuts and add menu commands. VoiceOver and larger text across the screens added in 1.1. The shared-file screens (step 5) come after this, so cover them in a short follow-up or in step 6.
+
+## Step 4: exports and extras
+
+- Print PDF on Reports and Summary (the builders exist, no button yet).
+- Attachments beyond receipts: PDF statements kept with an account.
+- Settings for default paper size and export style.
+- Check printing (optional).
+- Widget options, only if time allows.
+
+Attachments and check printing are the first to drop if the schedule slips.
+
+## Step 5: shared data file
+
+Two people on the same Mac, in separate Mac logins, use one data file, one at a time. No sync, no cloud, no accounts inside the app. A working prototype is on the `shared-data-prototype` branch (commits `572a337` and `ea179d4`). It has to be rebuilt on V2 and the encryption vault.
+
+**Design: check out and check in.** The shared file is never opened live, because SQLite makes side files and files made by one login can be unwritable by the other.
+
+- Opening takes a lock and copies the shared file to a private working copy; editing happens on the copy.
+- Saving writes the copy back to the shared file in one safe replace, then (on close) releases the lock. The shared file is only ever a finished file.
+- Receipts and photos travel with the data.
+- The lock records who has it and since when. A lock left by a process that no longer exists is stale at once, and Take Over is offered with a warning.
+- Saves go back every couple of minutes, when the app is hidden and when it quits. After a crash the app keeps unsaved work, or saves it as a separate file if someone else saved meanwhile.
+- With encryption on, the shared file is only ever stored encrypted; the vault simply lives in the shared folder.
+- Settings has Choose Folder, Save Now, Close File So Someone Else Can Use It, and Stop Sharing. Start-up asks first when someone else has the file.
+- Bookmarks are per Mac login, so each person opens the shared file once.
+
+**Still to build:** Open Recent, Move This File, Create a New File, timing a save on a large data file, cleaning up unused receipt files, Help and release notes.
+
+**Test with two real Mac logins** (permissions, fast user switching): only the owner can do this. Also test crashes (kill the app mid-edit, stale locks) and large data. This work changes how the app saves, so back up first.
+
+## Step 6: release
+
+- Help pages and screenshots for every feature, including shared data file, encryption and widgets.
+- Release notes. They tell users about the Backups folder (the safety copy can be deleted later) and to make a `.pig` backup before updating.
+- App Store text, website and listing update.
+- Version 1.1, build number up by one for every upload.
+- Remove the unused iCloud and push entitlements file. Keep the App Group entitlement for widgets.
+- Export compliance: encrypting the user's own data changes the answers (`ITSAppUsesNonExemptEncryption` is `false` today). Re-answer in App Store Connect and check whether a yearly report is needed.
+- New App Review notes: still no network, the data file stays on the Mac, widgets read local data only and show no financial data.
+- TestFlight, then submission.
+
+## Encryption: honest limits (for Help)
+
+- While the file is open, the working copy sits unencrypted in the app's private storage. It is deleted on close and covered by FileVault if the Mac has it. Encryption protects the file at rest and in sharing, not a Mac that is unlocked and in use.
+- There is no passphrase recovery without the recovery key. A forgotten passphrase with no recovery key means the file cannot be opened.
+
+## Risks
+
+- **Shared data file:** a damaged file (two logins and SQLite side files), lost edits if someone takes over a lock, stale locks after crashes. Check out and check in, copy first and verify, back up first, and crash tests reduce these.
+- **Late discovery:** it comes after the other features, so a problem found by the two-login test lands close to release.
+- **Migration:** an existing database that can't open is the worst outcome. Done and tested, with the safety copy as a backstop.
+- **Scope:** drop check printing and attachments first.
+- **Review:** the new version goes through App Review again. Keep release notes clear and the app free of crashes.
+
+## Loose ends
+
+- `docs/sample-bank-statement.csv`: keep or remove.
+- The stray nested git repo inside `Piggybank/Piggybank/Piggybank`: never run git there.
+- Menu bar app name: macOS builds it from the product name, and the owner said to leave it.
+
+## Checks only the owner can do
+
+Encrypted backup through the save panel, Import CSV on a real bank file, Print PDF in Preview, widgets and the menu bar pop-up, the locked sidebar in daily use, a release build with the widget, the Investments page on a real investment account, and the two-login shared file test.
