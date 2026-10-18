@@ -5,26 +5,25 @@ import Charts
 /// Every credit card, mortgage and loan in one place: what is owed, how much is paid off, and how
 /// leveraged you are.
 struct LiabilitiesView: View {
-    @Environment(\.modelContext) private var modelContext
     @Query private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
-    @State private var period: ReportPeriod = .quarterly
-    @State private var anchor = Date.now
-
-    private var earliest: Date? { modelContext.earliestTransactionDate() }
+    /// Debt as it stood the given number of months ago, up to now.
+    private func window(_ months: Int) -> Liabilities.Report {
+        let start = Calendar.current.date(byAdding: .month, value: -months, to: .now) ?? .now
+        return Liabilities.build(accounts, range: ReportRange(start: start, end: Date.now.addingTimeInterval(1)))
+    }
 
     var body: some View {
-        let range = Reports.range(period, anchor: anchor)
-        let report = Liabilities.build(accounts, range: range)
+        let report = window(3)
+        let windows = [(3, report), (6, window(6)), (12, window(12))]
 
         ScrollView {
             VStack(spacing: 14) {
                 PageTitle("Liabilities")
-                PeriodControls(periods: ReportPeriod.longTerm, period: $period, anchor: $anchor, earliest: earliest)
                 if report.lines.isEmpty {
                     PlaceholderTiles(titles: ["Owed", "Outstanding", "Paid Off", "Monthly Payments"])
-                    ReportCard(title: "This Period") {
+                    ReportCard(title: "Paid Down") {
                         NoDataNote(message: "No data yet. Add a credit card, mortgage or loan in Settings ▸ Accounts and it shows up here.")
                     }
                     ReportCard(title: "Leverage") {
@@ -38,7 +37,7 @@ struct LiabilitiesView: View {
                     }
                 } else {
                     tiles(report)
-                    ReportCard(title: "This Period") { thisPeriod(report) }
+                    ReportCard(title: "Paid Down") { paidDown(windows) }
                     ReportCard(title: "Leverage") { leverage(report) }
                     if report.totalOwed > 0 {
                         ReportCard(title: "Where the Debt Is") { breakdown(report) }
@@ -55,7 +54,6 @@ struct LiabilitiesView: View {
     // MARK: Deep dive
 
     /// How the debt pays off: the line of what's owed, the payoff schedule, interest and what extra payments would do.
-    /// These ignore the period picked at the top.
     private var deepDive: some View {
         VStack(spacing: 14) {
             HStack {
@@ -112,15 +110,15 @@ struct LiabilitiesView: View {
         }
     }
 
-    // MARK: This period
+    // MARK: Paid down
 
-    private func thisPeriod(_ report: Liabilities.Report) -> some View {
-        let start = report.startOwed ?? 0
-        let net = report.totalOwed - start
-        return VStack(alignment: .leading, spacing: 12) {
-            if report.trend.count > 1 {
-                Chart(report.trend) { point in
-                            LineMark(x: .value("Month", point.date), y: .value("Owed", point.owed))
+    /// How the debt moved over the last three months, six months and year, side by side.
+    private func paidDown(_ windows: [(Int, Liabilities.Report)]) -> some View {
+        let year = windows.last?.1
+        return VStack(alignment: .leading, spacing: 14) {
+            if let trend = year?.trend, trend.count > 1 {
+                Chart(trend) { point in
+                    LineMark(x: .value("Month", point.date), y: .value("Owed", point.owed))
                         .foregroundStyle(Theme.red)
                         .interpolationMethod(.monotone)
                     PointMark(x: .value("Month", point.date), y: .value("Owed", point.owed))
@@ -128,18 +126,28 @@ struct LiabilitiesView: View {
                 }
                 .chartYScale(domain: .automatic(includesZero: false))
                 .chartXScale(range: .plotDimension(padding: 24))
-                .chartXAxis { AxisMarks(values: report.trend.map(\.date)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
+                .chartXAxis { AxisMarks(values: trend.map(\.date)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .frame(height: 160)
             }
-            row("Owed at start", start)
-            row("Paid down", report.paidDown)
-            if report.borrowed > 0 { row("Borrowed", report.borrowed) }
-            row("Owed now", report.totalOwed, bold: true)
-            Text(net == 0 ? "No change this period." : net < 0
-                 ? "Down \((-net).formatted(.appCurrency)) this period."
-                 : "Up \(net.formatted(.appCurrency)) this period.")
-                .font(.footnote)
-                .foregroundStyle(net <= 0 ? Theme.green : Theme.red)
+            HStack(alignment: .top, spacing: 14) {
+                ForEach(windows, id: \.0) { months, report in
+                    let start = report.startOwed ?? 0
+                    let net = report.totalOwed - start
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(months == 12 ? "LAST YEAR" : "LAST \(months) MONTHS").font(.caption2).foregroundStyle(.secondary)
+                        row("Owed then", start)
+                        row("Paid down", report.paidDown)
+                        if report.borrowed > 0 { row("Borrowed", report.borrowed) }
+                        row("Owed now", report.totalOwed, bold: true)
+                        Text(net == 0 ? "No change." : net < 0 ? "Down \((-net).formatted(.appCurrency))" : "Up \(net.formatted(.appCurrency))")
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(net <= 0 ? Theme.green : Theme.red)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                }
+            }
         }
     }
 
@@ -245,7 +253,7 @@ struct LiabilitiesView: View {
             }
 
             if let paid = line.paidDown, paid != 0 {
-                Text(paid > 0 ? "Paid down \(paid.formatted(.appCurrency)) this period" : "Up \(abs(paid).formatted(.appCurrency)) this period")
+                Text(paid > 0 ? "Paid down \(paid.formatted(.appCurrency)) in the last 3 months" : "Up \(abs(paid).formatted(.appCurrency)) in the last 3 months")
                     .font(.caption)
                     .foregroundStyle(paid > 0 ? Theme.green : Theme.red)
             }
