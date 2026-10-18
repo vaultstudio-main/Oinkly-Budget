@@ -68,7 +68,7 @@ The prototype writes the lock and then looks again after 0.15 seconds. Better: c
 
 ### 6.3 Sleep, fast user switching and idle logins
 
-- A login that is switched away can still be running with the app open and holding the lock. Its heartbeat keeps going, so it looks alive. The other login does not stop and ask: the app asks that session to save and close, and carries on (D16).
+- A login that is switched away can still be running with the app open and holding the lock. Its heartbeat keeps going, so it looks alive. The other login sees a waiting message and the app opens by itself when the file is free (D17).
 - A laptop that sleeps stops the heartbeat. After 3 minutes another login may take over. When the first one wakes, it must **notice at once** (check the lock on wake), stop saving, keep its working copy, and keep its unsaved work as a recovered copy. The prototype only notices at the next heartbeat.
 
 ### 6.4 Receipts and photos
@@ -114,7 +114,7 @@ One system, not two. Four data locations, one pipeline:
 - **Not sharing:** a short explanation and **Share This Data…**, which shows the warning in 12b and then copies this Mac's data into `/Users/Shared/OinklyBudget` (never moves or changes the original).
 - **Sharing:** the folder path with Show in Finder, who has the file and since when, last saved time, and the buttons **Save Now**, **Close File So Someone Else Can Use It**, **Open Recent** (a pop-up of folders used before), **Move This File…**, **Create a New Data File…**, **Check Sharing** (a diagnostic, see 11), and **Stop Sharing**.
 
-**At launch**, if someone else has the file, there is no decision screen: a short "Asking Sam's session to save and close…" progress appears, and the app opens as soon as the file is free (D16). If the folder is missing: **Locate…**, **Choose Another…**, **Use This Mac's Own Data**. It never starts an empty database silently.
+**At launch**, if someone else has the file, a waiting screen says so and the app opens by itself as soon as the file is free; only a lock that has gone quiet offers **Open Anyway** (D17). If the folder is missing: **Locate…**, **Choose Another…**, **Use This Mac's Own Data**. It never starts an empty database silently.
 
 **While running**: a small status in the bottom bar ("Shared · saved 3:12 PM") and a banner if the lock is taken or a save fails ("Your changes are safe on this Mac and will be tried again").
 
@@ -149,8 +149,8 @@ One system, not two. Four data locations, one pipeline:
 | D1 | Can sharing be used **without** encryption? | A) Yes, each is optional. B) Sharing requires encryption. | **A.** Encryption stays opt-in, as promised. Sharing plain data in a folder everyone on the Mac can read is the owner's choice and Help says so. |
 | D2 | **Stop Sharing**: what does this Mac's data become? | A) The latest shared data is copied to this Mac (after a safety copy of what was there). B) Go back to this Mac's old data, which may be out of date (the prototype). C) Ask each time. | **A.** B can silently bring back stale data, which is exactly the loss this feature must not cause. |
 | D3 | Starting data when sharing is first turned on | A) Copy this Mac's data into the folder (never move). B) Also offer to join a folder that already has data (replaces this login's data after a safety copy). | **Both**, with a clear choice and a safety copy. |
-| D4 | ~~Take over a lock that still looks alive~~ | Replaced by D16. | Answered "yes" on 2026-10-18; D16 goes further and removes the warning. |
-| D5 | ~~Open read-only while someone else has it~~ | Dropped by D16. | The app no longer asks; it hands the file over. |
+| D4 | ~~Take over a lock that still looks alive~~ | Replaced by D17. | Answered "yes" first; D17 is simpler: only a lock that has gone quiet for 3 minutes can be taken. |
+| D5 | ~~Open read-only while someone else has it~~ | Dropped by D17. | The app waits instead. |
 | D6 | How often to save back | A) Every 2 minutes if changed (prototype). B) Every 5 minutes. C) After every change. | **A**, then measure on a large file and move to B if saves are slow. C is too heavy. |
 | D7 | Heartbeat and stale limit | A) 60 seconds and 3 minutes (prototype). B) 30 seconds and 2 minutes. C) Longer. | **A.** Sleep makes shorter limits trigger false takeovers. |
 | D8 | History of finished saves kept in the folder | A) One previous save (prototype). B) The last 5 saves plus one per day for 7 days. C) None. | **B.** Costs disk space (about 6 to 12 copies) but makes any bad save recoverable. Receipts are shared, not copied, between these. |
@@ -158,8 +158,9 @@ One system, not two. Four data locations, one pipeline:
 | D10 | Folder locations | A) Only this Mac's own disk; block network volumes and warn on cloud-synced folders. B) Allow anything. C) Block cloud folders too. | **A.** The finished file is written whole, so a sync service is less harmful than for a live database, but a synced folder can make "conflicted copies" and the lock would be wrong across Macs. |
 | D11 | Open Recent, Move This File, Create a New File | A) All three in 1.1. B) Open Recent only. | **A.** They were on the prototype's list. Move and Create are small once the pipeline is one system. |
 | D12 | Receipt clean-up | A) Remove unused ones at a clean close after 30 days. B) Never remove. | **A.** Otherwise the shared folder grows forever. |
-| D13 | ~~Ask the other login to let go~~ | Replaced by D16. | A switched-away login's app still runs and can answer a request with no person involved, so an automatic request works after all. |
-| D16 | **Automatic handoff**: a second login opening the app makes the other one save and close, with no prompts | A) Automatic: request, wait up to 20 seconds, then take over. B) Ask first (the earlier design). | **A** (chosen by the owner, 2026-10-18; see 12c). |
+| D13 | ~~Ask the other login to let go~~ | Replaced by D17. | Left out of 1.1; it can be added later as a Close It button. |
+| D16 | ~~Automatic handoff~~ | Replaced by D17 on the same day. | The owner preferred something simpler and safer. |
+| D17 | **When another login has the file open** | A) Stop with a waiting message that re-checks by itself; Open Anyway only when the other copy has gone quiet for 3 minutes. B) Close the other copy automatically. C) The message plus a Close It button. | **A** (chosen by the owner, 2026-10-18; see 12c). |
 | D15 | How the shared folder is chosen | A) A fixed folder, `/Users/Shared/OinklyBudget`, made by the app with a narrow sandbox exception, no panel. B) The same folder proposed, with the system panel pointing at it for one click. C) The person chooses any folder. | **A** (chosen by the owner, 2026-10-18; see 12b). B is the fallback if App Review refuses the exception. C is dropped: a person could pick a protected, network or cloud folder. |
 | D14 | What if the two-login test fails or finds permission problems | A) Fix and retry. B) Ship 1.1 without sharing and leave it for 1.2. | **Plan for B as the fallback.** Sharing is the last step, so dropping it does not disturb the rest. Decide at the gate after Phase 1. |
 
@@ -169,29 +170,30 @@ Answered by the owner:
 
 - **D1: Yes.** Sharing works with or without encryption. Help states the difference plainly.
 - **D2: The latest shared data.** Stop Sharing copies the latest shared data to this Mac, after a safety copy of what it had.
-- **D4: Yes, with a strong warning.** A login can take over a lock that still looks alive. The other app goes read-only and keeps its unsaved work as a recovered copy.
+- **D17 (replaces D4, D5, D13 and D16): stop with a waiting message.** If another login has the data open, the app waits and opens by itself when it is free. Only a lock that has gone quiet for 3 minutes offers Open Anyway. See 12c.
 - **D8: Last 5 saves plus one per day for a week**, with Restore a Previous Save.
 
-Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D5 (read-only open), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.1), D12 (remove unused receipts at a clean close after 30 days), D13 (no Ask to Close), D14 (fall back to shipping 1.1 without sharing if the permissions test fails).
+Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.1), D12 (remove unused receipts at a clean close after 30 days), D14 (fall back to shipping 1.1 without sharing if the permissions test fails).
 
-### 12c. Automatic handoff (decision D16, 2026-10-18)
+### 12c. When the other login has the file open (decision D17, 2026-10-18)
 
-The owner does not want lock warnings or choices. When a second login opens the app while another login has the file, the app **makes the other one save and close, and opens**. No decision screen, no read-only mode, no warning.
+The owner does not want the app to close anyone else's copy. The rule is simple: **if the other login has the data open, the app waits and says so.** Nothing is closed, nothing is taken, no data can be lost this way.
 
-**How it works.**
-1. Login B starts and finds a lock held by login A. B writes `request.json` in the shared folder (who is asking, when) and shows a short progress: "Asking A's session to save and close…".
-2. A's app checks for a request every 2 seconds while it holds the file (a cheap file check, it works from a switched-away session because the app keeps running). When it sees one, it shows a 3-second notice ("B is opening OinklyBudget. Saving and closing…"), saves the working copy to the shared file (the normal check-in, with all its checks), removes the lock and quits.
-3. B sees the lock released, takes it with the exclusive create, checks the file out and opens.
-4. **If A doesn't answer within 20 seconds** (hung, asleep, or its save failed), B takes the lock anyway. A's data up to its last automatic save (at most 2 minutes old) is in the shared file, and anything newer stays in A's working copy, which A keeps as a recovered copy the next time it starts. No data is deleted.
-5. **If the lock is already stale or the holder crashed**, step 1 is skipped: B takes over at once.
+**What the person sees.** A waiting screen in place of the boot screen's usual progress, with no buttons to decide anything:
 
-**What this costs, honestly.** A's window closes by itself a few seconds after B starts the app. A's data is saved first, but a form left half-filled in A (a New Transaction window not yet saved) is lost. The 3-second notice is the only warning. Anyone on this Mac can do this to anyone else, which is acceptable for a shared household Mac and is stated in Help.
+> **OinklyBudget is already open in Sam's session.**
+> Your data is open in another user account on this Mac. Quit OinklyBudget there (switch to that account and press ⌘Q) and this will open by itself.
+> *Waiting…*  [Quit]
 
-**Other changes this causes.**
-- No read-only mode (D5 dropped) and no "someone else has it" screen.
-- The handoff is also what makes the 3-minute stale limit matter less: a live holder answers in about 2 seconds, so waiting for staleness only applies to crashed or sleeping holders.
-- The Phase 0 process check (can one login tell if another's app has gone?) is no longer needed to decide the design. It would only make taking over a crashed login's lock instant instead of after 20 seconds.
-- The request file is a new file in the shared folder. It's written by the requester and removed by the holder (or by the requester after taking over).
+- It looks at the lock every 2 seconds and opens by itself the moment the other copy lets go.
+- **If the other copy has crashed or gone quiet** (its heartbeat is older than 3 minutes), the screen changes: "Sam's copy of OinklyBudget seems to have stopped. [Open Anyway]". Open Anyway takes the lock. What the other copy had saved is in the shared file (at most 2 minutes old); anything newer stays in its working copy and is kept as a recovered copy if it ever starts again. This is the only way past the screen, so a crash can never lock people out.
+- **Quit** just quits; nothing changes.
+
+**Why this and not an automatic close.** No code to ask another login's app to quit, no race between two copies, and no half-filled form lost. The cost: if the other login is switched away with the app still open, the second person has to switch to that account and quit it first. That is a few clicks, and Help explains it.
+
+**What this removes from the plan.** No request file, no 2-second polling of requests, no countdown notice, no forced quit, no read-only mode, no take-over warning screen. What stays: the lock, the heartbeat (needed to tell a crash from a copy that is open), crash recovery and the recovered copy.
+
+**Later, if wanted.** A "Close It" button (an automatic request to the other copy to save and quit) can be added without changing anything else.
 
 ### 12b. The fixed shared folder (decision D15, 2026-10-18)
 
@@ -233,11 +235,12 @@ About 4 weeks in all, in line with the plan's estimate. The gate after Phase 1 i
 Setup: a second macOS user on the same Mac (System Settings ▸ Users & Groups), and fast user switching on (Control Center ▸ Fast User Switching).
 
 1. Login A: share the data into a new folder (for example one inside `/Users/Shared`). Add a few transactions with receipts.
-2. Switch to login B (do not log A out). Open the app. Expected: a short "asking to save and close" progress; A's app saves and closes by itself within a few seconds; B opens with A's data.
+2. Switch to login B (do not log A out). Open the app. Expected: a waiting screen naming A. Nothing opens and A is unaffected.
+2b. In A, quit the app (⌘Q). Expected: B's waiting screen opens by itself within a few seconds, with A's data.
 3. Back in A: Close File So Someone Else Can Use It. In B: open it, add a transaction, close. In A: open again and see B's transaction and receipt.
 4. Crash test: in A, force quit the app while editing; reopen; the unsaved work is kept.
-5. Crashed holder: in A, force quit; in B, open: B takes over at once (or after the 20 second wait) with no prompt.
-6. Unresponsive holder: stop A's app (for example with the Activity Monitor pause) and open B: after 20 seconds B takes over; A, when resumed, keeps its work as a recovered copy.
+5. Crashed holder: in A, force quit; in B, open: the waiting screen shows, and after 3 minutes it offers Open Anyway, which works.
+6. Unresponsive holder: pause A's app (Activity Monitor) and open B: after 3 minutes B offers Open Anyway; A, when resumed, keeps its work as a recovered copy.
 7. Sleep: close the lid with A holding the lock for 5 minutes; open B; take over; wake A.
 8. Encrypted (after Phase 2): repeat 1 to 5 with encryption on; confirm the shared folder holds no readable data (`OinklyBudget.vault` only).
 9. Large file: a data set of about 20,000 transactions; time the saves.

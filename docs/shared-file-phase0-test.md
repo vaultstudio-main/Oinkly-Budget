@@ -4,7 +4,7 @@ Drafted 2026-10-18. This answers the biggest unknown in `shared-data-file-design
 
 ## Round 2 is no longer needed (2026-10-18)
 
-The owner chose an automatic handoff (design decision D16): a second login makes the first one save and close, with no prompts. That works without knowing whether one login can see another login's process, so round 2 below is optional. It would only let the app take over a crashed login's lock instantly instead of after a 20 second wait. Skip it unless you want the extra detail.
+The owner chose a simple rule (design decision D17): if another login has the data open, the app waits and says so. That works without knowing whether one login can see another login's process, so round 2 below is optional. It would only let a crashed login's lock be recognised sooner than the 3 minute timeout. Skip it unless you want the extra detail.
 
 ## What was set up (round 2, 2026-10-18)
 
