@@ -39,10 +39,15 @@ Each feature ends with: backup and restore, Clean Up, CSV and PDF export, test d
 - `TestData` (add a few splits).
 - Edit Transaction and New Transaction windows, and the Transaction detail window.
 
-**Decisions to confirm before building**
-1. CSV export of a split: one row per part with the same date and payee, or one row with the total and a "Split" memo. Recommendation: one row per part, so spreadsheets add up by category.
-2. Budgets: count each part under its own category (recommended).
-3. Does the split editor allow a part with no category? Recommendation: no, every part needs one.
+**Decisions (made 2026-10-18)**
+1. CSV export of a split: **one row per part**, same date and payee, so spreadsheets add up by category. Importing that file back gives separate transactions.
+2. Budgets and spending reports: **each part counts under its own category.**
+3. **Every part needs a category.** Save is blocked until each part has one.
+
+**Day-one findings (2026-10-18)**
+- No field is missing from V2 for splits. `TransactionSplit` has transaction, category, amount, memo and order. Whether a transaction is split is `splits.count > 0`, so no new flag is needed.
+- Files that read a transaction's category and need a split decision (count of references in brackets): `CleanUp` (9), `RegisterView` (6), `TopSpendingView` (5), `StatementExport` (5), `DocumentBuilders` (4), `Category` (4), `TransactionsView` (3), `OverviewReports` (3), `BillsView` (3), `SpendingReport` (3), `ReportInputs` (3), `DataBackup` (3), `SpendingReports` (2), `RecentTransactionsPanel` (2), `NewTransactionWindow` (2), `BudgetEditView` (2), `Transaction` (2), `InvestmentType` (2), `Budget` (2), and one each in `TransactionDetailWindow`, `IncomeReports`, `BudgetReports`, `BillReports`, `TransactionCSV`, `Reports`, `Investments`, `Bills`.
+- `LedgerIndex` does not read categories, so balances and net worth are unaffected by splits.
 
 **Tests**
 - A split of 2, 3 and 10 parts; parts that don't add up; negative and positive; editing the amount; deleting a category.
