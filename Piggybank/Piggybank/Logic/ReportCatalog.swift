@@ -58,9 +58,10 @@ enum ReportSection: String, CaseIterable, Identifiable {
     }
 
     /// Sections whose reports cover a chosen period. The rest follow the last twelve months and look six months ahead.
+    /// Cash Flow, Net Worth, Debt, Goals and the projections don't use one.
     var usesPeriod: Bool {
         switch self {
-        case .overview, .spending, .income, .cashFlow, .budgets, .bills: true
+        case .overview, .spending, .income, .budgets, .bills: true
         default: false
         }
     }
@@ -116,8 +117,8 @@ enum ReportSection: String, CaseIterable, Identifiable {
         case .cashFlow:
             [
                 ReportItem(title: "Monthly Cash Flow", summary: "Money in, money out and the net, month by month.", symbol: "arrow.left.arrow.right", shape: .bars, isWide: true),
+                ReportItem(title: "Cash Flow Forecast", summary: "Expected balance each week for six months, using bills and your usual income and spending.", symbol: "forward", shape: .line, isWide: true),
                 ReportItem(title: "Account Balances Over Time", summary: "Every checking and savings balance on one chart.", symbol: "chart.xyaxis.line", shape: .line),
-                ReportItem(title: "Cash Flow Forecast", summary: "Expected balance each week for six months, using bills and your usual income and spending.", symbol: "forward", shape: .line),
                 ReportItem(title: "Lowest Balance Ahead", summary: "The tightest week coming up and by how much.", symbol: "exclamationmark.triangle", shape: .tiles),
                 ReportItem(title: "Transfers Between Accounts", summary: "Money moved between your own accounts.", symbol: "arrow.triangle.swap", shape: .table, projects: false),
             ]
@@ -133,7 +134,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
             [
                 ReportItem(title: "Debt-to-Income Ratio", summary: "", symbol: "percent", shape: .line, trend: .debtToIncome),
                 ReportItem(title: "Total Debt Over Time", summary: "", symbol: "creditcard", shape: .line, trend: .debt),
-                ReportItem(title: "Loan Payoff Schedule", summary: "Each loan's balance, estimated payoff date and maturity date.", symbol: "calendar.badge.clock", shape: .table),
+                ReportItem(title: "Loan Payoff Schedule", summary: "Each loan's balance, estimated payoff date and maturity date.", symbol: "calendar.badge.clock", shape: .table, isWide: true),
                 ReportItem(title: "Ahead or Behind", summary: "Estimated payoff against maturity date for every loan, in months.", symbol: "flag.checkered", shape: .bars),
                 ReportItem(title: "Interest Paid", summary: "Interest paid so far and still to come at the current payment.", symbol: "percent", shape: .bars),
                 ReportItem(title: "Credit Card Use", summary: "Balance against limit for every card, and the projected balance.", symbol: "creditcard", shape: .ring),

@@ -129,6 +129,8 @@ private struct ReportsContent: View {
     private func card(_ item: ReportItem) -> some View {
         if let kind = item.trend {
             TrendChartCard(kind: kind, height: item.isWide ? 220 : 190)
+        } else if let built = ReportCards.view(section: section, title: item.title) {
+            built
         } else {
             ReportPlaceholderCard(report: item)
         }
