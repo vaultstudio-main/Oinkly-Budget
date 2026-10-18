@@ -62,7 +62,8 @@ struct AccountEditView: View {
         _startDate = State(initialValue: account?.loanStartDate ?? .now)
         _payoffDate = State(initialValue: account?.payoffDate ?? Calendar.current.date(byAdding: .year, value: 3, to: .now) ?? .now)
         _photoData = State(initialValue: account?.photoData)
-        _openingBalance = State(initialValue: account?.openingBalance ?? 0)
+        // An account whose money began as a deposit shows that amount here.
+        _openingBalance = State(initialValue: account.flatMap { OpeningDeposit.existing(in: $0)?.amount } ?? account?.openingBalance ?? 0)
         _notes = State(initialValue: account?.notes ?? "")
         _isPrimary = State(initialValue: account.map { PrimaryChecking.isPrimary($0, stored: PrimaryChecking.current) } ?? false)
     }
@@ -317,7 +318,14 @@ struct AccountEditView: View {
             target.interestRate = leased ? 0 : max((interestRate ?? 0).doubleValue, 0)
         } else {
             // A card's balance is money owed, so it is stored negative like a loan's.
-            target.openingBalance = type.group == .creditCards ? -abs(cardBalance) : openingBalance
+            if type.group == .creditCards {
+                target.openingBalance = -abs(cardBalance)
+            } else if !OpeningDeposit.applies(to: type) {
+                target.openingBalance = openingBalance
+            } else if account != nil, OpeningDeposit.existing(in: target) == nil, target.openingBalance != 0 {
+                // An account from before deposits: its starting balance stays a number until you change it.
+                target.openingBalance = openingBalance
+            }
             target.originalLoanAmount = 0
             target.monthlyPayment = type.group == .creditCards ? abs(monthlyPayment) : 0
             target.payoffDate = nil
@@ -328,6 +336,15 @@ struct AccountEditView: View {
         target.isLease = type == .autoLoan && isLease
         target.notes = notes
         if account == nil { modelContext.insert(target) }
+        // Money you own starts as a real deposit: payee Deposit, category Deposit, method Bank Deposit.
+        if type.group != .loans && type.group != .creditCards && OpeningDeposit.applies(to: type) {
+            let hasLegacy = account != nil && OpeningDeposit.existing(in: target) == nil && target.openingBalance != 0
+            if !hasLegacy {
+                // A starting balance below zero can't be a deposit, so it stays a number.
+                if openingBalance < 0 { target.openingBalance = openingBalance; OpeningDeposit.set(0, for: target, in: modelContext) }
+                else { target.openingBalance = 0; OpeningDeposit.set(openingBalance, for: target, in: modelContext) }
+            }
+        }
         LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
         modelContext.saveNow()
         if type == .checking && isPrimary {
