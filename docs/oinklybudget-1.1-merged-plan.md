@@ -19,9 +19,9 @@ Everything in `oinklybudget-1.1-update-plus-features.md` still applies. This fil
 
 1. **The database change (V2).** First, because everything else builds on it and an existing database has to open after the update. About 1 week.
 2. **Splits, recurring transactions and tags.** On top of V2. About 2 to 3 weeks together.
-3. **The shared data file.** Rebuilt on the V2 schema and the encryption vault. About 2 to 3 weeks, and it needs a test with two real Mac logins.
+3. **Shortcuts and accessibility pass.** About 3 days.
 4. **Exports and extras:** PDF buttons, attachments, check printing, default settings. About 1 week.
-5. **Shortcuts and accessibility pass.** About 3 days.
+5. **The shared data file.** Rebuilt on the V2 schema and the encryption vault. About 2 to 3 weeks, and it needs a test with two real Mac logins. Moved down on 2026-10-18 at the owner's request, so it comes after the other features and just before release work.
 6. **Help, screenshots, release notes, TestFlight and submission.** Last, so they describe the finished app. About 1 to 2 weeks.
 
 About 8 to 11 weeks in all.
