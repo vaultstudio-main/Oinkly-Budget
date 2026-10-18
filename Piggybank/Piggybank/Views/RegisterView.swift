@@ -101,7 +101,6 @@ private struct RegisterContent: View {
         return VStack(spacing: 12) {
             header
             AccountDetailsPanel(account: account, month: month) { isEditingDetails = true }
-            if account.isLoan || account.isCreditCard { LinkedGoalStrip(account: account) }
             if account.isCashOnHand {
                 Button { openWindow(id: "cash-transaction") } label: {
                     Label("New Cash Transaction", systemImage: "plus.circle.fill")

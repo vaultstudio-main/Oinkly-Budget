@@ -762,34 +762,6 @@ struct GoalEditView: View {
     }
 }
 
-// MARK: On an account
-
-/// A slim line under an account's details showing the goal that follows it, if there is one.
-struct LinkedGoalStrip: View {
-    let account: Account
-    @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
-
-    var body: some View {
-        if account.isLive, let goal = allGoals.live.first(where: { $0.followedAccount?.persistentModelID == account.persistentModelID }) {
-            let progress = goal.progress()
-            HStack(spacing: 12) {
-                CategoryBadge(symbol: goal.symbol, color: Color(hex: goal.colorHex), size: 28)
-                Text(goal.name).font(.subheadline.weight(.semibold))
-                ProgressView(value: progress.fraction)
-                    .tint(progress.isAchieved ? Theme.green : Color(hex: goal.colorHex))
-                    .frame(maxWidth: 260)
-                Text("\(goal.saved.formatted(.appCurrency)) \(goal.isPayoff ? "paid of" : "of") \(goal.targetAmount.formatted(.appCurrency))")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
-        }
-    }
-}
-
 // MARK: Loans on the Planning page
 
 /// A loan with a maturity date, shown beside the goals: how far along it is and whether it will be paid off before it matures.
