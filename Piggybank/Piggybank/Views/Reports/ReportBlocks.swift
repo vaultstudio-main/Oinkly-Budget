@@ -8,13 +8,25 @@ struct ReportPanel<Content: View>: View {
     let summary: String
     var headline: String?
     var headlineNote: String?
+    /// True when the numbers are made up to show what the report will look like.
+    var sample = false
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.headline)
+                    HStack(spacing: 8) {
+                        Text(title).font(.headline)
+                        if sample {
+                            Text("Sample")
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.2), in: Capsule())
+                                .foregroundStyle(.orange)
+                        }
+                    }
                     Text(summary).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
@@ -66,13 +78,23 @@ struct ReportKey: View {
 struct ReportEmpty: View {
     let message: String
     var height: CGFloat = 150
+    /// The faint outline drawn behind the message, so an empty report still shows its shape.
+    var shape: ReportShape = .line
 
     var body: some View {
-        Text(message)
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, minHeight: height, alignment: .center)
+        ZStack {
+            GhostView(shape: shape, projects: false)
+                .opacity(0.8)
+            Text(message)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal, 20)
+        }
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height)
     }
 }
 

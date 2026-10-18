@@ -63,6 +63,17 @@ enum ReportCards {
         case "Investments/Allocation": AnyView(InvestmentAllocationReport())
         case "Investments/Gains and Losses": AnyView(InvestmentGainsReport())
         case "Investments/Contributions": AnyView(InvestmentContributionsReport())
+        case "Investments/Where It Is": AnyView(InvestmentBucketsReport())
+        case "Investments/Growth by Account": AnyView(InvestmentGrowthReport())
+
+        case "Overview/Year-End Summary": AnyView(YearEndSummaryReport())
+        case "Overview/Report Card": AnyView(ReportCardReport())
+        case "Overview/What Changed": AnyView(WhatChangedReport())
+
+        case "Books & Records/Reconciliation Status": AnyView(ReconciliationStatusReport())
+        case "Books & Records/Unreconciled by Account": AnyView(UnreconciledByAccountReport())
+        case "Books & Records/Missing Receipts": AnyView(MissingReceiptsReport())
+        case "Books & Records/Duplicate Payees": AnyView(DuplicatePayeesReport())
 
         default: nil
         }

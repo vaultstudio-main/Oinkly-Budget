@@ -56,7 +56,7 @@ struct ReportPlaceholderCard: View {
 }
 
 /// The grey outline of a chart, table, ring or row of tiles. With a projection, the right third is a dashed zone.
-private struct GhostView: View {
+struct GhostView: View {
     let shape: ReportShape
     let projects: Bool
 
