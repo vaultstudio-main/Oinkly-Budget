@@ -28,6 +28,8 @@ About 8 to 11 weeks in all. The shared data file was moved down to step 5 at the
 - **Everyday:** Clean Up (find and replace), payee autofill, locked opening deposits, separate wire and digital routing numbers, status colours, locked sidebar, bottom status bar, full test data set (debug only).
 - **Windows:** bigger Help and Release Notes windows.
 
+Data safety comes first: see `data-integrity-plan.md`. Nothing is submitted until every test in it passes on the release candidate. The Help, screenshot and release notes plans are `help-file-plan.md`, `screenshot-plan.md` and `release-notes-1.1-draft.md`.
+
 ## Step 2: splits, recurring transactions, tags
 
 The V2 models exist (`TransactionSplit`, `Tag`, `RecurringTransaction`); the screens and logic do not.
