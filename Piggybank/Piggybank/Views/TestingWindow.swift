@@ -50,6 +50,8 @@ struct TestingWindow: View {
                 row("Wipe Everything", "Deletes the whole database, however big, and quits. Open the app again and it starts empty.", .wipe)
             }
 
+            SharingPermissionTest()
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Default pictures").font(.headline)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 6), spacing: 10) {
@@ -72,7 +74,7 @@ struct TestingWindow: View {
             Spacer(minLength: 0)
         }
         .padding(24)
-        .frame(width: 560, height: 600)
+        .frame(width: 560, height: 900)
         .disabled(working)
         .confirmationDialog(confirming?.title ?? "", isPresented: Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } }),
                             titleVisibility: .visible, presenting: confirming) { action in
@@ -112,6 +114,39 @@ struct TestingWindow: View {
                 message = "That didn't work: \(error.localizedDescription)"
             }
             working = false
+        }
+    }
+}
+
+/// Phase 0 of the shared data file: can two Mac logins use one folder? See `PermissionSpike`.
+private struct SharingPermissionTest: View {
+    @State private var spike = PermissionSpike.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sharing permission test").font(.headline)
+            Text("Run this in each Mac login against the same folder (for example one in /Users/Shared). It never touches your data.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Choose Folder…") { spike.chooseFolder() }
+                Button("Run Test") { spike.run() }.disabled(!spike.hasFolder)
+                Button("Clean Up") { spike.cleanUp() }.disabled(!spike.hasFolder)
+                Button("Copy Results") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(spike.text, forType: .string)
+                }
+                .disabled(spike.lines.isEmpty)
+            }
+            ScrollView {
+                Text(spike.lines.isEmpty ? "No results yet." : spike.text)
+                    .font(.system(size: 10, design: .monospaced))
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+            }
+            .frame(height: 230)
+            .background(Color.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 6))
         }
     }
 }

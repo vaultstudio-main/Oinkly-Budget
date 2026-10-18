@@ -43,6 +43,7 @@ struct PiggybankApp: App {
         LedgerIndex.shared.start(container: container)
         #if DEBUG
         PDFTestHook.runIfRequested(container: container)
+        PermissionSpike.runFromLaunchArgumentsIfRequested()
         #endif
     }
 
