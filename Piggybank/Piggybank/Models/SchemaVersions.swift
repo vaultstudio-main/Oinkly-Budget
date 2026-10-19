@@ -15,7 +15,7 @@ enum PiggybankSchemaV1: VersionedSchema {
     }
 }
 
-/// The shape from 1.1 on. Adds primary checking, wire and digital routing numbers and an opening deposit flag, a tax
+/// The shape from 1.0 on. Adds primary checking, wire and digital routing numbers and an opening deposit flag, a tax
 /// flag on categories, a remembered memo and method on payees, and three new models: splits, tags and recurring
 /// transactions. Every new field has a default, so the move from V1 is automatic.
 enum PiggybankSchemaV2: VersionedSchema {

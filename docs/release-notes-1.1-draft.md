@@ -16,7 +16,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 
 ### Before you update
 - Save a backup first (Settings ▸ Data & Backup ▸ Export Backup).
-- The first time 1.1 opens, it copies your data to Application Support ▸ Backups ▸ "Before 1.1 (date)". You can delete that copy once you are happy with 1.1.
+- The first time 1.1 opens, it copies your data to Application Support ▸ Backups ▸ "Before this update (date)". You can delete that copy once you are happy with 1.1.
 - Your accounts, transactions, bills, budgets, goals and receipts carry over automatically.
 
 ### Accounts

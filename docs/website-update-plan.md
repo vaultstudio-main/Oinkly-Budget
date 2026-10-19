@@ -63,7 +63,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 
 - How do I turn on encryption, and what if I forget the passphrase? (recovery key, no other way)
 - How do I share one data file between two Mac logins? Step by step, with the take-over and "close file" instructions. *(if built)*
-- What is the "Before 1.1" copy in Application Support ▸ Backups, and can I delete it? (yes, once you are happy)
+- What is the "Before this update" copy in Application Support ▸ Backups, and can I delete it? (yes, once you are happy)
 - How do I import a statement and map the columns?
 - How do I export a PDF, and how do I print it? (open it in Preview)
 - How do I set up a goal that follows an account?

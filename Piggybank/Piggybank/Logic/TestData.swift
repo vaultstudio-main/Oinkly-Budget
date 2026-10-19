@@ -454,7 +454,7 @@ enum TestData {
         GoalArchiver.archiveReached(in: context)
         try context.save()
 
-        // Things new in 1.1, so they have something to show: a primary checking account (a setting on this Mac) and a
+        // Things new since the early builds, so they have something to show: a primary checking account (a setting on this Mac) and a
         // few reminders for the Reminders widget.
         let primary = ((try? context.fetch(FetchDescriptor<Account>())) ?? []).live
             .filter { $0.type == .checking }

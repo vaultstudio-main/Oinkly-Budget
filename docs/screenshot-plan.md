@@ -73,7 +73,7 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-F1d | `Help-encryption-on` | Encryption settings when on | Settings |
 | S-F1e | `Help-encryption-off` | Turn off confirmation | Turn Off Encryption |
 | S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
-| S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before 1.1 | Finder (owner takes this) |
+| S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before this update | Finder (owner takes this) |
 | S-F4a | `Help-shared-file` | Shared file settings | Settings ▸ Data & Backup |
 | S-F4b | `Help-shared-busy` | "Someone else has this file" | Second login (owner takes this) |
 | S-F4c | `Help-shared-takeover` | Take over warning | Stale lock |

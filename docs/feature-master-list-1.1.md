@@ -1,5 +1,7 @@
 # 1.1 feature master list (everything different from 1.0)
 
+> **Release naming (2026-10-18).** The original `main` (version 1.0, build 1, the build that was submitted for App Review) is deprecated. It is kept as the tag `app-review-original-1.0` and the branch `legacy-1.0-original`. `main` now holds all the 1.1 work, and the first public release is **version 1.0, build 5**. In these documents, "1.1" means this big release and "1.0" in "different from 1.0" means the earlier, never-released build. The text will be renamed to plain 1.0 during step 6 (Help, release notes, website).
+
 Drafted 2026-10-18 from the git history of `update-1.1` and the current app. This is the single source for four documents: the Help file, the screenshots, the website and the release notes. If a feature is not here, it is not documented anywhere, so add it here first.
 
 - **Status:** Built = in the app now. Planned = in the final plan, not built yet. If a planned feature is dropped, delete its rows here and in the four documents.
@@ -192,7 +194,7 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Shots: S-F2.
 
 ### F3. Safe update (Built)
-- The first time 1.1 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before 1.1 (date)". It stays until you delete it.
+- The first time 1.1 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
 - Your data stays where 1.0 kept it; the new widgets don't move it.
 - Everything migrates automatically; opening a damaged file shows an error screen and never starts a blank database.
 - Shots: S-F3 (Finder showing the Backups folder).
@@ -293,7 +295,7 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-F1d | Encryption settings when on | Settings | Help-encryption-on | – | – |
 | S-F1e | Turn off confirmation | Turn Off Encryption | Help-encryption-off | – | – |
 | S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
-| S-F3 | Finder: Backups ▸ Before 1.1 | Finder (owner takes this) | Help-safety-copy | – | – |
+| S-F3 | Finder: Backups ▸ Before this update | Finder (owner takes this) | Help-safety-copy | – | – |
 | S-F4a | Shared file settings | Settings ▸ Data & Backup | Help-shared-file | features | yes |
 | S-F4b | "Someone else has this file" | Second login (owner takes this) | Help-shared-busy | – | – |
 | S-F4c | Take over warning | Stale lock | Help-shared-takeover | – | – |

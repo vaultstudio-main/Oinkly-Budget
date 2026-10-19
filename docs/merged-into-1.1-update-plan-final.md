@@ -1,5 +1,7 @@
 # OinklyBudget 1.1: merged update plan (final)
 
+> **Release naming (2026-10-18).** The original `main` (version 1.0, build 1, the build that was submitted for App Review) is deprecated. It is kept as the tag `app-review-original-1.0` and the branch `legacy-1.0-original`. `main` now holds all the 1.1 work, and the first public release is **version 1.0, build 5**. In these documents, "1.1" means this big release and "1.0" in "different from 1.0" means the earlier, never-released build. The text will be renamed to plain 1.0 during step 6 (Help, release notes, website).
+
 Final plan, 2026-10-18. It replaces the earlier 1.1 plan, the 1.2 plan and the first merged plan. Those files are removed; they stay in git history if a detail is ever needed. Version 1.0 is in App Review on `main` and does not change. All work is on `update-1.1`.
 
 The direction stays the same: a full desktop program, no bank linking, no accounts, no network. 1.1 carries everything that was once split between 1.1 and 1.2, so Help describes the finished app once, and the database change happens once, early.

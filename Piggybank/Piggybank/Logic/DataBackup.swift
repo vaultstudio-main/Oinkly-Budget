@@ -11,9 +11,9 @@ struct BackupFile: Codable {
     var version = BackupFile.currentVersion
     var exportedAt = Date.now
     var categories: [CategoryRecord] = []
-    /// Tags. Added in 1.1; absent in older files.
+    /// Tags. Added in 1.0; absent in older files.
     var tags: [TagRecord]?
-    /// Repeating transactions. Added in 1.1; absent in older files.
+    /// Repeating transactions. Added in 1.0; absent in older files.
     var recurring: [RuleRecord]?
     var accounts: [AccountRecord] = []
     var payees: [PayeeRecord] = []
@@ -50,7 +50,7 @@ struct BackupFile: Codable {
         var currencyCode: String
         var appearance: String
         var billRemindersOn: Bool
-        /// Added in 1.1; absent in older files.
+        /// Added in 1.0; absent in older files.
         var paperChoice: String?
         var exportStyle: String?
     }
@@ -94,7 +94,7 @@ struct BackupFile: Codable {
         var monthlyLimit: String
         var isIncome: Bool
         var showOnBudgets: Bool
-        /// Added in 1.1; absent in older files.
+        /// Added in 1.0; absent in older files.
         var isTaxRelated: Bool?
     }
 
@@ -121,7 +121,7 @@ struct BackupFile: Codable {
         var creditLimit: String?
         /// The built-in Cash on Hand.
         var isDefault: Bool?
-        /// Added in 1.1; absent in older files.
+        /// Added in 1.0; absent in older files.
         var wireRoutingNumber: String?
         var digitalRoutingNumber: String?
         var isPrimaryChecking: Bool?
@@ -131,7 +131,7 @@ struct BackupFile: Codable {
         var name: String
         var lastCategoryKey: String?
         var lastAmount: String
-        /// Added in 1.1; absent in older files.
+        /// Added in 1.0; absent in older files.
         var lastMemo: String?
         var lastMethodRaw: String?
     }
@@ -158,11 +158,11 @@ struct BackupFile: Codable {
         var isAtmWithdrawal: Bool?
         var paidBillIndex: Int?
         var paidDueDate: Date?
-        /// Added in 1.1; absent in older files.
+        /// Added in 1.0; absent in older files.
         var isOpeningDeposit: Bool?
-        /// The parts of a split transaction. Added in 1.1; absent in older files and for ordinary transactions.
+        /// The parts of a split transaction. Added in 1.0; absent in older files and for ordinary transactions.
         var splits: [SplitRecord]?
-        /// Names of the tags on this transaction. Added in 1.1; absent in older files.
+        /// Names of the tags on this transaction. Added in 1.0; absent in older files.
         var tagNames: [String]?
         /// Position in `recurring` of the rule that made this transaction.
         var recurringIndex: Int?

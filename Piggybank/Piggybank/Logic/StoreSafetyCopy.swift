@@ -1,8 +1,8 @@
 import Foundation
 
-/// A copy of the data file, made once, just before the app first opens it in the 1.1 shape. The move is automatic and
+/// A copy of the data file, made once, just before the app first opens it in the new shape. The move is automatic and
 /// tested, but this means that if anything ever goes wrong your data from before the update is still on the Mac, in
-/// Application Support ▸ Backups. It is kept; delete the folder whenever you're happy with 1.1.
+/// Application Support ▸ Backups. It is kept; delete the folder whenever you are happy with the update.
 enum StoreSafetyCopy {
     private static let doneKey = "safetyCopyBeforeV2Made"
 
@@ -10,7 +10,7 @@ enum StoreSafetyCopy {
     private static func destination(now: Date = .now) -> URL {
         let stamp = now.formatted(.iso8601.year().month().day().dateSeparator(.dash))
         return URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
-            .appendingPathComponent("Before 1.1 (\(stamp))", isDirectory: true)
+            .appendingPathComponent("Before this update (\(stamp))", isDirectory: true)
     }
 
     /// Copies the data file (and an encrypted vault, if there is one) the first time this runs. Quietly does nothing

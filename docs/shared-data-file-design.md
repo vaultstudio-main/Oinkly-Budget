@@ -104,7 +104,7 @@ One system, not two. Four data locations, one pipeline:
 ## 8. The database upgrade (V1 to V2) in shared mode
 
 - Everyone on one Mac runs the **same app**, so version differences only happen during an update. Still: `info.json` records `formatVersion` and `schemaVersion`. An older app opening newer data refuses with a clear message. A newer app opening older shared data upgrades **the working copy** (the V1 to V2 step already exists) and the upgrade reaches the shared file at the next check-in, after the safety copy.
-- The first-time 1.1 safety copy (Application Support ▸ Backups ▸ Before 1.1) still happens for this login's own data. When joining an existing shared file, a copy of it is made first, in the shared folder's `previous saves`.
+- The first-time 1.1 safety copy (Application Support ▸ Backups ▸ Before this update) still happens for this login's own data. When joining an existing shared file, a copy of it is made first, in the shared folder's `previous saves`.
 - Table counts for verification must come from the database's own table list, not a fixed list, so V2's new tables are included automatically.
 
 ## 9. What the person sees
