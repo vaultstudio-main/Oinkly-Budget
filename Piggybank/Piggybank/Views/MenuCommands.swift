@@ -46,13 +46,13 @@ struct FileNewCommands: Commands {
         CommandGroup(replacing: .sidebar) {}
 
         CommandGroup(replacing: .appInfo) {
-            Button("About OinklyBudget") {
+            Button("About Oinkly Budget") {
                 openWindow(id: "about")
             }
         }
 
         CommandGroup(replacing: .help) {
-            Button("OinklyBudget Help") {
+            Button("Oinkly Budget Help") {
                 openWindow(id: "help")
             }
             .keyboardShortcut("/", modifiers: [.command, .shift])

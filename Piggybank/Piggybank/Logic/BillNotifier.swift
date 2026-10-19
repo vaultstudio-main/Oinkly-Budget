@@ -45,7 +45,7 @@ enum BillNotifier {
     static func sendTest() async -> Bool {
         guard await requestAccess() else { return false }
         let content = UNMutableNotificationContent()
-        content.title = "OinklyBudget"
+        content.title = "Oinkly Budget"
         content.body = "Bill reminders will look like this."
         content.sound = .default
         let request = UNNotificationRequest(identifier: "piggybank.test", content: content,

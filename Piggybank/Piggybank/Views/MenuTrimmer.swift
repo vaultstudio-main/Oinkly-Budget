@@ -75,7 +75,7 @@ enum MenuTrimmer {
         for (index, item) in wanted.enumerated() {
             if index > 0 { appMenu.addItem(.separator()) }
             // The system words these with the short product name.
-            if item.title.hasPrefix("Quit") { item.title = "Quit OinklyBudget" }
+            if item.title.hasPrefix("Quit") { item.title = "Quit Oinkly Budget" }
             appMenu.addItem(item)
         }
     }
@@ -152,7 +152,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
             var window: NSWindow?
             for _ in 0..<80 where window == nil {
                 try? await Task.sleep(for: .milliseconds(500))
-                window = NSApp.windows.first { $0.title == "OinklyBudget" && $0.isVisible }
+                window = NSApp.windows.first { $0.title == "Oinkly Budget" && $0.isVisible }
             }
             guard let window, let notice = VaultSession.shared.notice else { return }
             VaultSession.shared.notice = nil
@@ -217,7 +217,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
 enum BackupOpener {
     static func offerRestore(of url: URL) async {
         // A launch by double-click arrives before the app is ready. Wait for the main window.
-        for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "OinklyBudget" && $0.isVisible }) {
+        for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "Oinkly Budget" && $0.isVisible }) {
             try? await Task.sleep(for: .milliseconds(250))
         }
         guard let container = PiggybankAppDelegate.container else { return }
@@ -233,7 +233,7 @@ enum BackupOpener {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Replace everything with this backup?"
-        alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in OinklyBudget is erased first, and this can't be undone."
+        alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Oinkly Budget is erased first, and this can't be undone."
         alert.addButton(withTitle: "Replace Everything")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }

@@ -1,10 +1,10 @@
 # Shared data file: design (step 5)
 
-Drafted 2026-10-18. Nothing here is built yet. This is the design for the last and riskiest feature of 1.1. It lists how the feature works, every decision that is still open (with options and a recommendation), how it fits the V2 database and the encryption vault, what can go wrong, how each failure is handled, and the order of work with a stop point after the first risky test. The decisions are in section 12. Build starts after they are answered.
+Drafted 2026-10-18. Nothing here is built yet. This is the design for the last and riskiest feature of 1.0. It lists how the feature works, every decision that is still open (with options and a recommendation), how it fits the V2 database and the encryption vault, what can go wrong, how each failure is handled, and the order of work with a stop point after the first risky test. The decisions are in section 12. Build starts after they are answered.
 
 ## 1. Goal and limits
 
-**Goal.** Two or more people who each have their own Mac login on **one Mac** can use the same OinklyBudget data file, **one at a time**. There is no cloud, no sync, no account in the app and no network.
+**Goal.** Two or more people who each have their own Mac login on **one Mac** can use the same Oinkly Budget data file, **one at a time**. There is no cloud, no sync, no account in the app and no network.
 
 **What it is not.**
 - Not two people editing at the same moment. Both at once needs merging, which is a different and much riskier feature. Not planned.
@@ -16,7 +16,7 @@ Drafted 2026-10-18. Nothing here is built yet. This is the design for the last a
 ## 2. What exists today
 
 - **The prototype** on branch `shared-data-prototype` (commits `572a337`, `ea179d4`) works on the old V1 database and no encryption. It has: a shared folder (`SharedDataFolder`) with one finished data file, a lock, an info note and a "previous save" copy; the session (`SharedDataSession`) that checks the file out to a private working copy at launch and checks it back in every couple of minutes, when hidden and at quit; crash recovery with a marker; a "someone has the file" decision screen; and a debug test folder.
-- **The vault** (`VaultSession`, on `update-1.1`) already does encryption with the same shape: an encrypted vault file, a private working copy, a sealing step, a marker, a timer. It was written to be reused here. Today the vault lives in this Mac's own Application Support.
+- **The vault** (`VaultSession`, on `main`) already does encryption with the same shape: an encrypted vault file, a private working copy, a sealing step, a marker, a timer. It was written to be reused here. Today the vault lives in this Mac's own Application Support.
 - **V2** (the new database shape) and the **safety copy** and **data file location fix** are in.
 
 So the work is: bring the prototype up to V2, make it and the vault one system instead of two, finish what the prototype lacks, and test it with two real logins.
@@ -44,7 +44,7 @@ This is the prototype's design and it stays.
   info.json                       format version, schema version, revision, saved at, saved by, app version, encrypted or not, file ID
   lock.json                       who has it, since when, last heartbeat, process and Mac
   previous saves/                 the last few finished files (see D8)
-  OinklyBudget (recovered ...)    a copy kept when a crash and someone else's save overlapped
+  Oinkly Budget (recovered ...)    a copy kept when a crash and someone else's save overlapped
 ```
 
 New compared with the prototype: `schemaVersion`, `revision` (a counter that goes up by one at every save, replacing the date comparison the prototype used, which loses precision), `encrypted`, and a `fileID` so a folder swapped for a different one is noticed.
@@ -104,7 +104,7 @@ One system, not two. Four data locations, one pipeline:
 ## 8. The database upgrade (V1 to V2) in shared mode
 
 - Everyone on one Mac runs the **same app**, so version differences only happen during an update. Still: `info.json` records `formatVersion` and `schemaVersion`. An older app opening newer data refuses with a clear message. A newer app opening older shared data upgrades **the working copy** (the V1 to V2 step already exists) and the upgrade reaches the shared file at the next check-in, after the safety copy.
-- The first-time 1.1 safety copy (Application Support ▸ Backups ▸ Before this update) still happens for this login's own data. When joining an existing shared file, a copy of it is made first, in the shared folder's `previous saves`.
+- The first-time 1.0 safety copy (Application Support ▸ Backups ▸ Before this update) still happens for this login's own data. When joining an existing shared file, a copy of it is made first, in the shared folder's `previous saves`.
 - Table counts for verification must come from the database's own table list, not a fixed list, so V2's new tables are included automatically.
 
 ## 9. What the person sees
@@ -156,13 +156,13 @@ One system, not two. Four data locations, one pipeline:
 | D8 | History of finished saves kept in the folder | A) One previous save (prototype). B) The last 5 saves plus one per day for 7 days. C) None. | **B.** Costs disk space (about 6 to 12 copies) but makes any bad save recoverable. Receipts are shared, not copied, between these. |
 | D9 | Which settings are shared | A) Per login (currency, appearance, reminders, paper, style). B) Some in the file. | **A.** Preferences are personal. Reminder notifications go to the login that set them. |
 | D10 | Folder locations | A) Only this Mac's own disk; block network volumes and warn on cloud-synced folders. B) Allow anything. C) Block cloud folders too. | **A.** The finished file is written whole, so a sync service is less harmful than for a live database, but a synced folder can make "conflicted copies" and the lock would be wrong across Macs. |
-| D11 | Open Recent, Move This File, Create a New File | A) All three in 1.1. B) Open Recent only. | **A.** They were on the prototype's list. Move and Create are small once the pipeline is one system. |
+| D11 | Open Recent, Move This File, Create a New File | A) All three in 1.0. B) Open Recent only. | **A.** They were on the prototype's list. Move and Create are small once the pipeline is one system. |
 | D12 | Receipt clean-up | A) Remove unused ones at a clean close after 30 days. B) Never remove. | **A.** Otherwise the shared folder grows forever. |
-| D13 | ~~Ask the other login to let go~~ | Replaced by D17. | Left out of 1.1; it can be added later as a Close It button. |
+| D13 | ~~Ask the other login to let go~~ | Replaced by D17. | Left out of 1.0; it can be added later as a Close It button. |
 | D16 | ~~Automatic handoff~~ | Replaced by D17 on the same day. | The owner preferred something simpler and safer. |
 | D17 | **When another login has the file open** | A) Stop with a waiting message that re-checks by itself; Open Anyway only when the other copy has gone quiet for 3 minutes. B) Close the other copy automatically. C) The message plus a Close It button. | **A** (chosen by the owner, 2026-10-18; see 12c). |
 | D15 | How the shared folder is chosen | A) A fixed folder, `/Users/Shared/OinklyBudget`, made by the app with a narrow sandbox exception, no panel. B) The same folder proposed, with the system panel pointing at it for one click. C) The person chooses any folder. | **A** (chosen by the owner, 2026-10-18; see 12b). B is the fallback if App Review refuses the exception. C is dropped: a person could pick a protected, network or cloud folder. |
-| D14 | What if the two-login test fails or finds permission problems | A) Fix and retry. B) Ship 1.1 without sharing and leave it for 1.2. | **Plan for B as the fallback.** Sharing is the last step, so dropping it does not disturb the rest. Decide at the gate after Phase 1. |
+| D14 | What if the two-login test fails or finds permission problems | A) Fix and retry. B) Ship 1.0 without sharing and leave it for 1.2. | **Plan for B as the fallback.** Sharing is the last step, so dropping it does not disturb the rest. Decide at the gate after Phase 1. |
 
 ### 12a. Answers so far (2026-10-18)
 
@@ -173,7 +173,7 @@ Answered by the owner:
 - **D17 (replaces D4, D5, D13 and D16): stop with a waiting message.** If another login has the data open, the app waits and opens by itself when it is free. Only a lock that has gone quiet for 3 minutes offers Open Anyway. See 12c.
 - **D8: Last 5 saves plus one per day for a week**, with Restore a Previous Save.
 
-Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.1), D12 (remove unused receipts at a clean close after 30 days), D14 (fall back to shipping 1.1 without sharing if the permissions test fails).
+Everything else is **accepted as recommended** (confirmed by the owner, 2026-10-18): D3 (copy this Mac's data in, and also offer to join an existing folder), D6 (save every 2 minutes if changed, then measure), D7 (60 second heartbeat, 3 minute stale limit), D9 (settings per login), D10 (this Mac's own disk only; block network volumes; warn on cloud-synced folders), D11 (Open Recent, Move This File and Create a New File all in 1.0), D12 (remove unused receipts at a clean close after 30 days), D14 (fall back to shipping 1.0 without sharing if the permissions test fails).
 
 ### 12c. When the other login has the file open (decision D17, 2026-10-18)
 
@@ -181,12 +181,12 @@ The owner does not want the app to close anyone else's copy. The rule is simple:
 
 **What the person sees.** A waiting screen in place of the boot screen's usual progress, with no buttons to decide anything:
 
-> **OinklyBudget is already open in Sam's session.**
-> Your data is open in another user account on this Mac. Quit OinklyBudget there (switch to that account and press ⌘Q) and this will open by itself.
+> **Oinkly Budget is already open in Sam's session.**
+> Your data is open in another user account on this Mac. Quit Oinkly Budget there (switch to that account and press ⌘Q) and this will open by itself.
 > *Waiting…*  [Quit]
 
 - It looks at the lock every 2 seconds and opens by itself the moment the other copy lets go.
-- **If the other copy has crashed or gone quiet** (its heartbeat is older than 3 minutes), the screen changes: "Sam's copy of OinklyBudget seems to have stopped. [Open Anyway]". Open Anyway takes the lock. What the other copy had saved is in the shared file (at most 2 minutes old); anything newer stays in its working copy and is kept as a recovered copy if it ever starts again. This is the only way past the screen, so a crash can never lock people out.
+- **If the other copy has crashed or gone quiet** (its heartbeat is older than 3 minutes), the screen changes: "Sam's copy of Oinkly Budget seems to have stopped. [Open Anyway]". Open Anyway takes the lock. What the other copy had saved is in the shared file (at most 2 minutes old); anything newer stays in its working copy and is kept as a recovered copy if it ever starts again. This is the only way past the screen, so a crash can never lock people out.
 - **Quit** just quits; nothing changes.
 
 **Why this and not an automatic close.** No code to ask another login's app to quit, no race between two copies, and no half-filled form lost. The cost: if the other login is switched away with the app still open, the second person has to switch to that account and quit it first. That is a few clicks, and Help explains it.
@@ -209,7 +209,7 @@ The owner does not want people choosing a folder, because they might pick a prot
 **What the person sees when turning sharing on.** A plain warning before anything is copied:
 
 > **Share your data with other users of this Mac?**
-> OinklyBudget will copy your data into **/Users/Shared/OinklyBudget**. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can log in to this Mac can read it **unless you turn on encryption** (Settings ▸ Data & Backup ▸ Encrypt Data). Your original data is not changed or removed.
+> Oinkly Budget will copy your data into **/Users/Shared/OinklyBudget**. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can log in to this Mac can read it **unless you turn on encryption** (Settings ▸ Data & Backup ▸ Encrypt Data). Your original data is not changed or removed.
 > [Share] [Encrypt First…] [Cancel]
 
 **Rules that follow from it.**

@@ -1,23 +1,16 @@
-# Release notes: 1.1 (draft)
+# Release notes: 1.0 (draft)
 
-Drafted 2026-10-18 and rewritten the same night to list **everything that is different between 1.1 and 1.0**. The source is `feature-master-list-1.1.md`; if a feature is added or dropped there, change it here too. Items marked *(if built)* are planned but not built yet; delete the line if the feature is dropped. Final wording is polished in step 6 after everything ships.
+Drafted 2026-10-18 for the first public release, version 1.0, build 5. It lists every feature of the app, so the same text can be used as the launch notes. The source is `feature-master-list-1.0.md`; if a feature is added or dropped there, change it here too. Items marked *(if built)* are planned but not built yet; delete the line if the feature is dropped. Final wording is polished in step 6 after everything ships.
 
-This text goes in four places: `Views/ReleaseNotesWindow.swift` (new release at the top of `releases`, with the same sections), the App Store "What's New" field (short version below), the website `whats-new.html`, and the support page's "Before you update" note.
-
-If 1.1 turns out to be the first public release, drop the "Before you update" section and the words "new in 1.1"; the list then reads as the feature list of the app.
+This text goes in four places: `Views/ReleaseNotesWindow.swift` (the release at the top of `releases`, with the same sections), the App Store description (the short version below), the website, and the support page.
 
 ## App Store "What's New" (short version)
 
-Goals that follow your accounts, six-month projections on every report, a reworked Summary with your priority bills, export to PDF and CSV, importing bank statements with a preview, an encrypted data file, widgets, and many smaller improvements. Your data stays on your Mac. Before you update, save a backup from Settings ▸ Data & Backup.
+Goals that follow your accounts, six-month projections on every report, a reworked Summary with your priority bills, export to PDF and CSV, importing bank statements with a preview, an encrypted data file, widgets, and many smaller improvements. Your data stays on your Mac.
 
 ## In-app release notes (full version)
 
-**Version 1.1 · More ways to see where you're going**
-
-### Before you update
-- Save a backup first (Settings ▸ Data & Backup ▸ Export Backup).
-- The first time 1.1 opens, it copies your data to Application Support ▸ Backups ▸ "Before this update (date)". You can delete that copy once you are happy with 1.1.
-- Your accounts, transactions, bills, budgets, goals and receipts carry over automatically.
+**Version 1.0 · First release**
 
 ### Accounts
 - Opening balances are now a real, locked Deposit transaction (payee Deposit, category Deposit, method Bank Deposit, memo Opening balance, reconciled) on bank and investment accounts. Change the amount in Edit Details. Cash on Hand has none.
@@ -54,14 +47,14 @@ Goals that follow your accounts, six-month projections on every report, a rework
 
 ### Export and import
 - Print PDF and Export CSV on every account and on the Transactions page, with an Export sheet for account, period (month, year or from a date) and paper size. A single transaction can be saved as a PDF from its detail window. To print, open the PDF in Preview.
-- Import Statement on every account: preview the rows with counts of new, already-there and unreadable ones; set the columns, date format, separator and amount style if the file isn't recognised; save the format under a name and have it detected next time; skip transactions already in OinklyBudget; tidy bank text in payee names; and Undo removes everything an import added. CSV only.
+- Import Statement on every account: preview the rows with counts of new, already-there and unreadable ones; set the columns, date format, separator and amount style if the file isn't recognised; save the format under a name and have it detected next time; skip transactions already in Oinkly Budget; tidy bank text in payee names; and Undo removes everything an import added. CSV only.
 - Print PDF on Reports and Summary *(if built)*.
 - Default paper size and export style in Settings *(if built)*.
 
 ### Your data
 - Encrypted data file (Settings ▸ Data & Backup ▸ Encryption): choose a passphrase, keep a recovery key, and your data file and backups can't be read without them. Change the passphrase, make a new recovery key, or turn it off any time. While the app is open it works on a readable copy that is removed when you quit, so this protects a copied file, a backup or a lost Mac without FileVault. If you lose both the passphrase and the recovery key, nobody can open the data.
-- Data & Backup is one tab: your counts, Export Backup and Import Backup, Erase All Data and the version. Backups carry all the new 1.1 information.
-- Updates are safer: a copy of your data is made before the first open in 1.1, and a file that can't be opened shows an error instead of an empty app.
+- Data & Backup is one tab: your counts, Export Backup and Import Backup, Erase All Data and the version. Backups carry all the new 1.0 information.
+- Updates are safer: a copy of your data is made before the first open in 1.0, and a file that can't be opened shows an error instead of an empty app.
 - Share one data file between two Mac logins on one Mac, one at a time *(if built)*: choose a folder, see who has the file and since when, close it for the next person, take over a stale lock, and recover after a crash.
 
 ### Widgets and the menu bar
@@ -80,7 +73,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 
 1. Every line is true of the shipped build (read each one against the app).
 2. Every *(if built)* item is either built or deleted.
-3. The "different from 1.0" list matches `feature-master-list-1.1.md`.
+3. The feature list matches `feature-master-list-1.0.md`.
 4. The macOS minimum, version and build number are right.
 5. The short App Store text fits the character limit in App Store Connect.
 6. Copy the final text to all four places listed at the top.

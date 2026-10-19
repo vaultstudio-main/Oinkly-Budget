@@ -1,4 +1,4 @@
-# Help file plan for 1.1
+# Help file plan for 1.0
 
 Drafted 2026-10-18. Help is written last (step 6 of the final plan) so it describes the finished app. This file says what to write, in what order, and how to check it.
 
@@ -7,20 +7,20 @@ Drafted 2026-10-18. Help is written last (step 6 of the final plan) so it descri
 - Help is one Swift file, `Views/HelpWindow.swift`. `HelpContent.groups` holds groups of topics. Each topic has a title, an SF Symbol, a list of lines and optional screenshots (`Shot(asset:caption:)`).
 - Line styles: `## Heading`, `• bullet`, plain text.
 - A screenshot shows under a topic when an image set with the exact name exists in `Assets.xcassets`. A missing image just doesn't show.
-- Search at the top of the list matches topics. Opens with ⇧⌘/ or Help ▸ OinklyBudget Help. The window now opens at 1100×780.
-- 1.0 groups: Start Here, Accounts, Everyday Money, Bills, Planning & Reports, Data & Settings, Reference.
+- Search at the top of the list matches topics. Opens with ⇧⌘/ or Help ▸ Oinkly Budget Help. The window now opens at 1100×780.
+- The groups at the start of the project were: Start Here, Accounts, Everyday Money, Bills, Planning & Reports, Data & Settings, Reference.
 
 ## Rules for writing it
 
-- Describe the finished 1.1 app only. No "coming soon", no mention of 1.0 differences (those go in release notes).
+- Describe the finished 1.0 app only. No "coming soon", and no mention of earlier builds.
 - Plain words, short lines, one idea per bullet. Say where to click (menu path or page name).
-- Every locked field gets a line in "Why Can't I Change That?" (new locked things in 1.1: opening Deposit, bill-payment categories, split totals).
+- Every locked field gets a line in "Why Can't I Change That?" (new locked things in 1.0: opening Deposit, bill-payment categories, split totals).
 - Say the honest limits: encryption protects the file at rest, a forgotten passphrase with no recovery key cannot be recovered, shared file is one person at a time.
 - No financial figures from the owner's real data. Use the test data set only.
 
 ## Every feature gets a topic, and every topic explains how it works
 
-The master list is `feature-master-list-1.1.md`. Each feature there (A1 to G3) must appear in Help. A topic is not finished until it has all of these:
+The master list is `feature-master-list-1.0.md`. Each feature there (A1 to G3) must appear in Help. A topic is not finished until it has all of these:
 
 1. **What it is**, in one or two sentences.
 2. **How it works**, step by step: where to click (menu path or page), what each field or button does, and what happens next. The "How it works" bullets in the master list are the starting text; add steps and examples.
@@ -63,7 +63,7 @@ Topics for planned features are written only if the feature ships.
 | E4 Reports and Summary PDF | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |
 | F1 Encryption | Data & Settings | Encryption (turn on, unlock, remember, change passphrase, recovery key, turn off, honest limits) | new |
 | F2 Data & Backup | Data & Settings | Backup & Restore | edit |
-| F3 Safe update | Data & Settings | Updating to 1.1 (the safety copy, where it is, deleting it) | new |
+| F3 Safe update | Data & Settings | Updating to 1.0 (the safety copy, where it is, deleting it) | new |
 | F4 Shared file | Data & Settings | Sharing One Data File | new, if built |
 | G1 Windows | Start Here | Welcome (mention Help and Release Notes) | edit |
 | G2 Shortcuts, accessibility | Reference | Keyboard Shortcuts, Accessibility | edit and new |

@@ -23,7 +23,7 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>PigDocument</string>
 			<key>CFBundleTypeName</key>
-			<string>OinklyBudget Backup</string>
+			<string>Oinkly Budget Backup</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSHandlerRank</key>
@@ -42,7 +42,7 @@
 				<string>public.json</string>
 			</array>
 			<key>UTTypeDescription</key>
-			<string>OinklyBudget Backup</string>
+			<string>Oinkly Budget Backup</string>
 			<key>UTTypeIconFile</key>
 			<string>PigDocument</string>
 			<key>UTTypeIdentifier</key>

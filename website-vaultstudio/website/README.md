@@ -6,7 +6,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 | File | What it is |
 |---|---|
 | `index.html` | Home page and project list (add new apps as cards here) |
-| `oinklybudget.html` | OinklyBudget product page |
+| `oinklybudget.html` | Oinkly Budget product page |
 | `about.html` | About Vault Studio (hobbyist studio, no personal details). Photo is `images/profile-square.jpg` (square crop of `profile.jpeg`) |
 | `support.html` | Support page (use this URL as the Support URL in App Store Connect) |
 | `privacy.html` | Privacy policy (use this URL as the Privacy Policy URL in App Store Connect) |
@@ -29,7 +29,7 @@ A small static site for the domain. No build step and no dependencies: upload th
 - Optional: an `og:image` preview picture and a favicon at several sizes.
 
 ## Adding another project later
-Copy the OinklyBudget card on `index.html`, give it its own page (copy `oinklybudget.html`) and add it to the nav in each
+Copy the Oinkly Budget card on `index.html`, give it its own page (copy `oinklybudget.html`) and add it to the nav in each
 page's header and footer. Each app should have its own support and privacy page, or point to shared ones.
 
 ## Keep it honest

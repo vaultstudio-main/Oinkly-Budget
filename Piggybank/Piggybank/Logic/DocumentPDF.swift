@@ -75,7 +75,7 @@ enum DocumentPDF {
 
         let data = NSMutableData()
         var box = CGRect(origin: .zero, size: paper.size)
-        let info = [kCGPDFContextTitle: "\(document.title), \(document.subtitle)", kCGPDFContextCreator: "OinklyBudget"] as CFDictionary
+        let info = [kCGPDFContextTitle: "\(document.title), \(document.subtitle)", kCGPDFContextCreator: "Oinkly Budget"] as CFDictionary
         guard let consumer = CGDataConsumer(data: data as CFMutableData),
               let context = CGContext(consumer: consumer, mediaBox: &box, info) else { return Data() }
         var drawer = Page(document: document, paper: paper, context: context, totalPages: total)

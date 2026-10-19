@@ -23,7 +23,7 @@ struct EncryptionSection: View {
                     LabeledContent("Last saved encrypted", value: sealed.formatted(date: .abbreviated, time: .shortened))
                 }
                 Toggle("Remember on this Mac", isOn: Binding(get: { remember }, set: { remember = $0; session.setRemember($0) }))
-                Text("With this on, OinklyBudget opens without asking for the passphrase on this Mac. Turn it off to be asked every time.")
+                Text("With this on, Oinkly Budget opens without asking for the passphrase on this Mac. Turn it off to be asked every time.")
                     .font(.footnote).foregroundStyle(.secondary)
                 HStack {
                     Button("Change Passphrase") { changingPassphrase = true }
@@ -32,7 +32,7 @@ struct EncryptionSection: View {
                     Button("Turn Off Encryption", role: .destructive) { confirmingOff = true }
                 }
                 if let error = session.errorMessage { Text(error).font(.footnote).foregroundStyle(.orange) }
-                Text("The encrypted file is saved every couple of minutes, when you hide the app and when you quit. While OinklyBudget is open it works on a readable copy that is removed when you quit, so this protects your data when the app is closed, such as a copied file, a backup or a lost Mac without FileVault. It does not hide it from someone using your Mac while it is unlocked and open.")
+                Text("The encrypted file is saved every couple of minutes, when you hide the app and when you quit. While Oinkly Budget is open it works on a readable copy that is removed when you quit, so this protects your data when the app is closed, such as a copied file, a backup or a lost Mac without FileVault. It does not hide it from someone using your Mac while it is unlocked and open.")
                     .font(.footnote).foregroundStyle(.secondary)
             } else {
                 HStack(alignment: .center, spacing: 12) {
@@ -106,7 +106,7 @@ private struct EnableEncryptionSheet: View {
     private var passphraseStep: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Encrypt your data").font(.title2.bold())
-            Text("Choose a passphrase. You'll type it when OinklyBudget opens, unless you ask this Mac to remember it. There is no way to reset it, so choose one you won't forget.")
+            Text("Choose a passphrase. You'll type it when Oinkly Budget opens, unless you ask this Mac to remember it. There is no way to reset it, so choose one you won't forget.")
                 .foregroundStyle(.secondary)
             SecureField("Passphrase", text: $passphrase)
             SecureField("Type it again", text: $confirmation)
@@ -142,7 +142,7 @@ private struct EnableEncryptionSheet: View {
                 Button("Save as Text File") { saveText(pending.recoveryKey) }
             }
             Toggle("I have saved my recovery key", isOn: $saved)
-            Text("OinklyBudget will now encrypt your data and restart. Your current data file is removed only after the encrypted copy opens.")
+            Text("Oinkly Budget will now encrypt your data and restart. Your current data file is removed only after the encrypted copy opens.")
                 .font(.footnote).foregroundStyle(.secondary)
             if let errorMessage { Text(errorMessage).font(.callout).foregroundStyle(Theme.red) }
             HStack {
@@ -187,9 +187,9 @@ private struct EnableEncryptionSheet: View {
     private func saveText(_ key: String) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
-        panel.nameFieldStringValue = "OinklyBudget Recovery Key.txt"
+        panel.nameFieldStringValue = "Oinkly Budget Recovery Key.txt"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let text = "OinklyBudget recovery key\n\n\(key)\n\nKeep this somewhere safe. With this key, anyone can open your OinklyBudget data.\n"
+        let text = "Oinkly Budget recovery key\n\n\(key)\n\nKeep this somewhere safe. With this key, anyone can open your Oinkly Budget data.\n"
         try? text.write(to: url, atomically: true, encoding: .utf8)
     }
 }

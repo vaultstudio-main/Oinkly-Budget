@@ -1,6 +1,6 @@
-# Data integrity plan for 1.1
+# Data integrity plan for 1.0
 
-Drafted 2026-10-18. The rule behind everything here: **no client loses information**, not in the upgrade from 1.0, not with encryption, not with the shared data file, not in a backup restore. Nothing is submitted until every check below has passed on the release candidate.
+Drafted 2026-10-18. The rule behind everything here: **no client loses information**, not in the upgrade from the original build, not with encryption, not with the shared data file, not in a backup restore. Nothing is submitted until every check below has passed on the release candidate.
 
 ## Promises
 
@@ -14,10 +14,10 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 
 | Protection | Where | Tested |
 |---|---|---|
-| Frozen V1 shape and a lightweight V1 to V2 migration | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real 1.0 build database opened by the 1.1 build, test data set |
+| Frozen V1 shape and a lightweight V1 to V2 migration | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real database from the original build (1.0 build 1, tag `app-review-original-1.0`) opened by the current build, test data set |
 | One-time step after migration (routing numbers, opening-deposit flag, tax flags, primary checking) | `Logic/SchemaUpgrade.swift` | Same test |
 | Safety copy before first V2 open (data file, side files, receipts folder, vault) | `Logic/StoreSafetyCopy.swift` | Same test |
-| Data file pinned to the app's own folder, so the App Group can't move it | `PiggybankApp.swift`, `VaultSession.localStoreURL` | Found and fixed by comparing 1.0 and 1.1 builds |
+| Data file pinned to the app's own folder, so the App Group can't move it | `PiggybankApp.swift`, `VaultSession.localStoreURL` | Found and fixed by comparing the original build and the new one |
 | Encrypted vault upgrades and unlocks | `Logic/Vault/` | Build from just before V2 with encryption on, opened by the new build |
 | Open failure shows an error screen, not an empty database | `PiggybankApp.swift`, `StartupState` | By design, not forced yet |
 
@@ -25,7 +25,7 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 
 - Large data (about 4,000 transactions and more) has not been tested.
 - No automated tests for the migration.
-- Restore of a 1.0 backup into the current build is untested.
+- Restore of a backup from the original build into the current build is untested.
 - Interrupted upgrade (kill during the first open) is untested.
 - Shared file on V2 with the vault is not built yet.
 - Splits, tags and recurring rules are not stored in real data yet.
@@ -34,25 +34,25 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 
 Run these on every release candidate. Record the date, the build and pass or fail in the table at the bottom.
 
-### A. Upgrade from 1.0
+### A. Upgrade from the original build
 
 | # | Test | Pass when |
 |---|---|---|
-| A1 | Build 1.0 from `main`, fill it with the test data set, open the same data with the release candidate | Every account, transaction, bill, goal, budget, holding, payee and receipt is there; balances match the 1.0 numbers to the cent |
+| A1 | Build the original from the tag `app-review-original-1.0`, fill it with the test data set, open the same data with the release candidate | Every account, transaction, bill, goal, budget, holding, payee and receipt is there; balances match the 1.0 numbers to the cent |
 | A2 | Same as A1 with a large data set (4,000 and then 20,000 transactions) | Same result; the first open finishes in reasonable time; no crash |
 | A3 | Same as A1 with encryption turned on in the old build | Vault unlocks and every record is there |
 | A4 | Upgrade with the old data file in an unusual state (wal and shm side files present, receipts folder large) | Same result; the safety copy contains them |
 | A5 | Kill the app during the first open | Next launch opens normally or restores from the safety copy; nothing missing |
 | A6 | Run the upgrade twice (open, quit, open) | No duplicate Deposits, categories or payees |
 | A7 | Open on a Mac with the old data file in a read-only or full-disk situation | A clear error, the original data untouched |
-| A8 | Verify the safety copy by opening it with the 1.0 build | It opens and has all the data |
+| A8 | Verify the safety copy by opening it with the original build | It opens and has all the data |
 | A9 | Compare a totals report before and after (net worth, every account balance, count of transactions, count of receipts) | Identical |
 
 ### B. Backup and restore
 
 | # | Test | Pass when |
 |---|---|---|
-| B1 | Backup made in 1.0, restored into the release candidate | All data back, new fields get sensible defaults |
+| B1 | Backup made by the original build, restored into the release candidate | All data back, new fields get sensible defaults |
 | B2 | Backup made in the release candidate, restored into the same build on an empty database | All data back, including splits, tags and rules |
 | B3 | Encrypted backup, right and wrong passphrase | Right one restores; wrong one is refused and changes nothing |
 | B4 | Restore on top of existing data | The person is warned first; a failure leaves the existing data untouched |
@@ -112,4 +112,4 @@ Run these on every release candidate. Record the date, the build and pass or fai
 
 | Date | Build | Tests run | Result | Notes |
 |---|---|---|---|---|
-| 2026-10-18 | update-1.1 at b374987 and 4a0d4c2 | A1, A3, location check | Passed | Test data set only; no large data yet |
+| 2026-10-18 | main at b374987 and 4a0d4c2 | A1, A3, location check | Passed | Test data set only; no large data yet |

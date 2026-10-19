@@ -1,19 +1,19 @@
-# Screenshot plan for 1.1
+# Screenshot plan for 1.0
 
 Drafted 2026-10-18. Two sets: the screenshots inside Help, and the App Store screenshots. Both are taken last, from the test data, once the app is finished.
 
 ## Rules for both sets
 
-- Use the debug-only Testing menu: OinklyBudget ▸ Testing ▸ Fill with Test Data. It replaces all data, so never do it on real data. Wipe and refill before each batch so every shot starts from the same data.
+- Use the debug-only Testing menu: Oinkly Budget ▸ Testing ▸ Fill with Test Data. It replaces all data, so never do it on real data. Wipe and refill before each batch so every shot starts from the same data.
 - Light mode for all of them (Settings ▸ General ▸ Interface ▸ Light), unless a shot is specifically about dark mode.
 - Fixed window size for every shot. Take the whole window with ⇧⌘4, Space, click (Option-click leaves the shadow off).
 - No real names, account numbers or balances. The test data is made up.
 - Save as PNG. Name files exactly as in the tables.
-- Retake every 1.0 Help shot, because the app's layout has changed (locked sidebar, new account details, new Summary and Reports).
+- Retake every earlier Help shot, because the app's layout has changed (locked sidebar, new account details, new Summary and Reports).
 
 ## A. Help screenshots
 
-Every new or changed feature has a Help screenshot, so each topic can show what the text describes. The shot register in `feature-master-list-1.1.md` is the master (it also says which shots the website and the App Store use). The register has 66 shots; this is the same list from the Help side. Asset names go into `Assets.xcassets` as image sets, named exactly as shown.
+Every new or changed feature has a Help screenshot, so each topic can show what the text describes. The shot register in `feature-master-list-1.0.md` is the master (it also says which shots the website and the App Store use). The register has 66 shots; this is the same list from the Help side. Asset names go into `Assets.xcassets` as image sets, named exactly as shown.
 
 | ID | Help asset | Shows | Setup |
 |---|---|---|---|
@@ -78,20 +78,20 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-F4b | `Help-shared-busy` | "Someone else has this file" | Second login (owner takes this) |
 | S-F4c | `Help-shared-takeover` | Take over warning | Stale lock |
 | S-F4d | `Help-shared-second` | Second login's window | Second login (owner takes this) |
-| S-G1 | `Help-window` | The Help window | Help ▸ OinklyBudget Help |
+| S-G1 | `Help-window` | The Help window | Help ▸ Oinkly Budget Help |
 | S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
 | S-G3 | `Help-export-defaults` | Export defaults | Settings |
 
 Shots for planned features (splits, tags, recurring, shared file, export defaults, Reports and Summary PDF) are taken only if the feature ships.
 
-The 1.0 shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
+The earlier shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 
 Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summary, Help-goal-section, Help-import, Help-encrypt.
 
 ## B. App Store screenshots
 
 - Mac App Store wants 16:10 images. Accepted sizes: 1280×800, 1440×900, 2560×1600 or 2880×1800. Take them at 2880×1800 (or the largest the display gives) and scale down only if needed. Confirm the current size list in App Store Connect before exporting.
-- Up to 10. The 1.0 set was 10 shots: summary, transactions, reports, liabilities, investments, bills, planning, checking, card, mortgage. Retake all 10 and replace any that no longer represent the app.
+- Up to 10. The earlier set was 10 shots: summary, transactions, reports, liabilities, investments, bills, planning, checking, card, mortgage. Retake all 10 and replace any that no longer represent the app.
 - Order that sells the app: Summary, Reports, Account with a goal, Bills, Planning, Investments, Liabilities, a Register, Export or Import, Widgets.
 - Optional captions on each: one short line (for example "Know where your money goes" or "Your data stays on your Mac").
 - The App Store takes at most 10, so choose 10 from the shots marked "yes" in the register (candidates: S-A4a, S-A4b, S-A4c, S-A6, S-B1, S-B4a, S-B5a, S-B8a, S-B10a, S-C1, S-C3a, S-D1c, S-E1a, S-E2a, S-E3a, S-E3b, S-F1b, S-F4a). Pick the ones that show the biggest new features: Summary, a Goal section, Reports, Import, Encryption, Widgets, Export, Recurring or Splits if built, Liabilities, Investments.

@@ -31,7 +31,7 @@ struct StatusBar: View {
                     Label("Help", systemImage: "questionmark.circle")
                 }
                 .buttonStyle(.link)
-                .help("Open OinklyBudget Help")
+                .help("Open Oinkly Budget Help")
             }
             .font(.caption)
             .padding(.horizontal, 14)

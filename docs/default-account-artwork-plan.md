@@ -104,7 +104,7 @@ Draw Things runs the models on this Mac. The implementing session should:
 5. **Everywhere it shows.** Account details, setup, bills, the Planning cards, the debug Testing grid (replace its sample list with the new subjects).
 6. **Accessibility.** The pictures stay decorative (hidden from VoiceOver), as today. The colour theme and style pickers need clear names for VoiceOver.
 7. **Performance.** Load images lazily and cache the decoded image. The register and Summary must not slow down.
-8. **Docs.** `feature-master-list-1.1.md` (a new entry, which also drives Help, screenshots, the website and the release notes), plus new shots for the picker.
+8. **Docs.** `feature-master-list-1.0.md` (a new entry, which also drives Help, screenshots, the website and the release notes), plus new shots for the picker.
 
 ## 8. Order of work
 
@@ -140,9 +140,9 @@ Rough effort: 1 to 2 days of generation and review (mostly choosing among candid
 ## 11. Prompt to start the project (paste into a new session)
 
 ```text
-You are helping with OinklyBudget (code name Piggybank), a Mac-only SwiftUI and SwiftData personal finance app, repository at /Users/dstibich/Documents/Code_Bank/Piggybank. The 1.1 work is on branch update-1.1. Do not touch main. Create a new branch from update-1.1 called default-artwork and work there, committing only when I say yes.
+You are helping with Oinkly Budget (code name Piggybank), a Mac-only SwiftUI and SwiftData personal finance app, repository at /Users/dstibich/Documents/Code_Bank/Piggybank. The 1.0 work is on branch main. Do not touch main. Create a new branch from main called default-artwork and work there, committing only when I say yes.
 
-Your job: carry out docs/default-account-artwork-plan.md. Read it first, then read docs/feature-master-list-1.1.md, Piggybank/Piggybank/Views/AccountArtwork.swift (today's code-drawn default pictures), docs/data-integrity-plan.md and docs/accessibility-audit.md.
+Your job: carry out docs/default-account-artwork-plan.md. Read it first, then read docs/feature-master-list-1.0.md, Piggybank/Piggybank/Views/AccountArtwork.swift (today's code-drawn default pictures), docs/data-integrity-plan.md and docs/accessibility-audit.md.
 
 Goal: replace the single code-drawn default picture per account kind with AI-generated artwork made in Draw Things on this Mac: about 26 subjects, 3 style variants each, as transparent 900x600 cut-outs, shown on one of 10 code-drawn colour-theme gradients, with a picker in the account edit screen. People's own photos must keep working exactly as today.
 
@@ -151,8 +151,8 @@ Rules:
 2. Check the licence of every model and LoRA for commercial App Store use and record each in docs/artwork-licences.md before using it. If you are unsure, say so and ask.
 3. No text, logos, brand marks, people or faces in any image. Keep each final image under about 120 KB and the whole set under about 10 MB.
 4. The choice of picture needs a new stored field with a default (for example defaultArtwork on Account and Bill). Before adding it, check whether database schema V2 (Models/SchemaVersions.swift) has left my Mac. I have not shipped it; if that is still true, add the field to V2, otherwise stop and tell me. Add it to the backup file as an optional field (Logic/DataBackup.swift).
-5. Keep the app building and the existing tests and data safe. The debug Testing window (OinklyBudget > Testing) fills the app with test data; use it to check every account type, light and dark, and the fallback when an image is missing. Do not run Fill with Test Data against any real data.
-6. Update docs/feature-master-list-1.1.md, and add screenshots to the shot register, when the feature works.
+5. Keep the app building and the existing tests and data safe. The debug Testing window (Oinkly Budget > Testing) fills the app with test data; use it to check every account type, light and dark, and the fallback when an image is missing. Do not run Fill with Test Data against any real data.
+6. Update docs/feature-master-list-1.0.md, and add screenshots to the shot register, when the feature works.
 7. Write plain, short sentences. Report outcomes faithfully, including anything you could not verify.
 
 Start with Phase 1: read the files, then propose the subject list, variants and themes, and ask me the decisions.

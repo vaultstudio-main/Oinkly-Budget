@@ -204,7 +204,7 @@ private struct UpcomingBillsView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             if entry.snapshot == nil {
-                Text("Open OinklyBudget to show your bills here.")
+                Text("Open Oinkly Budget to show your bills here.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if bills.isEmpty {
@@ -242,7 +242,7 @@ struct RemindersWidget: Widget {
                 .widgetURL(URL(string: "\(WidgetSnapshot.scheme)://summary"))
         }
         .configurationDisplayName("Reminders")
-        .description("Your own reminders from OinklyBudget, and when they are next. Edit the widget to choose which ones.")
+        .description("Your own reminders from Oinkly Budget, and when they are next. Edit the widget to choose which ones.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -269,11 +269,11 @@ private struct RemindersView: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
             if entry.snapshot == nil {
-                Text("Open OinklyBudget to show your reminders here.")
+                Text("Open Oinkly Budget to show your reminders here.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if reminders.isEmpty {
-                Text("No reminders. Add one in OinklyBudget ▸ Settings ▸ Reminders.")
+                Text("No reminders. Add one in Oinkly Budget ▸ Settings ▸ Reminders.")
                     .font(.caption)
             } else {
                 ForEach(reminders.prefix(limit)) { reminder in

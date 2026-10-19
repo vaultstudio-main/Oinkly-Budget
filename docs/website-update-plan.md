@@ -1,12 +1,12 @@
-# Website update plan for the 1.1 release
+# Website update plan for the 1.0 release
 
-Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/website/` (no build step, upload the folder as it is). This plan says what changes when 1.1 ships, page by page, what new pages to add, what the text must say, and how to keep it honest. Nothing here is started.
+Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/website/` (no build step, upload the folder as it is). This plan says what changes when 1.0 ships, page by page, what new pages to add, what the text must say, and how to keep it honest. Nothing here is started.
 
 ## When
 
 - Write the new text and take the new screenshots during step 6 of the final plan, when the app is finished. Draft the text earlier as features land, in this file or in `help-file-plan.md`.
 - Publish the site **the same day the app goes live**, not before. Until then the product pages keep saying "Coming soon".
-- If 1.1 becomes the first public release (see the 1.0 / 1.1 discussion), the website describes it as the launch: no "update" wording, no "what's new since 1.0". If 1.0 is released first, the page describes 1.1 as the current version and a What's New page covers the change.
+- This is the first public release (version 1.0, build 5), so the website describes it as the launch: no "update" wording and no "what's new since" text.
 
 ## Rules for the text
 
@@ -30,7 +30,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 | Good to know | Update: still no sync between devices; backup file moves data between computers; a shared data file lets two Mac logins on one Mac take turns. |
 | Requirements | Check the macOS minimum against the project setting before writing it. |
 
-**Feature blocks to write.** The complete, detailed feature list is `feature-master-list-1.1.md`; every feature in it that is built appears on this page, with its screenshot from the table below. (a short heading, two or three sentences and a screenshot each):
+**Feature blocks to write.** The complete, detailed feature list is `feature-master-list-1.0.md`; every feature in it that is built appears on this page, with its screenshot from the table below. (a short heading, two or three sentences and a screenshot each):
 
 1. **Goals that follow your accounts.** Savings and payoff goals tied to an account, with target date, status, monthly amount needed, pace and an estimated finish, in a Goal section on each account.
 2. **Reports and projections.** One period button, line charts, six-month projections on reports, Liabilities and Investments, and a reworked Summary with net worth over time.
@@ -46,7 +46,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 12. **Widgets.** Upcoming bills and reminders, no amounts or account details.
 13. **Share one data file** *(if built).* Two Mac logins, one at a time, with who has it and when.
 14. **Safe updates.** An automatic safety copy of your data before the first open in the new version.
-15. **Everything else from 1.0** stays in the base list: accounts, bills, receipts, reminders, backups, menu bar item.
+15. **The basics** stay in the base list: accounts, bills, receipts, reminders, backups, menu bar item.
 
 ### `privacy.html`: must be updated
 
@@ -56,7 +56,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 - **Widgets:** the widgets read a small file on your Mac with bill names, reminder titles and dates only. No amounts, no account details, nothing leaves the Mac.
 - **Safety copy:** the app keeps a copy of your data in its own folder when you update, until you delete it.
 - **Files:** the app keeps receipt photos and PDF bills on transactions and nothing else. Say so where the privacy page describes photos and files.
-- Keep "collects nothing", "no network" and "no analytics". If anything in 1.1 ever changes these, stop and fix the plan before publishing.
+- Keep "collects nothing", "no network" and "no analytics". If anything in 1.0 ever changes these, stop and fix the plan before publishing.
 - Re-check `PrivacyInfo.xcprivacy` and the App Privacy answers in App Store Connect against this page.
 
 ### `support.html`: add questions
@@ -75,7 +75,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 ### `index.html` (home)
 
 - Swap the "Coming soon for Mac" badge for "Now available for Mac" and add the App Store link when live.
-- Update the one-line description on the OinklyBudget card.
+- Update the one-line description on the Oinkly Budget card.
 
 ### `about.html`
 
@@ -85,7 +85,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 
 | Page | Why | Content |
 |---|---|---|
-| `whats-new.html` | The place the App Store "What's New" points to | Release notes for 1.1 in plain language, copied from the in-app notes (see `release-notes-1.1-draft.md`), and a "Before you update" box |
+| `whats-new.html` (optional) | A first-release page is not needed. Later releases add it, and the App Store "What's New" points to it | Release notes for each version in plain language, copied from the in-app notes (see `release-notes-1.0-draft.md`) |
 | `security.html` (or a section of `privacy.html`) | People will ask how the encryption works | What is protected and what is not, in plain words: protects the file at rest and in sharing, the working copy is unencrypted while the file is open, FileVault still matters, recovery key explained |
 | `help.html` (optional) | The in-app Help on the web, searchable | Generated from the same text as `help-file-plan.md`. Only if time allows. |
 
@@ -96,11 +96,11 @@ Add any new page to the nav in the header and footer of every page, to `sitemap.
 - `sitemap.xml`: add new pages, update `lastmod` dates.
 - `style.css`: only if the new pages need layout the current styles lack (feature rows, comparison tables).
 - `README.md` (website folder): update the table of files and the "Still to do before publishing" list.
-- `images/`: replace every screenshot with the 1.1 ones; keep 1600 px wide, light mode, from the test data; new names as needed (goal section, priority bills, import preview, export sheet, encryption settings, widgets, split, tags, recurring). Add `og:image` and a favicon at several sizes while there.
+- `images/`: replace every screenshot with the 1.0 ones; keep 1600 px wide, light mode, from the test data; new names as needed (goal section, priority bills, import preview, export sheet, encryption settings, widgets, split, tags, recurring). Add `og:image` and a favicon at several sizes while there.
 
 ## Screenshots for the website
 
-Every new feature gets at least one picture on the product page, and the key ones are also in the gallery. The full list of every screenshot (with setup steps) is the shot register in `feature-master-list-1.1.md`; this is the part the website uses. Images are 1600 px wide, light mode, from the test data, and compressed (optimised PNG or WebP). Every image needs alt text that describes what it shows. File names below are suggested.
+Every new feature gets at least one picture on the product page, and the key ones are also in the gallery. The full list of every screenshot (with setup steps) is the shot register in `feature-master-list-1.0.md`; this is the part the website uses. Images are 1600 px wide, light mode, from the test data, and compressed (optimised PNG or WebP). Every image needs alt text that describes what it shows. File names below are suggested.
 
 "features" means the image sits beside that feature's block on the product page. "gallery" means it is in the "A closer look" gallery (click to enlarge). "hero" means it is a large picture at the top of the page or on the home page.
 
@@ -165,7 +165,7 @@ Shots the owner must take (Claude cannot drive them): the widgets on the desktop
 
 ## Open questions
 
-1. Is 1.1 the first public release, or an update to a released 1.0? (changes the wording of every page)
+1. ~~Is 1.0 the first public release, or an update to a released 1.0?~~ **Decided 2026-10-18:** the first public release, version 1.0, build 5.
 2. Price: still $9.99 one-time?
 3. Do you want the web Help page, or only the in-app Help?
 4. A separate security page, or a section on the privacy page?

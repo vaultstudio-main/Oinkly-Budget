@@ -1,8 +1,8 @@
-# 1.1 feature master list (everything different from 1.0)
+# 1.0 feature master list (every feature in the first release)
 
-> **Release naming (2026-10-18).** The original `main` (version 1.0, build 1, the build that was submitted for App Review) is deprecated. It is kept as the tag `app-review-original-1.0` and the branch `legacy-1.0-original`. `main` now holds all the 1.1 work, and the first public release is **version 1.0, build 5**. In these documents, "1.1" means this big release and "1.0" in "different from 1.0" means the earlier, never-released build. The text will be renamed to plain 1.0 during step 6 (Help, release notes, website).
+> **Release naming (2026-10-18).** The first public release is **version 1.0, build 5**. The original `main` (version 1.0, build 1, the build submitted for App Review) is deprecated and kept as the tag `app-review-original-1.0` and the branch `legacy-1.0-original`. Everything in these documents was first planned as 1.0 and is now part of 1.0.
 
-Drafted 2026-10-18 from the git history of `update-1.1` and the current app. This is the single source for four documents: the Help file, the screenshots, the website and the release notes. If a feature is not here, it is not documented anywhere, so add it here first.
+Drafted 2026-10-18 from the git history of `main` and the current app. This is the single source for four documents: the Help file, the screenshots, the website and the release notes. If a feature is not here, it is not documented anywhere, so add it here first.
 
 - **Status:** Built = in the app now. Planned = in the final plan, not built yet. If a planned feature is dropped, delete its rows here and in the four documents.
 - **How it works:** written for Help and the website. Check each line against the running app before publishing (button names, menu paths).
@@ -79,7 +79,7 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Button on every account. Every row goes to that account.
 - Choose a CSV file. The sheet shows a preview table with counts: new, already there, problems.
 - If the headers aren't recognised, "How this file is read" lets you set: whether there is a header row, separator (comma, semicolon, tab, bar), date column and date format (with a warning when month-first and day-first are both possible), payee, memo, category, amount (single column, or separate debit and credit), "positive amounts are charges" for credit card files, and comma-decimal numbers (1.234,56).
-- Options: skip transactions already in OinklyBudget, tidy bank text in payee names, fill categories from payees you have used before.
+- Options: skip transactions already in Oinkly Budget, tidy bank text in payee names, fill categories from payees you have used before.
 - Save a format with a name ("Chase checking"); it is detected automatically next time.
 - After importing: how many were added, skipped as duplicates, left out as unreadable, or had no matching category. "Undo" removes everything that import added.
 - Still CSV only. PDF statements can't be imported.
@@ -125,7 +125,7 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 ### C3. Widgets (Built)
 - Two widgets in three sizes (small, medium, large): Upcoming Bills (the next bills due, names and dates only) and Reminders (your own reminders and when they are next).
 - **Choices.** Right-click a widget and choose Edit Widget. Upcoming Bills: Show (all bills or important bills only) and Look ahead (7, 14 or 30 days). Reminders: pick which reminders show, or leave empty for all of them. The large size lists about 9 bills or 8 reminders.
-- No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open OinklyBudget to show your bills here."
+- No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open Oinkly Budget to show your bills here."
 - Add them from the widget gallery (edit widgets on the desktop or in Notification Center).
 - Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery), S-C3c (Edit Widget choices).
 
@@ -135,7 +135,7 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 
 ### D1. Goals follow accounts (Built)
 - When you make a goal, link it to an account. A savings goal follows a checking or savings balance (progress is the balance above where it started); a payoff goal follows a loan or card (progress is how far the balance has come down since the goal was made).
-- A linked goal takes no manual progress; the balance is the truth. Unlinked goals work as in 1.0.
+- A linked goal takes no manual progress; the balance is the truth. Goals that aren't linked keep their own manual progress.
 - A reached goal is frozen with its final amount and stops following.
 - On the linked account, a Goal section shows: goal name, target date, status (on track, behind, past the date, reached), needed per month, your pace (last three months), to catch up, estimated finish, paid off or saved, and a progress bar.
 - Create an account from a savings goal: give the account number, institution and the current savings, which becomes its locked opening Deposit.
@@ -189,13 +189,13 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Shots: S-F1a (unlock screen), S-F1b (turn on: passphrase), S-F1c (recovery key), S-F1d (Encryption settings when on), S-F1e (turn off confirmation).
 
 ### F2. Data & Backup settings (Built)
-- One Data & Backup tab: counts, Export Backup and Import Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.1 fields.
+- One Data & Backup tab: counts, Export Backup and Import Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.0 fields.
 - A reminder to back up after two and three years of history.
 - Shots: S-F2.
 
 ### F3. Safe update (Built)
-- The first time 1.1 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
-- Your data stays where 1.0 kept it; the new widgets don't move it.
+- The first time 1.0 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
+- Your data stays in the app's own folder; the widgets don't move it.
 - Everything migrates automatically; opening a damaged file shows an error screen and never starts a blank database.
 - Shots: S-F3 (Finder showing the Backups folder).
 
@@ -227,14 +227,14 @@ Drafted 2026-10-18 from the git history of `update-1.1` and the current app. Thi
 - Saved in the backup file with the other preferences.
 - Shots: S-G3.
 
-### G4. Check printing (not in 1.1, decided)
-- Dropped from 1.1 on 2026-10-18: it can't print the magnetic line, is untested on real stock and printers, and few people write checks now. The work is saved on the `check-printing` branch for a later version.
+### G4. Check printing (not in 1.0, decided)
+- Dropped from 1.0 on 2026-10-18: it can't print the magnetic line, is untested on real stock and printers, and few people write checks now. The work is saved on the `check-printing` branch for a later version.
 
 ---
 
 ## Shot register (every screenshot for Help, website and the App Store)
 
-Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data), fixed window size, no real information. Website images are 1600 px wide; App Store images are 16:10 (see `screenshot-plan.md`). "Help asset" is the image set name in the asset catalog. A cell with a dash means not used there.
+Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data), fixed window size, no real information. Website images are 1600 px wide; App Store images are 16:10 (see `screenshot-plan.md`). "Help asset" is the image set name in the asset catalog. A cell with a dash means not used there.
 
 | ID | Shows | Setup | Help asset | Website | Store |
 |---|---|---|---|---|---|
@@ -300,11 +300,11 @@ Rules: light mode, test data (OinklyBudget ▸ Testing ▸ Fill with Test Data),
 | S-F4b | "Someone else has this file" | Second login (owner takes this) | Help-shared-busy | – | – |
 | S-F4c | Take over warning | Stale lock | Help-shared-takeover | – | – |
 | S-F4d | Second login's window | Second login (owner takes this) | Help-shared-second | – | – |
-| S-G1 | The Help window | Help ▸ OinklyBudget Help | Help-window | – | – |
+| S-G1 | The Help window | Help ▸ Oinkly Budget Help | Help-window | – | – |
 | S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
 | S-G3 | Export defaults | Settings | Help-export-defaults | – | – |
 
-Also retake the 1.0 shots that stay: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
+Also retake the earlier Help shots that stay: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 
 ## Rules for keeping this list true
 

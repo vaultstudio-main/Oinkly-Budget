@@ -124,9 +124,9 @@ Each feature ends with: backup and restore, Clean Up, CSV and PDF export, test d
 
 ## Shared work after all three
 
-- Backup and restore: new optional records for splits, tags and rules. The backup version stays compatible with 1.0 backups.
+- Backup and restore: new optional records for splits, tags and rules. The backup version stays compatible with backups from the original build.
 - Test data: a few splits, tags and rules in `TestData` so screenshots show them.
-- Release notes, Help topics and screenshots (see `help-file-plan.md`, `screenshot-plan.md`, `release-notes-1.1-draft.md`).
+- Release notes, Help topics and screenshots (see `help-file-plan.md`, `screenshot-plan.md`, `release-notes-1.0-draft.md`).
 - Data integrity checks section E.
 - Performance: the register, Summary and reports with 20,000 transactions, 2,000 splits and 200 rules.
 

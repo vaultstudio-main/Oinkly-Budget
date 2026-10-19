@@ -18,8 +18,8 @@ Round 1 passed (see the results below). Round 2 uses the fixed folder the owner 
 ## Steps
 
 **A. The other login is still running**
-1. Login 1 (`dstibich`): open the `-3` copy. OinklyBudget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Leave the app open. Switch users.
-2. Login 2 (`lstibich`): open the same copy. OinklyBudget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Look at the lines under **2b**. Leave the app open. Switch back.
+1. Login 1 (`dstibich`): open the `-3` copy. Oinkly Budget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Leave the app open. Switch users.
+2. Login 2 (`lstibich`): open the same copy. Oinkly Budget ▸ Testing ▸ **Run in /Users/Shared/OinklyBudget**. Look at the lines under **2b**. Leave the app open. Switch back.
 
 **B. The other login's app has closed**
 3. Login 1: **Run in /Users/Shared/OinklyBudget** again, then quit the app with ⌘Q.
@@ -42,6 +42,6 @@ Round 1 passed (see the results below). Round 2 uses the fixed folder the owner 
 
 - **All OK:** the design stands. Phase 1 starts.
 - **Replace fails:** I try other folder settings or a different way of replacing the file (copy over in place), and run again.
-- **Cannot be made to work:** fall back to the plan's decision D14: ship 1.1 without the shared data file.
+- **Cannot be made to work:** fall back to the plan's decision D14: ship 1.0 without the shared data file.
 
 A first run on login 1 with no folder chosen through the Open panel is refused by the sandbox ("Operation not permitted"). That is expected and confirms the app must always ask for the folder through the panel, as the design says.

@@ -92,7 +92,7 @@ struct ImportStatementSheet: View {
                 }
 
                 Section {
-                    Toggle("Skip transactions already in OinklyBudget", isOn: $skipDuplicates)
+                    Toggle("Skip transactions already in Oinkly Budget", isOn: $skipDuplicates)
                     Toggle("Tidy bank text in payee names", isOn: $tidyPayees)
                         .help("Removes card prefixes, store numbers and long digit runs, and turns ALL CAPS into words.")
                     Toggle("Fill categories from payees you've used before", isOn: $fillCategories)
@@ -224,7 +224,7 @@ struct ImportStatementSheet: View {
                 Text("\(planned.count.formatted()) transactions from \(first.formatted(.dateTime.month(.abbreviated).day().year())) to \(last.formatted(.dateTime.month(.abbreviated).day().year()))")
             }
             if duplicates > 0 {
-                Text("\(duplicates.formatted()) already in OinklyBudget\(skipDuplicates ? " and will be skipped" : "")")
+                Text("\(duplicates.formatted()) already in Oinkly Budget\(skipDuplicates ? " and will be skipped" : "")")
                     .foregroundStyle(.orange)
             }
             if !problems.isEmpty {
@@ -241,7 +241,7 @@ struct ImportStatementSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Imported \(result.added.formatted()) transaction\(result.added == 1 ? "" : "s")", systemImage: "checkmark.circle.fill")
                 .font(.title2.bold()).foregroundStyle(Theme.green)
-            if result.duplicatesSkipped > 0 { Text("Skipped \(result.duplicatesSkipped.formatted()) already in OinklyBudget.") }
+            if result.duplicatesSkipped > 0 { Text("Skipped \(result.duplicatesSkipped.formatted()) already in Oinkly Budget.") }
             if parsed.problems.count > 0 { Text("\(parsed.problems.count.formatted()) rows couldn't be read and were left out.") }
             if result.uncategorized > 0 { Text("\(result.uncategorized.formatted()) had a category that didn't match yours, so they have none.") }
             Text("Wrong? Undo removes everything this import added.").foregroundStyle(.secondary)

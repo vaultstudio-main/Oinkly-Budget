@@ -445,8 +445,8 @@ struct DataSettingsView: View {
             }
 
             Section {
-                backupRow("Export Backup", detail: "Everything in OinklyBudget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save") { exportBackup() }
-                backupRow("Restore from Backup", detail: "Restore from a .pig backup file. This replaces everything currently in OinklyBudget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
+                backupRow("Export Backup", detail: "Everything in Oinkly Budget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save") { exportBackup() }
+                backupRow("Restore from Backup", detail: "Restore from a .pig backup file. This replaces everything currently in Oinkly Budget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
                 if let message {
                     Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .foregroundStyle(messageIsError ? Color.orange : Theme.green)
@@ -459,7 +459,7 @@ struct DataSettingsView: View {
 
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
-                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open OinklyBudget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
+                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open Oinkly Budget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -478,7 +478,7 @@ struct DataSettingsView: View {
             Button("Replace Everything", role: .destructive, action: restoreBackup)
             Button("Cancel", role: .cancel) { pendingBackup = nil }
         } message: {
-            Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in OinklyBudget is erased first, and this can't be undone.")
+            Text("\(pendingBackupName) holds \(pendingBackup?.summary ?? ""). Everything currently in Oinkly Budget is erased first, and this can't be undone.")
         }
         .confirmationDialog("Erase everything and quit?", isPresented: $confirmingErase, titleVisibility: .visible) {
             Button("Erase Everything and Quit", role: .destructive, action: erase)
@@ -517,7 +517,7 @@ struct DataSettingsView: View {
         // .pig is the backup format. Older backups saved as plain .json still open.
         panel.allowedContentTypes = [DataBackup.fileType, .json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a OinklyBudget backup file (.pig)."
+        panel.message = "Choose a Oinkly Budget backup file (.pig)."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)

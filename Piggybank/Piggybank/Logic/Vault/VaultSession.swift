@@ -65,7 +65,7 @@ final class VaultSession {
     func prepareAtLaunch(localStore: URL) -> Outcome {
         guard Self.isEnabled else { return .local }
         guard let file = try? VaultCrypto.read(keysAt: Self.keysURL) else {
-            VaultPrompt.tell("The key file for your encrypted data is missing", "OinklyBudget can't open the encrypted data without OinklyBudget.vaultkeys beside it. Nothing was changed. Put the key file back, or restore from a backup.")
+            VaultPrompt.tell("The key file for your encrypted data is missing", "Oinkly Budget can't open the encrypted data without OinklyBudget.vaultkeys beside it. Nothing was changed. Put the key file back, or restore from a backup.")
             return .quit
         }
         keyFile = file
@@ -118,7 +118,7 @@ final class VaultSession {
     private func openWorkingCopy(key: SymmetricKey) throws -> String? {
         let manager = FileManager.default
         if manager.fileExists(atPath: Self.markerURL.path), manager.fileExists(atPath: Self.workingStore.path) {
-            return "OinklyBudget closed unexpectedly last time. Your unsaved changes were kept."
+            return "Oinkly Budget closed unexpectedly last time. Your unsaved changes were kept."
         }
         try? manager.removeItem(at: Self.workingDirectory)
         try VaultCrypto.open(Self.vaultURL, into: Self.workingDirectory, key: key)
@@ -343,7 +343,7 @@ enum VaultPrompt {
         // The prompt comes before any window, so bring the app forward or the field won't take the keyboard.
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
-        alert.messageText = "Unlock OinklyBudget"
+        alert.messageText = "Unlock Oinkly Budget"
         alert.informativeText = (message.map { $0 + "\n\n" } ?? "") + "Your data is encrypted. Enter your passphrase to open it. If you've forgotten it, type your recovery key instead."
         let field = NSSecureTextField(frame: NSRect(x: 0, y: 28, width: 300, height: 24))
         field.placeholderString = "Passphrase or recovery key"

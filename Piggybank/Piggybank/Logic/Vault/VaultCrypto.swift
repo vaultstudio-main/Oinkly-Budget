@@ -38,8 +38,8 @@ nonisolated enum VaultError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .wrongSecret: "That passphrase or recovery key doesn't open this data."
-        case .notAVault: "This file isn't OinklyBudget encrypted data."
-        case .newerFormat: "This data was saved by a newer version of OinklyBudget. Update the app and try again."
+        case .notAVault: "This file isn't Oinkly Budget encrypted data."
+        case .newerFormat: "This data was saved by a newer version of Oinkly Budget. Update the app and try again."
         case .failed(let why): why
         }
     }
