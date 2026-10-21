@@ -11,6 +11,7 @@ struct SharedDataSection: View {
     @State private var warning = false
     @State private var confirmingStop = false
     @State private var report: [String]?
+    @State private var versions: [SharedVersion]?
     @State private var working = false
     @State private var message: String?
     @State private var messageIsError = false
@@ -46,6 +47,9 @@ struct SharedDataSection: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This Mac gets a copy of the latest shared data, and a copy of what it had before is kept in Application Support ▸ Backups. Other users keep sharing.")
+        }
+        .sheet(isPresented: Binding(get: { versions != nil }, set: { if !$0 { versions = nil } })) {
+            PreviousSavesSheet(versions: versions ?? [])
         }
         .sheet(isPresented: Binding(get: { report != nil }, set: { if !$0 { report = nil } })) {
             CheckSharingSheet(lines: report ?? [])
@@ -87,6 +91,7 @@ struct SharedDataSection: View {
             Button("Close for Others") { closeForOthers() }
                 .disabled(working || !session.isActive || session.lostLock)
                 .help("Saves and quits, so another user can open the data.")
+            Button("Previous Saves…") { showPreviousSaves() }.disabled(working || !session.isActive || session.lostLock)
             Button("Check Sharing…") { checkSharing() }.disabled(working)
             Spacer()
             Button("Stop Sharing…", role: .destructive) { confirmingStop = true }.disabled(working)
@@ -135,11 +140,79 @@ struct SharedDataSection: View {
         Task { await session.closeForOthers() }
     }
 
+    private func showPreviousSaves() {
+        working = true
+        Task {
+            versions = await session.previousSaves()
+            working = false
+        }
+    }
+
     private func checkSharing() {
         working = true
         Task {
             report = await session.checkSharing()
             working = false
+        }
+    }
+}
+
+/// The earlier saves, with a way to go back to one.
+private struct PreviousSavesSheet: View {
+    let versions: [SharedVersion]
+    @Environment(\.dismiss) private var dismiss
+    @State private var chosen: SharedVersion?
+    @State private var restoring = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Previous Saves").font(.title2.bold())
+            Text("Every time the shared data is saved, the one before it is kept. Oinkly Budget keeps the last \(SharedDataFolder.keepNewest) saves and one for each of the last \(SharedDataFolder.keepDays) days. Going back saves what you have now first, so you can come back to it.")
+                .font(.callout).foregroundStyle(.secondary)
+            if versions.isEmpty {
+                Text("There are no previous saves yet.").foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
+            } else {
+                List(versions) { version in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))
+                            Text("Saved by \(version.info.savedBy), save number \(version.info.revision)").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Go Back to This…") { chosen = version }.disabled(restoring)
+                    }
+                }
+                .frame(minHeight: 200)
+            }
+            if let errorMessage { Label(errorMessage, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.orange).font(.callout) }
+            HStack {
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction).disabled(restoring)
+            }
+        }
+        .padding(20)
+        .frame(width: 520, height: 420)
+        .confirmationDialog("Go back to this save?", isPresented: Binding(get: { chosen != nil }, set: { if !$0 { chosen = nil } }), titleVisibility: .visible) {
+            Button("Go Back and Restart") { restore() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let chosen {
+                Text("The shared data goes back to how it was on \(chosen.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What is open now is saved first, and stays in the list. Oinkly Budget restarts.")
+            }
+        }
+    }
+
+    private func restore() {
+        guard let version = chosen else { return }
+        restoring = true
+        errorMessage = nil
+        Task {
+            do { try await SharedDataSession.shared.restore(version) }
+            catch {
+                errorMessage = "Nothing was changed: \(error.localizedDescription)"
+                restoring = false
+            }
         }
     }
 }

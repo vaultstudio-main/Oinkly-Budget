@@ -311,3 +311,13 @@ Not confirmed by the owner (still to be covered at the end of Phase 4): the forc
 ## 21. Encryption removed (2026-10-21)
 
 The owner asked for all encryption to be removed: it failed when used alone and when used with sharing. Removed from the app: the vault, passphrase and recovery key, the Keychain "remember", encrypted `.pig` backups, encrypted sharing (Phase 2) and its self-test. Sharing is plain only. Sections 7, 12 (D1 and the "Encrypt First" button), 17 (Phase 2), 20 and the encryption tests above are history and no longer apply. `info.json` no longer has an `encrypted` field. The upgrade safety copy no longer copies a vault folder. Nothing in 1.0's data (V1 or V2 databases) is affected.
+
+## 22. Phase 3, part 1: previous saves, restore and the save log (built 2026-10-21)
+
+Plain sharing passed the owner's two-login test again after encryption was removed (shared folder at save number 5, no lock left).
+
+**Built.** Every save keeps the file it replaces in `previous saves/` (a `.store` file and a small `.json` note of who saved it and when), then trims the folder to the newest 5 saves plus the newest save of each of the last 7 days. The old single "previous save" file is retired. Settings ▸ Shared Data File has **Previous Saves…**, a list with **Go Back to This…**: the current data is saved first (so it becomes a previous save too), the chosen save becomes the new current save, the lock is released and the app restarts on it. `save log.txt` in the shared folder gets one line per save, restore and kept recovery (last 300 lines); Check Sharing shows the newest lines and the number of previous saves.
+
+**Tested** (`-sharedFolderSelfTest`, debug, throwaway folder, copy of the owner's data): 30 simulated saves over ten days, history trimmed to 9 files, newest five kept, a save for each of the last six days, nothing older piling up, every kept save opens with the right record counts, restore makes a new save and keeps the data it replaced, the log is written, the history folder is open to every login. 14 of 14 passed. Not yet tried by hand through the Settings sheet.
+
+**Not built yet, and why.** *Receipt clean-up:* deleting a receipt file that is still used would lose data, and no data file here has receipts to show how SwiftData refers to them, so this needs a test with real receipts first. *Open Recent, Move This File, Create a New Data File:* with a fixed folder and one data file, these mean several data files in one folder, each with its own lock, notes and history, which is a large change for little use. *Large-file timing:* still to measure.

@@ -42,6 +42,13 @@ nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var fileID: String
 }
 
+/// One earlier finished save kept in the `previous saves` folder.
+nonisolated struct SharedVersion: Identifiable, Equatable, Sendable {
+    var url: URL
+    var info: SharedInfo
+    var id: URL { url }
+}
+
 nonisolated enum SharedDataError: LocalizedError {
     case folderUnavailable(String)
     case notOpenToEveryone(String)
@@ -80,6 +87,11 @@ nonisolated struct SharedDataFolder: Sendable {
     static let lockName = "lock.json"
     static let infoName = "info.json"
     static let previousName = "OinklyBudget (previous save).store"
+    static let historyName = "previous saves"
+    static let logName = "save log.txt"
+    /// How many of the newest saves are kept, and how many days back one save per day is kept as well.
+    static let keepNewest = 5
+    static let keepDays = 7
     static let formatVersion = 1
     static let schemaVersion = 2
     /// A lock is stale once its heartbeat is this old, in seconds. The app refreshes it every 60.
@@ -89,6 +101,8 @@ nonisolated struct SharedDataFolder: Sendable {
     var lockURL: URL { url.appendingPathComponent(Self.lockName) }
     var infoURL: URL { url.appendingPathComponent(Self.infoName) }
     var previousURL: URL { url.appendingPathComponent(Self.previousName) }
+    var historyURL: URL { url.appendingPathComponent(Self.historyName) }
+    var logURL: URL { url.appendingPathComponent(Self.logName) }
 
     private var manager: FileManager { .default }
 
@@ -286,18 +300,80 @@ nonisolated struct SharedDataFolder: Sendable {
         // leaves the shared data exactly as it was.
         try Self.copyAttachments(from: working, to: storeURL)
 
-        if hasStore {
-            try? manager.removeItem(at: previousURL)
-            try? manager.copyItem(at: storeURL, to: previousURL)
-            try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: previousURL.path)
-        }
+        if hasStore { archive(current: current, now: now) }
         if rename(temporary.path, storeURL.path) != 0 {
             throw SharedDataError.copyFailed("the new file couldn't replace the old one (\(String(cString: strerror(errno))))")
         }
         let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: (current?.revision ?? 0) + 1,
                               savedAt: now, savedBy: name, appVersion: appVersion, fileID: current?.fileID ?? UUID().uuidString)
         try writeInfo(info)
+        appendLog("saved by \(name) as save number \(info.revision) (Oinkly Budget \(appVersion))", now: now)
         return info
+    }
+
+    // MARK: Previous saves and the save log
+
+    /// Keeps the file that is about to be replaced, with a note of who saved it and when, then trims the old ones.
+    /// A failure here never stops the new save.
+    private func archive(current: SharedInfo?, now: Date) {
+        try? manager.removeItem(at: previousURL)
+        do {
+            if !manager.fileExists(atPath: historyURL.path) {
+                try manager.createDirectory(at: historyURL, withIntermediateDirectories: true)
+                chmod(historyURL.path, 0o777)
+            }
+            let modified = (try? manager.attributesOfItem(atPath: storeURL.path)[.modificationDate] as? Date) ?? now
+            let info = current ?? SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: 0, savedAt: modified,
+                                             savedBy: "unknown", appVersion: "", fileID: "")
+            let stamp = ISO8601DateFormatter().string(from: info.savedAt).replacingOccurrences(of: ":", with: "-")
+            let base = historyURL.appendingPathComponent("save \(info.revision) \(stamp)")
+            let copy = base.appendingPathExtension("store")
+            try? manager.removeItem(at: copy)
+            try manager.copyItem(at: storeURL, to: copy)
+            try Self.encoder.encode(info).write(to: base.appendingPathExtension("json"))
+            for file in [copy, base.appendingPathExtension("json")] { try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: file.path) }
+        } catch {
+            appendLog("couldn't keep the previous save: \(error.localizedDescription)", now: now)
+        }
+        pruneHistory(now: now)
+    }
+
+    /// The earlier saves, newest first.
+    func versions() -> [SharedVersion] {
+        guard let files = try? manager.contentsOfDirectory(at: historyURL, includingPropertiesForKeys: nil) else { return [] }
+        return files.filter { $0.pathExtension == "store" }.compactMap { store in
+            guard let data = try? Data(contentsOf: store.deletingPathExtension().appendingPathExtension("json")),
+                  let info = try? Self.decoder.decode(SharedInfo.self, from: data) else { return nil }
+            return SharedVersion(url: store, info: info)
+        }.sorted { $0.info.savedAt > $1.info.savedAt }
+    }
+
+    /// Keeps the newest few saves, plus the newest save of each of the last few days. Everything else is removed.
+    func pruneHistory(now: Date = .now, calendar: Calendar = .current) {
+        let all = versions()
+        var keep = Set(all.prefix(Self.keepNewest).map(\.url))
+        let cutoff = calendar.startOfDay(for: now).addingTimeInterval(-Double(Self.keepDays - 1) * 86_400)
+        var seenDays = Set<Date>()
+        for version in all where version.info.savedAt >= cutoff {
+            if seenDays.insert(calendar.startOfDay(for: version.info.savedAt)).inserted { keep.insert(version.url) }
+        }
+        for version in all where !keep.contains(version.url) {
+            try? manager.removeItem(at: version.url)
+            try? manager.removeItem(at: version.url.deletingPathExtension().appendingPathExtension("json"))
+        }
+    }
+
+    /// One line per save, newest at the end. Kept short so it never grows without limit.
+    func appendLog(_ text: String, now: Date = .now) {
+        let line = "\(now.formatted(.iso8601.year().month().day().dateSeparator(.dash)))  \(now.formatted(date: .omitted, time: .standard))  \(text)"
+        var lines = ((try? String(contentsOf: logURL, encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
+        lines.append(line)
+        if lines.count > 300 { lines.removeFirst(lines.count - 300) }
+        try? write(Data((lines.joined(separator: "\n") + "\n").utf8), to: logURL)
+    }
+
+    func recentLog(_ count: Int = 5) -> [String] {
+        ((try? String(contentsOf: logURL, encoding: .utf8)) ?? "").split(separator: "\n").suffix(count).map(String.init)
     }
 
     /// Makes a brand new shared folder from a database that already exists (this Mac's own data). The original is only
@@ -314,6 +390,7 @@ nonisolated struct SharedDataFolder: Sendable {
         try SQLiteStore.vacuum(source: working, into: destination)
         try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: destination.path)
         try Self.copyAttachments(from: working, to: destination)
+        appendLog("kept unsaved changes as \(destination.lastPathComponent)", now: now)
         return destination
     }
 
@@ -377,7 +454,9 @@ nonisolated struct SharedDataFolder: Sendable {
         } else {
             lines.append("Not in use.")
         }
-        lines.append(manager.fileExists(atPath: previousURL.path) ? "A previous save is kept." : "No previous save yet.")
+        let saves = versions()
+        lines.append(saves.isEmpty ? "No previous saves yet." : "\(saves.count) previous save\(saves.count == 1 ? " is" : "s are") kept, the newest from \(saves[0].info.savedAt.formatted(date: .abbreviated, time: .shortened)).")
+        for entry in recentLog() { lines.append("Log: \(entry)") }
         return lines
     }
 }

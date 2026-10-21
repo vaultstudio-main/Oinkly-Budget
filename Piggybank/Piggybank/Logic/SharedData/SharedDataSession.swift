@@ -245,6 +245,42 @@ final class SharedDataSession {
         NSApp.terminate(nil)
     }
 
+    /// The earlier saves in the shared folder, newest first.
+    func previousSaves() async -> [SharedVersion] {
+        let folder = SharedDataFolder.standard
+        return await Task.detached { folder.versions() }.value
+    }
+
+    /// Makes an earlier save the current data. What is open now is saved first, so it becomes a previous save itself and
+    /// nothing is lost. Then the app starts again on the restored data.
+    func restore(_ version: SharedVersion) async throws {
+        guard isActive, !lostLock, let folder else { throw SharedDataError.folderUnavailable("the shared data isn't open in this copy") }
+        await checkInNow(release: false)
+        if isDirty || lostLock { throw SharedDataError.copyFailed(errorMessage ?? "the current data couldn't be saved first, so nothing was changed") }
+        let name = NSFullUserName()
+        let appVersion = appVersion
+        let token = me.token
+        let base = baseRevision
+        let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedRestore", isDirectory: true)
+        let info: SharedInfo = try await Task.detached {
+            defer { try? FileManager.default.removeItem(at: staging) }
+            try? FileManager.default.removeItem(at: staging)
+            try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+            let copy = staging.appendingPathComponent(SharedDataFolder.storeName)
+            try FileManager.default.copyItem(at: version.url, to: copy)
+            guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
+            let info = try folder.checkIn(from: copy, baseRevision: base, by: name, appVersion: appVersion)
+            folder.appendLog("restored the save from \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)) (number \(version.info.revision)) as save number \(info.revision)")
+            folder.release(token: token)
+            return info
+        }.value
+        baseRevision = info.revision
+        stopTimers()
+        isActive = false
+        removeMarker()
+        Self.relaunch()
+    }
+
     /// A plain-words report on the shared folder, for Check Sharing.
     func checkSharing() async -> [String] {
         let folder = SharedDataFolder.standard
