@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import SwiftData
 
 /// Sharing one data file with other Mac logins, one at a time.
@@ -28,6 +29,8 @@ final class SharedDataSession {
         case local
         case shared(workingStore: URL)
         case waiting
+        /// The person chose Quit when asked for the passphrase.
+        case quit
     }
 
     private(set) var decision: Decision?
@@ -43,6 +46,10 @@ final class SharedDataSession {
     private var folder: SharedDataFolder?
     private var baseRevision: Int?
     private var fileID: String?
+    private var keyFile: VaultKeyFile?
+    private var dataKey: SymmetricKey?
+    /// The shared data is encrypted (set at launch, and when encryption is turned on or off).
+    private(set) var isEncrypted = false
     private let me = SharedLock(token: UUID().uuidString, userName: NSUserName(), fullName: NSFullUserName(), since: .now, heartbeat: .now,
                                 pid: ProcessInfo.processInfo.processIdentifier, host: ProcessInfo.processInfo.hostName)
     private var heartbeatTask: Task<Void, Never>?
@@ -77,7 +84,7 @@ final class SharedDataSession {
         let folder = SharedDataFolder.standard
         self.folder = folder
         let openAnyway = Self.takeNextLaunchChoice()
-        guard folder.exists, folder.hasStore else {
+        guard folder.exists, folder.hasData else {
             decision = .folderProblem("The shared data can't be found in \(folder.url.path). It may have been moved or deleted.")
             return .waiting
         }
@@ -97,7 +104,24 @@ final class SharedDataSession {
                 #endif
                 return .waiting
             }
-            let recovered = try openWorkingCopy(from: folder)
+            // Encrypted data needs its key before anything is opened. The lock is let go again if there isn't one.
+            if folder.isEncrypted {
+                guard let file = try? VaultCrypto.read(keysAt: folder.keysURL) else {
+                    folder.release(token: mine.token)
+                    decision = .failed("The key file (\(VaultCrypto.keysName)) is missing from the shared folder, so the encrypted data can't be opened.")
+                    return .waiting
+                }
+                guard let key = VaultSession.shared.obtainKey(file) else {
+                    folder.release(token: mine.token)
+                    return .quit
+                }
+                keyFile = file
+                dataKey = key
+                isEncrypted = true
+                VaultSession.shared.adoptShared(keyFile: file, key: key, keysURL: folder.keysURL)
+            }
+            let recovered: String?
+            do { recovered = try openWorkingCopy(from: folder) } catch { folder.release(token: mine.token); throw error }
             isActive = true
             openSince = .now
             lastSaved = folder.readInfo()?.savedAt
@@ -109,6 +133,8 @@ final class SharedDataSession {
             return .waiting
         }
     }
+
+    private var currentSeal: SharedSeal? { isEncrypted ? dataKey.map { SharedSeal(key: $0, keyFile: nil) } : nil }
 
     private struct Marker: Codable {
         var baseRevision: Int?
@@ -134,10 +160,10 @@ final class SharedDataSession {
                 return "Oinkly Budget closed unexpectedly last time. Your unsaved changes were kept."
             }
             // The shared data changed while this copy was out. Keep this copy as its own file instead of overwriting.
-            let kept = try folder.saveRecoveredCopy(from: Self.workingStore)
+            let kept = try folder.saveRecoveredCopy(from: Self.workingStore, seal: currentSeal)
             message = "Oinkly Budget closed unexpectedly, and the shared data was saved by someone else in the meantime. Your unsaved changes were kept as “\(kept.lastPathComponent)” in the shared folder, and Oinkly Budget opened the latest shared data."
         }
-        let copied = try folder.checkOut(to: Self.workingStore)
+        let copied = try folder.checkOut(to: Self.workingStore, key: isEncrypted ? dataKey : nil)
         baseRevision = copied?.revision
         fileID = copied?.fileID
         try writeMarker()
@@ -163,7 +189,7 @@ final class SharedDataSession {
     /// Looks at the lock without taking it. The waiting screen calls this every couple of seconds.
     func lookAgain() -> Waiting {
         let folder = SharedDataFolder.standard
-        guard folder.exists, folder.hasStore else { return .problem("The shared data can't be found in \(folder.url.path).") }
+        guard folder.exists, folder.hasData else { return .problem("The shared data can't be found in \(folder.url.path).") }
         guard let lock = folder.readLock() else { return FileManager.default.fileExists(atPath: folder.lockURL.path) ? .heldBy(SharedLock(token: "unreadable", userName: "another user", fullName: "", since: .now, heartbeat: .now), isStale: false) : .free }
         if lock.userName == NSUserName(), lock.isStale() { return .free }
         return .heldBy(lock, isStale: lock.isStale())
@@ -198,8 +224,14 @@ final class SharedDataSession {
         try? context.save()
         let folder = SharedDataFolder.standard
         try folder.ensureFolder()
-        if !folder.hasStore {
-            try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: appVersion)
+        if !folder.hasData {
+            let vault = VaultSession.shared
+            if VaultSession.isEnabled, vault.isActive, let keyFile = vault.currentKeyFile, let key = vault.currentKey {
+                // Encrypted on this Mac: the shared copy is encrypted with the same key and key file.
+                try folder.createStore(from: VaultSession.workingStore, by: NSFullUserName(), appVersion: appVersion, seal: SharedSeal(key: key, keyFile: keyFile))
+            } else {
+                try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: appVersion)
+            }
         }
         removeMarker()
         UserDefaults.standard.set(true, forKey: Self.enabledKey)
@@ -209,32 +241,86 @@ final class SharedDataSession {
     /// Back to this Mac's own data. The latest shared data is copied to this Mac, after a copy of what this Mac had
     /// is kept in Application Support ▸ Backups. The shared data stays where it is for the other logins.
     func stopSharing(localStore: URL) async throws {
-        var source = Self.workingStore
-        if isActive, !lostLock {
-            await checkInNow(release: true)
-            if let folder, folder.hasStore, !isDirty { source = folder.storeURL }
-        } else if let folder, folder.hasStore {
-            source = folder.storeURL
-        }
+        let encrypted = isEncrypted || SharedDataFolder.standard.isEncrypted
+        let wasActive = isActive && !lostLock
+        if wasActive { await checkInNow(release: true) }
+        // Anything the last save couldn't take is still only in the working copy.
+        let useWorking = wasActive && isDirty && FileManager.default.fileExists(atPath: Self.workingStore.path)
+        let shared = SharedDataFolder.standard
         let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
             .appendingPathComponent("Before stopping sharing (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
+        let working = Self.workingStore
+        let key = dataKey
+        let localVault = VaultSession.vaultDirectory
+        let localVaultFile = VaultSession.vaultURL
+        let localKeys = VaultSession.keysURL
+        var source = working
+        if !useWorking, shared.hasStore { source = shared.storeURL }
+        let sourceStore = source
         try await Task.detached {
-            if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
-            let copy = try StoreFiles.snapshot(of: source, into: URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true))
-            defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
-            StoreFiles.remove(store: localStore)
-            try FileManager.default.createDirectory(at: localStore.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try FileManager.default.copyItem(at: copy, to: localStore)
-            try StoreFiles.copyAttachments(from: copy, to: localStore)
+            let manager = FileManager.default
+            if manager.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
+            if encrypted {
+                // This Mac gets its own encrypted copy, with the same passphrase and recovery key.
+                if manager.fileExists(atPath: localVault.path) {
+                    try? manager.createDirectory(at: backups, withIntermediateDirectories: true)
+                    try? manager.copyItem(at: localVault, to: backups.appendingPathComponent("Vault", isDirectory: true))
+                }
+                try? manager.removeItem(at: localVault)
+                try manager.createDirectory(at: localVault, withIntermediateDirectories: true)
+                if useWorking, let key {
+                    let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true)
+                    defer { try? manager.removeItem(at: staging) }
+                    _ = try StoreFiles.snapshot(of: working, into: staging)
+                    try VaultCrypto.seal(directory: staging, to: localVaultFile, key: key)
+                } else {
+                    try manager.copyItem(at: shared.vaultURL, to: localVaultFile)
+                }
+                try manager.copyItem(at: shared.keysURL, to: localKeys)
+                StoreFiles.remove(store: localStore)
+            } else {
+                let copy = try StoreFiles.snapshot(of: sourceStore, into: URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true))
+                defer { try? manager.removeItem(at: copy.deletingLastPathComponent()) }
+                StoreFiles.remove(store: localStore)
+                try manager.createDirectory(at: localStore.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try manager.copyItem(at: copy, to: localStore)
+                try StoreFiles.copyAttachments(from: copy, to: localStore)
+            }
         }.value
         #if DEBUG
-        NSLog("SHARED: stopped sharing. Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.appendingPathComponent("OinklyBudget.store").path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from \(source.path)")
+        NSLog("SHARED: stopped sharing (\(encrypted ? "encrypted" : "plain")). Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from \(useWorking ? working.path : (encrypted ? shared.vaultURL.path : sourceStore.path))")
         #endif
         stopTimers()
         isActive = false
         UserDefaults.standard.set(false, forKey: Self.enabledKey)
         StoreFiles.remove(store: Self.workingStore)
         try? FileManager.default.removeItem(at: Self.workingDirectory)
+        Self.relaunch()
+    }
+
+    // MARK: Encryption of the shared data
+
+    /// Encrypts the shared data with a new passphrase: the working copy is sealed into the shared folder, the readable
+    /// copy there is removed, and the app starts again. Other users are asked for the passphrase the next time they open it.
+    func commitEnableEncryption(_ pending: VaultSession.Pending, remember: Bool) async throws {
+        guard isActive, !lostLock, !isEncrypted else { throw SharedDataError.folderUnavailable("the shared data isn't open in this copy") }
+        let seal = SharedSeal(key: pending.dataKey, keyFile: pending.keyFile)
+        guard await checkInNow(release: true, transition: .encrypt(seal)) else {
+            throw SharedDataError.copyFailed(errorMessage ?? "the shared data couldn't be saved")
+        }
+        if remember { VaultKeychain.save(pending.dataKey.withUnsafeBytes { Data($0) }, vaultID: pending.keyFile.vaultID) }
+        Self.relaunch()
+    }
+
+    /// Back to readable shared data: the working copy is saved as a plain data file, the encrypted copies are removed
+    /// from the shared folder, and the app starts again.
+    func turnOffEncryption() async throws {
+        guard isActive, !lostLock, isEncrypted else { throw SharedDataError.folderUnavailable("the shared data isn't open in this copy") }
+        let id = keyFile?.vaultID
+        guard await checkInNow(release: true, transition: .decrypt) else {
+            throw SharedDataError.copyFailed(errorMessage ?? "the shared data couldn't be saved")
+        }
+        if let id { VaultKeychain.delete(vaultID: id) }
         Self.relaunch()
     }
 
@@ -308,9 +394,16 @@ final class SharedDataSession {
     /// Called whenever the app saves, so the shared file is brought up to date at the next chance.
     func noteSaved() { if isActive && !lostLock { isDirty = true } }
 
-    /// Writes the working copy back to the shared folder. With `release`, also lets go of the lock.
-    func checkInNow(release: Bool) async {
-        guard isActive, !lostLock, let folder, !isCheckingIn else { return }
+    /// A change to how the shared data is stored, made as part of one save.
+    enum Transition {
+        case encrypt(SharedSeal)
+        case decrypt
+    }
+
+    /// Writes the working copy back to the shared folder. With `release`, also lets go of the lock. True when it saved.
+    @discardableResult
+    func checkInNow(release: Bool, transition: Transition? = nil) async -> Bool {
+        guard isActive, !lostLock, let folder, !isCheckingIn else { return false }
         isCheckingIn = true
         defer { isCheckingIn = false }
         if let container = PiggybankAppDelegate.container { try? container.mainContext.save() }
@@ -319,11 +412,17 @@ final class SharedDataSession {
         let token = me.token
         let working = Self.workingStore
         let base = baseRevision
+        let seal: SharedSeal?
+        switch transition {
+        case .encrypt(let new): seal = new
+        case .decrypt: seal = nil
+        case nil: seal = currentSeal
+        }
         let result: Result<SharedInfo, Error> = await Task.detached {
             do {
                 // Still ours? If another login took the lock, nothing is written.
                 guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
-                let info = try folder.checkIn(from: working, baseRevision: base, by: name, appVersion: version)
+                let info = try folder.checkIn(from: working, baseRevision: base, by: name, appVersion: version, seal: seal)
                 if release { folder.release(token: token) }
                 return .success(info)
             } catch {
@@ -337,27 +436,46 @@ final class SharedDataSession {
             baseRevision = info.revision
             fileID = info.fileID
             errorMessage = nil
+            switch transition {
+            case .encrypt(let new):
+                isEncrypted = true
+                dataKey = new.key
+                keyFile = new.keyFile
+            case .decrypt:
+                isEncrypted = false
+                dataKey = nil
+                keyFile = nil
+            case nil: break
+            }
             if release {
                 stopTimers()
                 isActive = false
                 removeMarker()
+                // Encrypted data leaves no readable copy behind when the app lets go of it.
+                if isEncrypted {
+                    StoreFiles.remove(store: Self.workingStore)
+                    try? FileManager.default.removeItem(at: Self.workingDirectory)
+                }
             } else {
                 try? writeMarker()
             }
+            return true
         case .failure(let error):
             if case SharedDataError.changedMeanwhile = error {
                 lockWasTaken()
             } else {
                 errorMessage = "The shared data couldn't be saved: \(error.localizedDescription) Your changes are safe on this Mac and will be tried again."
             }
+            return false
         }
     }
 
     /// Quitting: save and let go. A copy that lost the lock is kept as a separate file instead.
     func finishForQuit() async {
         if lostLock, let folder {
-            _ = try? folder.saveRecoveredCopy(from: Self.workingStore)
+            _ = try? folder.saveRecoveredCopy(from: Self.workingStore, seal: currentSeal)
             removeMarker()
+            if isEncrypted { StoreFiles.remove(store: Self.workingStore); try? FileManager.default.removeItem(at: Self.workingDirectory) }
             return
         }
         await checkInNow(release: true)
@@ -371,7 +489,7 @@ final class SharedDataSession {
         let folder = SharedDataFolder.standard
         do {
             try folder.ensureFolder()
-            if !folder.hasStore {
+            if !folder.hasData {
                 try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: "1.0")
             }
             UserDefaults.standard.set(true, forKey: enabledKey)

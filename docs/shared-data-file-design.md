@@ -284,3 +284,26 @@ Use the steps in section 14, with these specifics:
 6. Crash: in login 1 force quit the app (Activity Monitor ▸ Force Quit). In login 2, open the app: it shows the waiting screen, then after 3 minutes **Open Anyway**. Use it. Login 1 then opens its app again: it should say the shared data was taken and keep its own copy.
 7. In Settings ▸ **Check Sharing…** in each login: every line should say OK.
 8. Each login: **Stop Sharing** at the end if you want to go back.
+
+## 19. Phase 1 gate result (2026-10-21)
+
+The owner ran the two-login test with a second Mac login. Reported: data was added and deleted in the shared data without a crash, and trying to open the app while the other login's copy was open worked as designed (the waiting screen). After the test the shared folder held save number 9, no lock was left behind, and no recovered copy was created.
+
+Not confirmed by the owner (still to be covered at the end of Phase 4): the force-quit and Open Anyway case between two real logins, sleeping a login that holds the lock, and a large data file.
+
+**Decision: go ahead with Phase 2 (encrypted sharing).**
+
+## 20. Phase 2 status: encrypted sharing (built 2026-10-21, folder layer tested)
+
+**How it works.** With encryption on, the shared folder holds `OinklyBudget.vault` and `OinklyBudget.vaultkeys` instead of `OinklyBudget.store`, and `info.json` says `encrypted: true`. Check-out opens the vault into the private working copy with the data key; check-in seals the working copy back, opens the sealed file again and compares record counts before it replaces anything. No readable copy stays in the shared folder, and the working copy is deleted when the app lets go. Each login keeps the key in its own Keychain if it chooses "Remember on this Mac", otherwise it is asked for the passphrase (or recovery key) at launch, before the lock is used.
+
+**Changes between states** (all done as one save while holding the lock, then the app restarts):
+- Share while this Mac's data is encrypted: the shared copy is the same vault with the same key file.
+- Turn encryption on while sharing: the working copy is sealed into the shared folder and the readable file is removed; other logins are asked for the passphrase next time.
+- Turn encryption off while sharing: saved as a plain file, vault, key file and previous vault removed.
+- Stop sharing while encrypted: this Mac gets its own encrypted copy with the same passphrase; what it had before is kept in Backups.
+- A recovered copy (after a crash while someone else saved) is sealed too.
+
+**Tested** by `-sharedEncryptionSelfTest` (debug), on a throwaway folder with a copy of the owner's data (5079 rows): plain create, encrypt on, no readable data left, encrypted file isn't a database, open with passphrase and with recovery key, wrong passphrase refused, routine encrypted save, previous save kept, stale save refused, recovered copy encrypted, encrypt off cleans up, share-encrypted-from-the-start. All 15 passed.
+
+**Not yet tested by hand:** the launch prompt on a second login, the Settings sheets in shared mode (turn on, turn off, change passphrase, new recovery key), stop sharing while encrypted, and timing with a large file.

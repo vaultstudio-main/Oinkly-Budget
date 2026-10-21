@@ -15,11 +15,15 @@ struct EncryptionSection: View {
     @State private var remember = VaultSession.shared.hasRemembered
     @State private var message: String?
 
+    private var sharing: Bool { SharedDataSession.isEnabled }
+    /// With sharing on, whether the shared data is encrypted decides; otherwise whether this Mac's data is.
+    private var isOn: Bool { sharing ? SharedDataSession.shared.isEncrypted : VaultSession.isEnabled }
+
     var body: some View {
         Section {
-            if VaultSession.isEnabled {
-                Label("Your data is encrypted", systemImage: "lock.fill").foregroundStyle(Theme.green)
-                if let sealed = session.lastSealed {
+            if isOn {
+                Label(sharing ? "Your shared data is encrypted" : "Your data is encrypted", systemImage: "lock.fill").foregroundStyle(Theme.green)
+                if let sealed = sharing ? SharedDataSession.shared.lastSaved : session.lastSealed {
                     LabeledContent("Last saved encrypted", value: sealed.formatted(date: .abbreviated, time: .shortened))
                 }
                 Toggle("Remember on this Mac", isOn: Binding(get: { remember }, set: { remember = $0; session.setRemember($0) }))
@@ -31,7 +35,7 @@ struct EncryptionSection: View {
                     Spacer()
                     Button("Turn Off Encryption", role: .destructive) { confirmingOff = true }
                 }
-                if let error = session.errorMessage { Text(error).font(.footnote).foregroundStyle(.orange) }
+                if let error = sharing ? SharedDataSession.shared.errorMessage : session.errorMessage { Text(error).font(.footnote).foregroundStyle(.orange) }
                 Text("The encrypted file is saved every couple of minutes, when you hide the app and when you quit. While Oinkly Budget is open it works on a readable copy that is removed when you quit, so this protects your data when the app is closed, such as a copied file, a backup or a lost Mac without FileVault. It does not hide it from someone using your Mac while it is unlocked and open.")
                     .font(.footnote).foregroundStyle(.secondary)
             } else {
@@ -43,8 +47,6 @@ struct EncryptionSection: View {
                     }
                     Spacer()
                     Button("Turn On") { enabling = true }
-                        .disabled(SharedDataSession.isEnabled)
-                        .help(SharedDataSession.isEnabled ? "Encrypting shared data isn't available yet. Stop sharing first." : "")
                 }
             }
             if let message { Text(message).font(.footnote).foregroundStyle(.orange) }
@@ -58,7 +60,8 @@ struct EncryptionSection: View {
             Button("Turn Off and Restart", role: .destructive, action: turnOff)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Your data goes back to a plain data file on this Mac, and the encrypted copy is removed. You'll be asked for your passphrase first.")
+            Text(sharing ? "The shared data goes back to a plain data file in the shared folder, and the encrypted copy is removed. Other users no longer need the passphrase. You'll be asked for your passphrase first."
+                         : "Your data goes back to a plain data file on this Mac, and the encrypted copy is removed. You'll be asked for your passphrase first.")
         }
     }
 
@@ -68,7 +71,10 @@ struct EncryptionSection: View {
         message = nil
         let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         Task {
-            do { try await session.turnOff(current: passphrase, localStore: VaultSession.localStoreURL(for: schema)) }
+            do {
+                if sharing { try await SharedDataSession.shared.turnOffEncryption() }
+                else { try await session.turnOff(current: passphrase, localStore: VaultSession.localStoreURL(for: schema)) }
+            }
             catch { message = "Couldn't turn off encryption: \(error.localizedDescription)" }
         }
     }
@@ -144,7 +150,9 @@ private struct EnableEncryptionSheet: View {
                 Button("Save as Text File") { saveText(pending.recoveryKey) }
             }
             Toggle("I have saved my recovery key", isOn: $saved)
-            Text("Oinkly Budget will now encrypt your data and restart. Your current data file is removed only after the encrypted copy opens.")
+            Text(SharedDataSession.isEnabled
+                 ? "Oinkly Budget will now encrypt the shared data and restart. Every user of the shared data will be asked for this passphrase (or the recovery key) the next time they open it, and can ask their login to remember it."
+                 : "Oinkly Budget will now encrypt your data and restart. Your current data file is removed only after the encrypted copy opens.")
                 .font(.footnote).foregroundStyle(.secondary)
             if let errorMessage { Text(errorMessage).font(.callout).foregroundStyle(Theme.red) }
             HStack {
@@ -178,7 +186,11 @@ private struct EnableEncryptionSheet: View {
         let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         Task {
             do {
-                try await VaultSession.shared.commitEnable(pending, localStore: VaultSession.localStoreURL(for: schema), remember: remember)
+                if SharedDataSession.isEnabled {
+                    try await SharedDataSession.shared.commitEnableEncryption(pending, remember: remember)
+                } else {
+                    try await VaultSession.shared.commitEnable(pending, localStore: VaultSession.localStoreURL(for: schema), remember: remember)
+                }
             } catch {
                 errorMessage = "Couldn't encrypt your data: \(error.localizedDescription) Nothing was changed."
                 working = false

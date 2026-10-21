@@ -36,6 +36,9 @@ final class VaultSession {
     private var isDirty = false
     private var isSealing = false
     private var timer: Task<Void, Never>?
+    /// With a shared data file, where the key file lives (in the shared folder) instead of this Mac's vault folder.
+    private var sharedKeysURL: URL?
+    private var keysLocation: URL { sharedKeysURL ?? Self.keysURL }
 
     // MARK: Locations
 
@@ -51,6 +54,9 @@ final class VaultSession {
 
     static var isEnabled: Bool { FileManager.default.fileExists(atPath: vaultURL.path) }
     var vaultID: String? { keyFile?.vaultID }
+    /// The open vault's key file and data key, for sharing the encrypted data.
+    var currentKeyFile: VaultKeyFile? { keyFile }
+    var currentKey: SymmetricKey? { dataKey }
     var hasRemembered: Bool { vaultID.flatMap { VaultKeychain.load(vaultID: $0) } != nil }
 
     /// This Mac's own, unencrypted data file, as the app opened it before encryption was turned on.
@@ -90,7 +96,7 @@ final class VaultSession {
     }
 
     /// The key from the Keychain if it was remembered, otherwise by asking.
-    private func obtainKey(_ file: VaultKeyFile) -> SymmetricKey? {
+    func obtainKey(_ file: VaultKeyFile) -> SymmetricKey? {
         if let remembered = VaultKeychain.load(vaultID: file.vaultID), remembered.count == 32 { return SymmetricKey(data: remembered) }
         var message: String?
         while true {
@@ -130,6 +136,14 @@ final class VaultSession {
     // MARK: While running
 
     func noteSaved() { if isActive { isDirty = true } }
+
+    /// The shared data session opened encrypted shared data. The key settings (change passphrase, new recovery key,
+    /// remember on this Mac) then work on the shared key file, with the key it already holds.
+    func adoptShared(keyFile: VaultKeyFile, key: SymmetricKey, keysURL: URL) {
+        self.keyFile = keyFile
+        dataKey = key
+        sharedKeysURL = keysURL
+    }
 
     private func startTimer() {
         timer?.cancel()
@@ -248,7 +262,8 @@ final class VaultSession {
     func changePassphrase(current: String, to new: String) throws {
         guard let keyFile, let dataKey, confirm(current) else { throw VaultError.wrongSecret }
         let updated = try VaultCrypto.changingPassphrase(keyFile, dataKey: dataKey, to: new)
-        try VaultCrypto.write(updated, to: Self.keysURL)
+        try VaultCrypto.write(updated, to: keysLocation)
+        try? FileManager.default.setAttributes([.posixPermissions: sharedKeysURL == nil ? 0o600 : 0o666], ofItemAtPath: keysLocation.path)
         self.keyFile = updated
     }
 
@@ -256,7 +271,8 @@ final class VaultSession {
     func newRecoveryKey(current: String) throws -> String {
         guard let keyFile, let dataKey, confirm(current) else { throw VaultError.wrongSecret }
         let result = try VaultCrypto.replacingRecoveryKey(keyFile, dataKey: dataKey)
-        try VaultCrypto.write(result.keyFile, to: Self.keysURL)
+        try VaultCrypto.write(result.keyFile, to: keysLocation)
+        try? FileManager.default.setAttributes([.posixPermissions: sharedKeysURL == nil ? 0o600 : 0o666], ofItemAtPath: keysLocation.path)
         self.keyFile = result.keyFile
         return result.recoveryKey
     }

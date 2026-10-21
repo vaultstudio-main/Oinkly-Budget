@@ -14,6 +14,9 @@ struct PiggybankApp: App {
         // With encryption on, the app runs on a working copy opened from the encrypted vault instead of this Mac's
         // own data file. See VaultSession.
         // The first time this version opens the data file, keep a copy of it as it was.
+        #if DEBUG
+        SharedEncryptionSelfTest.runIfRequested(localStore: VaultSession.localStoreURL(for: schema))
+        #endif
         StoreSafetyCopy.makeIfNeeded(localStore: VaultSession.localStoreURL(for: schema))
         let configuration: ModelConfiguration
         #if DEBUG
@@ -26,6 +29,8 @@ struct PiggybankApp: App {
             configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
         case .waiting:
             configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        case .quit:
+            exit(0)
         case .local:
             switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
             case .local:
