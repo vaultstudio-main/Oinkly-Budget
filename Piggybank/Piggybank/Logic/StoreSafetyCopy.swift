@@ -13,7 +13,7 @@ enum StoreSafetyCopy {
             .appendingPathComponent("Before this update (\(stamp))", isDirectory: true)
     }
 
-    /// Copies the data file (and an encrypted vault, if there is one) the first time this runs. Quietly does nothing
+    /// Copies the data file the first time this runs. Quietly does nothing
     /// on a fresh install, and never stops the app from starting.
     static func makeIfNeeded(localStore: URL) {
         guard !UserDefaults.standard.bool(forKey: doneKey) else { return }
@@ -27,7 +27,6 @@ enum StoreSafetyCopy {
         // Receipts and photos live beside the store, in a hidden folder.
         let support = localStore.deletingLastPathComponent().appendingPathComponent(".\(localStore.lastPathComponent)_SUPPORT", isDirectory: true)
         sources.append((support, support.lastPathComponent))
-        sources.append((VaultSession.vaultDirectory, "Vault"))
 
         for (source, name) in sources where manager.fileExists(atPath: source.path) {
             do {

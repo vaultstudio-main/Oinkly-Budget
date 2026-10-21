@@ -11,16 +11,11 @@ struct PiggybankApp: App {
         let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
-        // With encryption on, the app runs on a working copy opened from the encrypted vault instead of this Mac's
-        // own data file. See VaultSession.
         // The first time this version opens the data file, keep a copy of it as it was.
-        #if DEBUG
-        SharedEncryptionSelfTest.runIfRequested(localStore: VaultSession.localStoreURL(for: schema))
-        #endif
-        StoreSafetyCopy.makeIfNeeded(localStore: VaultSession.localStoreURL(for: schema))
+        StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         let configuration: ModelConfiguration
         #if DEBUG
-        SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: VaultSession.localStoreURL(for: schema))
+        SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
         // With sharing on, the app opens a private working copy of the shared data instead of this Mac's own data. If
         // another login has it open, a waiting screen is shown and nothing is opened until it is free.
@@ -29,19 +24,10 @@ struct PiggybankApp: App {
             configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
         case .waiting:
             configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        case .quit:
-            exit(0)
         case .local:
-            switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
-            case .local:
-                // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
-                // that the widgets need would move the default data file to the group folder, and an update would open empty.
-                configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
-            case .open(let workingStore):
-                configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
-            case .quit:
-                exit(0)
-            }
+            // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
+            // that the widgets need would move the default data file to the group folder, and an update would open empty.
+            configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
         }
         if SharedDataSession.shared.decision == nil { StoreReset.performIfRequested(for: configuration) }
         do {

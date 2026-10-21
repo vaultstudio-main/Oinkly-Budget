@@ -132,36 +132,15 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
             Task { @MainActor in
                 WidgetSnapshotWriter.refreshSoon()
-                VaultSession.shared.noteSaved()
                 SharedDataSession.shared.noteSaved()
             }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.willResignActiveNotification, object: nil, queue: .main) { _ in
             Task { @MainActor in
                 WidgetSnapshotWriter.refreshSoon()
-                // Hiding the app is a good moment to seal the encrypted data and save the shared data.
-                await VaultSession.shared.sealNow(final: false)
+                // Hiding the app is a good moment to save the shared data.
                 await SharedDataSession.shared.checkInNow(release: false)
             }
-        }
-        #if DEBUG
-        Task { @MainActor in VaultSession.shared.runTestCommands() }
-        #endif
-        // Say so when encrypted data had to be recovered after an unexpected close. It waits for the main window, so
-        // it never holds up start-up.
-        Task { @MainActor in
-            guard VaultSession.shared.notice != nil else { return }
-            var window: NSWindow?
-            for _ in 0..<80 where window == nil {
-                try? await Task.sleep(for: .milliseconds(500))
-                window = NSApp.windows.first { $0.title == "Oinkly Budget" && $0.isVisible }
-            }
-            guard let window, let notice = VaultSession.shared.notice else { return }
-            VaultSession.shared.notice = nil
-            let alert = NSAlert()
-            alert.messageText = "Encrypted data"
-            alert.informativeText = notice
-            _ = await alert.beginSheetModal(for: window)
         }
         // Say so when the shared data had to be recovered after an unexpected close.
         Task { @MainActor in
@@ -198,15 +177,13 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
         await CustomReminders.shared.apply()
     }
 
-    /// Quitting seals the encrypted data and deletes the plain working copy first, so nothing readable is left behind.
+    /// Quitting saves the shared data first and lets go of the lock.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let session = VaultSession.shared
         let shared = SharedDataSession.shared
-        guard session.isActive || shared.isActive || shared.lostLock else { return .terminateNow }
+        guard shared.isActive || shared.lostLock else { return .terminateNow }
         Task { @MainActor in
             // Saving the shared data lets go of the lock, so the next user can open it.
             await shared.finishForQuit()
-            if session.isActive { await session.sealNow(final: true) }
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

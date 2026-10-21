@@ -376,27 +376,11 @@ enum DataBackup {
     }
 
     static func decode(_ data: Data) throws -> BackupFile {
-        var data = data
-        // An encrypted backup asks for its passphrase first.
-        if BackupCrypto.isEncrypted(data) { data = try decryptAsking(data) }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
         guard let file = try? decoder.decode(BackupFile.self, from: data) else { throw BackupError.unreadable }
         guard file.version <= BackupFile.currentVersion else { throw BackupError.newerVersion(file.version) }
         return file
-    }
-
-    /// Asks for the passphrase an encrypted backup was made with, until it opens or the person cancels.
-    @MainActor
-    private static func decryptAsking(_ data: Data) throws -> Data {
-        var detail = "This backup is encrypted. Enter the passphrase it was saved with."
-        while true {
-            guard let passphrase = VaultPrompt.askPassphrase(title: "Open encrypted backup", detail: detail, button: "Open") else {
-                throw BackupError.unreadable
-            }
-            if let plain = try? BackupCrypto.decrypt(data, passphrase: passphrase) { return plain }
-            detail = "That passphrase didn't open the backup. Try again."
-        }
     }
 
     // MARK: Restore

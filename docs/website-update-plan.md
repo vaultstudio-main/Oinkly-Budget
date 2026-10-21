@@ -25,7 +25,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 | Headline and badge | Keep the one-line promise. Swap "Coming soon" for the App Store button when live. Confirm the price line ($9.99 one-time, no subscription) is still correct. |
 | What it does (feature grid) | Rewrite as the finished app. Add the new features below. |
 | Old school on purpose | Keep. Update the CSV sentence: Import Statement with preview, column mapping, saved mappings, duplicate skipping and undo. Still no bank linking. |
-| Private by design | Add encryption, and the local-only widgets. Keep "no accounts, no servers, no tracking". |
+| Private by design | Add the local-only widgets. Keep "no accounts, no servers, no tracking". |
 | A closer look | All screenshots retaken (see below), plus new ones. |
 | Good to know | Update: still no sync between devices; backup file moves data between computers; a shared data file lets two Mac logins on one Mac take turns. |
 | Requirements | Check the macOS minimum against the project setting before writing it. |
@@ -42,7 +42,6 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 8. **Export to PDF and CSV.** Every account, the Transactions page, Reports and Summary *(if built)*. Print by opening the PDF.
 9. **Import a statement.** Preview, map the columns, skip duplicates, undo.
 10. **Clean Up and autofill.** Find and replace payees and categories, merge duplicates, memory for payee, category, memo and payment method.
-11. **Encrypted data file.** Passphrase, recovery key, encrypted backups, remember on this Mac.
 12. **Widgets.** Upcoming bills and reminders, no amounts or account details.
 13. **Share one data file** *(if built).* Two Mac logins, one at a time, with who has it and when.
 14. **Safe updates.** An automatic safety copy of your data before the first open in the new version.
@@ -51,7 +50,6 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 ### `privacy.html`: must be updated
 
 - New "Last updated" date.
-- **Encryption:** add a section. The file can be encrypted with a passphrase you choose; we never see the passphrase or the key; backups use the same passphrase; a forgotten passphrase cannot be recovered without the recovery key.
 - **Shared data file:** the file lives where you choose, on your Mac. Nothing is uploaded. Where you place it is your decision, and a cloud-synced folder is governed by that service's policy.
 - **Widgets:** the widgets read a small file on your Mac with bill names, reminder titles and dates only. No amounts, no account details, nothing leaves the Mac.
 - **Safety copy:** the app keeps a copy of your data in its own folder when you update, until you delete it.
@@ -61,7 +59,6 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 
 ### `support.html`: add questions
 
-- How do I turn on encryption, and what if I forget the passphrase? (recovery key, no other way)
 - How do I share one data file between two Mac logins? Step by step, with the take-over and "close file" instructions. *(if built)*
 - What is the "Before this update" copy in Application Support ▸ Backups, and can I delete it? (yes, once you are happy)
 - How do I import a statement and map the columns?
@@ -134,7 +131,6 @@ Every new feature gets at least one picture on the product page, and the key one
 | S-E3a | Liabilities | `web-liabilities.png` | gallery |
 | S-E3b | Investments | `web-investments.png` | gallery |
 | S-F1a | Unlock screen | `web-unlock.png` | features |
-| S-F1b | Turn on encryption: passphrase | `web-encrypt.png` | features |
 | S-F4a | Shared file settings | `web-shared-file.png` | features |
 
 Also retake the existing gallery pictures that stay (Transactions, Bills, Register, Card, Mortgage, Reports, Liabilities, Investments, Planning, Summary), because the app's layout changed. Add `og:image` and favicon sizes while there.

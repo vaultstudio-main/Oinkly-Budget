@@ -1,6 +1,5 @@
 import Foundation
 import Darwin
-import CryptoKit
 
 /// Who has the shared data open. Written beside the data file while one copy of the app is using it.
 nonisolated struct SharedLock: Codable, Equatable, Sendable {
@@ -39,15 +38,8 @@ nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var savedAt: Date
     var savedBy: String
     var appVersion: String
-    var encrypted: Bool
     /// Names this particular data. A folder swapped for a different one is noticed.
     var fileID: String
-}
-
-/// What an encrypted save needs: the data key, and the key file when it is being written for the first time.
-nonisolated struct SharedSeal: Sendable {
-    var key: SymmetricKey
-    var keyFile: VaultKeyFile?
 }
 
 nonisolated enum SharedDataError: LocalizedError {
@@ -97,19 +89,12 @@ nonisolated struct SharedDataFolder: Sendable {
     var lockURL: URL { url.appendingPathComponent(Self.lockName) }
     var infoURL: URL { url.appendingPathComponent(Self.infoName) }
     var previousURL: URL { url.appendingPathComponent(Self.previousName) }
-    var vaultURL: URL { url.appendingPathComponent(VaultCrypto.fileName) }
-    var keysURL: URL { url.appendingPathComponent(VaultCrypto.keysName) }
-    var previousVaultURL: URL { url.appendingPathComponent("OinklyBudget (previous save).vault") }
 
     private var manager: FileManager { .default }
 
     var exists: Bool { manager.fileExists(atPath: url.path) }
     var hasStore: Bool { manager.fileExists(atPath: storeURL.path) }
-    var hasVault: Bool { manager.fileExists(atPath: vaultURL.path) }
-    /// Some finished data is there, plain or encrypted.
-    var hasData: Bool { hasStore || hasVault }
-    /// Whether the finished data is encrypted. The note says so; without a note, the file that is there does.
-    var isEncrypted: Bool { readInfo()?.encrypted ?? (hasVault && !hasStore) }
+    var hasData: Bool { hasStore }
 
     // MARK: The folder itself
 
@@ -246,25 +231,11 @@ nonisolated struct SharedDataFolder: Sendable {
 
     // MARK: Check out
 
-    /// Copies the finished data file to a private working copy, replacing whatever was there. Encrypted data is opened
-    /// with `key` into the working copy's folder. Returns what was copied.
+    /// Copies the finished data file to a private working copy, replacing whatever was there. Returns what was copied.
     @discardableResult
-    func checkOut(to working: URL, key: SymmetricKey? = nil) throws -> SharedInfo? {
-        guard hasData else { throw SharedDataError.folderUnavailable("it has no data file") }
+    func checkOut(to working: URL) throws -> SharedInfo? {
         let info = readInfo()
         if let info, info.formatVersion > Self.formatVersion || info.schemaVersion > Self.schemaVersion { throw SharedDataError.newerFormat }
-        if let key {
-            guard hasVault else { throw SharedDataError.folderUnavailable("it has no encrypted data file") }
-            let directory = working.deletingLastPathComponent()
-            try? manager.removeItem(at: directory)
-            do {
-                try VaultCrypto.open(vaultURL, into: directory, key: key)
-            } catch {
-                throw SharedDataError.copyFailed(error.localizedDescription)
-            }
-            guard manager.fileExists(atPath: working.path) else { throw SharedDataError.verifyFailed("the encrypted data has no database in it") }
-            return info
-        }
         guard hasStore else { throw SharedDataError.folderUnavailable("it has no data file") }
         StoreFiles.remove(store: working)
         try manager.createDirectory(at: working.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -293,11 +264,10 @@ nonisolated struct SharedDataFolder: Sendable {
     /// kept beside it as one step of undo. If anything fails, the shared file is left exactly as it was.
     /// `baseRevision` is the revision this copy was checked out from; if the shared file has moved on, nothing is written.
     @discardableResult
-    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, seal: SharedSeal? = nil, now: Date = .now) throws -> SharedInfo {
+    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, now: Date = .now) throws -> SharedInfo {
         guard exists else { throw SharedDataError.folderUnavailable("it can't be found") }
         let current = readInfo()
         if let baseRevision, let current, current.revision != baseRevision { throw SharedDataError.changedMeanwhile }
-        if let seal { return try checkInEncrypted(from: working, current: current, by: name, appVersion: appVersion, seal: seal, now: now) }
         let temporary = url.appendingPathComponent(".\(Self.storeName).\(UUID().uuidString).tmp")
         defer { try? manager.removeItem(at: temporary) }
         do {
@@ -325,77 +295,21 @@ nonisolated struct SharedDataFolder: Sendable {
             throw SharedDataError.copyFailed("the new file couldn't replace the old one (\(String(cString: strerror(errno))))")
         }
         let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: (current?.revision ?? 0) + 1,
-                              savedAt: now, savedBy: name, appVersion: appVersion, encrypted: false, fileID: current?.fileID ?? UUID().uuidString)
+                              savedAt: now, savedBy: name, appVersion: appVersion, fileID: current?.fileID ?? UUID().uuidString)
         try writeInfo(info)
-        // Going from encrypted back to plain: the encrypted copies are no longer the data.
-        if current?.encrypted == true || hasVault {
-            for old in [vaultURL, keysURL, previousVaultURL] { try? manager.removeItem(at: old) }
-        }
-        return info
-    }
-
-    /// Seals the working copy as the new finished data file. The sealed file is opened again and compared before it
-    /// replaces anything. Everything the app needs is in the one file: the database and its attachments.
-    private func checkInEncrypted(from working: URL, current: SharedInfo?, by name: String, appVersion: String, seal: SharedSeal, now: Date) throws -> SharedInfo {
-        let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true)
-        let verifyDirectory = URL.applicationSupportDirectory.appendingPathComponent("SharedVerify", isDirectory: true)
-        defer { try? manager.removeItem(at: staging); try? manager.removeItem(at: verifyDirectory) }
-        do {
-            _ = try StoreFiles.snapshot(of: working, into: staging)
-            let stagedStore = staging.appendingPathComponent("OinklyBudget.store")
-            if hasVault, current?.encrypted != false {
-                try? manager.removeItem(at: previousVaultURL)
-                try? manager.copyItem(at: vaultURL, to: previousVaultURL)
-                try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: previousVaultURL.path)
-            }
-            if let keyFile = seal.keyFile {
-                try VaultCrypto.write(keyFile, to: keysURL)
-                try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: keysURL.path)
-            }
-            try VaultCrypto.seal(directory: staging, to: vaultURL, key: seal.key) { sealed in
-                try? FileManager.default.removeItem(at: verifyDirectory)
-                try VaultCrypto.open(sealed, into: verifyDirectory, key: seal.key)
-                let expected = try SQLiteStore.counts(of: stagedStore)
-                let actual = try SQLiteStore.counts(of: verifyDirectory.appendingPathComponent("OinklyBudget.store"))
-                guard expected == actual else { throw VaultError.failed("The sealed copy didn't match, so the shared data was left as it was.") }
-            }
-        } catch let error as SharedDataError {
-            throw error
-        } catch {
-            throw SharedDataError.verifyFailed(error.localizedDescription)
-        }
-        try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: vaultURL.path)
-        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: (current?.revision ?? 0) + 1,
-                              savedAt: now, savedBy: name, appVersion: appVersion, encrypted: true, fileID: current?.fileID ?? UUID().uuidString)
-        try writeInfo(info)
-        // Going from plain to encrypted: the readable data file is no longer needed, and must not stay behind.
-        if hasStore {
-            StoreFiles.remove(store: storeURL)
-            try? manager.removeItem(at: previousURL)
-        }
         return info
     }
 
     /// Makes a brand new shared folder from a database that already exists (this Mac's own data). The original is only
     /// read, never changed.
-    func createStore(from source: URL, by name: String, appVersion: String, seal: SharedSeal? = nil) throws {
+    func createStore(from source: URL, by name: String, appVersion: String) throws {
         try ensureFolder()
-        try checkIn(from: source, baseRevision: nil, by: name, appVersion: appVersion, seal: seal)
+        try checkIn(from: source, baseRevision: nil, by: name, appVersion: appVersion)
     }
 
     /// Where a copy goes when it can't safely replace the shared file, such as after a crash while someone else saved.
-    func saveRecoveredCopy(from working: URL, seal: SharedSeal? = nil, now: Date = .now) throws -> URL {
+    func saveRecoveredCopy(from working: URL, now: Date = .now) throws -> URL {
         let stamp = ISO8601DateFormatter().string(from: now).replacingOccurrences(of: ":", with: "-")
-        if let seal {
-            // Encrypted data stays encrypted: the recovered copy is a vault that opens with the same key.
-            let destination = url.appendingPathComponent("OinklyBudget (recovered \(stamp)).vault")
-            let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true)
-            defer { try? manager.removeItem(at: staging) }
-            _ = try StoreFiles.snapshot(of: working, into: staging)
-            try VaultCrypto.seal(directory: staging, to: destination, key: seal.key)
-            try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: destination.path)
-            return destination
-        }
         let destination = url.appendingPathComponent("OinklyBudget (recovered \(stamp)).store")
         try SQLiteStore.vacuum(source: working, into: destination)
         try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: destination.path)
@@ -453,12 +367,7 @@ nonisolated struct SharedDataFolder: Sendable {
         } else {
             lines.append("PROBLEM: this login can't create files here (\(String(cString: strerror(errno)))).")
         }
-        if hasVault {
-            lines.append("Data file (encrypted): \(describe(vaultURL.path))")
-            lines.append(manager.fileExists(atPath: keysURL.path) ? "OK: the key file is there." : "PROBLEM: the key file (\(VaultCrypto.keysName)) is missing, so the data can't be opened.")
-        } else {
-            lines.append("Data file: \(hasStore ? describe(storeURL.path) : "none yet")")
-        }
+        lines.append("Data file: \(hasStore ? describe(storeURL.path) : "none yet")")
         if let info = readInfo() {
             lines.append("Last saved: \(info.savedAt.formatted(date: .abbreviated, time: .shortened)) by \(info.savedBy), save number \(info.revision), schema \(info.schemaVersion).")
         }
@@ -468,7 +377,7 @@ nonisolated struct SharedDataFolder: Sendable {
         } else {
             lines.append("Not in use.")
         }
-        lines.append(manager.fileExists(atPath: previousURL.path) || manager.fileExists(atPath: previousVaultURL.path) ? "A previous save is kept." : "No previous save yet.")
+        lines.append(manager.fileExists(atPath: previousURL.path) ? "A previous save is kept." : "No previous save yet.")
         return lines
     }
 }

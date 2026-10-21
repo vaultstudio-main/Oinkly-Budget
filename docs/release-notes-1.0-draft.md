@@ -52,7 +52,6 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Default paper size and export style in Settings *(if built)*.
 
 ### Your data
-- Encrypted data file (Settings ▸ Data & Backup ▸ Encryption): choose a passphrase, keep a recovery key, and your data file and backups can't be read without them. Change the passphrase, make a new recovery key, or turn it off any time. While the app is open it works on a readable copy that is removed when you quit, so this protects a copied file, a backup or a lost Mac without FileVault. If you lose both the passphrase and the recovery key, nobody can open the data.
 - Data & Backup is one tab: your counts, Export Backup and Import Backup, Erase All Data and the version. Backups carry all the new 1.0 information.
 - Updates are safer: a copy of your data is made before the first open in 1.0, and a file that can't be opened shows an error instead of an empty app.
 - Share one data file between two Mac logins on one Mac, one at a time *(if built)*: choose a folder, see who has the file and since when, close it for the next person, take over a stale lock, and recover after a crash.

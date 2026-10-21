@@ -15,7 +15,7 @@ struct SharedDataSection: View {
     @State private var message: String?
     @State private var messageIsError = false
 
-    private var localStore: URL { VaultSession.localStoreURL(for: Schema(versionedSchema: PiggybankSchemaV2.self)) }
+    private var localStore: URL { AppStore.localStoreURL(for: Schema(versionedSchema: PiggybankSchemaV2.self)) }
 
     var body: some View {
         Section {
@@ -39,17 +39,13 @@ struct SharedDataSection: View {
             Button("Share") { turnOn() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(VaultSession.isEnabled
-                 ? "Oinkly Budget will copy your encrypted data into /Users/Shared/OinklyBudget. The data stays encrypted there, so other users need your passphrase or recovery key to open it. Your original data is not changed or removed."
-                 : "Oinkly Budget will copy your data into /Users/Shared/OinklyBudget. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can sign in to this Mac can read it. Your original data is not changed or removed.")
+            Text("Oinkly Budget will copy your data into /Users/Shared/OinklyBudget. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can sign in to this Mac can read it. Your original data is not changed or removed.")
         }
         .confirmationDialog("Stop sharing?", isPresented: $confirmingStop, titleVisibility: .visible) {
             Button("Stop Sharing and Use the Shared Data on This Mac") { turnOff() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(SharedDataSession.shared.isEncrypted
-                 ? "This Mac gets its own encrypted copy of the latest shared data, with the same passphrase, and a copy of what it had before is kept in Application Support ▸ Backups. Other users keep sharing."
-                 : "This Mac gets a copy of the latest shared data, and a copy of what it had before is kept in Application Support ▸ Backups. Other users keep sharing.")
+            Text("This Mac gets a copy of the latest shared data, and a copy of what it had before is kept in Application Support ▸ Backups. Other users keep sharing.")
         }
         .sheet(isPresented: Binding(get: { report != nil }, set: { if !$0 { report = nil } })) {
             CheckSharingSheet(lines: report ?? [])
@@ -63,9 +59,7 @@ struct SharedDataSection: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Share This Data").font(.body.weight(.medium))
-                Text(VaultSession.isEnabled
-                     ? "Copies your encrypted data into a shared folder so other users of this Mac can use it too. It stays encrypted, and they need your passphrase."
-                     : "Copies your data into a shared folder so other users of this Mac can use it too.")
+                Text("Copies your data into a shared folder so other users of this Mac can use it too.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()

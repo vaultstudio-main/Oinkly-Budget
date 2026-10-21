@@ -180,13 +180,8 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ## F. Your data
 
-### F1. Encrypted data file (Built)
-- Settings ▸ Data & Backup ▸ Encryption. **Turn On** asks for a passphrase and shows a recovery key once (copy it, or save as a text file; tick "I have saved my recovery key"). The app then encrypts and restarts; the plain data file is removed only after the encrypted copy opens.
-- At each launch you type the passphrase, or choose "Remember on this Mac".
-- Change Passphrase is instant (the data isn't re-encrypted; the recovery key keeps working). New Recovery Key makes a new one and the old one stops working. Turn Off Encryption asks for the passphrase and returns to a plain file.
-- Backups made while encryption is on are encrypted too.
-- Limits (state them plainly): while the app is open it works on a readable copy that is removed when you quit, so this protects a copied file, a backup or a lost Mac without FileVault, not someone using your unlocked Mac. Without the passphrase and the recovery key, nobody can open the data, including the developer.
-- Shots: S-F1a (unlock screen), S-F1b (turn on: passphrase), S-F1c (recovery key), S-F1d (Encryption settings when on), S-F1e (turn off confirmation).
+### F1. Encrypted data file (Removed)
+- Built and then taken out before release, because it failed in use. Nothing to document or photograph.
 
 ### F2. Data & Backup settings (Built)
 - One Data & Backup tab: counts, Export Backup and Import Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.0 fields.
@@ -194,7 +189,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Shots: S-F2.
 
 ### F3. Safe update (Built)
-- The first time 1.0 opens, it copies your data (data file, receipts, any encrypted vault) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
+- The first time 1.0 opens, it copies your data (data file and receipts) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
 - Your data stays in the app's own folder; the widgets don't move it.
 - Everything migrates automatically; opening a damaged file shows an error screen and never starts a blank database.
 - Shots: S-F3 (Finder showing the Backups folder).
@@ -289,11 +284,6 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-E3a | Liabilities | Liabilities | Help-liabilities | gallery | yes |
 | S-E3b | Investments | Investments | Help-investments | gallery | yes |
 | S-E4 | Reports with the Print PDF button | Reports | Help-reports-pdf | – | – |
-| S-F1a | Unlock screen | Launch with encryption on | Help-unlock | features | – |
-| S-F1b | Turn on encryption: passphrase | Settings ▸ Data & Backup | Help-encrypt | features | yes |
-| S-F1c | Recovery key screen | Next step (use a throwaway key) | Help-recovery-key | – | – |
-| S-F1d | Encryption settings when on | Settings | Help-encryption-on | – | – |
-| S-F1e | Turn off confirmation | Turn Off Encryption | Help-encryption-off | – | – |
 | S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
 | S-F3 | Finder: Backups ▸ Before this update | Finder (owner takes this) | Help-safety-copy | – | – |
 | S-F4a | Shared file settings | Settings ▸ Data & Backup | Help-shared-file | features | yes |

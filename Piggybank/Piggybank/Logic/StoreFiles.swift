@@ -4,6 +4,11 @@ import SQLite3
 /// Working with the database file and the attachments that live beside it, using plain files and the system's own
 /// SQLite. It knows nothing about the app's models. A database that is open in the app can be copied safely:
 /// `VACUUM INTO` writes a complete, consistent file with no side files.
+nonisolated enum StoreError: LocalizedError {
+    case failed(String)
+    var errorDescription: String? { switch self { case .failed(let why): why } }
+}
+
 nonisolated enum StoreFiles {
     /// Where SwiftData keeps large attachments (receipts, photos) for a store: a hidden folder beside it named after
     /// the store. They are not inside the database file, so they have to travel with it.
@@ -52,8 +57,8 @@ nonisolated enum StoreFiles {
         try copyAttachments(from: live, to: copy)
         let expected = try SQLiteStore.counts(of: live)
         let actual = try SQLiteStore.counts(of: copy)
-        guard expected == actual else { throw VaultError.failed("The copy's record counts didn't match, so nothing was changed.") }
-        guard try SQLiteStore.integrityIsOK(copy) else { throw VaultError.failed("The copy failed its integrity check, so nothing was changed.") }
+        guard expected == actual else { throw StoreError.failed("The copy's record counts didn't match, so nothing was changed.") }
+        guard try SQLiteStore.integrityIsOK(copy) else { throw StoreError.failed("The copy failed its integrity check, so nothing was changed.") }
         return copy
     }
 }
@@ -65,7 +70,7 @@ nonisolated enum SQLiteStore {
         guard sqlite3_open_v2(url.path, &handle, flags, nil) == SQLITE_OK, let handle else {
             let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "can't open the file"
             if let handle { sqlite3_close(handle) }
-            throw VaultError.failed("The database couldn't be opened: \(message)")
+            throw StoreError.failed("The database couldn't be opened: \(message)")
         }
         sqlite3_busy_timeout(handle, 5000)
         return handle
@@ -80,7 +85,7 @@ nonisolated enum SQLiteStore {
         if sqlite3_exec(db, "VACUUM INTO '\(quoted)'", nil, nil, &error) != SQLITE_OK {
             let message = error.map { String(cString: $0) } ?? "unknown error"
             sqlite3_free(error)
-            throw VaultError.failed("The database couldn't be copied: \(message)")
+            throw StoreError.failed("The database couldn't be copied: \(message)")
         }
     }
 
@@ -91,7 +96,7 @@ nonisolated enum SQLiteStore {
         var tables: [String] = []
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(db, "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'Z%' AND name NOT LIKE 'Z\\_%' ESCAPE '\\'", -1, &statement, nil) == SQLITE_OK else {
-            throw VaultError.failed(String(cString: sqlite3_errmsg(db)))
+            throw StoreError.failed(String(cString: sqlite3_errmsg(db)))
         }
         while sqlite3_step(statement) == SQLITE_ROW { tables.append(String(cString: sqlite3_column_text(statement, 0))) }
         sqlite3_finalize(statement)

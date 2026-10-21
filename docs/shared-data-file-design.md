@@ -307,3 +307,7 @@ Not confirmed by the owner (still to be covered at the end of Phase 4): the forc
 **Tested** by `-sharedEncryptionSelfTest` (debug), on a throwaway folder with a copy of the owner's data (5079 rows): plain create, encrypt on, no readable data left, encrypted file isn't a database, open with passphrase and with recovery key, wrong passphrase refused, routine encrypted save, previous save kept, stale save refused, recovered copy encrypted, encrypt off cleans up, share-encrypted-from-the-start. All 15 passed.
 
 **Not yet tested by hand:** the launch prompt on a second login, the Settings sheets in shared mode (turn on, turn off, change passphrase, new recovery key), stop sharing while encrypted, and timing with a large file.
+
+## 21. Encryption removed (2026-10-21)
+
+The owner asked for all encryption to be removed: it failed when used alone and when used with sharing. Removed from the app: the vault, passphrase and recovery key, the Keychain "remember", encrypted `.pig` backups, encrypted sharing (Phase 2) and its self-test. Sharing is plain only. Sections 7, 12 (D1 and the "Encrypt First" button), 17 (Phase 2), 20 and the encryption tests above are history and no longer apply. `info.json` no longer has an `encrypted` field. The upgrade safety copy no longer copies a vault folder. Nothing in 1.0's data (V1 or V2 databases) is affected.

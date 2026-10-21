@@ -457,7 +457,6 @@ struct DataSettingsView: View {
 
             SharedDataSection()
 
-            EncryptionSection()
 
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }

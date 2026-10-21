@@ -40,7 +40,6 @@ Run these on every release candidate. Record the date, the build and pass or fai
 |---|---|---|
 | A1 | Build the original from the tag `app-review-original-1.0`, fill it with the test data set, open the same data with the release candidate | Every account, transaction, bill, goal, budget, holding, payee and receipt is there; balances match the 1.0 numbers to the cent |
 | A2 | Same as A1 with a large data set (4,000 and then 20,000 transactions) | Same result; the first open finishes in reasonable time; no crash |
-| A3 | Same as A1 with encryption turned on in the old build | Vault unlocks and every record is there |
 | A4 | Upgrade with the old data file in an unusual state (wal and shm side files present, receipts folder large) | Same result; the safety copy contains them |
 | A5 | Kill the app during the first open | Next launch opens normally or restores from the safety copy; nothing missing |
 | A6 | Run the upgrade twice (open, quit, open) | No duplicate Deposits, categories or payees |
@@ -54,20 +53,12 @@ Run these on every release candidate. Record the date, the build and pass or fai
 |---|---|---|
 | B1 | Backup made by the original build, restored into the release candidate | All data back, new fields get sensible defaults |
 | B2 | Backup made in the release candidate, restored into the same build on an empty database | All data back, including splits, tags and rules |
-| B3 | Encrypted backup, right and wrong passphrase | Right one restores; wrong one is refused and changes nothing |
 | B4 | Restore on top of existing data | The person is warned first; a failure leaves the existing data untouched |
 | B5 | Restore a backup that was cut short or edited | Refused with a clear message, existing data untouched |
 
-### C. Encryption
 
 | # | Test | Pass when |
 |---|---|---|
-| C1 | Turn encryption on, quit, reopen, with and without Remember on this Mac | Data identical |
-| C2 | Turn it off again | Data identical, passphrase asked first |
-| C3 | Kill the app while the working copy is open | Unsaved work is recovered or kept; the vault is never half-written |
-| C4 | Forgotten passphrase with the recovery key | Opens |
-| C5 | Large file, timing of seal and unseal | Acceptable; memory stays low |
-| C6 | Write fails (disk full) while sealing | Old vault still good; error shown |
 
 ### D. Shared data file (after it is rebuilt)
 
@@ -76,7 +67,6 @@ Run these on every release candidate. Record the date, the build and pass or fai
 | D1 | Two real Mac logins take turns on one file | No lost edits; each save visible to the other |
 | D2 | Second login opens while the first has it | Told who has it; no change to the file |
 | D3 | Crash while holding the lock, then take over | Unsaved work recovered or saved as a separate file; the shared file is never half-written |
-| D4 | Encrypted shared file | Only ciphertext in the shared folder |
 | D5 | Shared file larger than usual | Save time acceptable |
 | D6 | Permissions: file made by one login, opened by the other | Opens, or says clearly why not |
 

@@ -67,11 +67,6 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-E3a | `Help-liabilities` | Liabilities | Liabilities |
 | S-E3b | `Help-investments` | Investments | Investments |
 | S-E4 | `Help-reports-pdf` | Reports with the Print PDF button | Reports |
-| S-F1a | `Help-unlock` | Unlock screen | Launch with encryption on |
-| S-F1b | `Help-encrypt` | Turn on encryption: passphrase | Settings ▸ Data & Backup |
-| S-F1c | `Help-recovery-key` | Recovery key screen | Next step (use a throwaway key) |
-| S-F1d | `Help-encryption-on` | Encryption settings when on | Settings |
-| S-F1e | `Help-encryption-off` | Turn off confirmation | Turn Off Encryption |
 | S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
 | S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before this update | Finder (owner takes this) |
 | S-F4a | `Help-shared-file` | Shared file settings | Settings ▸ Data & Backup |
@@ -86,7 +81,7 @@ Shots for planned features (splits, tags, recurring, shared file, export default
 
 The earlier shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 
-Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summary, Help-goal-section, Help-import, Help-encrypt.
+Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summary, Help-goal-section, Help-import.
 
 ## B. App Store screenshots
 
