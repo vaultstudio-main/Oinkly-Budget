@@ -455,10 +455,18 @@ struct DataSettingsView: View {
                 Text("Backup")
             }
 
+            SharedDataSection()
+
             EncryptionSection()
 
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
+                    .disabled(SharedDataSession.isEnabled)
+                if SharedDataSession.isEnabled {
+                    Text("Erasing is off while data is shared, because it would erase it for everyone. Stop sharing first.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
                 Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, then quits. Open Oinkly Budget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

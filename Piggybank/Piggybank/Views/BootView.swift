@@ -56,6 +56,17 @@ struct BootView: View {
     private var needsAttention: Bool { isFinished && (checker.hasFailure || checker.hasWarning) }
 
     var body: some View {
+        // When the shared data can't simply be opened, say why and wait. Nothing is started until then.
+        if let decision = SharedDataSession.shared.decision {
+            SharedWaitingView(decision: decision)
+                .frame(width: 500, height: 420)
+                .background(BootWindowStyle(box: windowBox))
+        } else {
+            regularBody
+        }
+    }
+
+    private var regularBody: some View {
         ZStack {
             Brand.gradient.ignoresSafeArea()
 
@@ -180,6 +191,7 @@ struct BootView: View {
             return
         }
         StartupState.hasRun = true
+        if SharedDataSession.shared.decision != nil { return }
 
         await checker.run(in: modelContext, databaseError: StartupState.databaseError)
         isFinished = true

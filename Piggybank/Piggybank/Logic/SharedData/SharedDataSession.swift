@@ -1,0 +1,388 @@
+import AppKit
+import SwiftData
+
+/// Sharing one data file with other Mac logins, one at a time.
+///
+/// With sharing on, the app doesn't open the shared file itself. At launch it takes the lock, copies the finished file
+/// into a private working copy in its own storage, and works on that. The working copy goes back to the shared folder
+/// every couple of minutes while there are changes, when the app is hidden and when it quits, and then the lock is let
+/// go. If another login has the data open, the app waits and says so; nothing is ever closed or taken for anyone, except
+/// that a copy that has gone quiet for three minutes can be taken over (it has crashed or is asleep).
+/// With sharing off, none of this runs and the app uses this Mac's own data as before.
+@MainActor
+@Observable
+final class SharedDataSession {
+    static let shared = SharedDataSession()
+
+    // MARK: What a launch decided
+
+    /// What the app has to tell the person before it can open any data.
+    enum Decision: Equatable {
+        /// Someone else has the data open. `isStale` means their copy has gone quiet and probably stopped.
+        case heldBy(SharedLock, isStale: Bool)
+        case folderProblem(String)
+        case failed(String)
+    }
+
+    enum Outcome {
+        case local
+        case shared(workingStore: URL)
+        case waiting
+    }
+
+    private(set) var decision: Decision?
+    private(set) var isActive = false
+    /// Someone took the lock while this copy was asleep or stuck. Nothing more can be saved into the shared data.
+    private(set) var lostLock = false
+    private(set) var lastSaved: Date?
+    private(set) var openSince: Date?
+    /// Shown once after launch, such as "closed unexpectedly, your changes were kept".
+    var notice: String?
+    var errorMessage: String?
+
+    private var folder: SharedDataFolder?
+    private var baseRevision: Int?
+    private var fileID: String?
+    private let me = SharedLock(token: UUID().uuidString, userName: NSUserName(), fullName: NSFullUserName(), since: .now, heartbeat: .now,
+                                pid: ProcessInfo.processInfo.processIdentifier, host: ProcessInfo.processInfo.hostName)
+    private var heartbeatTask: Task<Void, Never>?
+    private var wakeObserver: NSObjectProtocol?
+    private var isDirty = false
+    private var isCheckingIn = false
+
+    static let enabledKey = "sharedData.enabled"
+    private static let nextLaunchKey = "sharedData.nextLaunch"
+
+    /// True once sharing has been turned on for this Mac login.
+    static var isEnabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
+
+    private var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0" }
+
+    // MARK: Locations
+
+    static var workingDirectory: URL { URL.applicationSupportDirectory.appendingPathComponent("SharedWorking", isDirectory: true) }
+    static var workingStore: URL { workingDirectory.appendingPathComponent(SharedDataFolder.storeName) }
+    private static var markerURL: URL { workingDirectory.appendingPathComponent("open.json") }
+
+    // MARK: Launch
+
+    /// Decides what the app opens. Runs once, before the database is opened.
+    func prepareAtLaunch() -> Outcome {
+        guard Self.isEnabled else {
+            #if DEBUG
+            NSLog("SHARED: sharing is off")
+            #endif
+            return .local
+        }
+        let folder = SharedDataFolder.standard
+        self.folder = folder
+        let openAnyway = Self.takeNextLaunchChoice()
+        guard folder.exists, folder.hasStore else {
+            decision = .folderProblem("The shared data can't be found in \(folder.url.path). It may have been moved or deleted.")
+            return .waiting
+        }
+        do {
+            var mine = me
+            mine.since = .now
+            mine.heartbeat = .now
+            var result = try folder.acquire(mine, takeOver: openAnyway)
+            if case .heldBy(let lock, let stale) = result, stale, lock.userName == mine.userName {
+                // This login's own earlier run that closed unexpectedly is not "someone else": take over and recover.
+                result = try folder.acquire(mine, takeOver: true)
+            }
+            if case .heldBy(let lock, let stale) = result {
+                decision = .heldBy(lock, isStale: stale)
+                #if DEBUG
+                NSLog("SHARED: waiting, held by \(lock.displayName), stale \(stale)")
+                #endif
+                return .waiting
+            }
+            let recovered = try openWorkingCopy(from: folder)
+            isActive = true
+            openSince = .now
+            lastSaved = folder.readInfo()?.savedAt
+            if let recovered { notice = recovered }
+            startTimers()
+            return .shared(workingStore: Self.workingStore)
+        } catch {
+            decision = .failed(error.localizedDescription)
+            return .waiting
+        }
+    }
+
+    private struct Marker: Codable {
+        var baseRevision: Int?
+        var fileID: String?
+    }
+
+    private static var markerExists: Bool { FileManager.default.fileExists(atPath: markerURL.path) }
+
+    /// Makes the working copy ready. After a crash it keeps the unsaved work when it can, and never throws it away
+    /// silently. Returns a message to show the person when something was recovered.
+    private func openWorkingCopy(from folder: SharedDataFolder) throws -> String? {
+        let manager = FileManager.default
+        let info = folder.readInfo()
+        var message: String?
+
+        if Self.markerExists, manager.fileExists(atPath: Self.workingStore.path),
+           let data = try? Data(contentsOf: Self.markerURL), let marker = try? JSONDecoder().decode(Marker.self, from: data) {
+            if marker.baseRevision == info?.revision, marker.fileID == info?.fileID {
+                // Nobody saved since: the working copy still has everything, plus what was never written back.
+                baseRevision = marker.baseRevision
+                fileID = marker.fileID
+                isDirty = true
+                return "Oinkly Budget closed unexpectedly last time. Your unsaved changes were kept."
+            }
+            // The shared data changed while this copy was out. Keep this copy as its own file instead of overwriting.
+            let kept = try folder.saveRecoveredCopy(from: Self.workingStore)
+            message = "Oinkly Budget closed unexpectedly, and the shared data was saved by someone else in the meantime. Your unsaved changes were kept as “\(kept.lastPathComponent)” in the shared folder, and Oinkly Budget opened the latest shared data."
+        }
+        let copied = try folder.checkOut(to: Self.workingStore)
+        baseRevision = copied?.revision
+        fileID = copied?.fileID
+        try writeMarker()
+        return message
+    }
+
+    private func writeMarker() throws {
+        try FileManager.default.createDirectory(at: Self.workingDirectory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(Marker(baseRevision: baseRevision, fileID: fileID)).write(to: Self.markerURL)
+    }
+
+    private func removeMarker() { try? FileManager.default.removeItem(at: Self.markerURL) }
+
+    // MARK: The waiting screen
+
+    /// What the waiting screen sees when it looks again.
+    enum Waiting {
+        case free
+        case heldBy(SharedLock, isStale: Bool)
+        case problem(String)
+    }
+
+    /// Looks at the lock without taking it. The waiting screen calls this every couple of seconds.
+    func lookAgain() -> Waiting {
+        let folder = SharedDataFolder.standard
+        guard folder.exists, folder.hasStore else { return .problem("The shared data can't be found in \(folder.url.path).") }
+        guard let lock = folder.readLock() else { return FileManager.default.fileExists(atPath: folder.lockURL.path) ? .heldBy(SharedLock(token: "unreadable", userName: "another user", fullName: "", since: .now, heartbeat: .now), isStale: false) : .free }
+        if lock.userName == NSUserName(), lock.isStale() { return .free }
+        return .heldBy(lock, isStale: lock.isStale())
+    }
+
+    /// The other copy has let go: start again, which takes the lock and opens the data.
+    func tryAgain() { Self.relaunch() }
+
+    /// The other copy has gone quiet: take the lock anyway.
+    func openAnyway() {
+        UserDefaults.standard.set("openAnyway", forKey: Self.nextLaunchKey)
+        Self.relaunch()
+    }
+
+    /// Leave sharing and use this Mac's own data (for when the shared folder is gone).
+    func useThisMacsData() {
+        UserDefaults.standard.set(false, forKey: Self.enabledKey)
+        Self.relaunch()
+    }
+
+    private static func takeNextLaunchChoice() -> Bool {
+        let value = UserDefaults.standard.string(forKey: nextLaunchKey)
+        UserDefaults.standard.removeObject(forKey: nextLaunchKey)
+        return value == "openAnyway"
+    }
+
+    // MARK: Turning sharing on and off
+
+    /// Copies this Mac's data into the shared folder (or joins the data already there) and relaunches into it. The
+    /// original is only read, never changed or removed.
+    func enable(localStore: URL, context: ModelContext) throws {
+        try? context.save()
+        let folder = SharedDataFolder.standard
+        try folder.ensureFolder()
+        if !folder.hasStore {
+            try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: appVersion)
+        }
+        removeMarker()
+        UserDefaults.standard.set(true, forKey: Self.enabledKey)
+        Self.relaunch()
+    }
+
+    /// Back to this Mac's own data. The latest shared data is copied to this Mac, after a copy of what this Mac had
+    /// is kept in Application Support ▸ Backups. The shared data stays where it is for the other logins.
+    func stopSharing(localStore: URL) async throws {
+        var source = Self.workingStore
+        if isActive, !lostLock {
+            await checkInNow(release: true)
+            if let folder, folder.hasStore, !isDirty { source = folder.storeURL }
+        } else if let folder, folder.hasStore {
+            source = folder.storeURL
+        }
+        let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
+            .appendingPathComponent("Before stopping sharing (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
+        try await Task.detached {
+            if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
+            let copy = try StoreFiles.snapshot(of: source, into: URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true))
+            defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+            StoreFiles.remove(store: localStore)
+            try FileManager.default.createDirectory(at: localStore.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: copy, to: localStore)
+            try StoreFiles.copyAttachments(from: copy, to: localStore)
+        }.value
+        #if DEBUG
+        NSLog("SHARED: stopped sharing. Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.appendingPathComponent("OinklyBudget.store").path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from \(source.path)")
+        #endif
+        stopTimers()
+        isActive = false
+        UserDefaults.standard.set(false, forKey: Self.enabledKey)
+        StoreFiles.remove(store: Self.workingStore)
+        try? FileManager.default.removeItem(at: Self.workingDirectory)
+        Self.relaunch()
+    }
+
+    /// Saves, lets go of the lock so someone else can use the data, and quits.
+    func closeForOthers() async {
+        await checkInNow(release: true)
+        NSApp.terminate(nil)
+    }
+
+    /// A plain-words report on the shared folder, for Check Sharing.
+    func checkSharing() async -> [String] {
+        let folder = SharedDataFolder.standard
+        return await Task.detached { folder.diagnose() }.value
+    }
+
+    // MARK: While running
+
+    private func startTimers() {
+        stopTimers()
+        heartbeatTask = Task { @MainActor [weak self] in
+            var sinceSave = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(60))
+                guard let self, self.isActive, !self.lostLock else { return }
+                if let folder = self.folder, !folder.refresh(self.me) {
+                    self.lockWasTaken()
+                    return
+                }
+                sinceSave += 1
+                // Changes go back to the shared file every couple of minutes, so little is lost if the app dies.
+                if sinceSave >= 2, self.isDirty {
+                    sinceSave = 0
+                    await self.checkInNow(release: false)
+                }
+            }
+        }
+        // Waking from sleep: look at the lock at once, so a copy that was taken over finds out before it saves anything.
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.checkLockAfterWake() }
+        }
+    }
+
+    private func stopTimers() {
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+        wakeObserver = nil
+    }
+
+    private func checkLockAfterWake() {
+        guard isActive, !lostLock, let folder else { return }
+        if !folder.refresh(me) { lockWasTaken() }
+    }
+
+    /// Someone used Open Anyway while this copy was stuck or asleep. What this copy still holds can't go into the shared
+    /// data any more; it is kept as a separate copy in the shared folder when the app quits.
+    private func lockWasTaken() {
+        guard !lostLock else { return }
+        lostLock = true
+        stopTimers()
+        errorMessage = "Someone else opened the shared data while this copy wasn't responding."
+        Task { @MainActor in
+            NSApp.activate(ignoringOtherApps: true)
+            let alert = NSAlert()
+            alert.messageText = "Someone else is using the shared data now"
+            alert.informativeText = "Another user opened the shared data while this copy of Oinkly Budget wasn't responding. Changes made here since the last save can no longer go into the shared data. They are kept as a separate copy in the shared folder when you quit. Quit Oinkly Budget, then open it again to start from the shared data."
+            alert.runModal()
+        }
+    }
+
+    /// Called whenever the app saves, so the shared file is brought up to date at the next chance.
+    func noteSaved() { if isActive && !lostLock { isDirty = true } }
+
+    /// Writes the working copy back to the shared folder. With `release`, also lets go of the lock.
+    func checkInNow(release: Bool) async {
+        guard isActive, !lostLock, let folder, !isCheckingIn else { return }
+        isCheckingIn = true
+        defer { isCheckingIn = false }
+        if let container = PiggybankAppDelegate.container { try? container.mainContext.save() }
+        let name = NSFullUserName()
+        let version = appVersion
+        let token = me.token
+        let working = Self.workingStore
+        let base = baseRevision
+        let result: Result<SharedInfo, Error> = await Task.detached {
+            do {
+                // Still ours? If another login took the lock, nothing is written.
+                guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
+                let info = try folder.checkIn(from: working, baseRevision: base, by: name, appVersion: version)
+                if release { folder.release(token: token) }
+                return .success(info)
+            } catch {
+                return .failure(error)
+            }
+        }.value
+        switch result {
+        case .success(let info):
+            isDirty = false
+            lastSaved = info.savedAt
+            baseRevision = info.revision
+            fileID = info.fileID
+            errorMessage = nil
+            if release {
+                stopTimers()
+                isActive = false
+                removeMarker()
+            } else {
+                try? writeMarker()
+            }
+        case .failure(let error):
+            if case SharedDataError.changedMeanwhile = error {
+                lockWasTaken()
+            } else {
+                errorMessage = "The shared data couldn't be saved: \(error.localizedDescription) Your changes are safe on this Mac and will be tried again."
+            }
+        }
+    }
+
+    /// Quitting: save and let go. A copy that lost the lock is kept as a separate file instead.
+    func finishForQuit() async {
+        if lostLock, let folder {
+            _ = try? folder.saveRecoveredCopy(from: Self.workingStore)
+            removeMarker()
+            return
+        }
+        await checkInNow(release: true)
+    }
+
+    #if DEBUG
+    /// For testing without clicking through Settings: `-sharedDataEnable` turns sharing on from this Mac's own data at
+    /// launch, if it isn't on yet. Debug builds only.
+    static func enableFromLaunchArgumentIfRequested(localStore: URL) {
+        guard CommandLine.arguments.contains("-sharedDataEnable"), !isEnabled else { return }
+        let folder = SharedDataFolder.standard
+        do {
+            try folder.ensureFolder()
+            if !folder.hasStore {
+                try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: "1.0")
+            }
+            UserDefaults.standard.set(true, forKey: enabledKey)
+            NSLog("SHARED TEST: sharing turned on")
+        } catch {
+            NSLog("SHARED TEST: could not turn on sharing: \(error.localizedDescription)")
+        }
+    }
+    #endif
+
+    // MARK: Relaunching
+
+    static func relaunch() { VaultSession.relaunch() }
+}

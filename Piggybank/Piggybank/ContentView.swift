@@ -12,6 +12,17 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
+        // While the shared data can't be opened, this window can only say why. It can show up even when the boot window
+        // is shown too (macOS brings back the windows of a session that ended unexpectedly), and it must never show an
+        // empty app that someone could start adding data to.
+        if let decision = SharedDataSession.shared.decision {
+            SharedWaitingView(decision: decision)
+        } else {
+            content
+        }
+    }
+
+    private var content: some View {
         ZStack {
             if !hasChecked {
                 Color.clear

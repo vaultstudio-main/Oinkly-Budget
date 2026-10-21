@@ -253,3 +253,34 @@ Section D (D1 to D6) stays. New: S1 save fails (disk full), S2 crash during a sa
 ## 16. What changes in the plan documents when this is built
 
 Help (a new topic: Sharing One Data File, with the two-login setup, the permissions notes and the honest limits), screenshots S-F4a to S-F4d, the website security and privacy text, release notes (a headline feature, with "one at a time" stated plainly), the data integrity plan record, and the App Review notes (still no network).
+
+## 17. Phase 1 status (2026-10-21)
+
+**Built (plain sharing on V2):** the fixed folder `/Users/Shared/OinklyBudget` made open to every user; `SharedDataFolder` (finished file, `info.json` with revision, schema version and file ID, exclusive `lock.json`, one previous save, recovered copies, Check Sharing report); `SharedDataSession` (check out and check in with checks, marker and crash recovery, heartbeat every 60 seconds, wake-from-sleep check, saves every 2 minutes while changed, on hide and on quit, Stop Sharing); the waiting screen (D17) with Open Anyway for a copy quiet for 3 minutes; a Shared Data File section in Settings ▸ Data & Backup with the warning text, Save Now, Close for Others, Check Sharing and Stop Sharing; Erase All Data and Turn On encryption are switched off while sharing.
+
+**Tested on one Mac login with the debug build:**
+- Turning sharing on creates the folder (mode 777), the data file, `info.json` and the lock; the app opens the shared data and the numbers match.
+- Quit saves, increments the revision, keeps one previous save and removes the lock.
+- A fresh lock held by another user shows the waiting screen; removing the lock opens the app by itself within a few seconds.
+- A lock quiet for 10 minutes shows "seems to have stopped" and Open Anyway takes it.
+- A force-quit (kill -9) leaves the lock; the next start takes over the same user's dead lock and shows "closed unexpectedly, your unsaved changes were kept".
+- Another login taking the lock while this copy runs: this copy shows the "someone else is using the shared data" notice within a minute, leaves the shared data alone, keeps its own copy as a separate "recovered" file on quit and does not remove the other login's lock.
+- Joining a folder that already has data keeps this Mac's own data untouched.
+- Stop Sharing keeps a safety copy of this Mac's data in Backups, copies the latest shared data to this Mac and releases the lock.
+- Check Sharing reports owner, permissions, disk, create/rename/delete rights, last save and who has it.
+
+**A bug found and fixed on the way:** after a force-quit, macOS reopens the main window from the last session. With the waiting screen active that window showed an empty app that could have been added to. The main window now shows the waiting screen itself in that state, so an empty database can never be shown.
+
+**Not yet tested:** a real second login (the gate), waking from sleep, two copies starting in the same instant, a large data file, encryption with sharing (Phase 2), and App Review's view of the folder exception.
+
+## 18. Phase 1 gate test (the owner and a second login)
+
+Use the steps in section 14, with these specifics:
+1. Build or copy the app to `/Users/Shared/OinklyBudget-TestApp/OinklyBudget.app`. Both logins run that copy.
+2. Login 1: Settings ▸ Data & Backup ▸ **Share…**, read the warning, **Share**. Add a transaction and a receipt photo.
+3. Switch to login 2 (do not log 1 out). Open the app. It should show **"Oinkly Budget is already open in … session"** and wait. Nothing else on screen can be used.
+4. In login 1 press ⌘Q. Login 2's waiting screen should open the app by itself in a few seconds, with login 1's transaction and receipt.
+5. In login 2, add a transaction, then ⌘Q. In login 1, open the app and see it.
+6. Crash: in login 1 force quit the app (Activity Monitor ▸ Force Quit). In login 2, open the app: it shows the waiting screen, then after 3 minutes **Open Anyway**. Use it. Login 1 then opens its app again: it should say the shared data was taken and keep its own copy.
+7. In Settings ▸ **Check Sharing…** in each login: every line should say OK.
+8. Each login: **Stop Sharing** at the end if you want to go back.

@@ -43,6 +43,8 @@ struct EncryptionSection: View {
                     }
                     Spacer()
                     Button("Turn On") { enabling = true }
+                        .disabled(SharedDataSession.isEnabled)
+                        .help(SharedDataSession.isEnabled ? "Encrypting shared data isn't available yet. Stop sharing first." : "")
                 }
             }
             if let message { Text(message).font(.footnote).foregroundStyle(.orange) }

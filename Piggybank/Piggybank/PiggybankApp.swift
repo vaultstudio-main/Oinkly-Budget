@@ -16,17 +16,29 @@ struct PiggybankApp: App {
         // The first time this version opens the data file, keep a copy of it as it was.
         StoreSafetyCopy.makeIfNeeded(localStore: VaultSession.localStoreURL(for: schema))
         let configuration: ModelConfiguration
-        switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
-        case .local:
-            // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
-            // that the widgets need would move the default data file to the group folder, and an update would open empty.
-            configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
-        case .open(let workingStore):
+        #if DEBUG
+        SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: VaultSession.localStoreURL(for: schema))
+        #endif
+        // With sharing on, the app opens a private working copy of the shared data instead of this Mac's own data. If
+        // another login has it open, a waiting screen is shown and nothing is opened until it is free.
+        switch SharedDataSession.shared.prepareAtLaunch() {
+        case .shared(let workingStore):
             configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
-        case .quit:
-            exit(0)
+        case .waiting:
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        case .local:
+            switch VaultSession.shared.prepareAtLaunch(localStore: VaultSession.localStoreURL(for: schema)) {
+            case .local:
+                // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
+                // that the widgets need would move the default data file to the group folder, and an update would open empty.
+                configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
+            case .open(let workingStore):
+                configuration = ModelConfiguration(schema: schema, url: workingStore, cloudKitDatabase: .none)
+            case .quit:
+                exit(0)
+            }
         }
-        StoreReset.performIfRequested(for: configuration)
+        if SharedDataSession.shared.decision == nil { StoreReset.performIfRequested(for: configuration) }
         do {
             container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)
         } catch {
