@@ -292,7 +292,7 @@ enum HelpContent {
                 "• Add a pending transaction automatically: on, the entry is made for you. Off, the rule only reminds you, and the date waits until you add it or skip it.",
                 "## The Recurring tab",
                 "• The tiles show what comes in and goes out this month from repeating transactions, what is next, and how many rules there are.",
-                "• The month's list shows each date. A date waiting for you is added by ticking its circle. An entry a rule made is ticked to confirm it, and ticked again to take that back.",
+                "• The month's list shows each date. A date waiting for you is added by ticking its circle. An entry a rule made starts as pending and is ticked to confirm it: a paycheque or other income goes straight to Reconciled, and a payment becomes Unreconciled until you match it to a statement. Tick it again to take that back to pending.",
                 "• The calendar has a dot on each date. Click a day to see only that day.",
                 "• All Rules lists every rule with the day it comes out and the amount. From there you can edit, skip the next date, pause, resume or delete. Deleting a rule leaves the transactions it already made.",
                 "## Where else they show",

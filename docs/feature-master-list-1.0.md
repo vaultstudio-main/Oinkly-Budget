@@ -112,7 +112,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### B10. Recurring transactions (Built)
 - Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
-- The Recurring tab is laid out like the Bills tab: tiles (in and out this month, next up, rules) and the month's list on the left, where each date is ticked off (a date waiting for you is added by ticking it; an entry a rule made is ticked to confirm it); a calendar with a dot on each date, an Add Recurring button and an All Rules list in the sidebar (every rule with the day it comes out and the amount, with edit, pause, resume and delete).
+- The Recurring tab is laid out like the Bills tab: tiles (in and out this month, next up, rules) and the month's list on the left, where each date is ticked off (a date waiting for you is added by ticking it; an entry a rule made starts pending and is ticked to confirm it: income goes straight to Reconciled, a payment becomes Unreconciled; ticking again returns it to pending; test S39); a calendar with a dot on each date, an Add Recurring button and an All Rules list in the sidebar (every rule with the day it comes out and the amount, with edit, pause, resume and delete).
 - Repeating transactions also show in the menu bar pop-up (in the same list as bills, marked "Repeating", and counted in the number beside the icon), in reminders (a notification on the morning of each date, with no amount) and in the Upcoming Bills widget (names and dates only, switch off in Edit Widget).
 - Shots: S-B10a (rules screen), S-B10b (rule editor), S-B10c (a pending entry made by a rule).
 

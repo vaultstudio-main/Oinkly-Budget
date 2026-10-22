@@ -261,7 +261,7 @@ private struct OccurrenceRow: View {
                 onChange()
             case .added:
                 guard let entry = item.entry, entry.isLive else { return }
-                entry.state = isPending ? .unreconciled : .pending
+                Recurring.toggleConfirmed(entry)
                 onChange()
             case .coming:
                 break
@@ -273,14 +273,14 @@ private struct OccurrenceRow: View {
         }
         .buttonStyle(.plain)
         .disabled(item.kind == .coming)
-        .help(item.kind == .due ? "Add it now" : (item.kind == .added ? (isPending ? "Mark as confirmed" : "Mark as waiting to be confirmed") : "It is added on its date"))
+        .help(item.kind == .due ? "Add it now" : (item.kind == .added ? (isPending ? (item.entry.map { $0.amount > 0 } == true ? "Mark as received and reconciled" : "Mark as confirmed") : "Mark as waiting to be confirmed") : "It is added on its date"))
     }
 
     private var subtitle: String {
         let day = item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         let tail: String
         switch item.kind {
-        case .added: tail = isPending ? "Added · waiting to confirm" : "Added · confirmed"
+        case .added: tail = isPending ? "Added · waiting to confirm" : (item.entry?.state == .reconciled ? "Added · reconciled" : "Added · confirmed")
         case .due: tail = item.isOverdue ? "Overdue" : "Due"
         case .coming: tail = item.rule.frequency.title
         }

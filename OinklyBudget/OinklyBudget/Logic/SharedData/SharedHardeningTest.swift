@@ -1057,6 +1057,25 @@ enum SharedHardeningTest {
                 check("S38 a bill that isn't important is left out", !split.overdue.contains { $0.bill === notImportant } && !split.upcoming.contains { $0.bill === notImportant })
                 check("S38 paying the late date clears it from overdue", { loan.setPaid(true, on: split.overdue[0].date); return Bills.prioritySplit([loan, insurance]).overdue.isEmpty }())
             }
+
+            // S39: ticking an entry a repeating rule made
+            do {
+                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let income = Transaction(account: nil, date: .now, payee: "Pay", amount: 2_000)
+                rc.insert(income)
+                income.state = .pending
+                Recurring.toggleConfirmed(income)
+                check("S39 ticking a pending paycheque reconciles it", income.state == .reconciled)
+                Recurring.toggleConfirmed(income)
+                check("S39 ticking it again takes it back to pending", income.state == .pending)
+                let rent = Transaction(account: nil, date: .now, payee: "Rent", amount: -900)
+                rc.insert(rent)
+                rent.state = .pending
+                Recurring.toggleConfirmed(rent)
+                check("S39 ticking a pending payment makes it unreconciled, to match to a statement", rent.state == .unreconciled)
+                Recurring.toggleConfirmed(rent)
+                check("S39 and ticking that again takes it back to pending", rent.state == .pending)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
