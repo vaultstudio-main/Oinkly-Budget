@@ -200,7 +200,9 @@ private struct OccurrenceRow: View {
                 checkOff
                 Button(action: onEdit) {
                     HStack {
-                        CategoryBadge(category: item.rule.category, size: 36)
+                        AccountPicture(data: nil, type: nil)
+                            .frame(width: 36, height: 36)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.rule.payee).font(.body)
                             Text(subtitle).font(.caption).foregroundStyle(item.isOverdue ? Theme.red : (item.kind == .added ? Theme.green : Color.secondary))
@@ -310,7 +312,9 @@ private struct RuleRow: View {
         HStack(alignment: .center, spacing: 10) {
             Button(action: onEdit) {
                 HStack(spacing: 10) {
-                    CategoryBadge(category: rule.category, size: 32)
+                    AccountPicture(data: nil, type: nil)
+                        .frame(width: 32, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(rule.payee).font(.body).lineLimit(1)
