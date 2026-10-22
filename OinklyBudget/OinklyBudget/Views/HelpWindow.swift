@@ -412,7 +412,7 @@ enum HelpContent {
                 "• The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.",
                 "• Erase All Data keeps the backup copy unless you choose to delete it too, so an erase can still be undone.",
                 "• Receipts and photos nothing uses any more are removed from the backup copy after 30 days. A receipt that the latest copy or any older copy uses is always kept.",
-                "• Settings ▸ General ▸ Backup Copy has a switch for the reminder to set one up. Choosing Don't Ask Again turns it off, and you can turn it back on there. Turning the backup copy off turns the reminder back on, because having one is the best way to keep your data safe.",
+                "• Settings ▸ General ▸ Backup Copy has a switch for the reminder to set one up. While it is on, Oinkly Budget reminds you every time it starts until you set one up; Not Now only closes it until the next start. Choosing Don't Ask Again turns it off, and you can turn it back on there. Turning the backup copy off turns the reminder back on, because having one is the best way to keep your data safe.",
                 "• To stop, turn the Keep a Backup Copy switch off in Settings ▸ Data & Backup. You are asked whether to delete the backup copy folder too; deleting moves it to the Trash.",
             ]),
 

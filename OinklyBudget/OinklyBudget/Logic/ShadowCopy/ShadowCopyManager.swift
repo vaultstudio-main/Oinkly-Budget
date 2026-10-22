@@ -404,26 +404,29 @@ final class ShadowCopyManager {
 
     /// True when it is time to offer a backup copy: nothing set up, the person has put some data in, and they haven't
     /// said no. "Not now" waits a week.
+    /// Once a start-up: asked at most once each time the app is opened, however many windows open.
+    private var askedThisStart = false
+
     func shouldAsk(hasData: Bool) -> Bool {
-        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return false }
-        return Self.shouldAsk(isSetUp: isSetUp, hasData: hasData, reminderOn: remindsToSetUp,
-                              snoozedUntil: UserDefaults.standard.object(forKey: Self.snoozeKey) as? Date, now: .now)
+        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace, !askedThisStart else { return false }
+        return Self.shouldAsk(isSetUp: isSetUp, hasData: hasData, reminderOn: remindsToSetUp)
     }
 
-    /// The rule: ask when nothing is set up, there is some data, the reminder is on, and a "Not now" has run out.
-    nonisolated static func shouldAsk(isSetUp: Bool, hasData: Bool, reminderOn: Bool, snoozedUntil: Date?, now: Date) -> Bool {
-        guard !isSetUp, hasData, reminderOn else { return false }
-        if let snoozedUntil, snoozedUntil > now { return false }
-        return true
+    /// Called when the question is put to the person, so it isn't asked again until the next start.
+    func markAsked() { askedThisStart = true }
+
+    /// The rule: every time the app starts, ask when nothing is set up, there is some data, and the reminder is on.
+    /// "Not Now" only dismisses it for this start; the switch in Settings is what stops it.
+    nonisolated static func shouldAsk(isSetUp: Bool, hasData: Bool, reminderOn: Bool) -> Bool {
+        !isSetUp && hasData && reminderOn
     }
 
-    func snoozeAsking() { UserDefaults.standard.set(Date.now.addingTimeInterval(7 * 86_400), forKey: Self.snoozeKey) }
     func stopAsking() { setReminder(false) }
 
-    /// Turns the reminder on or off. Turning it on also cancels a "Not now", so it can ask at the next opportunity.
+    /// Turns the reminder on or off.
     func setReminder(_ on: Bool) {
         UserDefaults.standard.set(!on, forKey: Self.declinedKey)
-        if on { UserDefaults.standard.removeObject(forKey: Self.snoozeKey) }
+        UserDefaults.standard.removeObject(forKey: Self.snoozeKey)
         remindsToSetUp = on
     }
 

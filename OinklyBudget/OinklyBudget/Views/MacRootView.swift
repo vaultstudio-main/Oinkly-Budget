@@ -134,7 +134,10 @@ struct MacRootView: View {
         .task {
             // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up.
             try? await Task.sleep(for: .seconds(8))
-            if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) { askingForShadowCopy = true }
+            if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
+                ShadowCopyManager.shared.markAsked()
+                askingForShadowCopy = true
+            }
         }
     }
 

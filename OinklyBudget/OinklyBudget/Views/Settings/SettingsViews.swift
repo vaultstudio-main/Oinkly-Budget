@@ -60,7 +60,7 @@ struct GeneralSettingsView: View {
                 } header: {
                     Text("Backup Copy")
                 } footer: {
-                    Text("A backup copy is the best way to make sure your data is safe. This asks you to set one up until you have one. Turning the backup copy off turns this reminder back on.")
+                    Text("A backup copy is the best way to make sure your data is safe. Every time Oinkly Budget starts, it reminds you to set one up until you have one. Turning the backup copy off turns this reminder back on.")
                 }
             }
 

@@ -113,7 +113,7 @@ struct ShadowSetupSheet: View {
             HStack {
                 Button("Don't Ask Again") { ShadowCopyManager.shared.stopAsking(); dismiss() }
                 Spacer()
-                Button("Not Now") { ShadowCopyManager.shared.snoozeAsking(); dismiss() }
+                Button("Not Now") { dismiss() }
                 Button("Choose Folder…") {
                     dismiss()
                     ShadowCopyManager.shared.chooseFolder()
