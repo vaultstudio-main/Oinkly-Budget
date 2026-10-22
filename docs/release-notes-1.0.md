@@ -45,7 +45,7 @@ Welcome to Oinkly Budget 1.0. Accounts of every kind, a bills calendar with remi
 - Bills & Recurring has two tabs. Bills shows a calendar, this month's bills to tick off, and every bill you have set up with the day it comes out and the amount.
 - Recurring transactions: rules for paycheques, rent and more that add pending transactions for you to confirm. The Recurring tab looks like the Bills tab, with a calendar, a month list to tick off, and every rule with its day and amount.
 - Reminders before each bill is due, a priority alert for important bills, and a reminder on the morning of each repeating transaction. Reminders for repeating transactions never show an amount.
-- Your own reminders in Settings ▸ Reminders: review the budget each month, check bills each week, back up, or anything else, with a notification that opens the page you choose.
+- Your own reminders in Settings ▸ Reminders: review the budget each month, check bills each week, back up, or anything else, with a notification that opens the page you choose. They are saved with your data, so a backup includes them.
 - Loans and credit cards with a due date add their own bill.
 - Pay a Bill records the payment on both sides, with a payment method and status, and files under the bill's category so it shows in reports. Deleting the payment marks that bill unpaid again. Attach the PDF bill or a photo when you pay.
 - Transfers between your own accounts, never touching debts or investments.
@@ -65,7 +65,7 @@ Welcome to Oinkly Budget 1.0. Accounts of every kind, a bills calendar with remi
 - Default paper size and export style in Settings.
 
 ### Your data
-- Data & Backup is one tab: your counts, Export Backup and Restore from Backup, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules and your preferences.
+- Data & Backup is one tab: your counts, Export Backup and Restore from Backup, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules, your reminders, your saved CSV import formats and your preferences.
 - Restoring a backup first saves a copy of what is there now, so it can always be undone.
 - Upgrades are safe: a copy of your data is made before the first open, and a file that can't be opened shows an error instead of an empty app.
 - A reminder to save a backup once you have a very large number of transactions.

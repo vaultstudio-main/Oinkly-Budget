@@ -366,7 +366,7 @@ enum HelpContent {
             Topic(title: "Backup & Restore", symbol: "externaldrive", lines: [
                 "Settings ▸ Data & Backup saves everything to one .pig file and restores it.",
                 "## What's in a backup",
-                "Accounts, transactions with their splits, tags and receipts, bills, recurring rules, goals, holdings, budgets, your custom categories and payment methods, and your preferences.",
+                "Accounts, transactions with their splits, tags and receipts, bills, recurring rules, goals, holdings, budgets, your custom categories and payment methods, your own reminders, your saved CSV import formats, and your preferences.",
                 "## Saving one",
                 "Choose Export Backup and pick where to put the file. Keep backups somewhere safe: anyone with a .pig file can read it. Once you have a very large number of transactions, a reminder on this page and on the Summary suggests saving a backup.",
                 "## Restoring",
@@ -406,6 +406,7 @@ enum HelpContent {
                 "• Choose a ready-made one or write your own, with a message, how often (every day, week, month or once) and the time.",
                 "• Choose a page to open when you click the notification.",
                 "• Switch a reminder off without deleting it, or delete it when you no longer need it.",
+                "• Your reminders are saved with your data, so a backup includes them and a restore brings them back.",
             ]),
 
             Topic(title: "The Widget", symbol: "rectangle.3.group", lines: [
