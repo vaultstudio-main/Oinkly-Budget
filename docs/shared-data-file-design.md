@@ -321,3 +321,14 @@ Plain sharing passed the owner's two-login test again after encryption was remov
 **Tested** (`-sharedFolderSelfTest`, debug, throwaway folder, copy of the owner's data): 30 simulated saves over ten days, history trimmed to 9 files, newest five kept, a save for each of the last six days, nothing older piling up, every kept save opens with the right record counts, restore makes a new save and keeps the data it replaced, the log is written, the history folder is open to every login. 14 of 14 passed. Not yet tried by hand through the Settings sheet.
 
 **Not built yet, and why.** *Receipt clean-up:* deleting a receipt file that is still used would lose data, and no data file here has receipts to show how SwiftData refers to them, so this needs a test with real receipts first. *Open Recent, Move This File, Create a New Data File:* with a fixed folder and one data file, these mean several data files in one folder, each with its own lock, notes and history, which is a large change for little use. *Large-file timing:* still to measure.
+
+## 23. Large-file timing (measured 2026-10-21)
+
+`-sharedTimingTest <n>` (debug) repeats the owner's transactions up to n in a throwaway copy and times the sharing steps.
+
+| Transactions | File size | Save (copy, counts, integrity check, keep previous) | Open |
+|---|---|---|---|
+| 20,000 | 4 MB | 0.04 s | under 0.01 s |
+| 100,000 | 15 MB | 0.14 s | under 0.01 s |
+
+Saves are fast enough that nothing needs tuning: the two-minute save interval, the full integrity check on every save and the 5 + 7 previous saves all stay as they are. At 100,000 transactions the previous-saves folder holds about 12 copies, roughly 180 MB. Not measured: a data file with many receipt photos (attachments are copied only when new, and are not part of the database file), and a slow disk.

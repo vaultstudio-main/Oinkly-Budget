@@ -14,6 +14,7 @@ struct PiggybankApp: App {
         // The first time this version opens the data file, keep a copy of it as it was.
         #if DEBUG
         SharedFolderSelfTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
+        SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
         StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         let configuration: ModelConfiguration
