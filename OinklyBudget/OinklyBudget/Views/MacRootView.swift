@@ -144,6 +144,7 @@ struct MacRootView: View {
         // Coming back to the app after a day or more adds anything that has come due.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Recurring.run(in: modelContext)
+            BillEntries.run(in: modelContext)
         }
         .focusedSceneValue(\.selectedAccountID, selectedAccountID)
         .appAppearance()

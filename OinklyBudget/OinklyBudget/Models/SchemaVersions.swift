@@ -68,13 +68,24 @@ enum OinklyBudgetSchemaV6: VersionedSchema {
     }
 }
 
+/// Adds one model and nothing else: which account a bill comes out of, for the pending entry it makes on each due date. Every
+/// existing model is unchanged, so the move from V6 is automatic.
+enum OinklyBudgetSchemaV7: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(7, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        OinklyBudgetSchemaV6.models + [BillPaySource.self]
+    }
+}
+
 enum OinklyBudgetMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self, OinklyBudgetSchemaV6.self] }
+    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self, OinklyBudgetSchemaV6.self, OinklyBudgetSchemaV7.self] }
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: OinklyBudgetSchemaV1.self, toVersion: OinklyBudgetSchemaV2.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV4.self, toVersion: OinklyBudgetSchemaV5.self),
-         .lightweight(fromVersion: OinklyBudgetSchemaV5.self, toVersion: OinklyBudgetSchemaV6.self)]
+         .lightweight(fromVersion: OinklyBudgetSchemaV5.self, toVersion: OinklyBudgetSchemaV6.self),
+         .lightweight(fromVersion: OinklyBudgetSchemaV6.self, toVersion: OinklyBudgetSchemaV7.self)]
     }
 }

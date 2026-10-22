@@ -257,6 +257,10 @@ struct BackupFile: Codable {
         var photoData: Data?
         var categoryKey: String?
         var artworkTheme: Int?
+        /// The account this bill comes out of, as a position in `accounts`, and the day its pending entries were made up to.
+        /// Added in 1.0; absent in older files.
+        var paysFromIndex: Int?
+        var paysFromMadeThrough: Date?
     }
 
     /// A short description for the confirmation message.
@@ -359,6 +363,13 @@ enum DataBackup {
             }
         }
 
+        // Which account each bill comes out of, as a position in the accounts list.
+        let paySources = ((try? context.fetch(FetchDescriptor<BillPaySource>())) ?? []).live
+        let accountIndexByKey = Dictionary(accounts.enumerated().map { (BillPaySources.key(for: $1), $0) }, uniquingKeysWith: { first, _ in first })
+        func paySource(_ bill: Bill) -> (Int, Date?)? {
+            guard let source = paySources.first(where: { $0.billKey == BillPaySources.key(for: bill) }), let index = accountIndexByKey[source.accountKey] else { return nil }
+            return (index, source.madeThrough)
+        }
         file.bills = liveBills.map { b in
             .init(name: b.name, amount: text(b.amount), frequency: b.frequencyRaw, dueDate: b.dueDate,
                   remindDaysBefore: b.remindDaysBefore, remindersOn: b.remindersOn, isImportant: b.isImportant,
@@ -366,7 +377,8 @@ enum DataBackup {
                   loanAccountID: b.loan?.isLive == true ? ids[b.loan!.persistentModelID] : nil,
                   createdAt: b.createdAt, photoData: b.photoData,
                   categoryKey: b.category?.isLive == true ? b.category?.systemKey : nil,
-                  artworkTheme: themeByKey[ArtworkChoices.key(for: b)])
+                  artworkTheme: themeByKey[ArtworkChoices.key(for: b)],
+                  paysFromIndex: paySource(b)?.0, paysFromMadeThrough: paySource(b)?.1)
         }
 
         file.paymentMethods = try context.fetch(FetchDescriptor<CustomPaymentMethod>()).live.map { .init(name: $0.name, symbol: $0.symbol) }
@@ -505,6 +517,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<ArtworkChoice>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<OutlookSnapshot>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CashBudgetMark>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<BillPaySource>()) { context.delete(item) }
         for record in file.outlooks ?? [] {
             context.insert(OutlookSnapshot(monthKey: record.monthKey, incomeTotal: record.incomeTotal, billsTotal: record.billsTotal,
                                            budgetsTotal: record.budgetsTotal, otherSpending: record.otherSpending, leftToSave: record.leftToSave,
@@ -663,6 +676,11 @@ enum DataBackup {
             bill.category = record.categoryKey.flatMap { byKey[$0] }
             context.insert(bill)
             if let theme = record.artworkTheme, theme > 0, ArtworkTheme.isValid(theme) { context.insert(ArtworkChoice(key: ArtworkChoices.key(for: bill), theme: theme)) }
+            if let index = record.paysFromIndex, let account = accounts[index] {
+                let source = BillPaySource(billKey: BillPaySources.key(for: bill), accountKey: BillPaySources.key(for: account))
+                source.madeThrough = record.paysFromMadeThrough
+                context.insert(source)
+            }
             restoredBills.append(bill)
         }
         // Reconnect each bill payment to the bill it settled.

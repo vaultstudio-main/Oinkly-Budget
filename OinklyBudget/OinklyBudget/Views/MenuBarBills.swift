@@ -208,7 +208,7 @@ struct MenuBarBills: View {
         switch line.source {
         case .bill(let item):
             Button {
-                item.bill.setPaid(true, on: item.date)
+                BillEntries.markPaid(item.bill, on: item.date, in: modelContext)
                 modelContext.saveNow()
                 Task { await BillNotifier.refresh(in: modelContext) }
             } label: {

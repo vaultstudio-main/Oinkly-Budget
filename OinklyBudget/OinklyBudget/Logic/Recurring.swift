@@ -86,15 +86,10 @@ enum Recurring {
         return entry
     }
 
-    /// What ticking an entry a rule made does. A pending entry is confirmed: money coming in (a paycheque) goes straight to
-    /// Reconciled, because it has arrived, and money going out becomes Unreconciled until it is matched to a statement.
-    /// Ticking a confirmed entry again takes it back to pending.
+    /// What ticking an entry a rule made does. A pending entry is confirmed and goes straight to Reconciled, whether it is a
+    /// paycheque or a payment. Ticking a confirmed entry again takes it back to pending.
     static func toggleConfirmed(_ entry: Transaction) {
-        if entry.state == .pending {
-            entry.state = entry.amount > 0 ? .reconciled : .unreconciled
-        } else {
-            entry.state = .pending
-        }
+        entry.state = entry.state == .pending ? .reconciled : .pending
     }
 
     /// Moves a rule on to its next due date, or finishes it when there are no more.

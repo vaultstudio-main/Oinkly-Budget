@@ -91,6 +91,14 @@ struct MonthOutlook {
 
     static func stored(_ keys: Set<String>) -> String { keys.sorted().joined(separator: "\n") }
 
+    /// An account was renamed or changed type: its choice follows it.
+    static func accountChanged(from oldKey: String, to newKey: String, defaults: UserDefaults = .standard) {
+        var keys = excluded(from: defaults.string(forKey: excludedKey) ?? "")
+        guard oldKey != newKey, keys.remove(oldKey) != nil else { return }
+        keys.insert(newKey)
+        defaults.set(stored(keys), forKey: excludedKey)
+    }
+
     // MARK: Building
 
     /// Works out the outlook for the month containing `month`. `monthTransactions` is every transaction dated in it.
@@ -133,8 +141,11 @@ struct MonthOutlook {
             if !linked.isEmpty, !linked.contains(where: { counts($0.account) }) { continue }
             let actual = BillLink.actual(of: bill, on: item.date, calendar: calendar)
             let status: Status
-            if let actual {
+            if let actual, item.isPaid {
                 status = actual > bill.amount ? .over : (actual < bill.amount ? .under : .paid)
+            } else if actual != nil {
+                // Not ticked off yet, but its pending entry is already in the account: it counts at that amount, still waiting.
+                status = item.isOverdue ? .overdue : .expected
             } else {
                 status = item.isPaid ? .paid : (item.isOverdue ? .overdue : .expected)
             }

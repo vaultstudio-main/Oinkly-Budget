@@ -190,7 +190,7 @@ extension CategorySetupView {
         guard let flag = arguments.firstIndex(of: "-categorySetupCheck"), flag + 1 < arguments.count else { return }
         let folder = URL(fileURLWithPath: arguments[flag + 1], isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV6.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
         guard let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) else { exit(1) }
         Category.ensureSystemCategories(in: container.mainContext)
         NSApplication.shared.setActivationPolicy(.accessory)

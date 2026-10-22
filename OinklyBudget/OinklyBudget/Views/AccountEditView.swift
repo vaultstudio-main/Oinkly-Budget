@@ -303,6 +303,7 @@ struct AccountEditView: View {
     private func save() {
         let target = account ?? Account(name: "", type: type)
         let previousArtworkKey = account.map { ArtworkChoices.key(for: $0) }
+        let previousPaySourceKey = account.map { BillPaySources.key(for: $0) }
         target.name = String(name.trimmingCharacters(in: .whitespaces).prefix(Account.maxNameLength))
         target.type = type
         // Cash on hand has no bank details.
@@ -356,6 +357,11 @@ struct AccountEditView: View {
         }
         LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
         ArtworkChoices.set(artworkTheme, for: target, previousKey: previousArtworkKey, in: modelContext)
+        // Bills that came out of this account, and the outlook's account choice, follow a rename.
+        if let previousPaySourceKey {
+            BillPaySources.accountChanged(from: previousPaySourceKey, to: BillPaySources.key(for: target), in: modelContext)
+            MonthOutlook.accountChanged(from: previousPaySourceKey, to: BillPaySources.key(for: target))
+        }
         modelContext.saveNow()
         if type == .checking && isPrimary {
             PrimaryChecking.set(target, in: modelContext)

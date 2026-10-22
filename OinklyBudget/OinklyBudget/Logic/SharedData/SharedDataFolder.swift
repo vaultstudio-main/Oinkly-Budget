@@ -31,7 +31,7 @@ nonisolated struct SharedLock: Codable, Equatable, Sendable {
 /// About the finished data file: when it was last saved and by whom.
 nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var formatVersion: Int
-    /// The database shape (OinklyBudgetSchemaV6 is 6). An older app refuses newer data.
+    /// The database shape (OinklyBudgetSchemaV7 is 7). An older app refuses newer data.
     var schemaVersion: Int
     /// Goes up by one at every save, so two copies can tell whether the file changed while they were away.
     var revision: Int
@@ -126,7 +126,7 @@ nonisolated struct SharedDataFolder: Sendable {
     static let keepNewest = 5
     static let keepDays = 7
     static let formatVersion = 2
-    static let schemaVersion = 6
+    static let schemaVersion = 7
     /// A lock is stale once its heartbeat is this old, in seconds. The app refreshes it every 60.
     static let staleAfter: TimeInterval = 180
 

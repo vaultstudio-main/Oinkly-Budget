@@ -105,13 +105,13 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 7
-            try rewriteNote(s5) { $0.schemaVersion = 7 }
+            newer.schemaVersion = 8
+            try rewriteNote(s5) { $0.schemaVersion = 8 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 7 && s5.readInfo()?.counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 8 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -247,7 +247,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV6.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -922,7 +922,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2030, month: 1, day: d))! }
-                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Outlook bank", type: .checking, openingBalance: 0)
                 let groceries = Category(name: "Outlook groceries", colorHex: "34C759", symbol: "cart", monthlyLimit: 400)
                 let electric = Bill(name: "Electric", amount: 90, frequency: .monthly, dueDate: day(10))
@@ -1045,7 +1045,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: .now)
-                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let loan = Bill(name: "Auto Loan", amount: 400, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -12, to: today)!, isImportant: true)
                 let insurance = Bill(name: "Insurance", amount: 100, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 4, to: today)!, isImportant: true)
                 let notImportant = Bill(name: "Gym", amount: 30, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -3, to: today)!)
@@ -1060,7 +1060,7 @@ enum SharedHardeningTest {
 
             // S39: ticking an entry a repeating rule made
             do {
-                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let income = Transaction(account: nil, date: .now, payee: "Pay", amount: 2_000)
                 rc.insert(income)
                 income.state = .pending
@@ -1072,9 +1072,67 @@ enum SharedHardeningTest {
                 rc.insert(rent)
                 rent.state = .pending
                 Recurring.toggleConfirmed(rent)
-                check("S39 ticking a pending payment makes it unreconciled, to match to a statement", rent.state == .unreconciled)
+                check("S39 ticking a pending payment reconciles it too", rent.state == .reconciled)
                 Recurring.toggleConfirmed(rent)
                 check("S39 and ticking that again takes it back to pending", rent.state == .pending)
+            }
+
+            // S40: a bill's pending entry, ticking it off, and paying it
+            do {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                func ago(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: today)! }
+                let bc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bank = Account(name: "Bills bank", type: .checking, openingBalance: 0)
+                bc.insert(bank)
+                let power = Bill(name: "Power", amount: 90, frequency: .monthly, dueDate: ago(5))
+                let water = Bill(name: "Water", amount: 40, frequency: .monthly, dueDate: ago(3))
+                let phone = Bill(name: "Phone", amount: 60, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 9, to: today)!)
+                let gym = Bill(name: "Gym", amount: 25, frequency: .monthly, dueDate: ago(2))
+                for bill in [power, water, phone, gym] { bc.insert(bill) }
+                BillPaySources.set(bank, for: power, in: bc); BillPaySources.set(bank, for: water, in: bc); BillPaySources.set(bank, for: phone, in: bc)
+                try bc.save()
+                func entries(_ bill: Bill) -> [Transaction] { BillLink.payments(of: bill, on: bill.dueDate) }
+                let made = BillEntries.run(in: bc)
+                try bc.save()
+                let powerEntry = entries(power).first
+                check("S40 a bill with an account gets a pending entry for a due date that has come", made == 2 && powerEntry?.state == .pending && powerEntry?.amount == -90 && powerEntry?.account === bank, "made \(made)")
+                check("S40 the entry is linked to that due date and the bill is still unpaid", powerEntry?.paidBill === power && !power.isPaid(on: power.dueDate))
+                check("S40 a bill with no account makes none", entries(gym).isEmpty && entries(phone).isEmpty)
+                check("S40 running again makes no second one", BillEntries.run(in: bc) == 0)
+                BillEntries.markPaid(power, on: power.dueDate, in: bc)
+                check("S40 ticking the bill reconciles its entry and marks it paid", entries(power).first?.state == .reconciled && power.isPaid(on: power.dueDate) && entries(power).count == 1)
+                BillEntries.markUnpaid(power, on: power.dueDate, in: bc)
+                check("S40 ticking again puts the entry back to pending", entries(power).first?.state == .pending && !power.isPaid(on: power.dueDate))
+                if let waterEntry = entries(water).first { bc.delete(waterEntry) }
+                try bc.save()
+                check("S40 an entry that was deleted does not come back", BillEntries.run(in: bc) == 0 && entries(water).isEmpty)
+                BillEntries.markPaid(phone, on: phone.dueDate, in: bc)
+                check("S40 ticking a bill before its date makes an entry that is already reconciled", entries(phone).count == 1 && entries(phone)[0].state == .reconciled)
+                BillEntries.markPaid(gym, on: gym.dueDate, in: bc)
+                check("S40 ticking a bill with no account makes no entry", entries(gym).isEmpty && gym.isPaid(on: gym.dueDate))
+                BillPayment.record(from: bank, debt: nil, bill: power, amount: 95, date: power.dueDate, state: .reconciled, in: bc)
+                try bc.save()
+                let afterPay = entries(power)
+                check("S40 paying the bill replaces the pending entry with the real payment, reconciled", afterPay.count == 1 && afterPay[0].amount == -95 && afterPay[0].state == .reconciled && afterPay[0].isBillPayment, "\(afterPay.count)")
+                BillEntries.markUnpaid(power, on: power.dueDate, in: bc)
+                check("S40 unticking does not undo a real payment", entries(power).first?.state == .reconciled)
+                // The account follows a rename, and goes with a backup
+                let oldKey = BillPaySources.key(for: bank)
+                bank.name = "Bills bank renamed"
+                BillPaySources.accountChanged(from: oldKey, to: BillPaySources.key(for: bank), in: bc)
+                try bc.save()
+                check("S40 a renamed account keeps its bills", BillPaySources.account(for: phone, in: bc) === bank)
+                let paid = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: bc)))
+                try DataBackup.restore(paid, into: bc)
+                let restoredPhone = try bc.fetch(FetchDescriptor<Bill>()).first { $0.name == "Phone" }
+                check("S40 a backup brings back which account a bill comes out of", restoredPhone.flatMap { BillPaySources.account(for: $0, in: bc) }?.name == "Bills bank renamed")
+                check("S40 and the links to due dates", restoredPhone.map { !BillLink.payments(of: $0, on: $0.dueDate).isEmpty } == true)
+                if let account = try bc.fetch(FetchDescriptor<Account>()).first(where: { $0.name == "Bills bank renamed" }) { bc.delete(account) }
+                try bc.save()
+                BillPaySources.removeOrphans(in: bc)
+                try bc.save()
+                check("S40 deleting the account leaves no stray record", ((try? bc.fetch(FetchDescriptor<BillPaySource>())) ?? []).isEmpty)
             }
         } catch {
             check("no error", false, error.localizedDescription)

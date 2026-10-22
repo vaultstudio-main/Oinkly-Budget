@@ -279,7 +279,11 @@ private struct BillRow: View {
         if item.bill.isLive {
             HStack(spacing: 12) {
                 Button {
-                    item.bill.setPaid(!item.isPaid, on: item.date)
+                    if item.isPaid {
+                        BillEntries.markUnpaid(item.bill, on: item.date, in: modelContext)
+                    } else {
+                        BillEntries.markPaid(item.bill, on: item.date, in: modelContext)
+                    }
                     modelContext.saveNow()
                     Task { await BillNotifier.refresh(in: modelContext) }
                 } label: {
@@ -498,8 +502,16 @@ struct BillEditView: View {
     @State private var category: Category?
     @State private var photoData: Data?
     @State private var artworkTheme = 0
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+    /// The account this bill comes out of, for the pending entry it makes on each due date. Optional.
+    @State private var paysFrom: Account?
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var confirmingDelete = false
+
+    /// Accounts a bill can come out of: where money is kept, and cards.
+    private var payingAccounts: [Account] {
+        allAccounts.live.filter { !$0.isClosed && ($0.type.group == .checkingSavings || $0.type.group == .creditCards) }
+    }
 
     init(bill: Bill?, defaultDate: Date) {
         self.bill = bill
@@ -549,6 +561,16 @@ struct BillEditView: View {
                         if frequency != .once {
                             Text("Repeats from this date, so a bill first due on the 15th falls on the 15th every time.")
                         }
+                    }
+                }
+                if bill?.loan == nil {
+                    Section {
+                        Picker("Pays from", selection: $paysFrom) {
+                            Text("None").tag(Account?.none)
+                            ForEach(payingAccounts) { Text($0.name).tag(Optional($0)) }
+                        }
+                    } footer: {
+                        Text("Optional. Pick an account and this bill adds a pending entry to it on each due date. Tick the bill off to mark it paid and reconcile that entry, or pay it with Pay a Bill. With None, ticking only marks the bill paid.")
                     }
                 }
                 Section {
@@ -623,6 +645,7 @@ struct BillEditView: View {
             }
         }
         .macSheetFrame(minHeight: 620)
+        .onAppear { if let bill { paysFrom = BillPaySources.account(for: bill, in: modelContext) } }
     }
 
     private func save() {
@@ -650,9 +673,14 @@ struct BillEditView: View {
             created.category = category
             modelContext.insert(created)
             ArtworkChoices.set(artworkTheme, for: created, in: modelContext)
+            BillPaySources.set(paysFrom, for: created, in: modelContext)
         }
-        if let bill { ArtworkChoices.set(artworkTheme, for: bill, in: modelContext) }
+        if let bill {
+            ArtworkChoices.set(artworkTheme, for: bill, in: modelContext)
+            if bill.loan == nil { BillPaySources.set(paysFrom, for: bill, in: modelContext) }
+        }
         modelContext.saveNow()
+        BillEntries.run(in: modelContext)
         Task { await BillNotifier.refresh(in: modelContext) }
         dismiss()
     }

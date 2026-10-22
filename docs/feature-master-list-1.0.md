@@ -112,7 +112,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### B10. Recurring transactions (Built)
 - Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
-- The Recurring tab is laid out like the Bills tab: tiles (in and out this month, next up, rules) and the month's list on the left, where each date is ticked off (a date waiting for you is added by ticking it; an entry a rule made starts pending and is ticked to confirm it: income goes straight to Reconciled, a payment becomes Unreconciled; ticking again returns it to pending; test S39); a calendar with a dot on each date, an Add Recurring button and an All Rules list in the sidebar (every rule with the day it comes out and the amount, with edit, pause, resume and delete).
+- The Recurring tab is laid out like the Bills tab: tiles (in and out this month, next up, rules) and the month's list on the left, where each date is ticked off (a date waiting for you is added by ticking it; an entry a rule made starts pending and is ticked to confirm it: it goes straight to Reconciled, income or payment; ticking again returns it to pending; test S39); a calendar with a dot on each date, an Add Recurring button and an All Rules list in the sidebar (every rule with the day it comes out and the amount, with edit, pause, resume and delete).
 - Repeating transactions also show in the menu bar pop-up (in the same list as bills, marked "Repeating", and counted in the number beside the icon), in reminders (a notification on the morning of each date, with no amount) and in the Upcoming Bills widget (names and dates only, switch off in Edit Widget).
 - Shots: S-B10a (rules screen), S-B10b (rule editor), S-B10c (a pending entry made by a rule).
 
@@ -162,6 +162,9 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Click any budget card to change its amount (the same editor as in Settings; your own budgets can be renamed or deleted there).
 - A button, Set Hidden and Custom Budgets, opens Settings ▸ Categories, where any category can be given a budget, shown or hidden on this page, and budgets of your own can be added.
 - Shots: S-D3.
+
+### C2. Bills that make pending entries (Built)
+- A bill has an optional **Pays from** account (a new standalone record, BillPaySource, database shape 7, in Manual Backup and following account renames). With one, each due date that has come adds a pending entry in that account, linked to the bill's due date (looking back 30 days, never remaking a deleted one). Ticking the bill off reconciles the entry, or adds one already reconciled when ticked early; unticking puts it back to pending. Pay a Bill replaces the pending entry with the real payment, reconciled. Loan and card bills and bills with no account behave as before. Tests: S40.
 
 ### D3b. Budgets in first-run setup (Built)
 - After the accounts, a second setup step lists every expense category with a budget box (zero means none), plus Suggested Amounts, Clear All and Add Your Own, and a running total. Continue opens the app. Skip for now on the accounts step goes straight in. Debug check: `-categorySetupCheck <folder>`.

@@ -306,3 +306,69 @@ enum CashBudgets {
         for mark in all(in: context) where !present.contains(mark.key) { context.delete(mark) }
     }
 }
+
+/// Which account a bill comes out of, for the pending entry it makes on each due date. Its own record, found by the bill's key
+/// and the account's key, so neither the bill nor the account model changes. A bill with no record makes no entries.
+@Model
+final class BillPaySource {
+    var billKey: String = ""
+    var accountKey: String = ""
+    var createdAt: Date = Date.now
+    /// The day up to which due dates have been given their pending entry, so an entry that was deleted doesn't come back.
+    var madeThrough: Date?
+
+    init(billKey: String, accountKey: String) {
+        self.billKey = billKey
+        self.accountKey = accountKey
+    }
+}
+
+enum BillPaySources {
+    static func key(for bill: Bill) -> String { ArtworkChoices.key(for: bill) }
+    static func key(for account: Account) -> String { MonthOutlook.accountKey(account) }
+
+    private static func all(in context: ModelContext) -> [BillPaySource] {
+        ((try? context.fetch(FetchDescriptor<BillPaySource>())) ?? []).live
+    }
+
+    /// The record for a bill, if it has one.
+    static func source(for bill: Bill, in context: ModelContext) -> BillPaySource? {
+        all(in: context).first { $0.billKey == key(for: bill) }
+    }
+
+    /// The account a bill comes out of, if one was chosen and it is still there and open.
+    static func account(for bill: Bill, in context: ModelContext) -> Account? {
+        guard bill.isLive, bill.loan == nil, let source = all(in: context).first(where: { $0.billKey == key(for: bill) }) else { return nil }
+        let accounts = ((try? context.fetch(FetchDescriptor<Account>())) ?? []).live
+        return accounts.first { key(for: $0) == source.accountKey && !$0.isClosed }
+    }
+
+    /// Sets or clears the account for a bill. Does not save.
+    static func set(_ account: Account?, for bill: Bill, in context: ModelContext) {
+        let wanted = key(for: bill)
+        let mine = all(in: context).filter { $0.billKey == wanted }
+        for extra in mine.dropFirst() { context.delete(extra) }
+        guard let account else {
+            for source in mine { context.delete(source) }
+            return
+        }
+        if let existing = mine.first {
+            if existing.accountKey != key(for: account) { existing.accountKey = key(for: account) }
+        } else {
+            context.insert(BillPaySource(billKey: wanted, accountKey: key(for: account)))
+        }
+    }
+
+    /// An account was renamed or changed type: bills that came out of it follow it. Does not save.
+    static func accountChanged(from oldKey: String, to newKey: String, in context: ModelContext) {
+        guard oldKey != newKey else { return }
+        for source in all(in: context) where source.accountKey == oldKey { source.accountKey = newKey }
+    }
+
+    /// Records for bills or accounts that are gone.
+    static func removeOrphans(in context: ModelContext) {
+        let bills = Set(((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live.map { key(for: $0) })
+        let accounts = Set(((try? context.fetch(FetchDescriptor<Account>())) ?? []).live.map { key(for: $0) })
+        for source in all(in: context) where !bills.contains(source.billKey) || !accounts.contains(source.accountKey) { context.delete(source) }
+    }
+}

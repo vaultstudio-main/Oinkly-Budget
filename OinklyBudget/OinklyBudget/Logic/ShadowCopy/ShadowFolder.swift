@@ -4,7 +4,7 @@ import Darwin
 /// What the backup copy's latest file is: which save it matches and how much data it holds.
 nonisolated struct ShadowInfo: Codable, Equatable, Sendable {
     var formatVersion: Int
-    /// The database shape (OinklyBudgetSchemaV6 is 6).
+    /// The database shape (OinklyBudgetSchemaV7 is 7).
     var schemaVersion: Int
     /// Goes up by one at every copy.
     var copyNumber: Int
@@ -84,7 +84,7 @@ nonisolated struct ShadowFolder: Sendable {
     /// A receipt must have been in the backup copy this long before it can be removed for not being used.
     static let receiptGraceDays = 30
     static let formatVersion = 1
-    static let schemaVersion = 6
+    static let schemaVersion = 7
     /// The newest older copies kept, and how many days back one per day is kept as well.
     static let keepNewest = 10
     static let keepDays = 7

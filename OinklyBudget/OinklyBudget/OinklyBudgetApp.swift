@@ -8,7 +8,7 @@ struct OinklyBudgetApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV6.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
         // A restore from a portable file waits here until the fresh data file is open.
         var portableRestore: (file: BackupFile?, note: String?) = (nil, nil)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
@@ -86,7 +86,10 @@ struct OinklyBudgetApp: App {
         }
         SchemaUpgrade.run(in: container.mainContext)
         // Repeating transactions that came due while the app was closed.
-        if StartupState.shadowFinding == nil { Recurring.run(in: container.mainContext) }
+        if StartupState.shadowFinding == nil {
+            Recurring.run(in: container.mainContext)
+            BillEntries.run(in: container.mainContext)
+        }
         NotificationCenter.default.removeObserver(launchSaves)
         OinklyBudgetAppDelegate.container = container
         BalanceCache.install()

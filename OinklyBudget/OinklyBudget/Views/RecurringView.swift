@@ -273,7 +273,7 @@ private struct OccurrenceRow: View {
         }
         .buttonStyle(.plain)
         .disabled(item.kind == .coming)
-        .help(item.kind == .due ? "Add it now" : (item.kind == .added ? (isPending ? (item.entry.map { $0.amount > 0 } == true ? "Mark as received and reconciled" : "Mark as confirmed") : "Mark as waiting to be confirmed") : "It is added on its date"))
+        .help(item.kind == .due ? "Add it now" : (item.kind == .added ? (isPending ? "Mark as confirmed and reconciled" : "Mark as waiting to be confirmed") : "It is added on its date"))
     }
 
     private var subtitle: String {

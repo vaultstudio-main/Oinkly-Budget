@@ -236,6 +236,10 @@ enum BillPayment {
         out.paymentChoice = paymentChoice
         out.isBillPayment = true
         if let bill, let due = Bills.nearestDue(bill, to: day, calendar: calendar) {
+            // The pending entry the bill made for this date is replaced by the real payment.
+            for placeholder in BillLink.payments(of: bill, on: due, calendar: calendar) where placeholder.state == .pending && !placeholder.isBillPayment {
+                context.delete(placeholder)
+            }
             out.paidBill = bill
             out.paidDueDate = due
         }
