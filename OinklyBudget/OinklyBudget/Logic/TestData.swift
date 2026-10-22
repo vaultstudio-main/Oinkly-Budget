@@ -41,11 +41,11 @@ enum TestData {
     static let monthsOfHistory = 26
 
     /// Small everyday purchases added for every day of the history, to make the transaction count large.
-    /// About 4 a day gives roughly 4,000 over two years.
+    /// About 2 a day gives roughly 2,000 over two years, and keeps a month's spending below the pay.
     static var everydayPurchasesPerDay: Int {
         // For load testing: `open -n OinklyBudget.app --args -piggybank.testPurchasesPerDay 12`.
         let override = UserDefaults.standard.integer(forKey: "piggybank.testPurchasesPerDay")
-        return override > 0 ? override : 4
+        return override > 0 ? override : 2
     }
 
     /// A believable two-plus years of everything the app does. Dates are relative to today, so it always looks current.
@@ -73,6 +73,10 @@ enum TestData {
                              ("home-improvement", 150), ("books-media", 35), ("salon-barber", 40)] as [(String, Decimal)] {
             cat(key)?.monthlyLimit = limit
         }
+        // Only the budgets above are in use. The starter limits on the other categories would add up to thousands a month.
+        let inUse = Set(["groceries", "dining-out", "gas-fuel", "entertainment", "utilities", "phone-internet", "shopping", "subscriptions",
+                         "fitness", "pets", "healthcare", "charity", "clothing", "home-improvement", "books-media", "salon-barber"])
+        for category in categories where !category.isIncome && !category.isCustom && !inUse.contains(category.systemKey ?? "") { category.monthlyLimit = 0 }
 
         // Custom categories and payment methods.
         let coffee = Category(name: "Coffee Runs", colorHex: "A2845E", symbol: "cup.and.saucer", monthlyLimit: 40,
@@ -211,8 +215,8 @@ enum TestData {
             // Amounts drift a little from month to month without growing forever.
             let drift = back % 4
             // Pay and savings.
-            tx(checking, monthDay(back, 1), "Acme Corp Payroll", "paycheck", 3_500, method: .directDeposit)
-            tx(checking, monthDay(back, 15), "Acme Corp Payroll", "paycheck", 3_500, method: .directDeposit)
+            tx(checking, monthDay(back, 1), "Acme Corp Payroll", "paycheck", 4_500, method: .directDeposit)
+            tx(checking, monthDay(back, 15), "Acme Corp Payroll", "paycheck", 4_500, method: .directDeposit)
             tx(savings, monthDay(back, 28), "Interest", "interest-dividends", 11.80)
             if back == 1 { tx(checking, monthDay(back, 9), "Weekend House Sit", "custom-house-sitting", 180, method: .venmo) }
 
@@ -385,8 +389,12 @@ enum TestData {
         for (loan, amount) in [(auto, Decimal(412)), (mortgage, Decimal(1_640)), (student, Decimal(190))] {
             for back in 1...monthsOfHistory {
                 let date = monthDay(back, cal.component(.day, from: loan.loanBill?.dueDate ?? today))
-                BillPayment.record(from: checking, debt: loan, bill: loan.loanBill, amount: amount, date: date,
-                                   state: .reconciled, paymentChoice: .type(.bankTransfer), in: context)
+                let paid = BillPayment.record(from: checking, debt: loan, bill: loan.loanBill, amount: amount, date: date,
+                                              state: .reconciled, paymentChoice: .type(.bankTransfer), in: context)
+                // The bill starts this cycle, so an earlier month's payment isn't one of its due dates: leave it unlinked.
+                if let paid, let first = loan.loanBill?.dueDate, date < (cal.date(byAdding: .day, value: -20, to: first) ?? first) {
+                    BillLink.unlink(paid)
+                }
             }
         }
         // This month's mortgage was paid on time.
@@ -442,6 +450,17 @@ enum TestData {
                                               frequency: .everyThreeMonths, startDate: inDays(-1))
         taxReserve.autoEnter = false
         for rule in [streaming, sideGig, taxReserve] { context.insert(rule) }
+        // The two paydays each month are repeating income, and this month's paycheques already belong to them.
+        let paychecks = ((try? context.fetch(FetchDescriptor<Transaction>())) ?? []).filter { $0.payee == "Acme Corp Payroll" }
+        for dayOfMonth in [1, 15] {
+            let start = monthDay(0, dayOfMonth)
+            let pay = RecurringTransaction(payee: "Acme Corp Payroll", account: checking, category: cat("paycheck"), amount: 4_500,
+                                           frequency: .monthly, startDate: start)
+            pay.paymentTypeRaw = PaymentType.directDeposit.rawValue
+            context.insert(pay)
+            if start <= today { pay.nextDate = cal.date(byAdding: .month, value: 1, to: start) ?? start }
+            for entry in paychecks where cal.isDate(entry.date, inSameDayAs: start) { entry.recurring = pay }
+        }
         Recurring.run(in: context)
         for back in 0...2 {
             context.insert(GoalContribution(goal: wedding, amount: 140, date: monthDay(back, 6), note: "Monthly set aside"))
