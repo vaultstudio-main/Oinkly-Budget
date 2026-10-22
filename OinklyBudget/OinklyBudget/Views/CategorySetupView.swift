@@ -106,9 +106,7 @@ struct CategorySetupView: View {
             CategoryBadge(category: category, size: 28)
             Text(category.name).lineLimit(1)
             Spacer(minLength: 4)
-            CurrencyField("Monthly budget", amount: Binding(get: { category.monthlyLimit }, set: { category.monthlyLimit = max($0, 0) }))
-                .labelsHidden()
-                .multilineTextAlignment(.trailing)
+            BudgetAmountField(category: category)
                 .frame(width: 110)
         }
         .padding(10)
@@ -128,6 +126,58 @@ struct CategorySetupView: View {
     private func clearAll() {
         for category in allCategories.live where !category.isIncome { category.monthlyLimit = 0 }
         modelContext.saveNow()
+    }
+}
+
+/// A budget box that gets out of the way: type any number you like and nothing is rewritten under your fingers. The amount is kept as
+/// you type, and the box is tidied into currency (such as $1,500.00) only once you leave it.
+private struct BudgetAmountField: View {
+    let category: Category
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextField("Monthly budget", text: $text, prompt: Text(Decimal(0), format: .appCurrency))
+            .labelsHidden()
+            .multilineTextAlignment(.trailing)
+            .focused($focused)
+            .onAppear { text = BudgetAmountText.shown(category.monthlyLimit, editing: false) }
+            .onChange(of: text) { _, new in
+                // Keep the amount up to date while typing, without touching what is in the box.
+                guard focused else { return }
+                category.monthlyLimit = BudgetAmountText.parse(new)
+            }
+            .onChange(of: focused) { _, isFocused in
+                text = BudgetAmountText.shown(category.monthlyLimit, editing: isFocused)
+            }
+            // Suggested Amounts, Clear All and the like change the amount from outside.
+            .onChange(of: category.monthlyLimit) { _, new in
+                if !focused { text = BudgetAmountText.shown(new, editing: false) }
+            }
+    }
+}
+
+enum BudgetAmountText {
+    /// Reads whatever was typed: digits and one decimal point, ignoring currency signs, commas, spaces and letters. Nothing
+    /// readable is zero. Never negative.
+    static func parse(_ text: String, decimalSeparator: String = Locale.current.decimalSeparator ?? ".") -> Decimal {
+        var number = ""
+        var seenPoint = false
+        for character in text {
+            if character.isASCII, character.isNumber {
+                number.append(character)
+            } else if String(character) == decimalSeparator || character == ".", !seenPoint {
+                seenPoint = true
+                number.append(".")
+            }
+        }
+        return Decimal(string: number, locale: Locale(identifier: "en_US_POSIX")) ?? 0
+    }
+
+    /// What the box shows: empty for zero, the plain number while editing, and tidy currency otherwise.
+    static func shown(_ value: Decimal, editing: Bool) -> String {
+        guard value != 0 else { return "" }
+        return editing ? "\(value)" : value.formatted(.appCurrency)
     }
 }
 

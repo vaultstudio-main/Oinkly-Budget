@@ -1029,6 +1029,17 @@ enum SharedHardeningTest {
                 check("S36 an earlier build's 'don't ask' is cleared the first time", ShadowCopyManager.reminderIsOn(in: old))
                 check("S36 and its wait is cleared too", old.object(forKey: "shadowCopyAskAgainAfter") == nil)
             }
+
+            // S37: typing a budget amount in setup is read as it is typed
+            check("S37 plain digits", BudgetAmountText.parse("1500") == 1500)
+            check("S37 currency signs and commas are ignored", BudgetAmountText.parse("$1,500.50") == Decimal(string: "1500.5"))
+            check("S37 a lone digit is read while typing", BudgetAmountText.parse("5") == 5)
+            check("S37 a trailing point is read as the whole number so far", BudgetAmountText.parse("12.") == 12)
+            check("S37 empty and letters are zero", BudgetAmountText.parse("") == 0 && BudgetAmountText.parse("abc") == 0)
+            check("S37 a second point is ignored", BudgetAmountText.parse("1.2.3") == Decimal(string: "1.23"))
+            check("S37 a comma decimal separator works where the Mac uses one", BudgetAmountText.parse("12,5", decimalSeparator: ",") == Decimal(string: "12.5"))
+            check("S37 zero shows as an empty box", BudgetAmountText.shown(0, editing: true) == "" && BudgetAmountText.shown(0, editing: false) == "")
+            check("S37 editing shows the plain number", BudgetAmountText.shown(1500, editing: true) == "1500")
         } catch {
             check("no error", false, error.localizedDescription)
         }
