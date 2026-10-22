@@ -20,11 +20,15 @@ struct SharedDataSection: View {
 
     var body: some View {
         Section {
-            if SharedDataSession.isEnabled {
-                sharing
-            } else {
-                notSharing
-            }
+            // A switch, like the backup copy. Turning it on asks first (and offers a backup copy folder); turning it off
+            // asks first too. The switch only moves once the app has restarted into the new state.
+            Toggle("Share with Other Users", isOn: Binding(
+                get: { SharedDataSession.isEnabled },
+                set: { wantsOn in
+                    if wantsOn { warning = true } else { confirmingStop = true }
+                }))
+                .disabled(working)
+            if SharedDataSession.isEnabled { sharing }
             if let message {
                 Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(messageIsError ? Color.orange : Theme.green)
@@ -32,9 +36,7 @@ struct SharedDataSection: View {
         } header: {
             Text("Sharing")
         } footer: {
-            Text(SharedDataSession.isEnabled
-                 ? "Other users of this Mac use the same data, one at a time."
-                 : "Lets other users of this Mac use your data, one at a time.")
+            Text("Lets other users of this Mac use your data, one at a time.")
         }
         .sheet(isPresented: $warning) { ShareSetupSheet(onShare: turnOn) }
         .sheet(isPresented: $confirmingStop) {
@@ -48,26 +50,10 @@ struct SharedDataSection: View {
         }
     }
 
-    // MARK: Off
-
-    @ViewBuilder
-    private var notSharing: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Share with Other Users").font(.body.weight(.medium))
-                Text("Other users of this Mac can open this data, one at a time.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Share…") { warning = true }.disabled(working)
-        }
-    }
-
     // MARK: On
 
     @ViewBuilder
     private var sharing: some View {
-        Label("Sharing is on", systemImage: "person.2.fill").foregroundStyle(Theme.green)
         LabeledContent("Folder", value: SharedDataFolder.defaultURL.path)
         if let saved = session.lastSaved {
             LabeledContent("Last saved", value: saved.formatted(date: .abbreviated, time: .shortened))
@@ -82,8 +68,6 @@ struct SharedDataSection: View {
                 .help("Saves and quits so another user can open the data")
             Button("Previous Saves…") { showPreviousSaves() }.disabled(working || !session.isActive || session.lostLock)
             Button("Check Sharing…") { checkSharing() }.disabled(working)
-            Spacer()
-            Button("Stop Sharing…", role: .destructive) { confirmingStop = true }.disabled(working)
         }
     }
 

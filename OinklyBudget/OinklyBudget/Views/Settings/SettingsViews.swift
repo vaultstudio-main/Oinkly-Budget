@@ -447,19 +447,23 @@ struct DataSettingsView: View {
 
             if !ScreenshotMode.isOn { ShadowCopySection() }
 
+            if !ScreenshotMode.isOn { SharedDataSection() }
+
             Section {
-                backupRow("Export Data", detail: "Everything in Oinkly Budget in one .pig file you can keep or move anywhere: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, your reminders, and your preferences.", button: "Save") { exportBackup() }
-                backupRow("Import Data", detail: "Bring in everything from a .pig file. This replaces everything currently in Oinkly Budget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
+                HStack {
+                    Button("Export Data…") { exportBackup() }
+                    Button("Import Data…") { chooseBackup() }
+                    Spacer()
+                }
                 if let message {
                     Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .foregroundStyle(messageIsError ? Color.orange : Theme.green)
                 }
             } header: {
                 Text("Export & Import")
+            } footer: {
+                Text("Save everything in Oinkly Budget to one .pig file, or bring one in. Importing replaces everything currently in Oinkly Budget.")
             }
-
-            if !ScreenshotMode.isOn { SharedDataSection() }
-
 
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
@@ -515,17 +519,6 @@ struct DataSettingsView: View {
             try? await Task.sleep(for: .milliseconds(350))
             withAnimation { proxy.scrollTo(ShadowCopySection.scrollID, anchor: .top) }
             ShadowCopyManager.shared.revealRequested = false
-        }
-    }
-
-    private func backupRow(_ title: String, detail: String, button: String, action: @escaping () -> Void) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.medium))
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button(button, action: action)
         }
     }
 

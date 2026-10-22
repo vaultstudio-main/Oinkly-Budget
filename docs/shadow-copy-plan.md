@@ -69,6 +69,8 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 
 - **Settings ▸ Backup Copy is a switch.** Keep a Backup Copy on or off; when on it shows Status (Up to date, Saving a copy…, Changes are waiting to be copied, folder problems), Folder and Last copied, with Copy Now, Restore…, Show in Finder and Change Folder…. The long footer, the version counts and the More menu were removed. Turning it off asks whether to delete the Oinkly Budget Backup Copy folder too (to the Trash) or keep it.
 
+- **Settings order:** Backup Copy (switch), Sharing (now a switch too, with Save Now, Save and Quit, Previous Saves… and Check Sharing… under it when on; turning it on or off asks first as before), then **Export & Import** as two plain buttons, Export Data… and Import Data…, then Erase All Data and About.
+
 ## Not done yet
 
 - Older builds can't open a converted folder (they look for the old file names): update both logins' test builds together.
