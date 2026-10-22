@@ -41,6 +41,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Shots: S-A5.
 
 ### A6. Side panel and window shell (Built)
+- **Fixed header on every page.** The top bar is solid, and each page keeps its title and controls in a fixed box at the top (Summary, Reports with its section tabs, Liabilities, Investments, Budgets with the month picker, and the same box on Transactions, Bills & Recurring, Planning and Manage Accounts). Only what is below the box scrolls, and it stops at the box's edge.
 - Colored icons that match each account type; folders for Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets.
 - Fixed width, can't be dragged, and can't be collapsed.
 - A status bar along the bottom of every page: what you are looking at on the left, and on the right a dot for the database (green "Database · Saved", yellow "Saving…" while changes are written, red "Problem" if saving keeps failing, with the last saved time on hover) and, when sharing is on, a dot for the shared data (green Saved, yellow Not saved yet and click to save now, red Problem). Help is in the Help menu (⇧⌘/).

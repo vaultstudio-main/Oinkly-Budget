@@ -29,15 +29,10 @@ struct BudgetsView: View {
         let budgeted = budgets.reduce(Decimal(0)) { $0 + $1.monthlyLimit }
         let spent = budgets.reduce(Decimal(0)) { $0 + table[$1] }
 
+        VStack(spacing: 0) {
+        PinnedHeader("Budgets") { MonthSelector(month: $month, range: range) }
         ScrollView {
             VStack(spacing: 14) {
-                HStack {
-                    Text("Budgets").font(.largeTitle.bold())
-                    Spacer()
-                    MonthSelector(month: $month, range: range)
-                    Spacer()
-                }
-
                 HStack(spacing: 12) {
                     total("Budgeted", budgeted, note: "\(budgets.count) budget\(budgets.count == 1 ? "" : "s")")
                     total("Spent", spent, note: "this month")
@@ -76,6 +71,7 @@ struct BudgetsView: View {
                 }
             }
             .padding(16)
+        }
         }
         .background(Theme.background)
         .sheet(item: $editing, onDismiss: { modelContext.saveNow() }) { category in

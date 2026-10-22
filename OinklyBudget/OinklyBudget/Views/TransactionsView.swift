@@ -42,7 +42,8 @@ struct TransactionsView: View {
     private var heading: String { search.isEmpty ? "" : "Results for “\(search)”" }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Transactions").font(.largeTitle.bold())
                 Spacer()
@@ -60,9 +61,14 @@ struct TransactionsView: View {
                 if search.isEmpty { ThisMonthButton(month: $month) }
                 accountPicker
             }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
+            .pinnedHeaderStyle()
             TransactionsTable(month: month, accountID: accountID, search: search)
+                .padding(16)
         }
-        .padding(16)
         .background(Theme.background)
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in

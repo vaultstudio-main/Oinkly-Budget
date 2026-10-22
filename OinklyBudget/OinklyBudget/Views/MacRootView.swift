@@ -103,6 +103,9 @@ struct MacRootView: View {
         .navigationTitle("Oinkly Budget")
         // The name sits in the middle of the top bar, matching the bar along the bottom.
         .toolbar(removing: .title)
+        // A solid bar, so nothing scrolls under it and shows through.
+        .toolbarBackground(Theme.background, for: .windowToolbar)
+        .toolbarBackground(.visible, for: .windowToolbar)
         .toolbar { AppNameToolbarItem() }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
             if let name = note.userInfo?["account"] as? String, let account = accounts.first(where: { $0.name == name }) {
@@ -173,7 +176,7 @@ struct MacRootView: View {
             BudgetsView()
         case .manageAccounts:
             VStack(alignment: .leading, spacing: 0) {
-                Text("Manage Accounts").font(.largeTitle.bold()).padding([.top, .horizontal], 16)
+                PinnedHeader("Manage Accounts")
                 AccountsSettingsView()
             }
             .background(Theme.background)

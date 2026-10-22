@@ -18,9 +18,10 @@ struct LiabilitiesView: View {
         let report = window(3)
         let windows = [(3, report), (6, window(6)), (12, window(12))]
 
+        VStack(spacing: 0) {
+        PinnedHeader("Liabilities")
         ScrollView {
             VStack(spacing: 14) {
-                PageTitle("Liabilities")
                 if report.lines.isEmpty {
                     PlaceholderTiles(titles: ["Owed", "Outstanding", "Paid Off", "Monthly Payments"])
                     ReportCard(title: "Paid Down") {
@@ -47,6 +48,7 @@ struct LiabilitiesView: View {
                 }
             }
             .padding(16)
+        }
         }
         .background(Theme.background)
     }

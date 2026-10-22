@@ -17,15 +17,15 @@ struct ReportsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 14) {
-                HStack {
-                    PageTitle("Reports")
+        VStack(spacing: 0) {
+            // The title and the tabs stay at the top while the reports scroll below them.
+            PinnedHeader("Reports") { sectionPicker }
+            ScrollView {
+                VStack(spacing: 14) {
+                    grid(section.reports)
                 }
-                sectionPicker
-                grid(section.reports)
+                .padding(16)
             }
-            .padding(16)
         }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in

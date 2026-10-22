@@ -48,7 +48,10 @@ struct BillsView: View {
                 .labelsHidden()
                 .frame(width: 220)
             }
-            .padding([.horizontal, .top], 16)
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
+            .pinnedHeaderStyle()
             if tab == .recurring {
                 RecurringView()
             } else {

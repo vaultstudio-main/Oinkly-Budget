@@ -32,7 +32,9 @@ struct PlanningView: View {
                 .controlSize(.large)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
+            .pinnedHeaderStyle()
 
             switch tab {
             case .goals: GoalsView(isAdding: $isAddingGoal)

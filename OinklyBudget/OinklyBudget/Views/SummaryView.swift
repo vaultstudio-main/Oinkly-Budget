@@ -21,9 +21,10 @@ struct SummaryView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+        PinnedHeader("Summary")
         ScrollView {
             VStack(spacing: 12) {
-                header
                 GlanceCards(accounts: accounts, transactions: transactions)
                 PriorityBillsCard()
                 HStack(alignment: .top, spacing: 12) {
@@ -44,13 +45,7 @@ struct SummaryView: View {
             }
             .padding(16)
         }
-        .background(Theme.background)
-    }
-
-    private var header: some View {
-        HStack {
-            Text("Summary").font(.largeTitle.bold())
-            Spacer()
         }
+        .background(Theme.background)
     }
 }

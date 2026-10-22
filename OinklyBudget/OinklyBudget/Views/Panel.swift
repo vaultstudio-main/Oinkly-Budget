@@ -34,3 +34,39 @@ struct PageTitle: View {
         }
     }
 }
+
+/// The fixed box at the top of a page: the page's title and its controls (month picker, tabs, filters) stay put while
+/// everything below scrolls and stops at its edge. Put it above the page's scroll view, not inside it.
+struct PinnedHeader<Controls: View>: View {
+    let title: String
+    @ViewBuilder let controls: Controls
+
+    init(_ title: String, @ViewBuilder controls: () -> Controls) {
+        self.title = title
+        self.controls = controls()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            PageTitle(title)
+            controls
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .pinnedHeaderStyle()
+    }
+}
+
+extension PinnedHeader where Controls == EmptyView {
+    init(_ title: String) { self.init(title) { EmptyView() } }
+}
+
+extension View {
+    /// The look of the fixed box at the top of a page: solid, with a line under it, so what scrolls below never shows through.
+    func pinnedHeaderStyle() -> some View {
+        background(Theme.background)
+            .overlay(alignment: .bottom) { Divider() }
+    }
+}

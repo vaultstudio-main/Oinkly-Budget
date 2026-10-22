@@ -20,9 +20,10 @@ struct InvestmentsView: View {
         let windows = hasAccounts ? [(3, window(3)), (6, window(6)), (12, window(12))] : []
         let year = windows.last?.1
 
+        VStack(spacing: 0) {
+        PinnedHeader("Investments")
         ScrollView {
             VStack(spacing: 14) {
-                PageTitle("Investments")
                 if let year {
                     tiles(year)
                 } else {
@@ -63,6 +64,7 @@ struct InvestmentsView: View {
             }
             .environment(\.reportCardMinHeight, 290)
             .padding(16)
+        }
         }
         .background(Theme.background)
     }
