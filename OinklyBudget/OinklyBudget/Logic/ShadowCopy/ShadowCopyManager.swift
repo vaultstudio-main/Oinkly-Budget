@@ -25,7 +25,7 @@ final class ShadowCopyManager {
     /// Whether the backup copy is on, for the switch in Settings (which needs something it can watch).
     private(set) var isOn = UserDefaults.standard.data(forKey: "shadowCopyFolderBookmark") != nil
     /// Whether the app reminds the person to set up a backup copy. The switch in Settings ▸ General.
-    private(set) var remindsToSetUp = !UserDefaults.standard.bool(forKey: "shadowCopyDontAsk")
+    private(set) var remindsToSetUp = ShadowCopyManager.reminderIsOn(in: .standard)
     private(set) var lastCopy: Date?
     private(set) var versionCount = 0
     private(set) var size: Int64 = 0
@@ -401,6 +401,19 @@ final class ShadowCopyManager {
     }
 
     // MARK: Asking the first time
+
+    private static let reminderDefaultAppliedKey = "shadowCopyReminderDefaultApplied"
+
+    /// Whether the set-up reminder is on. The first time this runs on a Mac the reminder is switched on, whatever an earlier
+    /// test build left behind, so a new person always starts with it on; after that, the person's own choice stands.
+    nonisolated static func reminderIsOn(in defaults: UserDefaults) -> Bool {
+        if !defaults.bool(forKey: reminderDefaultAppliedKey) {
+            defaults.set(true, forKey: reminderDefaultAppliedKey)
+            defaults.removeObject(forKey: declinedKey)
+            defaults.removeObject(forKey: snoozeKey)
+        }
+        return !defaults.bool(forKey: declinedKey)
+    }
 
     /// True when it is time to offer a backup copy: nothing set up, the person has put some data in, and they haven't
     /// said no. "Not now" waits a week.

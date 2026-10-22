@@ -150,13 +150,20 @@ struct MacRootView: View {
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
         .sheet(isPresented: $askingForShadowCopy) { ShadowSetupSheet() }
         .task {
-            // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up.
+            // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up, then keeps
+            // looking for a while, so a new person who adds their first account in this session is asked too.
             try? await Task.sleep(for: .seconds(8))
             // Keep what the Month Outlook said for last month, before bills and budgets get edited.
             if !StartupState.isHoldingPlace { OutlookSnapshots.closeLastMonth(in: modelContext) }
-            if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
-                ShadowCopyManager.shared.markAsked()
-                askingForShadowCopy = true
+            for _ in 0..<60 {
+                if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
+                    ShadowCopyManager.shared.markAsked()
+                    askingForShadowCopy = true
+                    break
+                }
+                // Nothing to ask about, and no reason to look again: a backup copy is set up, or the reminder is off.
+                if ShadowCopyManager.shared.isSetUp || !ShadowCopyManager.shared.remindsToSetUp { break }
+                try? await Task.sleep(for: .seconds(20))
             }
         }
     }

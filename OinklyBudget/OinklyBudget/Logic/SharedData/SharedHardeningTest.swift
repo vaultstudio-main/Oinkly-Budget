@@ -1013,6 +1013,22 @@ enum SharedHardeningTest {
                 try oc.save()
                 check("S35 deleting the budget leaves no stray mark", ((try? oc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).isEmpty)
             }
+
+            // S36: the backup copy reminder starts on, whatever an earlier build left behind, and then the person's choice stands
+            do {
+                let suite = "OinklyHardening-S36-\(UUID().uuidString)"
+                let defaults = UserDefaults(suiteName: suite)!
+                defer { defaults.removePersistentDomain(forName: suite) }
+                check("S36 a new Mac starts with the reminder on", ShadowCopyManager.reminderIsOn(in: defaults))
+                defaults.set(true, forKey: "shadowCopyDontAsk")
+                check("S36 after that, turning it off is kept", !ShadowCopyManager.reminderIsOn(in: defaults))
+                let old = UserDefaults(suiteName: suite + "-old")!
+                defer { old.removePersistentDomain(forName: suite + "-old") }
+                old.set(true, forKey: "shadowCopyDontAsk")
+                old.set(Date.now.addingTimeInterval(86_400), forKey: "shadowCopyAskAgainAfter")
+                check("S36 an earlier build's 'don't ask' is cleared the first time", ShadowCopyManager.reminderIsOn(in: old))
+                check("S36 and its wait is cleared too", old.object(forKey: "shadowCopyAskAgainAfter") == nil)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
