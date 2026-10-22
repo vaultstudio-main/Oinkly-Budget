@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import UserNotifications
 
 extension Notification.Name {
@@ -84,20 +85,19 @@ struct CustomReminder: Codable, Identifiable, Equatable {
     }()
 }
 
-/// The user's custom reminders. Kept in preferences (they're settings, not financial data) and turned into repeating
-/// system notifications, so they arrive even when OinklyBudget isn't open.
+/// The user's custom reminders. Kept in the database, so everyone who shares the data sees the same ones, and turned
+/// into repeating system notifications on each Mac, so they arrive even when OinklyBudget isn't open.
 @MainActor
 @Observable
 final class CustomReminders {
     static let shared = CustomReminders()
 
-    private static let key = "customReminders"
     private static let idPrefix = "piggybank.reminder."
 
     var items: [CustomReminder] {
         didSet {
             guard items != oldValue else { return }
-            if let data = try? JSONEncoder().encode(items) { UserDefaults.standard.set(data, forKey: Self.key) }
+            persist()
             Task { await apply() }
         }
     }
@@ -106,12 +106,28 @@ final class CustomReminders {
         if ScreenshotMode.isOn {
             // Screenshots show ready-made reminders, never the person's own.
             items = CustomReminder.presets.prefix(3).map(\.reminder)
-        } else if let data = UserDefaults.standard.data(forKey: Self.key),
-           let saved = try? JSONDecoder().decode([CustomReminder].self, from: data) {
-            items = saved
         } else {
-            items = []
+            items = Self.stored()
         }
+    }
+
+    private static var context: ModelContext? { PiggybankAppDelegate.container?.mainContext }
+
+    private static func stored() -> [CustomReminder] {
+        context.map { SettingsRecords.reminders(in: $0) } ?? []
+    }
+
+    private func persist() {
+        guard !ScreenshotMode.isOn, let context = Self.context else { return }
+        SettingsRecords.setReminders(items, in: context)
+        context.saveNow()
+    }
+
+    /// Reads the reminders again from the database, after the data was replaced (a restored backup).
+    func reload() {
+        guard !ScreenshotMode.isOn else { return }
+        items = Self.stored()
+        Task { await apply() }
     }
 
     /// Replaces the scheduled notifications with the current set.

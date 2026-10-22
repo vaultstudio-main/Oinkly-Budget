@@ -68,15 +68,16 @@ struct SavedImportLayout: Codable, Identifiable, Equatable {
     var headers: [String]
     var layout: ImportLayout
 
-    private static let key = "savedImportLayouts"
-
+    /// Kept in the database, so everyone who shares the data has the same saved layouts.
     static func load() -> [SavedImportLayout] {
-        guard !ScreenshotMode.isOn, let data = UserDefaults.standard.data(forKey: key) else { return [] }
-        return (try? JSONDecoder().decode([SavedImportLayout].self, from: data)) ?? []
+        guard !ScreenshotMode.isOn, let context = PiggybankAppDelegate.container?.mainContext else { return [] }
+        return SettingsRecords.importLayouts(in: context)
     }
 
     static func store(_ layouts: [SavedImportLayout]) {
-        if let data = try? JSONEncoder().encode(layouts) { UserDefaults.standard.set(data, forKey: key) }
+        guard !ScreenshotMode.isOn, let context = PiggybankAppDelegate.container?.mainContext else { return }
+        SettingsRecords.setImportLayouts(layouts, in: context)
+        context.saveNow()
     }
 
     static func normalized(_ headers: [String]) -> [String] {

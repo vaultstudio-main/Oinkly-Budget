@@ -8,7 +8,7 @@ struct PiggybankApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
+        let schema = Schema(versionedSchema: PiggybankSchemaV3.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // The first time this version opens the data file, keep a copy of it as it was.

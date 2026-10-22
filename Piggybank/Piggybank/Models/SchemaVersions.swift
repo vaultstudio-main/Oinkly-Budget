@@ -28,7 +28,20 @@ enum PiggybankSchemaV2: VersionedSchema {
     }
 }
 
+/// Adds two models and nothing else: the person's own reminders and their saved CSV import layouts, which used to be kept
+/// in each login's preferences. Every existing model is unchanged, so the move from V2 is automatic.
+enum PiggybankSchemaV3: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(3, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        PiggybankSchemaV2.models + [ReminderRecord.self, ImportLayoutRecord.self]
+    }
+}
+
 enum PiggybankMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [PiggybankSchemaV1.self, PiggybankSchemaV2.self] }
-    static var stages: [MigrationStage] { [.lightweight(fromVersion: PiggybankSchemaV1.self, toVersion: PiggybankSchemaV2.self)] }
+    static var schemas: [any VersionedSchema.Type] { [PiggybankSchemaV1.self, PiggybankSchemaV2.self, PiggybankSchemaV3.self] }
+    static var stages: [MigrationStage] {
+        [.lightweight(fromVersion: PiggybankSchemaV1.self, toVersion: PiggybankSchemaV2.self),
+         .lightweight(fromVersion: PiggybankSchemaV2.self, toVersion: PiggybankSchemaV3.self)]
+    }
 }

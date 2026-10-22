@@ -92,7 +92,7 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 3
+            newer.schemaVersion = 4
             let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
             try encoder.encode(newer).write(to: s5.infoURL)
             var refusedOpen = false, refusedSave = false
@@ -235,7 +235,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
+            let schema = Schema(versionedSchema: PiggybankSchemaV3.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -381,6 +381,61 @@ enum SharedHardeningTest {
             let bare = WidgetLines.make(wSnapshot, now: wNow, options: .init(includeRepeating: false, includeReminders: false), calendar: gregorian)
             check("S21 switches turn repeating and reminders off", bare.allSatisfy { $0.kind == .bill })
             check("S21 no snapshot means no lines", WidgetLines.make(nil, now: wNow, calendar: gregorian).isEmpty)
+
+            // S22: reminders and saved import layouts live in the database, and a 2.0 data file opens in 3.0 without loss
+            let v2 = Schema(versionedSchema: PiggybankSchemaV2.self)
+            let v2Store = root.appendingPathComponent("v2-file/OinklyBudget.store")
+            try manager.createDirectory(at: v2Store.deletingLastPathComponent(), withIntermediateDirectories: true)
+            do {
+                let old = try ModelContainer(for: v2, configurations: ModelConfiguration(schema: v2, url: v2Store, cloudKitDatabase: .none))
+                old.mainContext.insert(Account(name: "Kept through the upgrade", type: .savings, openingBalance: 0))
+                old.mainContext.insert(Tag(name: "Kept tag"))
+                try old.mainContext.save()
+            }
+            let upgraded = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self,
+                                              configurations: ModelConfiguration(schema: schema, url: v2Store, cloudKitDatabase: .none))
+            let uc = upgraded.mainContext
+            check("S22 a 2.0 data file opens in 3.0 with its data", ((try? uc.fetch(FetchDescriptor<Account>())) ?? []).contains { $0.name == "Kept through the upgrade" }
+                  && ((try? uc.fetch(FetchDescriptor<Tag>())) ?? []).count == 1)
+            var reminder = CustomReminder()
+            reminder.title = "Both of us"
+            var second = CustomReminder()
+            second.title = "Second one"
+            SettingsRecords.setReminders([reminder, second], in: uc)
+            SettingsRecords.setImportLayouts([SavedImportLayout(name: "My bank", headers: ["Date", "Amount"], layout: ImportLayout())], in: uc)
+            try uc.save()
+            check("S22 reminders are stored in order", SettingsRecords.reminders(in: uc).map(\.title) == ["Both of us", "Second one"])
+            check("S22 import layouts are stored", SettingsRecords.importLayouts(in: uc).map(\.name) == ["My bank"])
+            SettingsRecords.setReminders([second], in: uc)
+            SettingsRecords.setReminders([second, reminder], in: uc)
+            try uc.save()
+            check("S22 changes and removals apply, with no duplicates", SettingsRecords.reminders(in: uc).map(\.title) == ["Second one", "Both of us"]
+                  && ((try? uc.fetch(FetchDescriptor<ReminderRecord>())) ?? []).count == 2)
+            let withSettings = try DataBackup.make(from: uc)
+            check("S22 a backup holds them", withSettings.reminders?.count == 2 && withSettings.importLayouts?.count == 1)
+            let reread = try DataBackup.decode(try DataBackup.encode(withSettings))
+            check("S22 and reads them back", reread.reminders?.map(\.title) == ["Second one", "Both of us"] && reread.importLayouts?.first?.name == "My bank")
+            SettingsRecords.setReminders([], in: uc)
+            try uc.save()
+            var oldBackup = withSettings
+            oldBackup.reminders = nil
+            oldBackup.importLayouts = nil
+            check("S22 a backup from before them leaves the current ones alone", { () -> Bool in
+                SettingsRecords.setReminders([reminder], in: uc)
+                try? DataBackup.restore(oldBackup, into: uc)
+                return SettingsRecords.reminders(in: uc).map(\.title) == ["Both of us"]
+            }())
+            // Moving them out of preferences happens once, and adds without replacing
+            let suite = "OinklyHardening-\(UUID().uuidString)"
+            let defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            var legacyOnly = CustomReminder()
+            legacyOnly.title = "From preferences"
+            defaults.set(try JSONEncoder().encode([reminder, legacyOnly]), forKey: "customReminders")
+            SettingsRecords.adoptLegacy(in: uc, defaults: defaults)
+            SettingsRecords.adoptLegacy(in: uc, defaults: defaults)
+            try uc.save()
+            check("S22 old reminders are moved in once, none twice", SettingsRecords.reminders(in: uc).map(\.title) == ["Both of us", "From preferences"], "\(SettingsRecords.reminders(in: uc).map(\.title))")
         } catch {
             check("no error", false, error.localizedDescription)
         }

@@ -23,6 +23,9 @@ enum SchemaUpgrade {
         let deposits = (try? context.fetch(FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { $0.payee == name && !$0.isOpeningDeposit }))) ?? []
         for deposit in deposits where deposit.hasOpeningDepositShape { deposit.isOpeningDeposit = true }
 
+        // Reminders and saved import layouts used to be kept in this login's preferences.
+        if !ScreenshotMode.isOn { SettingsRecords.adoptLegacy(in: context) }
+
         seedTaxFlags(in: context)
         context.saveNow()
     }

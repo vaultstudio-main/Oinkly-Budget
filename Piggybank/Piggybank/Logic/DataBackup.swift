@@ -23,6 +23,9 @@ struct BackupFile: Codable {
     /// Added after format 1 shipped, so files from before it simply have none.
     var goals: [GoalRecord] = []
     var paymentMethods: [PaymentMethodRecord] = []
+    /// Your own reminders and saved CSV import layouts. Added in 1.0; absent in older files.
+    var reminders: [CustomReminder]?
+    var importLayouts: [SavedImportLayout]?
     /// Your preferences, so a restore brings back the whole setup. Absent in older files.
     var settings: SettingsRecord?
 
@@ -43,6 +46,8 @@ struct BackupFile: Codable {
         settings = try c.decodeIfPresent(SettingsRecord.self, forKey: .settings)
         tags = try c.decodeIfPresent([TagRecord].self, forKey: .tags)
         recurring = try c.decodeIfPresent([RuleRecord].self, forKey: .recurring)
+        reminders = try c.decodeIfPresent([CustomReminder].self, forKey: .reminders)
+        importLayouts = try c.decodeIfPresent([SavedImportLayout].self, forKey: .importLayouts)
     }
 
     struct SettingsRecord: Codable {
@@ -358,6 +363,8 @@ enum DataBackup {
                   contributions: g.contributions.live.map { .init(amount: text($0.amount), date: $0.date, note: $0.note, createdAt: $0.createdAt) },
                   kind: g.kindRaw, goalBalance: text(g.goalBalance), finalAmount: g.finalAmount.map { text($0) }, categoryName: g.categoryName)
         }
+        file.reminders = SettingsRecords.reminders(in: context)
+        file.importLayouts = SettingsRecords.importLayouts(in: context)
         file.settings = .init(
             currencyCode: AppSettings.shared.currencyCode,
             appearance: AppSettings.shared.appearance.rawValue,
@@ -415,6 +422,9 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
+        // A backup from before these were kept in the data has none: leave the current ones alone then.
+        if let reminders = file.reminders { SettingsRecords.setReminders(reminders, in: context) }
+        if let layouts = file.importLayouts { SettingsRecords.setImportLayouts(layouts, in: context) }
         for item in try context.fetch(FetchDescriptor<Category>()) where item.isCustom { context.delete(item) }
         try context.save()
 
@@ -590,6 +600,8 @@ enum DataBackup {
         // Cash on Hand is always there, even when the backup came from before it existed.
         Account.ensureDefault(in: context)
         try context.save()
+
+        if file.reminders != nil { CustomReminders.shared.reload() }
 
         // Preferences come back too, so the whole setup is recalled.
         if let settings = file.settings {
