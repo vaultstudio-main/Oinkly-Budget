@@ -557,7 +557,6 @@ enum HelpContent {
                         Shot(asset: "Help-brokerage", caption: "An investment account with its holdings."),
                         Shot(asset: "Help-update-price", caption: "Update Investment Price.")],
         "Backup & Restore": [Shot(asset: "Help-backup", caption: "Settings ▸ Data & Backup.")],
-        "The Safety Copy": [Shot(asset: "Help-safety-copy", caption: "Application Support ▸ Backups in Finder.")],
         "The Menu Bar Item": [Shot(asset: "Help-menu-bar", caption: "The menu bar pop-up.")],
         "Reminders": [Shot(asset: "Help-reminders-settings", caption: "Settings ▸ Reminders.")],
         "The Widget": [Shot(asset: "Help-widget-large", caption: "Large."),

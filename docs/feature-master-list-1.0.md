@@ -272,7 +272,7 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-E3a | Liabilities | Liabilities | Help-liabilities | gallery | yes |
 | S-E3b | Investments | Investments | Help-investments | gallery | yes |
 | S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
-| S-F3 | Finder: Backups ▸ Before this update | Finder (owner takes this) | Help-safety-copy | – | – |
+| S-F3 | Finder: Backups ▸ Before this update | Dropped: no picture, the text explains it | – | – | – |
 | S-G1 | The Help window | Help ▸ Oinkly Budget Help | Help-window | – | – |
 | S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
 | S-G3 | Export defaults | Settings | Help-export-defaults | – | – |

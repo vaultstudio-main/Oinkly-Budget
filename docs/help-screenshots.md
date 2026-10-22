@@ -38,7 +38,7 @@ The mapping from raw picture to Help image is in `scripts/make-help-images.py`.
 
 | Asset | Shows | How |
 |---|---|---|
-| Help-safety-copy | Finder: Application Support ▸ Backups ▸ Before this update | Finder, after a first launch |
+| (dropped) Help-safety-copy | Finder: Application Support ▸ Backups ▸ Before this update | Not used; the Help text explains it |
 | A reminder notification | A bill reminder banner | After Send a Test Notification in Settings ▸ Reminders |
 | Widgets on the real desktop | The widget placed on the desktop, and the widget gallery | Edit widgets on the desktop |
 | Menus | File, Go and Transaction menus | ⇧⌘4, Space |

@@ -73,7 +73,7 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-E3a | `Help-liabilities` | Liabilities | Liabilities |
 | S-E3b | `Help-investments` | Investments | Investments |
 | S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
-| S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before this update | Finder (owner takes this) |
+| S-F3 | (dropped) | Finder: Backups ▸ Before this update | No picture; the Help text explains it |
 | S-G1 | `Help-window` | The Help window | Help ▸ Oinkly Budget Help |
 | S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
 | S-G3 | `Help-export-defaults` | Export defaults | Settings |
