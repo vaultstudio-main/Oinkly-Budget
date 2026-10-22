@@ -2,6 +2,103 @@ import AppKit
 import SwiftData
 import UserNotifications
 
+/// Keeps the Mac menu bar to the Apple menu, Oinkly Budget, File, Transaction, Go and Help. Most of the unwanted rows are
+/// never made, because the commands in `FileNewCommands` replace their groups with nothing. What is left is what AppKit adds
+/// on its own: the Format, View and Window menus, Close and Close All in File, and the Quit alternate. Those are removed here.
+///
+/// Rows are only taken out of a menu just before it opens (when the menu asks to be updated) or while no menu is open, never
+/// while someone is looking at one.
+enum MenuTrimmer {
+    private static let removedMenus: Set<String> = ["Edit", "Format", "View", "Window"]
+    private static var isInstalled = false
+    private static var isTracking = false
+    private static var wantsTrim = false
+
+    /// Asked by the menus themselves just before they are shown, the one moment a row can go without anyone seeing it move.
+    private final class Tidier: NSObject, NSMenuDelegate {
+        func menuNeedsUpdate(_ menu: NSMenu) { MenuTrimmer.trimRows(in: menu) }
+    }
+    private static let tidier = Tidier()
+
+    static func install() {
+        guard !isInstalled else { return }
+        isInstalled = true
+        trim()
+        let center = NotificationCenter.default
+        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { _ in isTracking = true }
+        center.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { _ in
+            isTracking = false
+            if wantsTrim { DispatchQueue.main.async { trim() } }
+        }
+        center.addObserver(forName: NSMenu.didAddItemNotification, object: nil, queue: .main) { _ in
+            DispatchQueue.main.async { trim() }
+        }
+        center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in trim() }
+        // Copy, paste and the rest normally live in the Edit menu. Without it they would stop working in text fields, so
+        // they are handled here directly, and so is ⌘W.
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            if event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
+               event.charactersIgnoringModifiers == "w", let window = NSApp.keyWindow {
+                window.performClose(nil)
+                return nil
+            }
+            return handleEditingShortcut(event) ? nil : event
+        }
+    }
+
+    private static func trim() {
+        guard let menu = NSApp.mainMenu else { return }
+        // A menu is open: leave everything alone and look again once it has closed (or soon, if nothing tells us it did).
+        if isTracking || RunLoop.current.currentMode == .eventTracking {
+            wantsTrim = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { if wantsTrim { trim() } }
+            return
+        }
+        wantsTrim = false
+        for item in menu.items where removedMenus.contains(item.submenu?.title ?? item.title) {
+            menu.removeItem(item)
+        }
+        // The app menu and File menu tidy themselves each time they are about to open.
+        for item in menu.items.prefix(2) {
+            guard let submenu = item.submenu else { continue }
+            if submenu.delegate == nil || submenu.delegate === tidier { submenu.delegate = tidier }
+            trimRows(in: submenu)
+        }
+    }
+
+    /// Takes out the rows AppKit adds that aren't wanted: Close and Close All in File (⌘W still closes the front window, see the
+    /// key monitor) and the Quit alternate in the app menu. Leaves any divider that would be left dangling or doubled.
+    private static func trimRows(in menu: NSMenu) {
+        let unwanted = menu.items.filter { $0.title == "Close" || $0.title == "Close All" || $0.title.hasPrefix("Quit and Keep") }
+        guard !unwanted.isEmpty else { return }
+        for item in unwanted { menu.removeItem(item) }
+        while let last = menu.items.last, last.isSeparatorItem { menu.removeItem(last) }
+        var index = 1
+        while index < menu.items.count {
+            if menu.items[index].isSeparatorItem && menu.items[index - 1].isSeparatorItem { menu.removeItem(at: index) } else { index += 1 }
+        }
+    }
+
+    private static func handleEditingShortcut(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        guard flags.contains(.command), !flags.contains(.option), !flags.contains(.control),
+              NSApp.keyWindow?.firstResponder is NSTextView,
+              let key = event.charactersIgnoringModifiers?.lowercased() else { return false }
+        let selector: Selector?
+        switch (key, flags.contains(.shift)) {
+        case ("c", false): selector = #selector(NSText.copy(_:))
+        case ("x", false): selector = #selector(NSText.cut(_:))
+        case ("v", false): selector = #selector(NSText.paste(_:))
+        case ("a", false): selector = #selector(NSText.selectAll(_:))
+        case ("z", false): selector = Selector(("undo:"))
+        case ("z", true): selector = Selector(("redo:"))
+        default: selector = nil
+        }
+        guard let selector else { return false }
+        return NSApp.sendAction(selector, to: nil, from: nil)
+    }
+}
+
 final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Set by the app at launch so a backup opened from Finder can reach the data.
     nonisolated(unsafe) static var container: ModelContainer?
@@ -38,6 +135,7 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
+        MenuTrimmer.install()
         Task { @MainActor in await Self.refreshReminders() }
         // The widgets read a small snapshot of bill names and reminder times. Keep it current as data changes.
         Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }

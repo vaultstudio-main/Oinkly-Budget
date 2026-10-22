@@ -45,6 +45,22 @@ struct FileNewCommands: Commands {
         // The side panel always stays open, so there is no Hide Sidebar command.
         CommandGroup(replacing: .sidebar) {}
 
+        // The menu bar is kept small: no Services, Hide, Hide Others or Show All in the app menu, and nothing for Close, Edit,
+        // View or Window to hold. Replacing a group with nothing means SwiftUI never makes those rows, so nothing has to be
+        // taken out of a menu afterwards.
+        CommandGroup(replacing: .systemServices) {}
+        CommandGroup(replacing: .appVisibility) {}
+        CommandGroup(replacing: .saveItem) {}
+        CommandGroup(replacing: .undoRedo) {}
+        CommandGroup(replacing: .pasteboard) {}
+        CommandGroup(replacing: .textEditing) {}
+        CommandGroup(replacing: .textFormatting) {}
+        CommandGroup(replacing: .toolbar) {}
+        CommandGroup(replacing: .windowSize) {}
+        CommandGroup(replacing: .windowList) {}
+        CommandGroup(replacing: .singleWindowList) {}
+        CommandGroup(replacing: .windowArrangement) {}
+
         CommandGroup(replacing: .appInfo) {
             Button("About Oinkly Budget") {
                 openWindow(id: "about")
