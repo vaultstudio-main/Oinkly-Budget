@@ -97,6 +97,9 @@ struct CustomBudgetEditView: View {
                         CurrencyField("Monthly budget", value: $limit)
                         Toggle("Counts as tax-related", isOn: $isTaxRelated)
                     }
+                } footer: {
+                    Text(isIncome ? "This also adds a new income category you can pick when you record a transaction."
+                         : "This also adds a new category with the same name. Pick it as the category when you record a transaction or set up a bill, and what you spend in it counts toward this budget.")
                 }
                 if category != nil {
                     Section {

@@ -254,7 +254,7 @@ struct CategoriesSettingsView: View {
             Section {
                 Button("Add Custom Category", systemImage: "plus.circle") { isAddingCustom = true }
             } footer: {
-                Text("Make your own, either an expense with a monthly budget or an income category. You can pick it when you record a transaction or set up a bill.")
+                Text("Make your own, either an expense with a monthly budget or an income category. A custom budget is also a category: it is created here, and you pick it as the category when you record a transaction or set up a bill. Spending in it is what counts toward the budget.")
             }
 
             Section {
