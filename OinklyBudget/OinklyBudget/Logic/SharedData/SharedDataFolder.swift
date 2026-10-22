@@ -40,6 +40,12 @@ nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var appVersion: String
     /// Names this particular data. A folder swapped for a different one is noticed.
     var fileID: String
+    /// How many records each table of this save holds, so a copy can be checked without opening the original. Nil in
+    /// notes from before it was kept.
+    var counts: [String: Int]?
+    /// The receipt and photo files this save uses, so unused ones can be cleaned up without opening every save. Nil when
+    /// that isn't known.
+    var attachments: [String]?
 }
 
 /// A login that uses the shared data. Each one leaves a small note in the `members` folder when it starts and when it
@@ -100,27 +106,37 @@ nonisolated struct SharedDataFolder: Sendable {
     static let defaultURL = URL(fileURLWithPath: "/Users/Shared/OinklyBudget", isDirectory: true)
     static var standard: SharedDataFolder { SharedDataFolder(url: defaultURL) }
 
-    static let storeName = "OinklyBudget.store"
-    static let lockName = "lock.json"
-    static let infoName = "info.json"
-    static let previousName = "OinklyBudget (previous save).store"
+    // Everything in the folder is in Oinkly Budget's own formats: the data and the receipts are sealed `.pigdata` files
+    // (see `SealedFile`), and the lock, the log and the notes about who shares are binary `.pigmeta` files.
+    static let storeName = "OinklyBudget.pigdata"
+    static let lockName = "lock.pigmeta"
     static let historyName = "previous saves"
-    static let logName = "save log.txt"
+    static let logName = "save log.pigmeta"
     static let membersName = "members"
+    static let receiptsName = "Receipts"
+    static let metaExtension = "pigmeta"
+    /// The names the folder used before the sealed format (format 1). Opening such a folder converts it once.
+    static let legacyStoreName = "OinklyBudget.store"
+    static let legacyInfoName = "info.json"
+    static let legacyLockName = "lock.json"
+    static let legacyLogName = "save log.txt"
     /// A login that has used the shared data this recently still counts as sharing it.
     static let stillSharingDays = 30
     /// How many of the newest saves are kept, and how many days back one save per day is kept as well.
     static let keepNewest = 5
     static let keepDays = 7
-    static let formatVersion = 1
+    static let formatVersion = 2
     static let schemaVersion = 4
     /// A lock is stale once its heartbeat is this old, in seconds. The app refreshes it every 60.
     static let staleAfter: TimeInterval = 180
 
     var storeURL: URL { url.appendingPathComponent(Self.storeName) }
     var lockURL: URL { url.appendingPathComponent(Self.lockName) }
-    var infoURL: URL { url.appendingPathComponent(Self.infoName) }
-    var previousURL: URL { url.appendingPathComponent(Self.previousName) }
+    var receiptsURL: URL { url.appendingPathComponent(Self.receiptsName, isDirectory: true) }
+    var legacyStoreURL: URL { url.appendingPathComponent(Self.legacyStoreName) }
+    var legacyInfoURL: URL { url.appendingPathComponent(Self.legacyInfoName) }
+    var legacyLockURL: URL { url.appendingPathComponent(Self.legacyLockName) }
+    var legacyLogURL: URL { url.appendingPathComponent(Self.legacyLogName) }
     var historyURL: URL { url.appendingPathComponent(Self.historyName) }
     var logURL: URL { url.appendingPathComponent(Self.logName) }
     var membersURL: URL { url.appendingPathComponent(Self.membersName, isDirectory: true) }
@@ -129,7 +145,9 @@ nonisolated struct SharedDataFolder: Sendable {
 
     var exists: Bool { manager.fileExists(atPath: url.path) }
     var hasStore: Bool { manager.fileExists(atPath: storeURL.path) }
-    var hasData: Bool { hasStore }
+    /// There is shared data here, in the current format or in the format before it (which is converted when opened).
+    var hasData: Bool { hasStore || manager.fileExists(atPath: legacyStoreURL.path) }
+    var hasLegacyData: Bool { !hasStore && manager.fileExists(atPath: legacyStoreURL.path) }
 
     // MARK: The folder itself
 
@@ -160,31 +178,41 @@ nonisolated struct SharedDataFolder: Sendable {
 
     // MARK: Info and lock
 
-    private static var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    private static var encoder: PropertyListEncoder {
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
         return encoder
     }
 
-    private static var decoder: JSONDecoder {
+    private static var decoder: PropertyListDecoder { PropertyListDecoder() }
+
+    /// How the folder's notes were written before the sealed format.
+    private static var legacyDecoder: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }
 
+    /// The note about the finished data file: it lives inside the sealed file's header. For a folder still in the old
+    /// format it is read from the old note.
     func readInfo() -> SharedInfo? {
-        guard let data = try? Data(contentsOf: infoURL) else { return nil }
-        return try? Self.decoder.decode(SharedInfo.self, from: data)
-    }
-
-    private func writeInfo(_ info: SharedInfo) throws {
-        try write(Self.encoder.encode(info), to: infoURL)
+        if hasStore {
+            guard let header = try? SealedFile.readHeader(storeURL), let data = header.info else { return nil }
+            return try? Self.decoder.decode(SharedInfo.self, from: data)
+        }
+        guard let data = try? Data(contentsOf: legacyInfoURL) else { return nil }
+        return try? Self.legacyDecoder.decode(SharedInfo.self, from: data)
     }
 
     func readLock() -> SharedLock? {
         guard let data = try? Data(contentsOf: lockURL) else { return nil }
         return try? Self.decoder.decode(SharedLock.self, from: data)
+    }
+
+    /// A lock written by a copy of the app from before the sealed format.
+    func readLegacyLock() -> SharedLock? {
+        guard let data = try? Data(contentsOf: legacyLockURL) else { return nil }
+        return try? Self.legacyDecoder.decode(SharedLock.self, from: data)
     }
 
     /// When the lock file last changed. Used when the lock can't be read, for example while it is still being written.
@@ -219,6 +247,12 @@ nonisolated struct SharedDataFolder: Sendable {
     /// another copy holds it, nothing changes unless `takeOver` is true and that lock is stale.
     func acquire(_ me: SharedLock, takeOver: Bool = false, now: Date = .now) throws -> LockResult {
         guard exists else { throw SharedDataError.folderUnavailable("it can't be found") }
+        // A copy of the app from before the sealed format keeps its lock under the old name. It counts the same.
+        if let legacy = readLegacyLock() {
+            let stale = legacy.isStale(now: now)
+            if !(takeOver && stale) { return .heldBy(legacy, isStale: stale) }
+            try? manager.removeItem(at: legacyLockURL)
+        }
         let body = try Self.encoder.encode(me)
         let handle = open(lockURL.path, O_CREAT | O_EXCL | O_WRONLY, 0o666)
         if handle >= 0 {
@@ -257,7 +291,10 @@ nonisolated struct SharedDataFolder: Sendable {
     /// Who has the lock right now, and whether they have gone quiet. A lock file that can't be read is stale only once it
     /// is old, the same rule `acquire` uses. Nil when nobody has it.
     func holder(now: Date = .now) -> (lock: SharedLock, isStale: Bool)? {
-        guard manager.fileExists(atPath: lockURL.path) else { return nil }
+        guard manager.fileExists(atPath: lockURL.path) else {
+            if let legacy = readLegacyLock() { return (legacy, legacy.isStale(now: now)) }
+            return nil
+        }
         if let lock = readLock() { return (lock, lock.isStale(now: now)) }
         let age = lockFileAge(now: now) ?? 0
         let unknown = SharedLock(token: "unreadable", userName: "another user", fullName: "", since: now.addingTimeInterval(-age), heartbeat: now.addingTimeInterval(-age))
@@ -284,25 +321,38 @@ nonisolated struct SharedDataFolder: Sendable {
 
     // MARK: Check out
 
-    /// Copies the finished data file to a private working copy, replacing whatever was there. Returns what was copied.
+    /// Unpacks the finished data file into a private working copy, replacing whatever was there, and brings the receipts
+    /// along. Returns what was copied.
     @discardableResult
     func checkOut(to working: URL) throws -> SharedInfo? {
-        let info = readInfo()
-        if let info, info.formatVersion > Self.formatVersion || info.schemaVersion > Self.schemaVersion { throw SharedDataError.newerFormat }
         guard hasStore else { throw SharedDataError.folderUnavailable("it has no data file") }
+        let layout: SealedFile.Layout
+        do {
+            layout = try SealedFile.layout(of: storeURL)
+        } catch SealedError.newerFormat {
+            throw SharedDataError.newerFormat
+        } catch {
+            throw SharedDataError.verifyFailed("the shared data file can't be read: \(error.localizedDescription)")
+        }
+        guard let noteData = layout.header.info, let info = try? Self.decoder.decode(SharedInfo.self, from: noteData) else {
+            throw SharedDataError.verifyFailed("the shared data file's note can't be read")
+        }
+        if info.formatVersion > Self.formatVersion || info.schemaVersion > Self.schemaVersion { throw SharedDataError.newerFormat }
         StoreFiles.remove(store: working)
         try manager.createDirectory(at: working.deletingLastPathComponent(), withIntermediateDirectories: true)
         do {
-            try manager.copyItem(at: storeURL, to: working)
-            try StoreFiles.copyAttachments(from: storeURL, to: working)
+            try SealedFile.unseal(storeURL, to: working)
+            try restoreReceipts(into: working)
         } catch {
             throw SharedDataError.copyFailed(error.localizedDescription)
         }
-        // The copy is checked against the original before anyone works on it.
+        // The copy is checked against what the note says before anyone works on it.
         do {
-            let original = try SQLiteStore.counts(of: storeURL)
-            let copy = try SQLiteStore.counts(of: working)
-            guard original == copy else { throw SharedDataError.verifyFailed("the copy's record counts differ from the shared file") }
+            guard try SQLiteStore.integrityIsOK(working) else { throw SharedDataError.verifyFailed("the unpacked copy failed its integrity check") }
+            if let expected = info.counts {
+                let copy = try SQLiteStore.counts(of: working)
+                guard expected == copy else { throw SharedDataError.verifyFailed("the copy's record counts differ from the shared file") }
+            }
         } catch let error as SharedDataError {
             throw error
         } catch {
@@ -313,11 +363,12 @@ nonisolated struct SharedDataFolder: Sendable {
 
     // MARK: Check in
 
-    /// Writes the working copy back as the new finished data file, in one safe replace. The previous finished file is
-    /// kept beside it as one step of undo. If anything fails, the shared file is left exactly as it was.
+    /// Seals the working copy and puts it in place as the new finished data file, in one safe replace. The previous finished
+    /// file is kept as one step of undo. If anything fails, the shared file is left exactly as it was.
     /// `baseRevision` is the revision this copy was checked out from; if the shared file has moved on, nothing is written.
     @discardableResult
-    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, now: Date = .now) throws -> SharedInfo {
+    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, now: Date = .now,
+                 fileID forcedFileID: String? = nil, revisionAtLeast: Int? = nil) throws -> SharedInfo {
         guard exists else { throw SharedDataError.folderUnavailable("it can't be found") }
         let current = readInfo()
         if let baseRevision, let current, current.revision != baseRevision { throw SharedDataError.changedMeanwhile }
@@ -325,11 +376,16 @@ nonisolated struct SharedDataFolder: Sendable {
         if let current, current.formatVersion > Self.formatVersion || current.schemaVersion > Self.schemaVersion { throw SharedDataError.newerFormat }
         removeLeftovers(now: now)
         let temporary = url.appendingPathComponent(".\(Self.storeName).\(UUID().uuidString).tmp")
-        defer { try? manager.removeItem(at: temporary) }
+        let sealedTemporary = url.appendingPathComponent(".\(Self.storeName).\(UUID().uuidString).sealed.tmp")
+        defer {
+            try? manager.removeItem(at: temporary)
+            try? manager.removeItem(at: sealedTemporary)
+        }
+        let actual: [String: Int]
         do {
             try SQLiteStore.vacuum(source: working, into: temporary)
             let expected = try SQLiteStore.counts(of: working)
-            let actual = try SQLiteStore.counts(of: temporary)
+            actual = try SQLiteStore.counts(of: temporary)
             guard expected == actual else { throw SharedDataError.verifyFailed("record counts differ after copying") }
             guard try SQLiteStore.integrityIsOK(temporary) else { throw SharedDataError.verifyFailed("the database failed its integrity check") }
         } catch let error as SharedDataError {
@@ -337,18 +393,26 @@ nonisolated struct SharedDataFolder: Sendable {
         } catch {
             throw SharedDataError.verifyFailed(error.localizedDescription)
         }
-        try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: temporary.path)
-        // Attachments go first. Until the database is replaced, nothing refers to the new ones, so a failure here
-        // leaves the shared data exactly as it was.
-        try Self.copyAttachments(from: working, to: storeURL)
+        let attachments = (try? SQLiteStore.attachmentReferences(of: temporary)).map { Array($0).sorted() }
+        // Receipts go first. Until the data is replaced, nothing refers to the new ones, so a failure here leaves the
+        // shared data exactly as it was.
+        try addReceipts(from: working, appVersion: appVersion)
 
+        // Putting data back from a backup copy carries on that copy's numbering, so the two still agree afterwards.
+        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: max((current?.revision ?? 0) + 1, revisionAtLeast ?? 0),
+                              savedAt: now, savedBy: name, appVersion: appVersion, fileID: forcedFileID ?? current?.fileID ?? UUID().uuidString,
+                              counts: actual, attachments: attachments)
+        do {
+            try SealedFile.seal(temporary, to: sealedTemporary, kind: "shared", info: try Self.encoder.encode(info), appVersion: appVersion, now: now)
+        } catch {
+            throw SharedDataError.copyFailed(error.localizedDescription)
+        }
+        guard SealedFile.isIntact(sealedTemporary) else { throw SharedDataError.verifyFailed("the sealed copy didn't read back") }
+        try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: sealedTemporary.path)
         if hasStore { archive(current: current, now: now) }
-        if rename(temporary.path, storeURL.path) != 0 {
+        if rename(sealedTemporary.path, storeURL.path) != 0 {
             throw SharedDataError.copyFailed("the new file couldn't replace the old one (\(String(cString: strerror(errno))))")
         }
-        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: (current?.revision ?? 0) + 1,
-                              savedAt: now, savedBy: name, appVersion: appVersion, fileID: current?.fileID ?? UUID().uuidString)
-        try writeInfo(info)
         appendLog("saved by \(name) as save number \(info.revision) (Oinkly Budget \(appVersion))", now: now)
         return info
     }
@@ -362,6 +426,55 @@ nonisolated struct SharedDataFolder: Sendable {
         }
     }
 
+    // MARK: Receipts
+
+    /// Seals each receipt and photo of `working` that the shared folder doesn't have yet. They never change once written
+    /// (each has its own unique name), so only new ones are copied.
+    private func addReceipts(from working: URL, appVersion: String) throws {
+        try sealReceipts(fromSupport: StoreFiles.supportURL(for: working), appVersion: appVersion)
+    }
+
+    private func sealReceipts(fromSupport source: URL, appVersion: String) throws {
+        guard manager.fileExists(atPath: source.path), let walker = manager.enumerator(at: source, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+        for case let item as URL in walker {
+            guard (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true else { continue }
+            let relative = String(item.path.dropFirst(source.path.count + 1))
+            let target = receiptsURL.appendingPathComponent(relative + "." + SealedFile.fileExtension)
+            guard !manager.fileExists(atPath: target.path) else { continue }
+            do {
+                try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try SealedFile.seal(item, to: target, kind: "receipt", appVersion: appVersion)
+            } catch {
+                throw SharedDataError.copyFailed(error.localizedDescription)
+            }
+        }
+        Self.openUp(receiptsURL)
+    }
+
+    /// Unpacks every receipt of the shared folder into the folder that goes with `store`.
+    func restoreReceipts(into store: URL) throws {
+        guard manager.fileExists(atPath: receiptsURL.path), let walker = manager.enumerator(at: receiptsURL, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+        let destination = StoreFiles.supportURL(for: store)
+        for case let item as URL in walker {
+            guard item.pathExtension == SealedFile.fileExtension, (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true else { continue }
+            let relative = String(item.deletingPathExtension().path.dropFirst(receiptsURL.path.count + 1))
+            let target = destination.appendingPathComponent(relative)
+            guard !manager.fileExists(atPath: target.path) else { continue }
+            try SealedFile.unseal(item, to: target)
+        }
+    }
+
+    /// Unpacks the finished data file and its receipts to `store`, to use this data somewhere else (leaving sharing).
+    func unpackLatest(to store: URL) throws {
+        try manager.createDirectory(at: store.deletingLastPathComponent(), withIntermediateDirectories: true)
+        do {
+            try SealedFile.unseal(storeURL, to: store)
+            try restoreReceipts(into: store)
+        } catch {
+            throw SharedDataError.copyFailed(error.localizedDescription)
+        }
+    }
+
     // MARK: Receipt clean-up
 
     /// How long an attachment must have been in the shared folder before it can be removed for not being used.
@@ -369,30 +482,34 @@ nonisolated struct SharedDataFolder: Sendable {
 
     /// Removes receipt and photo files nothing uses any more, so the shared folder doesn't grow for ever. A file is only
     /// removed when it is older than 30 days and no saved copy of the data points to it: not the current data, not any
-    /// previous save (going back to one needs its receipts) and not a recovered copy. If any of those can't be read,
-    /// nothing is removed. Returns how many files were removed.
+    /// previous save (going back to one needs its receipts) and not a recovered copy. Each save's note lists the receipts
+    /// it uses. If any of those notes can't be read, nothing is removed. Returns how many files were removed.
     @discardableResult
     func removeUnusedAttachments(now: Date = .now) -> Int {
-        let root = StoreFiles.supportURL(for: storeURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+        let root = receiptsURL.appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
         guard let files = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey]), !files.isEmpty else { return 0 }
         // Nothing old enough to remove means there is nothing to look up, which is almost always.
         let cutoff = now.addingTimeInterval(-Double(Self.attachmentGraceDays) * 86_400)
-        let old = files.filter { ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now) < cutoff }
+        let old = files.filter { $0.pathExtension == SealedFile.fileExtension && ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now) < cutoff }
         guard !old.isEmpty else { return 0 }
-        var stores = [storeURL] + versions().map(\.url)
+        // Every saved copy counts, including one whose note can't be read: that stops the clean-up, as it should.
+        let saved = ((try? manager.contentsOfDirectory(at: historyURL, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == SealedFile.fileExtension && !$0.lastPathComponent.hasPrefix(".") }
+        var stores = [storeURL] + saved
         if let others = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
-            stores += others.filter { $0.pathExtension == "store" && $0.lastPathComponent.contains("recovered") }
+            stores += others.filter { $0.pathExtension == SealedFile.fileExtension && $0.lastPathComponent.contains("recovered") }
         }
         var used = Set<String>()
         for store in stores where manager.fileExists(atPath: store.path) {
-            guard let names = try? SQLiteStore.attachmentReferences(of: store) else {
+            guard let header = try? SealedFile.readHeader(store), let data = header.info,
+                  let info = try? Self.decoder.decode(SharedInfo.self, from: data), let names = info.attachments else {
                 appendLog("receipt clean-up skipped: \(store.lastPathComponent) couldn't be read", now: now)
                 return 0
             }
             used.formUnion(names)
         }
         var removed = 0
-        for file in old where !used.contains(file.lastPathComponent) {
+        for file in old where !used.contains(file.deletingPathExtension().lastPathComponent) {
             if (try? manager.removeItem(at: file)) != nil { removed += 1 }
         }
         if removed > 0 { appendLog("removed \(removed) receipt file\(removed == 1 ? "" : "s") nothing uses any more", now: now) }
@@ -401,25 +518,26 @@ nonisolated struct SharedDataFolder: Sendable {
 
     // MARK: Previous saves and the save log
 
-    /// Keeps the file that is about to be replaced, with a note of who saved it and when, then trims the old ones.
-    /// A failure here never stops the new save.
+    /// Keeps the file that is about to be replaced, with its note of who saved it and when, then trims the old ones. It is
+    /// already sealed, so it is simply copied. A failure here never stops the new save.
     private func archive(current: SharedInfo?, now: Date) {
-        try? manager.removeItem(at: previousURL)
         do {
             if !manager.fileExists(atPath: historyURL.path) {
                 try manager.createDirectory(at: historyURL, withIntermediateDirectories: true)
                 chmod(historyURL.path, 0o777)
             }
             let modified = (try? manager.attributesOfItem(atPath: storeURL.path)[.modificationDate] as? Date) ?? now
-            let info = current ?? SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: 0, savedAt: modified,
-                                             savedBy: "unknown", appVersion: "", fileID: "")
-            let stamp = ISO8601DateFormatter().string(from: info.savedAt).replacingOccurrences(of: ":", with: "-")
-            let base = historyURL.appendingPathComponent("save \(info.revision) \(stamp)")
-            let copy = base.appendingPathExtension("store")
+            let stamp = ISO8601DateFormatter().string(from: current?.savedAt ?? modified).replacingOccurrences(of: ":", with: "-")
+            let copy: URL
+            if let current {
+                copy = historyURL.appendingPathComponent("save \(current.revision) \(stamp).\(SealedFile.fileExtension)")
+            } else {
+                // A file whose note can't be read is kept aside rather than lost, but isn't listed as a save.
+                copy = historyURL.appendingPathComponent("unreadable \(stamp).bad")
+            }
             try? manager.removeItem(at: copy)
             try manager.copyItem(at: storeURL, to: copy)
-            try Self.encoder.encode(info).write(to: base.appendingPathExtension("json"))
-            for file in [copy, base.appendingPathExtension("json")] { try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: file.path) }
+            try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: copy.path)
         } catch {
             appendLog("couldn't keep the previous save: \(error.localizedDescription)", now: now)
         }
@@ -429,10 +547,10 @@ nonisolated struct SharedDataFolder: Sendable {
     /// The earlier saves, newest first.
     func versions() -> [SharedVersion] {
         guard let files = try? manager.contentsOfDirectory(at: historyURL, includingPropertiesForKeys: nil) else { return [] }
-        return files.filter { $0.pathExtension == "store" }.compactMap { store in
-            guard let data = try? Data(contentsOf: store.deletingPathExtension().appendingPathExtension("json")),
+        return files.filter { $0.pathExtension == SealedFile.fileExtension && !$0.lastPathComponent.hasPrefix(".") }.compactMap { file in
+            guard let header = try? SealedFile.readHeader(file), let data = header.info,
                   let info = try? Self.decoder.decode(SharedInfo.self, from: data) else { return nil }
-            return SharedVersion(url: store, info: info)
+            return SharedVersion(url: file, info: info)
         }.sorted { $0.info.savedAt > $1.info.savedAt }
     }
 
@@ -445,24 +563,24 @@ nonisolated struct SharedDataFolder: Sendable {
         for version in all where version.info.savedAt >= cutoff {
             if seenDays.insert(calendar.startOfDay(for: version.info.savedAt)).inserted { keep.insert(version.url) }
         }
-        for version in all where !keep.contains(version.url) {
-            try? manager.removeItem(at: version.url)
-            try? manager.removeItem(at: version.url.deletingPathExtension().appendingPathExtension("json"))
-        }
+        for version in all where !keep.contains(version.url) { try? manager.removeItem(at: version.url) }
     }
 
-    /// One line per save, newest at the end. Kept short so it never grows without limit.
+    /// One line per save, newest at the end, kept in a binary file. Kept short so it never grows without limit.
     func appendLog(_ text: String, now: Date = .now) {
         let line = "\(now.formatted(.iso8601.year().month().day().dateSeparator(.dash)))  \(now.formatted(date: .omitted, time: .standard))  \(text)"
-        var lines = ((try? String(contentsOf: logURL, encoding: .utf8)) ?? "").split(separator: "\n").map(String.init)
+        var lines = readLog()
         lines.append(line)
         if lines.count > 300 { lines.removeFirst(lines.count - 300) }
-        try? write(Data((lines.joined(separator: "\n") + "\n").utf8), to: logURL)
+        if let data = try? Self.encoder.encode(lines) { try? write(data, to: logURL) }
     }
 
-    func recentLog(_ count: Int = 5) -> [String] {
-        ((try? String(contentsOf: logURL, encoding: .utf8)) ?? "").split(separator: "\n").suffix(count).map(String.init)
+    private func readLog() -> [String] {
+        guard let data = try? Data(contentsOf: logURL) else { return [] }
+        return (try? Self.decoder.decode([String].self, from: data)) ?? []
     }
+
+    func recentLog(_ count: Int = 5) -> [String] { Array(readLog().suffix(count)) }
 
     /// Makes a brand new shared folder from a database that already exists (this Mac's own data). The original is only
     /// read, never changed.
@@ -474,18 +592,19 @@ nonisolated struct SharedDataFolder: Sendable {
     /// Where a copy goes when it can't safely replace the shared file, such as after a crash while someone else saved.
     func saveRecoveredCopy(from working: URL, now: Date = .now) throws -> URL {
         let stamp = ISO8601DateFormatter().string(from: now).replacingOccurrences(of: ":", with: "-")
-        let destination = url.appendingPathComponent("OinklyBudget (recovered \(stamp)).store")
-        try SQLiteStore.vacuum(source: working, into: destination)
+        let destination = url.appendingPathComponent("OinklyBudget (recovered \(stamp)).\(SealedFile.fileExtension)")
+        let temporary = url.appendingPathComponent(".recovered.\(UUID().uuidString).tmp")
+        defer { try? manager.removeItem(at: temporary) }
+        try SQLiteStore.vacuum(source: working, into: temporary)
+        let counts = try SQLiteStore.counts(of: temporary)
+        let attachments = (try? SQLiteStore.attachmentReferences(of: temporary)).map { Array($0).sorted() }
+        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: 0, savedAt: now, savedBy: "a copy kept after a crash",
+                              appVersion: "", fileID: readInfo()?.fileID ?? "", counts: counts, attachments: attachments)
+        try addReceipts(from: working, appVersion: "")
+        try SealedFile.seal(temporary, to: destination, kind: "shared", info: try Self.encoder.encode(info), appVersion: "", now: now)
         try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: destination.path)
-        try Self.copyAttachments(from: working, to: destination)
         appendLog("kept unsaved changes as \(destination.lastPathComponent)", now: now)
         return destination
-    }
-
-    /// Adds any attachment files the destination doesn't have yet, and makes them readable and writable by every login.
-    static func copyAttachments(from sourceStore: URL, to destinationStore: URL) throws {
-        do { try StoreFiles.copyAttachments(from: sourceStore, to: destinationStore) } catch { throw SharedDataError.copyFailed(error.localizedDescription) }
-        openUp(StoreFiles.supportURL(for: destinationStore))
     }
 
     /// Opens everything under a folder to every login, so the next person can add to it and replace files in it.
@@ -500,12 +619,98 @@ nonisolated struct SharedDataFolder: Sendable {
         }
     }
 
+    // MARK: Converting a folder from before the sealed format
+
+    /// Turns a folder in the old format into the current one, once. Whoever opens it first does it, holding the lock. Every
+    /// new file is made first and the data file is put in place last, so a conversion that is cut short leaves the old data
+    /// exactly as it was and is simply done again next time. Returns whether anything was converted.
+    @discardableResult
+    func convertLegacyIfNeeded(appVersion: String, now: Date = .now) throws -> Bool {
+        guard hasLegacyData else { return false }
+        do {
+            guard try SQLiteStore.integrityIsOK(legacyStoreURL) else {
+                throw SharedDataError.verifyFailed("the shared data failed its integrity check, so it wasn't converted")
+            }
+            let legacyInfo = (try? Data(contentsOf: legacyInfoURL)).flatMap { try? Self.legacyDecoder.decode(SharedInfo.self, from: $0) }
+
+            // Receipts
+            try sealReceipts(fromSupport: StoreFiles.supportURL(for: legacyStoreURL), appVersion: appVersion)
+
+            // Previous saves
+            let legacyHistory = (try? manager.contentsOfDirectory(at: historyURL, includingPropertiesForKeys: nil)) ?? []
+            for store in legacyHistory where store.pathExtension == "store" {
+                let note = store.deletingPathExtension().appendingPathExtension("json")
+                guard let info = (try? Data(contentsOf: note)).flatMap({ try? Self.legacyDecoder.decode(SharedInfo.self, from: $0) }),
+                      (try? SQLiteStore.integrityIsOK(store)) == true else { continue }
+                let stamp = ISO8601DateFormatter().string(from: info.savedAt).replacingOccurrences(of: ":", with: "-")
+                let destination = historyURL.appendingPathComponent("save \(info.revision) \(stamp).\(SealedFile.fileExtension)")
+                if !manager.fileExists(atPath: destination.path) { try sealLegacyStore(store, info: info, to: destination, appVersion: appVersion, now: now) }
+            }
+
+            // Copies kept after a crash
+            let rootFiles = (try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+            let legacyRecovered = rootFiles.filter { $0.pathExtension == "store" && $0.lastPathComponent.contains("recovered") }
+            for store in legacyRecovered where (try? SQLiteStore.integrityIsOK(store)) == true {
+                let destination = store.deletingPathExtension().appendingPathExtension(SealedFile.fileExtension)
+                let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: legacyInfo?.schemaVersion ?? Self.schemaVersion, revision: 0, savedAt: now,
+                                      savedBy: "a copy kept after a crash", appVersion: "", fileID: legacyInfo?.fileID ?? "")
+                if !manager.fileExists(atPath: destination.path) { try sealLegacyStore(store, info: info, to: destination, appVersion: appVersion, now: now) }
+            }
+
+            // The log
+            if readLog().isEmpty, let text = try? String(contentsOf: legacyLogURL, encoding: .utf8) {
+                let lines = Array(text.split(separator: "\n").map(String.init).suffix(300))
+                if let data = try? Self.encoder.encode(lines) { try? write(data, to: logURL) }
+            }
+
+            // The data file goes in last: until it is there, nothing has changed.
+            let modified = (try? manager.attributesOfItem(atPath: legacyStoreURL.path)[.modificationDate] as? Date) ?? now
+            let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: legacyInfo?.schemaVersion ?? Self.schemaVersion,
+                                  revision: max(legacyInfo?.revision ?? 1, 1), savedAt: legacyInfo?.savedAt ?? modified,
+                                  savedBy: legacyInfo?.savedBy ?? "unknown", appVersion: legacyInfo?.appVersion ?? "",
+                                  fileID: (legacyInfo?.fileID.isEmpty == false ? legacyInfo?.fileID : nil) ?? UUID().uuidString)
+            try sealLegacyStore(legacyStoreURL, info: info, to: storeURL, appVersion: appVersion, now: now)
+        } catch let error as SharedDataError {
+            throw error
+        } catch {
+            throw SharedDataError.copyFailed("the shared data couldn't be converted: \(error.localizedDescription)")
+        }
+        appendLog("converted the shared folder to Oinkly Budget's own file format", now: now)
+
+        // The old files are no longer used.
+        for suffix in ["", "-wal", "-shm"] { try? manager.removeItem(at: URL(fileURLWithPath: legacyStoreURL.path + suffix)) }
+        try? manager.removeItem(at: StoreFiles.supportURL(for: legacyStoreURL))
+        try? manager.removeItem(at: legacyInfoURL)
+        try? manager.removeItem(at: legacyLogURL)
+        try? manager.removeItem(at: url.appendingPathComponent("OinklyBudget (previous save).store"))
+        let legacyFiles = ((try? manager.contentsOfDirectory(at: historyURL, includingPropertiesForKeys: nil)) ?? []).filter { $0.pathExtension == "store" || $0.pathExtension == "json" }
+        for file in legacyFiles { try? manager.removeItem(at: file) }
+        for store in ((try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []).filter({ $0.pathExtension == "store" }) { try? manager.removeItem(at: store) }
+        for note in ((try? manager.contentsOfDirectory(at: membersURL, includingPropertiesForKeys: nil)) ?? []).filter({ $0.pathExtension == "json" }) { try? manager.removeItem(at: note) }
+        return true
+    }
+
+    /// Seals a data file from the old format, filling in what the new note holds that the old one didn't.
+    private func sealLegacyStore(_ plain: URL, info: SharedInfo, to destination: URL, appVersion: String, now: Date) throws {
+        var note = info
+        note.formatVersion = Self.formatVersion
+        note.counts = try SQLiteStore.counts(of: plain)
+        note.attachments = (try? SQLiteStore.attachmentReferences(of: plain)).map { Array($0).sorted() }
+        let temporary = url.appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).convert.tmp")
+        defer { try? manager.removeItem(at: temporary) }
+        try SealedFile.seal(plain, to: temporary, kind: "shared", info: try Self.encoder.encode(note), appVersion: appVersion, now: now)
+        guard SealedFile.isIntact(temporary) else { throw SharedDataError.verifyFailed("a converted file didn't read back") }
+        try? manager.setAttributes([.posixPermissions: 0o666], ofItemAtPath: temporary.path)
+        try manager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if rename(temporary.path, destination.path) != 0 { throw SharedDataError.copyFailed("a converted file couldn't be put in place") }
+    }
+
     // MARK: Who shares it
 
     private func memberURL(_ userName: String) -> URL {
         // An account name is plain, but never let one reach outside the folder.
         let safe = userName.map { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" || $0 == "." ? $0 : "_" }
-        return membersURL.appendingPathComponent(String(safe) + ".json")
+        return membersURL.appendingPathComponent(String(safe) + "." + Self.metaExtension)
     }
 
     /// Says this login uses the shared data. Failing to write it never matters to the data itself.
@@ -526,7 +731,7 @@ nonisolated struct SharedDataFolder: Sendable {
 
     func members() -> [SharedMember] {
         guard let files = try? manager.contentsOfDirectory(at: membersURL, includingPropertiesForKeys: nil) else { return [] }
-        return files.filter { $0.pathExtension == "json" }.compactMap { file in
+        return files.filter { $0.pathExtension == Self.metaExtension }.compactMap { file in
             (try? Data(contentsOf: file)).flatMap { try? Self.decoder.decode(SharedMember.self, from: $0) }
         }
     }
@@ -605,7 +810,7 @@ nonisolated struct SharedDataFolder: Sendable {
         } else {
             lines.append("PROBLEM: this login can't create files here (\(String(cString: strerror(errno)))).")
         }
-        lines.append("Data file: \(hasStore ? describe(storeURL.path) : "none yet")")
+        lines.append("Data file: \(hasStore ? describe(storeURL.path) : (hasLegacyData ? "in the old format, converted when it is next opened" : "none yet"))")
         if let info = readInfo() {
             lines.append("Last saved: \(info.savedAt.formatted(date: .abbreviated, time: .shortened)) by \(info.savedBy), save number \(info.revision), schema \(info.schemaVersion).")
         }

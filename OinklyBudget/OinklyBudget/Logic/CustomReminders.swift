@@ -132,7 +132,7 @@ final class CustomReminders {
 
     /// Replaces the scheduled notifications with the current set.
     func apply() async {
-        guard !ScreenshotMode.isOn else { return }
+        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return }
         WidgetSnapshotWriter.refreshSoon()
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()

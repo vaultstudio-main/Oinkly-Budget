@@ -6,6 +6,14 @@ import AppKit
 enum StartupState {
     static var hasRun = false
     static var databaseError: Error?
+    /// Set when the app starts on a stand-in database to ask the person something first: whether to restore the backup copy.
+    static var shadowFinding: ShadowFinding?
+
+    /// True while the app is on a stand-in database (waiting for shared data, a data file that can't open, or a question
+    /// about the backup copy). Nothing that reads the data may act then: it would see nothing and clear reminders, the
+    /// widget and the backup copy.
+    @MainActor
+    static var isHoldingPlace: Bool { databaseError != nil || shadowFinding != nil || SharedDataSession.shared.decision != nil }
 }
 
 /// Remembers the boot window so it can be closed explicitly once the main window is up.
@@ -57,7 +65,11 @@ struct BootView: View {
 
     var body: some View {
         // When the shared data can't simply be opened, say why and wait. Nothing is started until then.
-        if let decision = SharedDataSession.shared.decision {
+        if let finding = StartupState.shadowFinding {
+            ShadowRescueView(finding: finding)
+                .frame(width: 500, height: 480)
+                .background(BootWindowStyle(box: windowBox))
+        } else if let decision = SharedDataSession.shared.decision {
             SharedWaitingView(decision: decision)
                 .frame(width: 500, height: 420)
                 .background(BootWindowStyle(box: windowBox))
@@ -191,7 +203,7 @@ struct BootView: View {
             return
         }
         StartupState.hasRun = true
-        if SharedDataSession.shared.decision != nil { return }
+        if SharedDataSession.shared.decision != nil || StartupState.shadowFinding != nil { return }
 
         await checker.run(in: modelContext, databaseError: StartupState.databaseError)
         isFinished = true

@@ -2,7 +2,7 @@ import AppKit
 import SwiftData
 import SwiftUI
 
-/// Saving a full backup to a file, and remembering when it last happened.
+/// Exporting everything to a .pig file, and remembering when it last happened.
 @MainActor
 enum BackupExporter {
     static let lastBackupKey = "piggybank.lastBackupDate"
@@ -29,8 +29,8 @@ enum BackupExporter {
     static func exportWithPanel(from context: ModelContext) -> Outcome? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [DataBackup.fileType]
-        panel.nameFieldStringValue = "Oinkly Budget Backup \(stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save a backup of everything in Oinkly Budget."
+        panel.nameFieldStringValue = "Oinkly Budget Export \(stamp()).\(DataBackup.fileExtension)"
+        panel.message = "Save everything in Oinkly Budget to a .pig file."
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         do {
             let file = try DataBackup.make(from: context)
@@ -44,8 +44,9 @@ enum BackupExporter {
     }
 }
 
-/// When to push a backup on the user: only once there are a lot of transactions, which is when a backup (and a
-/// fresh start for the oldest years, if you want one) is worth thinking about.
+/// When to push a backup copy or an export on the user: only once there are a lot of transactions, which is when a spare
+/// copy (and a fresh start for the oldest years, if you want one) is worth thinking about. Not while a backup copy is
+/// set up, because that is already keeping a spare.
 enum BackupReminder {
     static let snoozeKey = "piggybank.backupReminderSnoozedUntil"
 
@@ -61,6 +62,7 @@ enum BackupReminder {
     static func prompt(transactionCount: Int, lastBackup: Date?, snoozedUntil: Date?, now: Date = .now,
                        calendar: Calendar = .current) -> Prompt? {
         guard transactionCount >= softCount else { return nil }
+        if ShadowCopyManager.isSetUpNow { return nil }
         if let snoozedUntil, snoozedUntil > now { return nil }
         let urgent = transactionCount >= urgentCount
         // A recent backup quiets the reminder: 6 months at the soft level, 3 months at the firm one.
@@ -70,7 +72,7 @@ enum BackupReminder {
     }
 }
 
-/// A banner for Settings ▸ Data that asks for a backup once the transaction count is high.
+/// A banner for Settings ▸ Data that asks for a backup copy once the transaction count is high.
 struct BackupReminderBanner: View {
     @Environment(\.modelContext) private var modelContext
     /// How many transactions there are, counted by the page that shows this.
@@ -96,7 +98,7 @@ struct BackupReminderBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("You have \(prompt.count.formatted()) transactions")
                         .font(.headline)
-                    Text("That's a lot of history. Save a backup file somewhere safe, like iCloud Drive or an external drive.")
+                    Text("That's a lot of history. Set up a backup copy so there is always a spare, or export your data to a file.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -110,7 +112,8 @@ struct BackupReminderBanner: View {
                     snoozedInterval = until.timeIntervalSinceReferenceDate
                 }
                 .buttonStyle(.borderless)
-                Button("Export Backup") { export() }
+                Button("Export Data") { export() }
+                Button("Set Up Backup Copy") { ShadowCopyManager.shared.chooseFolder() }
                     .buttonStyle(.borderedProminent)
                     .tint(tint)
             }
@@ -125,7 +128,7 @@ struct BackupReminderBanner: View {
             lastBackupInterval = Date.now.timeIntervalSinceReferenceDate
             message = "Saved \(name)."
         case .failed(let reason):
-            message = "Couldn't save the backup: \(reason)"
+            message = "Couldn't save the file: \(reason)"
         case nil:
             break
         }

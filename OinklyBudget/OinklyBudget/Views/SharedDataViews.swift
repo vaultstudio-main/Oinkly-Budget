@@ -20,11 +20,15 @@ struct SharedDataSection: View {
 
     var body: some View {
         Section {
-            if SharedDataSession.isEnabled {
-                sharing
-            } else {
-                notSharing
-            }
+            // A switch, like the backup copy. Turning it on asks first (and offers a backup copy folder); turning it off
+            // asks first too. The switch only moves once the app has restarted into the new state.
+            Toggle("Share with Other Users", isOn: Binding(
+                get: { SharedDataSession.isEnabled },
+                set: { wantsOn in
+                    if wantsOn { warning = true } else { confirmingStop = true }
+                }))
+                .disabled(working)
+            if SharedDataSession.isEnabled { sharing }
             if let message {
                 Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(messageIsError ? Color.orange : Theme.green)
@@ -32,16 +36,9 @@ struct SharedDataSection: View {
         } header: {
             Text("Sharing")
         } footer: {
-            Text(SharedDataSession.isEnabled
-                 ? "Other users of this Mac use the same data, one at a time."
-                 : "Lets other users of this Mac use your data, one at a time.")
+            Text("Lets other users of this Mac use your data, one at a time.")
         }
-        .alert("Share your data?", isPresented: $warning) {
-            Button("Share") { turnOn() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Your data is copied to /Users/Shared/OinklyBudget. Anyone with an account on this Mac can read it. Your own copy is not changed.")
-        }
+        .sheet(isPresented: $warning) { ShareSetupSheet(onShare: turnOn) }
         .sheet(isPresented: $confirmingStop) {
             StopSharingSheet { removeFolder in turnOff(removeFolder: removeFolder) }
         }
@@ -53,26 +50,10 @@ struct SharedDataSection: View {
         }
     }
 
-    // MARK: Off
-
-    @ViewBuilder
-    private var notSharing: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Share with Other Users").font(.body.weight(.medium))
-                Text("Other users of this Mac can open this data, one at a time.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Button("Share…") { warning = true }.disabled(working)
-        }
-    }
-
     // MARK: On
 
     @ViewBuilder
     private var sharing: some View {
-        Label("Sharing is on", systemImage: "person.2.fill").foregroundStyle(Theme.green)
         LabeledContent("Folder", value: SharedDataFolder.defaultURL.path)
         if let saved = session.lastSaved {
             LabeledContent("Last saved", value: saved.formatted(date: .abbreviated, time: .shortened))
@@ -87,8 +68,6 @@ struct SharedDataSection: View {
                 .help("Saves and quits so another user can open the data")
             Button("Previous Saves…") { showPreviousSaves() }.disabled(working || !session.isActive || session.lostLock)
             Button("Check Sharing…") { checkSharing() }.disabled(working)
-            Spacer()
-            Button("Stop Sharing…", role: .destructive) { confirmingStop = true }.disabled(working)
         }
     }
 
@@ -305,6 +284,8 @@ struct SharedWaitingView: View {
                 Button("Use This Mac's Own Data") { SharedDataSession.shared.useThisMacsData() }
                 Button("Quit") { NSApp.terminate(nil) }
             }
+        case .shadowFound(let finding):
+            SharedShadowRescue(finding: finding)
         case .failed(let text):
             message("The shared data couldn't be opened.", text + " Nothing was changed.")
             HStack {
@@ -392,5 +373,183 @@ private struct StopSharingSheet: View {
             let user = NSUserName(), full = NSFullUserName()
             others = await Task.detached { SharedDataFolder.standard.otherUsers(besides: user, fullName: full) }.value
         }
+    }
+}
+
+
+/// Shown when the shared data and the backup copy disagree. Offers the backup copy, an earlier save in the shared folder,
+/// or carrying on as it is. Nothing changes until the person chooses.
+private struct SharedShadowRescue: View {
+    let finding: ShadowFinding
+
+    @State private var best: ShadowVersion?
+    @State private var versions: [ShadowVersion] = []
+    @State private var hasEarlierSave = false
+    @State private var loaded = false
+    @State private var working = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(finding.title).font(.headline).foregroundStyle(.white).multilineTextAlignment(.center)
+            Text(explanation).font(.callout).foregroundStyle(.white.opacity(0.85)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            if let best {
+                Text("Newest good backup copy: \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.accounts) accounts and \(best.info.transactions.formatted()) transactions.")
+                    .font(.callout.weight(.medium)).foregroundStyle(.white).multilineTextAlignment(.center)
+            } else if loaded {
+                Text("No good copy was found in the backup copy folder.").font(.callout.weight(.medium)).foregroundStyle(.white)
+            } else {
+                ProgressView().controlSize(.small).tint(.white)
+            }
+            if let error { Text(error).font(.callout).foregroundStyle(.orange).multilineTextAlignment(.center) }
+            buttons.disabled(working)
+        }
+        .task { await load() }
+    }
+
+    private var explanation: String {
+        switch finding {
+        case .sharedOlder(let shared, let shadow):
+            "The shared data is at save \(shared) but your backup copy is from save \(shadow). The shared data may have been restored to an older state or replaced."
+        case .sharedIsDifferent:
+            "Your backup copy was made from other shared data. The folder may have been swapped for different data."
+        case .sharedMissing:
+            "There is no shared data in the shared folder, but you have a backup copy of it."
+        case .sharedUnreadable(let why):
+            "The shared data can't be read (\(why)). Nothing has been changed."
+        default:
+            ""
+        }
+    }
+
+    private var canOpenAsItIs: Bool {
+        switch finding {
+        case .sharedOlder, .sharedIsDifferent: true
+        default: false
+        }
+    }
+
+    @ViewBuilder
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            if let best {
+                Button("Restore from Backup Copy") { restore(best) }.keyboardShortcut(.defaultAction)
+            }
+            if versions.count > 1 {
+                Menu("Older Backup Copy") {
+                    ForEach(versions) { version in
+                        Button("\(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)) · \(version.info.transactions.formatted()) transactions") { restore(version) }
+                    }
+                }
+                .fixedSize()
+            }
+            if hasEarlierSave, case .sharedUnreadable = finding {
+                Button("Use the Newest Good Earlier Save") { restoreEarlier() }
+            }
+        }
+        HStack(spacing: 8) {
+            if canOpenAsItIs { Button("Open the Shared Data As It Is") { SharedDataSession.shared.openSharedAsItIs() } }
+            Button("Use This Mac's Own Data") { SharedDataSession.shared.useThisMacsData() }
+            Button("Quit") { NSApp.terminate(nil) }
+        }
+    }
+
+    private func restore(_ version: ShadowVersion) {
+        working = true
+        error = nil
+        Task {
+            do {
+                try await ShadowCopyManager.shared.rebuildShared(from: version)
+                SharedDataSession.shared.tryAgain()
+            } catch {
+                working = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func restoreEarlier() {
+        working = true
+        error = nil
+        Task {
+            do {
+                if try await SharedDataSession.shared.restoreNewestGoodEarlierSave() == false {
+                    working = false
+                    error = "There is no good earlier save."
+                }
+            } catch {
+                working = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func load() async {
+        versions = await ShadowCopyManager.shared.versions()
+        if let parent = ShadowCopyManager.shared.resolveParent() {
+            let accessing = parent.startAccessingSecurityScopedResource()
+            let folder = ShadowFolder(inside: parent)
+            best = await Task.detached { folder.newestGoodVersion() }.value
+            if accessing { parent.stopAccessingSecurityScopedResource() }
+        }
+        hasEarlierSave = await Task.detached {
+            SharedDataFolder.standard.versions().contains { SealedFile.isIntact($0.url) }
+        }.value
+        loaded = true
+    }
+}
+
+
+/// Asked before sharing starts: what sharing does, and the choice of a backup copy in a folder of the person's own, to
+/// keep the peace between their edits and the other person's.
+struct ShareSetupSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onShare: () -> Void
+
+    private var shadow: ShadowCopyManager { ShadowCopyManager.shared }
+
+    /// True once a backup copy folder has been chosen. Reading the path makes the sheet update when it is chosen.
+    private var hasShadowCopy: Bool { _ = shadow.folderPath; return shadow.isSetUp }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Share your data?", systemImage: "person.2.fill").font(.title3.weight(.semibold))
+            Text("Your data is copied to \(SharedDataFolder.defaultURL.path), in Oinkly Budget's own file format, so only Oinkly Budget can open it. Every user of this Mac can use it, and it is not encrypted. Your own copy is not changed.")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Keep a backup copy for yourself", systemImage: "shield.lefthalf.filled").font(.headline)
+                Text("A backup copy is a second copy of the data in a folder of your own, such as Documents. It keeps the peace between your edits and the other person's: if the shared data ever goes wrong, you can restore from your backup copy. It is kept up to date each time the shared data is saved.")
+                    .font(.callout)
+                if hasShadowCopy {
+                    HStack {
+                        Label("On: \(shadow.folderPath ?? "")", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green).lineLimit(1).truncationMode(.middle)
+                        Spacer()
+                        Button("Change Folder…") { shadow.chooseFolder() }
+                    }
+                } else {
+                    HStack {
+                        Button("Choose Folder…") { shadow.chooseFolder() }
+                        Text("Recommended").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+                Text("It is kept in Oinkly Budget's own file format, so only Oinkly Budget can read it.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            .padding(12)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+
+            HStack {
+                Button("Cancel", role: .cancel) { dismiss() }
+                Spacer()
+                if !hasShadowCopy {
+                    Button("Share Without a Backup Copy") { dismiss(); onShare() }
+                }
+                Button("Share") { dismiss(); onShare() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!hasShadowCopy)
+            }
+        }
+        .padding(22)
+        .frame(width: 540)
     }
 }

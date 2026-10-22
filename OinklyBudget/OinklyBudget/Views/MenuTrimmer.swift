@@ -142,6 +142,22 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
                 await SharedDataSession.shared.checkInNow(release: false)
             }
         }
+        ShadowCopyManager.shared.start()
+        // Say what happened after restoring from the backup copy.
+        Task { @MainActor in
+            guard let note = UserDefaults.standard.string(forKey: "shadowRestoreNote") else { return }
+            UserDefaults.standard.removeObject(forKey: "shadowRestoreNote")
+            var window: NSWindow?
+            for _ in 0..<80 where window == nil {
+                try? await Task.sleep(for: .milliseconds(500))
+                window = NSApp.windows.first { $0.title == "Oinkly Budget" && $0.isVisible }
+            }
+            guard let window else { return }
+            let alert = NSAlert()
+            alert.messageText = "Backup copy"
+            alert.informativeText = note
+            _ = await alert.beginSheetModal(for: window)
+        }
         // Say what happened to the shared folder after stopping sharing.
         Task { @MainActor in
             guard let note = UserDefaults.standard.string(forKey: SharedDataSession.stopNoteKey) else { return }
@@ -195,10 +211,13 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
     /// Quitting saves the shared data first and lets go of the lock.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let shared = SharedDataSession.shared
-        guard shared.isActive || shared.lostLock else { return .terminateNow }
+        let shadow = ShadowCopyManager.shared
+        guard shared.isActive || shared.lostLock || shadow.needsCopyAtQuit else { return .terminateNow }
         Task { @MainActor in
             // Saving the shared data lets go of the lock, so the next user can open it.
             await shared.finishForQuit()
+            // The last changes go into the backup copy too.
+            await shadow.copyForQuit()
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -219,6 +238,10 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
             NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
             return
         }
+        if let copy = urls.first(where: { $0.pathExtension.lowercased() == SealedFile.fileExtension }) {
+            Task { @MainActor in await CopyOpener.offerRestore(of: copy) }
+            return
+        }
         guard let url = urls.first(where: { $0.pathExtension.lowercased() == DataBackup.fileExtension }) else { return }
         Task { @MainActor in await BackupOpener.offerRestore(of: url) }
     }
@@ -237,14 +260,14 @@ enum BackupOpener {
         do {
             file = try DataBackup.decode(try Data(contentsOf: url))
         } catch {
-            show(title: "Couldn't open that backup", text: error.localizedDescription)
+            show(title: "Couldn't open that file", text: error.localizedDescription)
             return
         }
 
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Replace everything with this backup?"
+        alert.messageText = "Replace everything with this file?"
         alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Oinkly Budget is erased first, and this can't be undone."
         alert.addButton(withTitle: "Replace Everything")
         alert.addButton(withTitle: "Cancel")
@@ -253,10 +276,10 @@ enum BackupOpener {
         DataDeletion.afterLeavingAccountPages {
             do {
                 try DataBackup.restore(file, into: container.mainContext)
-                show(title: "Backup restored", text: "Restored \(file.summary).")
+                show(title: "Data imported", text: "Imported \(file.summary).")
             } catch {
                 container.mainContext.rollback()
-                show(title: "Couldn't restore the backup", text: error.localizedDescription)
+                show(title: "Couldn't import the file", text: error.localizedDescription)
             }
         }
     }

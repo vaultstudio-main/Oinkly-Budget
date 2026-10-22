@@ -20,7 +20,7 @@ enum WidgetSnapshotWriter {
 
     static func refresh(now: Date = .now) {
         // Screenshots use made-up data: never write it where the real widgets would read it.
-        guard !ScreenshotMode.isOn, let container = OinklyBudgetAppDelegate.container else { return }
+        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace, let container = OinklyBudgetAppDelegate.container else { return }
         let snapshot = makeSnapshot(container: container, now: now)
         if snapshot.write() { WidgetCenter.shared.reloadAllTimelines() }
     }

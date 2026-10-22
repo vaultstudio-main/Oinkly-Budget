@@ -5,7 +5,7 @@ Apple is not rejecting the app. This is a request for information because the de
 ## Before you reply
 
 1. **Screen recording on a physical Mac** running the latest macOS. Use Screenshot (Shift-Command-5), Record Entire Screen. Start with the app closed, then launch it from the Dock. Keep it to 3 to 5 minutes. See the shot list below.
-2. **Sample file (optional but helpful).** The app starts empty. Export a `.pig` backup from a copy with sample data (Settings ▸ Import & Export ▸ Export Backup…), and attach it in the Notes section if Apple lets you attach a file, or say it is available on request. The reviewer can use Settings ▸ Import & Export ▸ Import Backup… to load it.
+2. **Sample file (optional but helpful).** The app starts empty. Export a `.pig` backup from a copy with sample data (Settings ▸ Data & Backup ▸ Export Data…), and attach it in the Notes section if Apple lets you attach a file, or say it is available on request. The reviewer can use Settings ▸ Data & Backup ▸ Import Data… to load it.
 3. **Upload the build from the same Mac you record on**, so what Apple sees matches the recording.
 
 ## Shot list for the recording

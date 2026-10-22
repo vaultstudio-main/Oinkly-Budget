@@ -21,6 +21,7 @@ struct MacRootView: View {
     @State private var selection: SidebarItem? = .summary
     @State private var collapsed = Set<AccountGroup>()
     @State private var editingAccount: Account?
+    @State private var askingForShadowCopy = false
     @Environment(\.modelContext) private var modelContext
 
     private var selectedAccountID: Account.ID? {
@@ -129,6 +130,12 @@ struct MacRootView: View {
         .focusedSceneValue(\.selectedAccountID, selectedAccountID)
         .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
+        .sheet(isPresented: $askingForShadowCopy) { ShadowSetupSheet() }
+        .task {
+            // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up.
+            try? await Task.sleep(for: .seconds(8))
+            if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) { askingForShadowCopy = true }
+        }
     }
 
     @ViewBuilder
