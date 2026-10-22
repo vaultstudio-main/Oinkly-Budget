@@ -35,7 +35,6 @@ final class SharedDataSession {
     /// Someone took the lock while this copy was asleep or stuck. Nothing more can be saved into the shared data.
     private(set) var lostLock = false
     private(set) var lastSaved: Date?
-    private(set) var openSince: Date?
     /// Shown once after launch, such as "closed unexpectedly, your changes were kept".
     var notice: String?
     var errorMessage: String?
@@ -117,7 +116,6 @@ final class SharedDataSession {
             let recovered: String?
             do { recovered = try openWorkingCopy(from: folder) } catch { folder.release(token: mine.token); throw error }
             isActive = true
-            openSince = .now
             lastSaved = folder.readInfo()?.savedAt
             if let recovered { notice = recovered }
             startTimers()
@@ -182,9 +180,9 @@ final class SharedDataSession {
     func lookAgain() -> Waiting {
         let folder = SharedDataFolder.standard
         guard folder.exists, folder.hasData else { return .problem("The shared data can't be found in \(folder.url.path).") }
-        guard let lock = folder.readLock() else { return FileManager.default.fileExists(atPath: folder.lockURL.path) ? .heldBy(SharedLock(token: "unreadable", userName: "another user", fullName: "", since: .now, heartbeat: .now), isStale: false) : .free }
-        if lock.userName == NSUserName(), lock.isStale() { return .free }
-        return .heldBy(lock, isStale: lock.isStale())
+        guard let holder = folder.holder() else { return .free }
+        if holder.lock.userName == NSUserName(), holder.isStale { return .free }
+        return .heldBy(holder.lock, isStale: holder.isStale)
     }
 
     /// The other copy has let go: start again, which takes the lock and opens the data.
@@ -367,7 +365,17 @@ final class SharedDataSession {
         guard isActive, !lostLock, let folder, !isCheckingIn else { return }
         isCheckingIn = true
         defer { isCheckingIn = false }
-        if let container = PiggybankAppDelegate.container { try? container.mainContext.save() }
+        if let container = PiggybankAppDelegate.container {
+            // Changes that haven't been written yet count as changes, even before the save notice arrives.
+            if container.mainContext.hasChanges { isDirty = true }
+            try? container.mainContext.save()
+        }
+        // Nothing changed since the last save: don't write another copy (it would push a real earlier save out of
+        // the previous saves). Letting go of the lock is still needed.
+        guard isDirty else {
+            if release { await letGo(folder) }
+            return
+        }
         let name = NSFullUserName()
         let version = appVersion
         let token = me.token
@@ -407,6 +415,18 @@ final class SharedDataSession {
                 errorMessage = "The shared data couldn't be saved: \(error.localizedDescription) Your changes are safe on this Mac and will be tried again."
             }
         }
+    }
+
+    /// Lets go of the lock without saving, because the shared data already has everything. Also the moment to tidy up receipts.
+    private func letGo(_ folder: SharedDataFolder) async {
+        let token = me.token
+        await Task.detached {
+            folder.removeUnusedAttachments()
+            folder.release(token: token)
+        }.value
+        stopTimers()
+        isActive = false
+        removeMarker()
     }
 
     /// Quitting: save and let go. A copy that lost the lock is kept as a separate file instead.

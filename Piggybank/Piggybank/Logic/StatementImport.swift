@@ -327,7 +327,8 @@ enum StatementImporter {
         }
         if s.hasPrefix("-") { negative.toggle(); s.removeFirst() }
         if s.hasPrefix("+") { s.removeFirst() }
-        guard !s.isEmpty, s.allSatisfy({ $0.isNumber || $0 == "." }),
+        // One decimal point at most: "1.234.567" is not an amount, and reading its first part would be a wrong one.
+        guard !s.isEmpty, s.allSatisfy({ ($0.isASCII && $0.isNumber) || $0 == "." }), s.filter({ $0 == "." }).count <= 1,
               let value = Decimal(string: s, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
         return negative ? -value : value
     }

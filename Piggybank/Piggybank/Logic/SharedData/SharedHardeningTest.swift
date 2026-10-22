@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SQLite3
+import SwiftData
 
 /// `-sharedHardeningTest` tries the things that go wrong with a shared data file, on throwaway folders, using a copy of
 /// this Mac's own data, then quits. Never touches /Users/Shared/OinklyBudget. Debug only.
@@ -202,6 +203,75 @@ enum SharedHardeningTest {
             try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: external.appendingPathComponent(unusedNew).path)
             if let old = s11.versions().first { try Data(repeating: 0, count: 4096).write(to: old.url) }
             check("S11 nothing is removed when a saved copy can't be read", s11.removeUnusedAttachments() == 0 && there(unusedNew) && there(inUse))
+
+            // S12: the waiting screen sees an old unreadable lock as stale, and a new one as in use
+            let s12 = try fresh("s12")
+            try s12.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
+            check("S12 no lock means free", s12.holder() == nil)
+            try Data("not json".utf8).write(to: s12.lockURL)
+            check("S12 a new unreadable lock is in use", s12.holder().map { !$0.isStale } ?? false)
+            try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-3600)], ofItemAtPath: s12.lockURL.path)
+            check("S12 an old unreadable lock is stale", s12.holder()?.isStale == true)
+            try manager.removeItem(at: s12.lockURL)
+            _ = try s12.acquire(lock("old", heartbeat: .now.addingTimeInterval(-900)))
+            check("S12 an old readable lock is stale", s12.holder()?.isStale == true)
+
+            // S13: several logins take over the same stale lock at once; only one keeps it
+            let s13 = try fresh("s13")
+            try s13.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
+            _ = try s13.acquire(lock("gone", heartbeat: .now.addingTimeInterval(-900)))
+            let takers = (0..<6).map { lock("taker \($0)") }
+            let takeResults = Locked([Bool]())
+            DispatchQueue.concurrentPerform(iterations: takers.count) { index in
+                takeResults.append((try? s13.acquire(takers[index], takeOver: true)) == .acquired)
+            }
+            let holders = takers.filter { s13.holds(token: $0.token) }
+            check("S13 only one takeover wins", takeResults.value.filter { $0 }.count == 1 && holders.count == 1, "\(takeResults.value.filter { $0 }.count) won, \(holders.count) hold")
+
+            // S14: amounts in a bank file
+            check("S14 plain amounts", StatementImporter.parseAmount("1,234.56", commaDecimal: false) == Decimal(string: "1234.56"))
+            check("S14 comma decimal", StatementImporter.parseAmount("1.234,56", commaDecimal: true) == Decimal(string: "1234.56"))
+            check("S14 brackets and signs", StatementImporter.parseAmount("(12.50)", commaDecimal: false) == Decimal(string: "-12.5") && StatementImporter.parseAmount("12.50-", commaDecimal: false) == Decimal(string: "-12.5"))
+            check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
+
+            // S15: a repeating transaction missed for ten years makes recent entries, not old ones
+            let schema = Schema(versionedSchema: PiggybankSchemaV2.self)
+            let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
+            let context = memory.mainContext
+            let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
+            context.insert(account)
+            let calendar = Calendar.current
+            let tenYearsAgo = calendar.date(byAdding: .year, value: -10, to: .now) ?? .now
+            let rule = RecurringTransaction(payee: "Weekly thing", account: account, category: nil, amount: -10, frequency: .weekly, startDate: tenYearsAgo)
+            context.insert(rule)
+            let outcome = Recurring.run(in: context)
+            let made = rule.transactions.map(\.date)
+            let oldest = made.min() ?? .now
+            check("S15 a long-missed rule makes a few entries", outcome.created > 0 && outcome.created <= Recurring.maxCatchUp, "\(outcome.created) made")
+            check("S15 and they are recent", oldest > (calendar.date(byAdding: .year, value: -1, to: .now) ?? .now).addingTimeInterval(-8 * 86_400), "oldest \(oldest.formatted(date: .abbreviated, time: .omitted))")
+            check("S15 the rule moves on past today", rule.nextDate > .now.addingTimeInterval(-86_400))
+
+            // S16: restoring a backup first keeps a copy of what is there now
+            let fileStore = root.appendingPathComponent("restore-test/OinklyBudget.store")
+            try manager.createDirectory(at: fileStore.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let fileContainer = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: fileStore, cloudKitDatabase: .none))
+            let fileContext = fileContainer.mainContext
+            fileContext.insert(Account(name: "Before restoring", type: .checking, openingBalance: 0))
+            try fileContext.save()
+            let backup = try DataBackup.make(from: fileContext)
+            let marker = Date(timeIntervalSince1970: 1_000_000_000)
+            try DataBackup.makeSafetyCopy(of: fileContext, now: marker)
+            let copies = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
+            let made16 = ((try? manager.contentsOfDirectory(at: copies, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasPrefix("Before restoring a backup") && $0.lastPathComponent.contains("2001") }
+            check("S16 a copy is made before restoring", made16.count == 1 && manager.fileExists(atPath: made16[0].appendingPathComponent("OinklyBudget.store").path), "\(made16.map(\.lastPathComponent))")
+            let copied16 = try made16.first.map { try SQLiteStore.counts(of: $0.appendingPathComponent("OinklyBudget.store")) }
+            check("S16 and it holds the current data", (copied16?["ZACCOUNT"] ?? 0) >= 1)
+            for copy in made16 { try? manager.removeItem(at: copy) }
+            try DataBackup.restore(backup, into: fileContext)
+            let restored = try fileContext.fetch(FetchDescriptor<Account>()).filter { $0.name == "Before restoring" }
+            check("S16 the restore still works", restored.count == 1)
+            let stray = ((try? manager.contentsOfDirectory(at: copies, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasPrefix("Before restoring a backup") }
+            for copy in stray { try? manager.removeItem(at: copy) }
         } catch {
             check("no error", false, error.localizedDescription)
         }

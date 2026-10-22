@@ -43,14 +43,18 @@ struct PiggybankApp: App {
             StartupState.databaseError = error
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
+        // Anything the upgrade or the repeating transactions change at launch has to reach the shared data too.
+        let launchSaves = NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: nil) { _ in
+            MainActor.assumeIsolated { SharedDataSession.shared.noteSaved() }
+        }
         SchemaUpgrade.run(in: container.mainContext)
         // Repeating transactions that came due while the app was closed.
         Recurring.run(in: container.mainContext)
+        NotificationCenter.default.removeObserver(launchSaves)
         PiggybankAppDelegate.container = container
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)
         #if DEBUG
-        PDFTestHook.runIfRequested(container: container)
         PermissionSpike.runFromLaunchArgumentsIfRequested()
         #endif
     }

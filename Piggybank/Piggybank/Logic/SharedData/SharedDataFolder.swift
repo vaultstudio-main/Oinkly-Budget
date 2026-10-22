@@ -213,7 +213,7 @@ nonisolated struct SharedDataFolder: Sendable {
             let age = lockFileAge(now: now) ?? 0
             let unknown = SharedLock(token: "unreadable", userName: "another user", fullName: "", since: now.addingTimeInterval(-age), heartbeat: now.addingTimeInterval(-age))
             let stale = age > Self.staleAfter
-            if takeOver && stale { try write(body, to: lockURL); return .acquired }
+            if takeOver && stale { return try takeOverLock(body, me: me, previous: unknown) }
             return .heldBy(unknown, isStale: stale)
         }
         if current.token == me.token { return .acquired }
@@ -221,8 +221,26 @@ nonisolated struct SharedDataFolder: Sendable {
         guard takeOver && stale else { return .heldBy(current, isStale: stale) }
         // Replace the stale lock, but only if it is still the one we looked at.
         guard readLock()?.token == current.token else { return .heldBy(readLock() ?? current, isStale: false) }
+        return try takeOverLock(body, me: me, previous: current)
+    }
+
+    /// Replaces a stale lock. Two logins can do this in the same moment and both write, so afterwards each waits a
+    /// beat and reads the lock back; only the one whose lock is still there goes on.
+    private func takeOverLock(_ body: Data, me: SharedLock, previous: SharedLock) throws -> LockResult {
         try write(body, to: lockURL)
-        return .acquired
+        usleep(150_000)
+        if let now = readLock(), now.token == me.token { return .acquired }
+        return .heldBy(readLock() ?? previous, isStale: false)
+    }
+
+    /// Who has the lock right now, and whether they have gone quiet. A lock file that can't be read is stale only once it
+    /// is old, the same rule `acquire` uses. Nil when nobody has it.
+    func holder(now: Date = .now) -> (lock: SharedLock, isStale: Bool)? {
+        guard manager.fileExists(atPath: lockURL.path) else { return nil }
+        if let lock = readLock() { return (lock, lock.isStale(now: now)) }
+        let age = lockFileAge(now: now) ?? 0
+        let unknown = SharedLock(token: "unreadable", userName: "another user", fullName: "", since: now.addingTimeInterval(-age), heartbeat: now.addingTimeInterval(-age))
+        return (unknown, age > Self.staleAfter)
     }
 
     /// Shows the lock is still in use. False when someone else has taken it over.
@@ -336,6 +354,10 @@ nonisolated struct SharedDataFolder: Sendable {
     func removeUnusedAttachments(now: Date = .now) -> Int {
         let root = StoreFiles.supportURL(for: storeURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
         guard let files = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey]), !files.isEmpty else { return 0 }
+        // Nothing old enough to remove means there is nothing to look up, which is almost always.
+        let cutoff = now.addingTimeInterval(-Double(Self.attachmentGraceDays) * 86_400)
+        let old = files.filter { ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now) < cutoff }
+        guard !old.isEmpty else { return 0 }
         var stores = [storeURL] + versions().map(\.url)
         if let others = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
             stores += others.filter { $0.pathExtension == "store" && $0.lastPathComponent.contains("recovered") }
@@ -348,11 +370,8 @@ nonisolated struct SharedDataFolder: Sendable {
             }
             used.formUnion(names)
         }
-        let cutoff = now.addingTimeInterval(-Double(Self.attachmentGraceDays) * 86_400)
         var removed = 0
-        for file in files where !used.contains(file.lastPathComponent) {
-            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now
-            guard modified < cutoff else { continue }
+        for file in old where !used.contains(file.lastPathComponent) {
             if (try? manager.removeItem(at: file)) != nil { removed += 1 }
         }
         if removed > 0 { appendLog("removed \(removed) receipt file\(removed == 1 ? "" : "s") nothing uses any more", now: now) }

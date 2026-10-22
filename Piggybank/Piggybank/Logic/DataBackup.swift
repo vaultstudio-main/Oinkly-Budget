@@ -385,10 +385,27 @@ enum DataBackup {
 
     // MARK: Restore
 
+    /// A copy of everything as it is now, kept in Application Support ▸ Backups ▸ "Before restoring a backup (date)", made
+    /// before anything is deleted. If it can't be made, the restore doesn't start.
+    @MainActor
+    static func makeSafetyCopy(of context: ModelContext, now: Date = .now) throws {
+        guard let store = context.container.configurations.first?.url, !context.container.configurations.first!.isStoredInMemoryOnly else { return }
+        try? context.save()
+        let stamp = now.formatted(.iso8601.year().month().day().dateSeparator(.dash).time(includingFractionalSeconds: false).timeSeparator(.omitted))
+        let destination = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
+            .appendingPathComponent("Before restoring a backup (\(stamp))", isDirectory: true)
+        do {
+            _ = try StoreFiles.snapshot(of: store, into: destination)
+        } catch {
+            throw StoreError.failed("A copy of the current data couldn't be made first, so nothing was changed. (\(error.localizedDescription))")
+        }
+    }
+
     /// Replaces everything with the contents of `file`. Built-in categories keep their identity and take the backup's
     /// budget amounts; custom budgets are replaced with the backup's.
     @MainActor
     static func restore(_ file: BackupFile, into context: ModelContext) throws {
+        try makeSafetyCopy(of: context)
         // Clear out the current data. Objects are deleted one at a time; a batch delete fails on the links between them.
         try context.deleteAllTransactions()
         for item in try context.fetch(FetchDescriptor<Account>()) { context.delete(item) }   // takes holdings with it

@@ -104,7 +104,12 @@ enum Recurring {
         let today = calendar.startOfDay(for: now)
         let rules = ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live
         for rule in rules where rule.isActive && rule.autoEnter && rule.account?.isLive == true {
-            let due = dates(of: rule, through: today, calendar: calendar)
+            var due = dates(of: rule, through: today, calendar: calendar)
+            // So many were missed that the list was cut short: jump to the last year, so the newest ones are the ones made.
+            if due.count >= 400, let recent = firstDue(onOrAfter: calendar.date(byAdding: .year, value: -1, to: today) ?? today, for: rule, calendar: calendar) {
+                rule.nextDate = recent
+                due = dates(of: rule, through: today, calendar: calendar)
+            }
             guard !due.isEmpty else { continue }
             let skipped = max(due.count - maxCatchUp, 0)
             result.skipped += skipped
