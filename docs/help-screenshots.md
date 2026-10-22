@@ -22,7 +22,7 @@ accounts are ever on screen. They are retaken in one go whenever the screens cha
 
    `python3 scripts/make-help-images.py /Users/Shared/OinklyBudget/shots /Users/Shared/OinklyBudget/shots-wide`
 
-   That fills `Assets.xcassets` (the `Help-*` image sets Help shows), `website-vaultstudio/website/images` and
+   That fills `Assets.xcassets` (the `Help-*` image sets Help shows), `docs/website-images` and
    `docs/app-store-screenshots` (the ten App Store pictures, exactly 2880 x 1800).
 5. Build again so Help picks up the new images. Delete `/Users/Shared/OinklyBudget/shots*` afterwards.
 

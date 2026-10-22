@@ -10,8 +10,7 @@ Version 1.0 (build 5) is the first public release.
 |---|---|
 | `OinklyBudget/` | The Xcode project (OinklyBudget.xcodeproj, scheme OinklyBudget): the app, the widget extension and the shared code |
 | `docs/` | The release plan, feature list, release notes, App Store text, screenshot notes, data safety plan and the 1.1 plan |
-| `website-vaultstudio/` | The Vault Studio website, including the Oinkly Budget pages |
-| `scripts/` | `make-help-images.py`, which turns the app's own screenshots into Help, website and App Store pictures |
+| `scripts/` | `make-help-images.py`, which turns the app's own screenshots into Help, website and App Store pictures (website pictures go to `docs/website-images`; the website itself lives outside this repository) |
 
 Never run git inside `OinklyBudget/OinklyBudget`: it holds a stray nested repository.
 
