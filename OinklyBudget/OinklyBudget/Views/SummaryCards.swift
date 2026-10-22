@@ -64,14 +64,22 @@ struct SummaryBalanceCard: View {
                 Spacer()
                 Text(ReportFormat.money(total)).font(.callout.weight(.semibold)).foregroundStyle(color)
             }
-            // One bar split by what each row is of the total, so the mix reads at a glance.
+            // One bar split by what each row is of what the bar covers, so the mix reads at a glance. Only rows with something
+            // in them are drawn, and the widths are shares of those rows, so a card that is in credit (a negative amount owed)
+            // can't push the bar past the edge of the card.
+            let shown = rows.filter { $0.value > 0 }
+            let covered = shown.reduce(0) { $0 + $1.value }
             GeometryReader { geo in
+                let gaps = CGFloat(max(shown.count - 1, 0)) * 2
                 HStack(spacing: 2) {
-                    ForEach(rows.filter { $0.value > 0 }) { row in
-                        RoundedRectangle(cornerRadius: 3).fill(row.color).frame(width: max(geo.size.width * row.value / max(total, 1) - 2, 2))
+                    ForEach(shown) { row in
+                        RoundedRectangle(cornerRadius: 3).fill(row.color)
+                            .frame(width: max((geo.size.width - gaps) * row.value / max(covered, 1), 2))
                     }
-                    if total <= 0 { RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(0.2)) }
+                    if shown.isEmpty { RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(0.2)) }
                 }
+                .frame(width: geo.size.width, alignment: .leading)
+                .clipped()
             }
             .frame(height: 8)
             ForEach(rows) { row in
