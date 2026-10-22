@@ -26,8 +26,7 @@ struct StatusBar: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 SharingStatusDot()
-                ShadowStatusLabel()
-                DatabaseStatusDot()
+                ShadowDatabaseStatusLabel()
             }
             .font(.caption)
             .padding(.horizontal, 14)
@@ -98,57 +97,6 @@ private struct SharingStatusDot: View {
         case .saved: "Everything is saved to the shared data."
         case .unsaved: "Changes are saved to the shared data every couple of minutes, and when you hide or quit. Click to save now."
         case .problem(let why): why
-        }
-    }
-}
-
-/// A small coloured dot for this Mac's database: green when everything is saved, yellow while changes are being saved,
-/// red when saving keeps failing. While sharing is on, the sharing dot says whether the data is saved, so this one only
-/// appears when saving on this Mac has gone wrong.
-private struct DatabaseStatusDot: View {
-    private var status: DatabaseStatus { DatabaseStatus.shared }
-
-    private var isHiddenWhileSharing: Bool {
-        guard SharedDataSession.shared.status != nil else { return false }
-        if case .problem = status.state { return false }
-        return true
-    }
-
-    var body: some View {
-        if !isHiddenWhileSharing {
-            HStack(spacing: 5) {
-                Circle().fill(color).frame(width: 8, height: 8)
-                Text(label).foregroundStyle(.secondary)
-            }
-            .help(detail)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Database: \(label)")
-            .accessibilityHint(detail)
-        }
-    }
-
-    private var color: Color {
-        switch status.state {
-        case .saved: Theme.green
-        case .unsaved: .yellow
-        case .problem: Theme.red
-        }
-    }
-
-    private var label: String {
-        switch status.state {
-        case .saved: "Database · Saved"
-        case .unsaved: "Database · Saving…"
-        case .problem: "Database · Problem"
-        }
-    }
-
-    private var detail: String {
-        switch status.state {
-        case .saved:
-            status.lastSaved.map { "Everything is saved on this Mac. Last saved \($0.formatted(date: .omitted, time: .shortened))." } ?? "Everything is saved on this Mac."
-        case .unsaved: "Your changes are being saved."
-        case .problem(let why): "Your changes couldn't be saved: \(why) They are still in the app. Try again, or back up your data and restart."
         }
     }
 }

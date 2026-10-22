@@ -4,16 +4,21 @@ import AppKit
 
 // MARK: Status bar
 
-/// The shadow copy's part of the status bar, in words and a dot: green when it is up to date, orange when it needs
-/// attention, red when copying keeps failing.
-struct ShadowStatusLabel: View {
+/// The one status in the bottom bar for the data's safety: this Mac's database and the shadow copy together, in words and a
+/// dot. Green when everything is saved and the shadow copy is up to date, yellow while something is being written,
+/// orange when the shadow copy needs attention (including when it isn't set up), red when saving or copying keeps failing.
+struct ShadowDatabaseStatusLabel: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
+    private var database: DatabaseStatus { DatabaseStatus.shared }
+
+    static let name = "Shadow Copy Database"
 
     var body: some View {
         if !ScreenshotMode.isOn {
             Button { openSettings() } label: {
                 TimelineView(.periodic(from: .now, by: 30)) { _ in
-                    let look = Self.look(for: manager.status)
+                    let look = Self.look(database: database.state, lastSaved: database.lastSaved, shadow: manager.status,
+                                         sharing: SharedDataSession.shared.status != nil)
                     HStack(spacing: 5) {
                         Circle().fill(look.color).frame(width: 8, height: 8)
                         Text(look.text).foregroundStyle(.secondary)
@@ -34,24 +39,46 @@ struct ShadowStatusLabel: View {
         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
-    static func look(for status: ShadowCopyManager.Status) -> (color: Color, text: String, detail: String) {
-        switch status {
+    struct Look {
+        var color: Color
+        var text: String
+        var detail: String
+    }
+
+    /// What to show for this Mac's database and the shadow copy together. The worst of the two wins: a database problem,
+    /// then a shadow copy that keeps failing, then a shadow copy that needs attention (not set up counts), then work in
+    /// progress, then all well. While sharing, the sharing dot says whether the data is saved, so only a database problem
+    /// counts here.
+    static func look(database: DatabaseStatus.State, lastSaved: Date? = nil, shadow: ShadowCopyManager.Status, sharing: Bool, now: Date = .now) -> Look {
+        if case .problem(let why) = database {
+            return Look(color: Theme.red, text: "Database · Problem",
+                        detail: "Your changes couldn't be saved: \(why) They are still in the app. Try again, or back up your data and restart.")
+        }
+        switch shadow {
+        case .failed(let why):
+            return Look(color: Theme.red, text: "Shadow Copy · Problem", detail: "Copying keeps failing: \(why) Your data is not affected.")
         case .notSetUp:
-            return (.orange, "Shadow · Not set up", "A shadow copy keeps a second copy of your data in a folder you choose. Click to set it up.")
-        case .copying:
-            return (.yellow, "Shadow · Copying…", "Your shadow copy is being updated.")
-        case .upToDate(let when):
-            let ago = RelativeDateTimeFormatter.shadow.localizedString(for: when, relativeTo: .now)
-            return (Theme.green, "Shadow · Copied \(ago)", "Your shadow copy is up to date. Last copied \(when.formatted(date: .abbreviated, time: .shortened)).")
+            return Look(color: .orange, text: "\(name) · Not set up",
+                        detail: "A shadow copy keeps a second copy of your data in a folder you choose. Click to set it up.")
+        case .folderMissing:
+            return Look(color: .orange, text: "\(name) · Folder not found",
+                        detail: "The folder for your shadow copy can't be found. It may be on a drive that isn't connected. Click to choose another.")
+        case .otherData:
+            return Look(color: .orange, text: "\(name) · Other data",
+                        detail: "The shadow copy in that folder is of other data, so it was left alone. Click to start a new one.")
         case .behind(let when):
             let detail = when.map { "The last shadow copy was \($0.formatted(date: .abbreviated, time: .shortened)). Click to copy now." } ?? "No shadow copy has been made yet. Click to copy now."
-            return (.orange, "Shadow · Out of date", detail)
-        case .folderMissing:
-            return (.orange, "Shadow · Folder not found", "The folder for your shadow copy can't be found. It may be on a drive that isn't connected. Click to choose another.")
-        case .otherData:
-            return (.orange, "Shadow · Other data", "The shadow copy in that folder is of other data, so it was left alone. Click to start a new one.")
-        case .failed(let why):
-            return (Theme.red, "Shadow · Problem", "Copying keeps failing: \(why) Your data is not affected.")
+            return Look(color: .orange, text: "\(name) · Out of date", detail: detail)
+        case .copying:
+            return Look(color: .yellow, text: "\(name) · Copying…", detail: "Your shadow copy is being updated.")
+        case .upToDate(let when):
+            if !sharing, case .unsaved = database {
+                return Look(color: .yellow, text: "\(name) · Saving…", detail: "Your changes are being saved.")
+            }
+            let ago = RelativeDateTimeFormatter.shadow.localizedString(for: when, relativeTo: now)
+            let saved = lastSaved.map { " Last saved on this Mac \($0.formatted(date: .omitted, time: .shortened))." } ?? ""
+            return Look(color: Theme.green, text: "\(name) · Copied \(ago)",
+                        detail: "Everything is saved on this Mac and your shadow copy is up to date, copied \(when.formatted(date: .abbreviated, time: .shortened)).\(saved)")
         }
     }
 }
@@ -370,13 +397,24 @@ enum ShadowViewsCheck {
                 try? png.write(to: folder.appendingPathComponent("shadow-\(name).png"))
             }
         }
-        let states: [ShadowCopyManager.Status] = [.notSetUp, .copying, .upToDate(.now.addingTimeInterval(-300)), .behind(.now.addingTimeInterval(-7200)), .folderMissing, .otherData, .failed("the disk is full.")]
+        let up = ShadowCopyManager.Status.upToDate(.now.addingTimeInterval(-300))
+        let looks: [ShadowDatabaseStatusLabel.Look] = [
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: up, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .unsaved, shadow: up, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .copying, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .notSetUp, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .behind(.now.addingTimeInterval(-7200)), sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .folderMissing, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .otherData, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .saved, shadow: .failed("the disk is full."), sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .problem("the disk is full."), shadow: up, sharing: false),
+            ShadowDatabaseStatusLabel.look(database: .unsaved, shadow: up, sharing: true),
+        ]
         let bar = VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(states.enumerated()), id: \.offset) { _, status in
-                let look = ShadowStatusLabel.look(for: status)
+            ForEach(Array(looks.enumerated()), id: \.offset) { _, look in
                 HStack(spacing: 5) { Circle().fill(look.color).frame(width: 8, height: 8); Text(look.text).foregroundStyle(.secondary) }.font(.caption)
             }
-        }.padding(16).frame(width: 300, alignment: .leading).background(Color(white: 0.96))
+        }.padding(16).frame(width: 340, alignment: .leading).background(Color(white: 0.96))
         save(bar, "labels")
         save(ShadowSetupSheet().background(Color(white: 0.96)), "setup")
         save(ShadowRescueView(finding: .dataLooksEmpty(shadowAccounts: 6, shadowTransactions: 1_240)).frame(width: 500, height: 480), "rescue")

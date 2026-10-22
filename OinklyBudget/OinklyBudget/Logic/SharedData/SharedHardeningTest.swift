@@ -639,6 +639,20 @@ enum SharedHardeningTest {
             check("S26 the newest good earlier save is put back", restoredEarlier && (try? SQLiteStore.integrityIsOK(earlier.storeURL)) == true)
             let none = try fresh("s26-none")
             check("S26 with no earlier save nothing is changed", (try? SharedRescue.restoreNewestGoodEarlierSave(none, me: me26, appVersion: "1.0", staging: staging26)) == false)
+
+            // S27: the one status for the database and the shadow copy
+            let upToDate27 = ShadowCopyManager.Status.upToDate(.now.addingTimeInterval(-300))
+            func words(_ database: DatabaseStatus.State, _ shadow: ShadowCopyManager.Status, sharing: Bool = false) -> String {
+                MainActor.assumeIsolated { ShadowDatabaseStatusLabel.look(database: database, shadow: shadow, sharing: sharing).text }
+            }
+            check("S27 all well says copied", words(.saved, upToDate27).hasPrefix("Shadow Copy Database · Copied"))
+            check("S27 no shadow copy set up shows the shadow status", words(.saved, .notSetUp) == "Shadow Copy Database · Not set up")
+            check("S27 a database problem comes first", words(.problem("x"), .notSetUp) == "Database · Problem" && words(.problem("x"), .failed("y")) == "Database · Problem")
+            check("S27 a failing shadow copy is next", words(.saved, .failed("y")) == "Shadow Copy · Problem")
+            check("S27 a shadow copy that needs attention beats saving", words(.unsaved, .behind(nil)) == "Shadow Copy Database · Out of date" && words(.unsaved, .folderMissing) == "Shadow Copy Database · Folder not found")
+            check("S27 saving or copying shows as work in progress", words(.unsaved, upToDate27) == "Shadow Copy Database · Saving…" && words(.saved, .copying) == "Shadow Copy Database · Copying…")
+            check("S27 while sharing, unsaved changes are the Shared dot's to report", words(.unsaved, upToDate27, sharing: true).hasPrefix("Shadow Copy Database · Copied"))
+            check("S27 while sharing, a database problem still shows", words(.problem("x"), upToDate27, sharing: true) == "Database · Problem")
         } catch {
             check("no error", false, error.localizedDescription)
         }

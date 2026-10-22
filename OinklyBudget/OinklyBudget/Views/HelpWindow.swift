@@ -58,17 +58,21 @@ enum HelpContent {
                 "Cash on Hand sits at the top by itself, with your Primary Checking account under it if you chose one. The rest are grouped in folders by type: Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets. Click an account to open its register. The side panel shows each account's name and type, never its balance, so nothing private is on show until you open it.",
                 "Manage Accounts is pinned at the bottom of the panel.",
                 "## The bar at the bottom",
-                "The bar along the bottom of every page says what you are looking at. On the right, a dot tells you your data is safe: green Database · Saved, yellow Saving… for a moment after a change, red Problem if saving keeps failing. Hover over it to see when it was last saved.",
+                "The bar along the bottom of every page says what you are looking at. On the right, one dot tells you your data is safe: green Shadow Copy Database · Copied 5 min. ago when everything is saved and your shadow copy is up to date, yellow while something is being written, orange when the shadow copy needs a look (it says Not set up until you set one up), red if saving or copying keeps failing. Click it to open the settings.",
             ]),
         
 
             Topic(title: "The Status Bar", symbol: "dot.circle", lines: [
                 "The bar along the bottom of every page says what you are looking at on the left, such as 134 transactions · October 2026.",
-                "On the right, a small dot tells you your data is safe.",
-                "• Green, Database · Saved: everything is written to your Mac.",
-                "• Yellow, Database · Saving…: a change was just made and is being written. It turns green again in a moment.",
+                "On the right, one dot and a few words tell you your data is safe. It covers both the database on this Mac and your shadow copy. Click it to open Settings ▸ Data & Backup.",
+                "• Green, Shadow Copy Database · Copied 5 min. ago: everything is written to your Mac and your shadow copy is up to date.",
+                "• Yellow, Saving… or Copying…: a change was just made and is being written. It turns green again in a moment.",
+                "• Orange, Not set up: you haven't set up a shadow copy yet. Click it to choose a folder.",
+                "• Orange, Out of date, Folder not found or Other data: the shadow copy needs a look. Out of date means changes have waited a while to be copied. Folder not found means its folder or drive can't be reached. Other data means the folder holds a shadow copy of different data, which was left alone.",
                 "• Red, Database · Problem: saving keeps failing. Your changes are still in the app. Save a backup, then restart Oinkly Budget. Hover over the dot to see why.",
-                "Hover over the dot to see when everything was last saved.",
+                "• Red, Shadow Copy · Problem: copying keeps failing. Your data is not affected.",
+                "While you share your data, a separate Shared dot says whether the shared data is saved, and this one shows the shadow copy and only reports a database problem.",
+                "Hover over the dot to see when everything was last saved and copied.",
             ]),
 
             Topic(title: "Using Help", symbol: "questionmark.circle", lines: [

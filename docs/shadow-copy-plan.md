@@ -11,7 +11,7 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - **Format:** a checked snapshot of the data file plus the receipts (not a `.pig`): exact, fast, written in the background. `.pig` stays the manual backup.
 - **When:** a few minutes after changes, when the app is hidden, and on quit. In sharing: after every save of the shared data.
 - **Kept:** the latest copy, the newest 10 older copies, plus one per day for a week.
-- **Status:** a separate label next to the other dots, always in words: green "Copied 5 min. ago", yellow "Copying…", orange "Not set up / Out of date / Folder not found / Other data", red "Problem". Clicking it opens Settings ▸ Data & Backup.
+- **Status:** one combined label for this Mac's database and the shadow copy, called "Shadow Copy Database", in the bottom bar. The worst state wins: red "Database · Problem" or "Shadow Copy · Problem", then orange for the shadow copy (Not set up, Out of date, Folder not found, Other data), then yellow (Saving…, Copying…), then green "Copied 5 min. ago". Without a shadow copy set up it shows the orange Not set up nudge. While sharing, the Shared dot is separate and this one only reports a database problem. Clicking it opens Settings ▸ Data & Backup.
 - **Asking:** once the person has added some data, a sheet explains it (including that it is not encrypted); "Not now" waits a week, "Don't ask again" stops it.
 - **Erase All Data:** offers "Erase Everything and Delete the Shadow Copy" next to the plain erase, which leaves the shadow copy so the erase can be undone.
 - **Privacy:** plain, unencrypted copy; the setup sheet, the Settings footer and a Read Me in the folder say so.
