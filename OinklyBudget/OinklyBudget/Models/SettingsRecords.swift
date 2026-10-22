@@ -247,7 +247,7 @@ enum OutlookSnapshots {
                                   rules: ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live,
                                   categories: ((try? context.fetch(FetchDescriptor<Category>())) ?? []).live, monthTransactions: transactions,
                                   excludedAccounts: MonthOutlook.excluded(from: UserDefaults.standard.string(forKey: MonthOutlook.excludedKey) ?? ""),
-                                  cashBudgetKeys: CashBudgets.keys(in: context))
+                                  cashBudgetKeys: CashBudgets.keys(in: context), weeklyAmounts: BudgetPeriods.weeklyAmounts(in: context))
     }
 
     /// Keeps the figures of last month, if they haven't been kept yet. Does nothing before there is any data.
@@ -392,6 +392,16 @@ enum BudgetPeriods {
     /// The monthly equivalent of a weekly amount: an average month is 52 weeks over 12, to the cent.
     static func monthly(fromWeekly weekly: Decimal) -> Decimal {
         var value = weekly * 52 / 12
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &value, 2, .plain)
+        return rounded
+    }
+
+    /// What a weekly amount adds up to in one particular month: a week is seven days, so it is the weekly amount over seven times
+    /// the days in that month. $100 a week is $428.57 in a 30-day month and $442.86 in a 31-day one.
+    static func monthlyMaximum(weekly: Decimal, inMonthOf date: Date, calendar: Calendar = .current) -> Decimal {
+        let days = calendar.range(of: .day, in: .month, for: date)?.count ?? 30
+        var value = weekly * Decimal(days) / 7
         var rounded = Decimal()
         NSDecimalRound(&rounded, &value, 2, .plain)
         return rounded

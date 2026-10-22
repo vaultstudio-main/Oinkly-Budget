@@ -141,9 +141,13 @@ struct BudgetsView: View {
     private func weeklyContent(_ budgets: [Category], weekly: [String: Decimal], isCash: (Category) -> Bool) -> some View {
         let weekInterval = interval(ofWeek: week)
         let table = Budget.spentTable(transactions(from: weekInterval.start, to: weekInterval.end), interval: weekInterval)
+        // The monthly maximum is worked out for the month the week starts in, from the days that month really has.
+        let maxMonth = MonthFilter.start(of: week)
+        let daysInMonth = Calendar.current.range(of: .day, in: .month, for: maxMonth)?.count ?? 30
         let shown = budgets.map { category -> Shown in
-            Shown(category: category, limit: weekly[CashBudgets.key(for: category)] ?? 0, spent: table[category],
-                  isCash: isCash(category), monthlyMaximum: category.monthlyLimit)
+            let amount = weekly[CashBudgets.key(for: category)] ?? 0
+            return Shown(category: category, limit: amount, spent: table[category], isCash: isCash(category),
+                         monthlyMaximum: BudgetPeriods.monthlyMaximum(weekly: amount, inMonthOf: maxMonth))
         }
         let budgeted = shown.reduce(Decimal(0)) { $0 + $1.limit }
         let spent = shown.reduce(Decimal(0)) { $0 + $1.spent }
@@ -165,7 +169,7 @@ struct BudgetsView: View {
                 total("Spent", spent, note: "this week")
                 total(budgeted - spent < 0 ? "Over" : "Left", abs(budgeted - spent), note: "this week",
                       color: budgeted - spent < 0 ? Theme.red : Theme.green)
-                total("Monthly maximum", monthlyMaximum, note: "all weekly budgets, about 4.33 weeks a month")
+                total("Monthly maximum", monthlyMaximum, note: "\(maxMonth.formatted(.dateTime.month(.wide))) has \(daysInMonth) days")
             }
             grid(shown)
         }
@@ -262,6 +266,7 @@ struct BudgetsView: View {
                 Divider()
                 HStack {
                     Text("MONTHLY MAXIMUM").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                        .help("The weekly amount over seven, times the days in the month")
                     Spacer()
                     Text(monthlyMaximum, format: .appCurrency).font(.caption.weight(.semibold))
                 }

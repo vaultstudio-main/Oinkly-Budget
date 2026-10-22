@@ -104,7 +104,7 @@ struct MonthOutlook {
     /// Works out the outlook for the month containing `month`. `monthTransactions` is every transaction dated in it.
     static func build(
         month: Date, bills: [Bill], rules: [RecurringTransaction], categories: [Category], monthTransactions: [Transaction],
-        excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], now: Date = .now, calendar: Calendar = .current
+        excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], weeklyAmounts: [String: Decimal] = [:], now: Date = .now, calendar: Calendar = .current
     ) -> MonthOutlook {
         func counts(_ account: Account?) -> Bool { account.map { !excludedAccounts.contains(accountKey($0)) } ?? true }
         let interval = calendar.dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 86400 * 30)
@@ -116,6 +116,11 @@ struct MonthOutlook {
         func isCash(_ category: Category?) -> Bool { category.map { cashBudgetKeys.contains(CashBudgets.key(for: $0)) } ?? false }
         let budgeted = categories.live.filter { !$0.isIncome && $0.showOnBudgets && $0.monthlyLimit > 0 && !isCash($0) }
         let budgetIDs = Set(budgeted.map(\.persistentModelID))
+        // A budget set as a weekly amount is worth that many days of it in this month: the days the month has over seven.
+        func monthLimit(_ category: Category) -> Decimal {
+            guard let weekly = weeklyAmounts[BudgetPeriods.key(for: category)] else { return category.monthlyLimit }
+            return BudgetPeriods.monthlyMaximum(weekly: weekly, inMonthOf: start, calendar: calendar)
+        }
         let spent = Budget.spentTable(live, month: start, calendar: calendar)
         var planned: [PersistentIdentifier: Decimal] = [:]
         var inside: [PersistentIdentifier: [Line]] = [:]
@@ -200,7 +205,7 @@ struct MonthOutlook {
         }
 
         let budgetLines = budgeted.map {
-            BudgetLine(category: $0, limit: $0.monthlyLimit, spent: spent[$0], planned: planned[$0.persistentModelID] ?? 0,
+            BudgetLine(category: $0, limit: monthLimit($0), spent: spent[$0], planned: planned[$0.persistentModelID] ?? 0,
                        inside: (inside[$0.persistentModelID] ?? []).sorted { $0.date < $1.date })
         }.sorted { $0.category.name.localizedCaseInsensitiveCompare($1.category.name) == .orderedAscending }
 

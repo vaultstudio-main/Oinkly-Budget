@@ -42,7 +42,7 @@ struct BudgetEditView: View {
                         .multilineTextAlignment(.trailing)
                 }
                 if isWeekly && limit > 0 {
-                    Text("Reports and the Summary read this as about \(BudgetPeriods.monthly(fromWeekly: limit).formatted(.appCurrency)) a month.")
+                    Text("The Weekly tab and the Month Outlook work out each month from its real days: \(limit.formatted(.appCurrency)) over 7, times 30 days is \(BudgetPeriods.monthlyMaximum(weekly: limit, inMonthOf: DateComponents(calendar: .current, year: 2026, month: 4, day: 1).date ?? .now).formatted(.appCurrency)). Reports and the Summary use an average month, about \(BudgetPeriods.monthly(fromWeekly: limit).formatted(.appCurrency)).")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if !category.isIncome {

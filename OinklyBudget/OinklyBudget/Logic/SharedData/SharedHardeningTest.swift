@@ -1141,6 +1141,11 @@ enum SharedHardeningTest {
                 let wc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 check("S41 a weekly amount is read as about a month: 100 a week is 433.33", BudgetPeriods.monthly(fromWeekly: 100) == Decimal(string: "433.33"))
                 check("S41 and 15 a week is 65", BudgetPeriods.monthly(fromWeekly: 15) == 65)
+                func month(_ m: Int, year: Int = 2026) -> Date { DateComponents(calendar: calendar, year: year, month: m, day: 10).date! }
+                check("S41 100 a week is 428.57 in a 30-day month", BudgetPeriods.monthlyMaximum(weekly: 100, inMonthOf: month(4)) == Decimal(string: "428.57"))
+                check("S41 and 442.86 in a 31-day month", BudgetPeriods.monthlyMaximum(weekly: 100, inMonthOf: month(10)) == Decimal(string: "442.86"))
+                check("S41 and exactly 400 in a 28-day February", BudgetPeriods.monthlyMaximum(weekly: 100, inMonthOf: month(2)) == 400)
+                check("S41 and 414.29 in a 29-day leap February", BudgetPeriods.monthlyMaximum(weekly: 100, inMonthOf: month(2, year: 2028)) == Decimal(string: "414.29"))
                 let food = Category(name: "Weekly food", colorHex: "34C759", symbol: "cart", monthlyLimit: 0, isIncome: false, systemKey: Category.customKeyPrefix + "weekly-food")
                 wc.insert(food)
                 BudgetPeriods.set(amount: 100, weekly: true, for: food, in: wc)
@@ -1149,6 +1154,12 @@ enum SharedHardeningTest {
                 BudgetPeriods.set(amount: 120, weekly: true, for: food, in: wc)
                 try wc.save()
                 check("S41 changing it keeps one record", ((try? wc.fetch(FetchDescriptor<BudgetPeriod>())) ?? []).count == 1 && BudgetPeriods.weeklyAmount(for: food) == 120)
+                // The Month Outlook counts a weekly budget by the days of the month it is showing
+                let april = MonthOutlook.build(month: month(4), bills: [], rules: [], categories: [food], monthTransactions: [],
+                                               weeklyAmounts: BudgetPeriods.weeklyAmounts(in: wc), now: month(4), calendar: calendar)
+                let october = MonthOutlook.build(month: month(10), bills: [], rules: [], categories: [food], monthTransactions: [],
+                                                 weeklyAmounts: BudgetPeriods.weeklyAmounts(in: wc), now: month(10), calendar: calendar)
+                check("S41 the Month Outlook counts a weekly budget by the month's days", april.budgets.first?.limit == BudgetPeriods.monthlyMaximum(weekly: 120, inMonthOf: month(4)) && october.budgets.first?.limit == BudgetPeriods.monthlyMaximum(weekly: 120, inMonthOf: month(10)) && april.budgets.first?.limit != october.budgets.first?.limit)
                 let bank = Account(name: "Weekly bank", type: .checking, openingBalance: 0)
                 wc.insert(bank)
                 func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: .now))! }
