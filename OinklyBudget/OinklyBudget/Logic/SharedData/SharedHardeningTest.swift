@@ -513,6 +513,90 @@ enum SharedHardeningTest {
             check("S24 when nobody else uses it the folder is removed", !alone.exists && (noteAlone ?? "").contains("removed"), noteAlone ?? "")
             let gone = SharedDataFolder(url: root.appendingPathComponent("never-made", isDirectory: true))
             check("S24 a folder that is already gone is fine", SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: gone, useTrash: false) == nil)
+
+            // S25: the shadow copy: writing, older copies, damage, and the checks against the data
+            let shadowRoot = root.appendingPathComponent("shadow-parent", isDirectory: true)
+            try manager.createDirectory(at: shadowRoot, withIntermediateDirectories: true)
+            let shadow = ShadowFolder(inside: shadowRoot)
+            let shadowFirst = try shadow.write(from: source, dataID: "data-1", source: "This Mac", appVersion: "1.0")
+            check("S25 the first copy is number 1 and matches the data", shadowFirst.copyNumber == 1 && shadowFirst.accounts == (counts["ZACCOUNT"] ?? 0) && shadowFirst.transactions == (counts["ZTRANSACTION"] ?? 0))
+            check("S25 it passes its own check", shadow.allVersions().first.map { shadow.isGood($0) } == true)
+            var shadowStat = stat()
+            stat(shadow.url.path, &shadowStat)
+            check("S25 only its owner can open the folder", shadowStat.st_mode & 0o077 == 0)
+            check("S25 no half-written files are left", ((try? manager.contentsOfDirectory(atPath: shadow.url.path)) ?? []).filter { $0.hasSuffix(".tmp") }.isEmpty)
+            let shadowSecond = try shadow.write(from: source, dataID: "data-1", source: "This Mac", appVersion: "1.0")
+            check("S25 the next copy is number 2 and the first becomes an older copy", shadowSecond.copyNumber == 2 && shadow.olderVersions().count == 1 && shadow.olderVersions().first?.info.copyNumber == 1)
+            for _ in 0..<14 { try shadow.write(from: source, dataID: "data-1", source: "This Mac", appVersion: "1.0") }
+            check("S25 older copies are trimmed to the newest ten", shadow.olderVersions().count == ShadowFolder.keepNewest, "\(shadow.olderVersions().count)")
+            check("S25 the newest older copy is the one just before the latest", shadow.olderVersions().first?.info.copyNumber == (shadow.readInfo()?.copyNumber ?? 0) - 1)
+            // A damaged latest copy is noticed, and the newest good one is found
+            let latestBytes = try Data(contentsOf: shadow.storeURL)
+            try Data(latestBytes.prefix(latestBytes.count / 3)).write(to: shadow.storeURL)
+            check("S25 a damaged copy fails its check", shadow.allVersions().first.map { shadow.isGood($0) } == false)
+            check("S25 the newest good copy is the next one back", shadow.newestGoodVersion()?.isLatest == false && shadow.newestGoodVersion()?.info.copyNumber == (shadow.readInfo()?.copyNumber ?? 0) - 1)
+            // Putting a copy back
+            let restoreTarget = root.appendingPathComponent("restored/OinklyBudget.store")
+            if let good = shadow.newestGoodVersion() {
+                try shadow.restore(good, to: restoreTarget)
+                let back = try SQLiteStore.counts(of: restoreTarget)
+                check("S25 a restored copy holds the same records", back["ZACCOUNT"] == good.info.accounts && back["ZTRANSACTION"] == good.info.transactions)
+                check("S25 a damaged copy is refused", { () -> Bool in
+                    guard let bad = shadow.allVersions().first(where: { $0.isLatest }) else { return false }
+                    return (try? shadow.restore(bad, to: root.appendingPathComponent("refused/OinklyBudget.store"))) == nil
+                }())
+            }
+            // A shadow copy that can't be written changes nothing
+            let shadowBefore = shadow.readInfo()
+            check("S25 a copy from a missing file fails and leaves the shadow alone", (try? shadow.write(from: root.appendingPathComponent("nothing.store"), dataID: "data-1", source: "This Mac", appVersion: "1.0")) == nil && shadow.readInfo() == shadowBefore)
+            // The checks against the data
+            let shadow2 = ShadowFolder(inside: root.appendingPathComponent("shadow-2", isDirectory: true))
+            try shadow2.write(from: source, dataID: "data-2", source: "This Mac", appVersion: "1.0")
+            check("S25 matching data has nothing to say", ShadowCheck.lookAtOwnData(store: source, shadow: shadow2, dataID: "data-2") == nil || (counts["ZTRANSACTION"] ?? 0) == 0)
+            check("S25 a shadow copy of other data is noticed", ShadowCheck.lookAtOwnData(store: source, shadow: shadow2, dataID: "someone-else") == .otherData)
+            check("S25 no shadow copy means nothing to say", ShadowCheck.lookAtOwnData(store: source, shadow: ShadowFolder(inside: root.appendingPathComponent("none")), dataID: "data-2") == nil)
+            let emptyStore = root.appendingPathComponent("empty/OinklyBudget.store")
+            try manager.createDirectory(at: emptyStore.deletingLastPathComponent(), withIntermediateDirectories: true)
+            do { _ = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: emptyStore, cloudKitDatabase: .none)) }
+            var bigInfo = try JSONDecoder.shadowTest.decode(ShadowInfo.self, from: Data(contentsOf: shadow2.infoURL))
+            bigInfo.accounts = 5
+            bigInfo.transactions = 200
+            try JSONEncoder.shadowTest.encode(bigInfo).write(to: shadow2.infoURL)
+            check("S25 empty data against a full shadow copy is noticed", {
+                if case .dataLooksEmpty = ShadowCheck.lookAtOwnData(store: emptyStore, shadow: shadow2, dataID: "data-2") { return true }
+                return false
+            }())
+            check("S25 data that has gone missing is noticed", {
+                if case .dataLooksEmpty = ShadowCheck.lookAtOwnData(store: root.appendingPathComponent("gone.store"), shadow: shadow2, dataID: "data-2") { return true }
+                return false
+            }())
+            let garbage = root.appendingPathComponent("garbage.store")
+            try Data("not a database at all".utf8).write(to: garbage)
+            check("S25 unreadable data is noticed", {
+                if case .dataUnreadable = ShadowCheck.lookAtOwnData(store: garbage, shadow: shadow2, dataID: "data-2") { return true }
+                return false
+            }())
+            // Sharing
+            let sharedA = try fresh("s25-shared")
+            let sharedInfo = try sharedA.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
+            let shadow3 = ShadowFolder(inside: root.appendingPathComponent("shadow-3", isDirectory: true))
+            try shadow3.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: sharedInfo.revision, sharedFileID: sharedInfo.fileID, appVersion: "1.0")
+            check("S25 shared data that matches the shadow copy has nothing to say", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow3, dataID: "data-3") == nil)
+            let shadow4 = ShadowFolder(inside: root.appendingPathComponent("shadow-4", isDirectory: true))
+            try shadow4.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: sharedInfo.revision + 4, sharedFileID: sharedInfo.fileID, appVersion: "1.0")
+            check("S25 shared data older than the shadow copy is noticed", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow4, dataID: "data-3") == .sharedOlder(sharedRevision: sharedInfo.revision, shadowRevision: sharedInfo.revision + 4))
+            let shadow5 = ShadowFolder(inside: root.appendingPathComponent("shadow-5", isDirectory: true))
+            try shadow5.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: 1, sharedFileID: "another-shared-data", appVersion: "1.0")
+            check("S25 shared data that isn't the data the shadow came from is noticed", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow5, dataID: "data-3") == .sharedIsDifferent)
+            let sharedGone = SharedDataFolder(url: root.appendingPathComponent("s25-gone", isDirectory: true))
+            check("S25 shared data that is missing is noticed when there is a shadow copy", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == .sharedMissing)
+            check("S25 and not when there is none", ShadowCheck.lookAtSharedData(sharedGone, shadow: ShadowFolder(inside: root.appendingPathComponent("no-shadow")), dataID: "data-3") == nil)
+            let sharedBad = try fresh("s25-bad")
+            try Data("damaged".utf8).write(to: sharedBad.storeURL)
+            check("S25 damaged shared data is noticed", {
+                if case .sharedUnreadable = ShadowCheck.lookAtSharedData(sharedBad, shadow: shadow3, dataID: "data-3") { return true }
+                return false
+            }())
         } catch {
             check("no error", false, error.localizedDescription)
         }
@@ -528,5 +612,13 @@ private final class Locked<T>: @unchecked Sendable {
     init(_ value: T) { stored = value }
     var value: T { lock.lock(); defer { lock.unlock() }; return stored }
     func append<E>(_ element: E) where T == [E] { lock.lock(); stored.append(element); lock.unlock() }
+}
+
+private extension JSONDecoder {
+    static var shadowTest: JSONDecoder { let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d }
+}
+
+private extension JSONEncoder {
+    static var shadowTest: JSONEncoder { let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601; return e }
 }
 #endif

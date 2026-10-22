@@ -142,6 +142,22 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
                 await SharedDataSession.shared.checkInNow(release: false)
             }
         }
+        ShadowCopyManager.shared.start()
+        // Say what happened after restoring from the shadow copy.
+        Task { @MainActor in
+            guard let note = UserDefaults.standard.string(forKey: "shadowRestoreNote") else { return }
+            UserDefaults.standard.removeObject(forKey: "shadowRestoreNote")
+            var window: NSWindow?
+            for _ in 0..<80 where window == nil {
+                try? await Task.sleep(for: .milliseconds(500))
+                window = NSApp.windows.first { $0.title == "Oinkly Budget" && $0.isVisible }
+            }
+            guard let window else { return }
+            let alert = NSAlert()
+            alert.messageText = "Shadow copy"
+            alert.informativeText = note
+            _ = await alert.beginSheetModal(for: window)
+        }
         // Say what happened to the shared folder after stopping sharing.
         Task { @MainActor in
             guard let note = UserDefaults.standard.string(forKey: SharedDataSession.stopNoteKey) else { return }
@@ -195,10 +211,13 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
     /// Quitting saves the shared data first and lets go of the lock.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let shared = SharedDataSession.shared
-        guard shared.isActive || shared.lostLock else { return .terminateNow }
+        let shadow = ShadowCopyManager.shared
+        guard shared.isActive || shared.lostLock || shadow.needsCopyAtQuit else { return .terminateNow }
         Task { @MainActor in
             // Saving the shared data lets go of the lock, so the next user can open it.
             await shared.finishForQuit()
+            // The last changes go into the shadow copy too.
+            await shadow.copyForQuit()
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

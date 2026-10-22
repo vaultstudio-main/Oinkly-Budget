@@ -457,6 +457,8 @@ struct DataSettingsView: View {
 
             if !ScreenshotMode.isOn { SharedDataSection() }
 
+            if !ScreenshotMode.isOn { ShadowCopySection() }
+
 
             Section {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
@@ -489,9 +491,15 @@ struct DataSettingsView: View {
         }
         .confirmationDialog("Erase everything and quit?", isPresented: $confirmingErase, titleVisibility: .visible) {
             Button("Erase Everything and Quit", role: .destructive, action: erase)
+            if ShadowCopyManager.shared.isSetUp {
+                Button("Erase Everything and Delete the Shadow Copy", role: .destructive) {
+                    ShadowCopyManager.shared.deleteCopies()
+                    erase()
+                }
+            }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone.")
+            Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone." + (ShadowCopyManager.shared.isSetUp ? " Your shadow copy stays unless you choose to delete it too, so the erase can still be undone from it." : ""))
         }
     }
 

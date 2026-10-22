@@ -42,6 +42,12 @@ final class SharedDataSession {
     private var folder: SharedDataFolder?
     private var baseRevision: Int?
     private var fileID: String?
+
+    /// Which save of which shared data this copy was opened from, for the shadow copy.
+    var shadowSource: (revision: Int, fileID: String)? {
+        guard isActive, let baseRevision, let fileID else { return nil }
+        return (baseRevision, fileID)
+    }
     private let me = SharedLock(token: UUID().uuidString, userName: NSUserName(), fullName: NSFullUserName(), since: .now, heartbeat: .now,
                                 pid: ProcessInfo.processInfo.processIdentifier, host: ProcessInfo.processInfo.hostName)
     private var heartbeatTask: Task<Void, Never>?
@@ -439,6 +445,8 @@ final class SharedDataSession {
             baseRevision = info.revision
             fileID = info.fileID
             errorMessage = nil
+            // The shadow copy follows each save of the shared data.
+            await ShadowCopyManager.shared.afterSharedSave(revision: info.revision, fileID: info.fileID)
             if release {
                 stopTimers()
                 isActive = false

@@ -26,6 +26,7 @@ struct StatusBar: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 SharingStatusDot()
+                ShadowStatusLabel()
                 DatabaseStatusDot()
             }
             .font(.caption)

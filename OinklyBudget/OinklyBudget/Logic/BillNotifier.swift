@@ -58,7 +58,7 @@ enum BillNotifier {
     @MainActor
     static func refresh(in context: ModelContext) async {
         // Screenshots use made-up data: never touch the real reminders.
-        guard !ScreenshotMode.isOn else { return }
+        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return }
         let center = UNUserNotificationCenter.current()
 
         // Clear out only our own notifications.

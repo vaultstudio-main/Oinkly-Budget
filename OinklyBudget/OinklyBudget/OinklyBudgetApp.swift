@@ -17,6 +17,7 @@ struct OinklyBudgetApp: App {
         ClosingCountdown.runTestIfRequested()
         WidgetSnapshotWriter.runCheckIfRequested()
         ArtworkThemePicker.runCheckIfRequested()
+        ShadowViewsCheck.runIfRequested()
         SharedHardeningTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
@@ -25,6 +26,10 @@ struct OinklyBudgetApp: App {
             // Taking screenshots: a throwaway data file, so no real data is shown or changed.
             configuration = ModelConfiguration(schema: schema, url: ScreenshotMode.storeURL, cloudKitDatabase: .none)
         } else {
+        // A restore from the shadow copy that was asked for before the restart happens now, before the data is opened.
+        if let note = ShadowCopyManager.performPendingRestore(localStore: AppStore.localStoreURL(for: schema)) {
+            UserDefaults.standard.set(note, forKey: "shadowRestoreNote")
+        }
         StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         #if DEBUG
         SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: AppStore.localStoreURL(for: schema))
@@ -37,9 +42,16 @@ struct OinklyBudgetApp: App {
         case .waiting:
             configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         case .local:
-            // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
-            // that the widgets need would move the default data file to the group folder, and an update would open empty.
-            configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
+            // The shadow copy gets a look first: if this Mac's data is empty, much smaller or can't be read while the shadow
+            // copy has plenty, the app asks before opening anything.
+            if let finding = ShadowCopyManager.launchFinding(localStore: AppStore.localStoreURL(for: schema)) {
+                StartupState.shadowFinding = finding
+                configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            } else {
+                // `groupContainer: .none` keeps the data file where 1.0 put it, in the app's own folder. Without it, the App Group
+                // that the widgets need would move the default data file to the group folder, and an update would open empty.
+                configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
+            }
         }
         }
         if SharedDataSession.shared.decision == nil && !ScreenshotMode.isOn { StoreReset.performIfRequested(for: configuration) }
@@ -49,6 +61,8 @@ struct OinklyBudgetApp: App {
             // Keep going with throwaway storage so the boot window can explain what went wrong.
             // The main window never opens in this state.
             StartupState.databaseError = error
+            // With a shadow copy set up, the boot screen can offer to restore from it.
+            if ShadowCopyManager.isSetUpNow { StartupState.shadowFinding = .dataUnreadable(error.localizedDescription) }
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
         // Anything the upgrade or the repeating transactions change at launch has to reach the shared data too.
@@ -57,7 +71,7 @@ struct OinklyBudgetApp: App {
         }
         SchemaUpgrade.run(in: container.mainContext)
         // Repeating transactions that came due while the app was closed.
-        Recurring.run(in: container.mainContext)
+        if StartupState.shadowFinding == nil { Recurring.run(in: container.mainContext) }
         NotificationCenter.default.removeObserver(launchSaves)
         OinklyBudgetAppDelegate.container = container
         BalanceCache.install()
