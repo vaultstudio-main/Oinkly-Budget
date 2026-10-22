@@ -26,6 +26,7 @@ struct OinklyBudgetApp: App {
         let configuration: ModelConfiguration
         if ScreenshotMode.isOn {
             // Taking screenshots: a throwaway data file, so no real data is shown or changed.
+            ScreenshotMode.removeStoreIfRequested()
             configuration = ModelConfiguration(schema: schema, url: ScreenshotMode.storeURL, cloudKitDatabase: .none)
         } else {
         // A restore from the backup copy that was asked for before the restart happens now, before the data is opened.

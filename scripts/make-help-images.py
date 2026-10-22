@@ -40,6 +40,8 @@ HELP = [
     ("Help-investments", "page-investments", 1800, None),
     ("Help-goals", "page-planning", 1800, None),
     ("Help-budgets", "page-budgets", 1800, None),
+    ("Help-month-outlook", "page-month-outlook", 1800, None),
+    ("Help-reports-budgets", "page-reports-budgets", 1800, None),
     ("Help-manage-accounts-page", "page-manage-accounts", 1800, None),
     ("Help-bills", "page-bills", 1800, None),
     ("Help-recurring", "page-recurring", 1800, None),
@@ -102,7 +104,7 @@ WEB = [
     ("recurring.png", "page-recurring"), ("register.png", "account-checking"), ("card.png", "account-card"),
     ("mortgage.png", "account-mortgage"), ("savings.png", "account-savings"), ("reports.png", "page-reports-spending"),
     ("liabilities.png", "page-liabilities"), ("investments.png", "page-investments"), ("planning.png", "page-planning"),
-    ("budgets.png", "page-budgets"), ("cash.png", "account-cash"), ("brokerage.png", "account-brokerage"),
+    ("budgets.png", "page-budgets"), ("month-outlook.png", "page-month-outlook"), ("cash.png", "account-cash"), ("brokerage.png", "account-brokerage"),
 ]
 WEB_SMALL = [
     ("split.png", "win-new-transaction-split", 900), ("import.png", "sheet-import", 1100), ("export.png", "sheet-export-pdf", 900),
@@ -112,12 +114,12 @@ WEB_SMALL = [
     ("pay-bill.png", "win-pay-bill", 900), ("settings-reminders.png", "set-reminders", 900),
 ]
 
-# App Store: exactly 2880 x 1800.
+# App Store: exactly 2880 x 1800. Apple takes ten; the eleventh is a spare to swap in.
 STORE = [
     ("01-summary.png", "page-summary"), ("02-bills.png", "page-bills"), ("03-recurring.png", "page-recurring"),
     ("04-checking.png", "account-checking"), ("05-reports.png", "page-reports"), ("06-planning.png", "page-planning"),
     ("07-card.png", "account-card"), ("08-budgets.png", "page-budgets"), ("09-investments.png", "page-investments"),
-    ("10-transactions.png", "page-transactions"),
+    ("10-transactions.png", "page-transactions"), ("11-month-outlook.png", "page-month-outlook"),
 ]
 
 

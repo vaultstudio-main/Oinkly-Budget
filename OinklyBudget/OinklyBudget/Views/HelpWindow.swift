@@ -595,6 +595,7 @@ enum HelpContent {
                                    Shot(asset: "Help-make-recurring", caption: "Make Recurring, filled in from a transaction."),
                                    Shot(asset: "Help-recurring-pending", caption: "A pending entry made by a rule, in the register.")],
         "Paying a Bill": [Shot(asset: "Help-pay-bill", caption: "The Pay a Bill window.")],
+        "Month Outlook": [Shot(asset: "Help-month-outlook", caption: "The Month Outlook page.")],
         "Categories & Budgets": [Shot(asset: "Help-categories", caption: "Settings ▸ Categories with budgets."),
                                  Shot(asset: "Help-budgets", caption: "The Budgets page.")],
         "Summary": [Shot(asset: "Help-summary", caption: "The top of the Summary."),

@@ -18,6 +18,13 @@ enum ScreenshotMode {
         #endif
     }
 
+    /// `-screenshotFresh YES` starts from an empty throwaway data file, so changes to the test data show up. Only ever touches
+    /// the throwaway file, never the real data. Call before the file is opened.
+    static func removeStoreIfRequested() {
+        guard UserDefaults.standard.bool(forKey: "screenshotFresh") else { return }
+        try? FileManager.default.removeItem(at: storeURL.deletingLastPathComponent())
+    }
+
     /// The throwaway data file, in the app's own temporary folder.
     static var storeURL: URL { FileManager.default.temporaryDirectory.appendingPathComponent("ScreenshotStore/OinklyBudget.store") }
 }
