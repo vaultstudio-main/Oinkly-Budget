@@ -19,6 +19,9 @@ nonisolated struct ShadowInfo: Codable, Equatable, Sendable {
     var sharedFileID: String?
     var accounts: Int
     var transactions: Int
+    /// The receipt and photo files this copy uses, so unused ones can be cleaned up without opening every copy. Nil in
+    /// copies made before it was kept.
+    var attachments: [String]?
 }
 
 /// What a sealed .pig file says about itself in its header.
@@ -78,6 +81,8 @@ nonisolated struct ShadowFolder: Sendable {
     static let portableName = "Portable files"
     /// How many of the portable .pig files are kept (they carry the receipts inside them, so they are large).
     static let keepPortable = 5
+    /// A receipt must have been in the backup copy this long before it can be removed for not being used.
+    static let receiptGraceDays = 30
     static let formatVersion = 1
     static let schemaVersion = 4
     /// The newest older copies kept, and how many days back one per day is kept as well.
@@ -153,12 +158,14 @@ nonisolated struct ShadowFolder: Sendable {
             try? manager.removeItem(at: stagingSealed)
         }
         let counts: [String: Int]
+        var attachments: [String]?
         do {
             try SQLiteStore.vacuum(source: live, into: staging)
             let expected = try SQLiteStore.counts(of: live)
             counts = try SQLiteStore.counts(of: staging)
             guard expected == counts else { throw ShadowError.verifyFailed("the record counts differ from the original") }
             guard try SQLiteStore.integrityIsOK(staging) else { throw ShadowError.verifyFailed("the database failed its integrity check") }
+            attachments = (try? SQLiteStore.attachmentReferences(of: staging)).map { Array($0).sorted() }
         } catch let error as ShadowError {
             throw error
         } catch {
@@ -171,7 +178,7 @@ nonisolated struct ShadowFolder: Sendable {
         let info = ShadowInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, copyNumber: (current?.copyNumber ?? 0) + 1,
                               savedAt: now, appVersion: appVersion, dataID: dataID, source: source,
                               sharedRevision: sharedRevision, sharedFileID: sharedFileID,
-                              accounts: counts["ZACCOUNT"] ?? 0, transactions: counts["ZTRANSACTION"] ?? 0)
+                              accounts: counts["ZACCOUNT"] ?? 0, transactions: counts["ZTRANSACTION"] ?? 0, attachments: attachments)
         do {
             try SealedFile.seal(staging, to: stagingSealed, kind: "data", info: try SealedFile.encodeInfo(info), appVersion: appVersion, now: now)
         } catch {
@@ -183,6 +190,7 @@ nonisolated struct ShadowFolder: Sendable {
             throw ShadowError.copyFailed("the new copy couldn't replace the old one (\(String(cString: strerror(errno))))")
         }
         prune(now: now)
+        removeUnusedReceipts(now: now)
         return info
     }
 
@@ -264,6 +272,33 @@ nonisolated struct ShadowFolder: Sendable {
     }
 
     // MARK: Receipts
+
+    /// Removes receipts that no copy kept here uses any more, so the folder doesn't grow for ever. A receipt is only
+    /// removed when it has been here for over 30 days and neither the latest copy nor any older copy points to it (going
+    /// back to an older copy needs its receipts). Portable files carry their receipts inside them, so they don't count.
+    /// Each copy's note lists the receipts it uses; if any copy's note can't be read, nothing is removed. Returns how many
+    /// files were removed.
+    @discardableResult
+    func removeUnusedReceipts(now: Date = .now) -> Int {
+        let root = receiptsURL.appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+        guard let files = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey]), !files.isEmpty else { return 0 }
+        let cutoff = now.addingTimeInterval(-Double(Self.receiptGraceDays) * 86_400)
+        let old = files.filter { $0.pathExtension == SealedFile.fileExtension && ((try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now) < cutoff }
+        guard !old.isEmpty else { return 0 }
+        // Every copy counts, including one whose note can't be read: that stops the clean-up, as it should.
+        let older = ((try? manager.contentsOfDirectory(at: olderURL, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == SealedFile.fileExtension && !$0.lastPathComponent.hasPrefix(".") }
+        var used = Set<String>()
+        for copy in [storeURL] + older where manager.fileExists(atPath: copy.path) {
+            guard let info = Self.info(of: copy), let names = info.attachments else { return 0 }
+            used.formUnion(names)
+        }
+        var removed = 0
+        for file in old where !used.contains(file.deletingPathExtension().lastPathComponent) {
+            if (try? manager.removeItem(at: file)) != nil { removed += 1 }
+        }
+        return removed
+    }
 
     /// Seals each receipt and photo of `live` that the backup copy doesn't have yet. They never change once written (each
     /// has its own unique name), so only new ones are copied.

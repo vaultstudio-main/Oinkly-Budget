@@ -145,7 +145,7 @@ struct ShadowCopySection: View {
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Keep a Backup Copy").font(.body.weight(.medium))
-                        Text("A second copy of your data in a folder you choose, kept up to date on its own.")
+                        Text("A second copy of your data in a folder you choose, kept up to date on its own, with older versions and a portable .pig file.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -155,7 +155,7 @@ struct ShadowCopySection: View {
         } header: {
             Text("Backup Copy")
         } footer: {
-            Text("The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
+            Text("A snapshot is made a few minutes after changes, when you hide the app and when you quit. A portable .pig file is made about once a day and when you quit. Both are in Oinkly Budget's own file format, so other apps can't read them, but they are not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
@@ -174,7 +174,7 @@ struct ShadowCopySection: View {
         if let path = manager.folderPath { LabeledContent("Folder", value: path) }
         if let last = manager.lastCopy { LabeledContent("Last copied", value: last.formatted(date: .abbreviated, time: .shortened)) }
         if manager.versionCount > 0 {
-            LabeledContent("Kept", value: "\(manager.versionCount) cop\(manager.versionCount == 1 ? "y" : "ies"), \(ByteCountFormatter.string(fromByteCount: manager.size, countStyle: .file))")
+            LabeledContent("Snapshots kept", value: "\(manager.versionCount) cop\(manager.versionCount == 1 ? "y" : "ies"), \(ByteCountFormatter.string(fromByteCount: manager.size, countStyle: .file))")
         }
         if let portable = manager.lastPortable {
             LabeledContent("Portable file", value: "\(portable.formatted(date: .abbreviated, time: .shortened)), \(manager.portableCount) kept")
@@ -188,11 +188,15 @@ struct ShadowCopySection: View {
         }
         HStack {
             Button("Copy Now") { Task { await manager.copyNow(onlyIfChanged: false, portable: .always) } }
-            Button("Show in Finder") { manager.revealInFinder() }
             Button("Restore…") { restoring = true }.disabled(SharedDataSession.isEnabled)
-            Button("Change Folder…") { manager.chooseFolder() }
+            Button("Show in Finder") { manager.revealInFinder() }
             Spacer()
-            Button("Turn Off…", role: .destructive) { confirmingOff = true }
+            Menu("More") {
+                Button("Change Folder…") { manager.chooseFolder() }
+                Divider()
+                Button("Turn Off…", role: .destructive) { confirmingOff = true }
+            }
+            .fixedSize()
         }
     }
 
@@ -482,6 +486,30 @@ enum ShadowViewsCheck {
             }
         }.padding(16).frame(width: 340, alignment: .leading).background(Color(white: 0.96))
         save(bar, "labels")
+        // Settings ▸ Data & Backup, as it looks with and without a backup copy
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+        if let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) {
+            let manager = ShadowCopyManager.shared
+            /// Draws the Settings page in a real window (a form doesn't draw any other way) and saves a picture of it.
+            func capture<Content: View>(_ view: Content, _ name: String) {
+                NSApplication.shared.setActivationPolicy(.accessory)
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 1500), styleMask: [.titled], backing: .buffered, defer: false)
+                window.appearance = NSAppearance(named: .aqua)
+                window.contentView = NSHostingView(rootView: view)
+                window.setFrame(NSRect(x: 100, y: 0, width: 640, height: 1500), display: true)
+                window.orderFrontRegardless()
+                RunLoop.current.run(until: Date().addingTimeInterval(2.5))
+                guard let content = window.contentView, let bitmap = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { return }
+                content.cacheDisplay(in: content.bounds, to: bitmap)
+                if let png = bitmap.representation(using: .png, properties: [:]) { try? png.write(to: folder.appendingPathComponent("shadow-\(name).png")) }
+                window.orderOut(nil)
+            }
+            manager.showPreview(isSetUp: false, status: .notSetUp, path: nil, copies: 0, bytes: 0, lastCopy: nil, lastPortable: nil, portables: 0)
+            capture(DataSettingsView().modelContainer(container), "settings-not-set-up")
+            manager.showPreview(isSetUp: true, status: .upToDate(.now.addingTimeInterval(-300)), path: "/Users/someone/Documents", copies: 11, bytes: 148_000_000,
+                                lastCopy: .now.addingTimeInterval(-300), lastPortable: .now.addingTimeInterval(-7_200), portables: 5)
+            capture(DataSettingsView().modelContainer(container), "settings-set-up")
+        }
         save(ShadowSetupSheet().background(Color(white: 0.96)), "setup")
         save(ShareSetupSheet(onShare: {}).background(Color(white: 0.96)), "share")
         save(ShadowRescueView(finding: .dataLooksEmpty(shadowAccounts: 6, shadowTransactions: 1_240)).frame(width: 500, height: 480), "rescue")

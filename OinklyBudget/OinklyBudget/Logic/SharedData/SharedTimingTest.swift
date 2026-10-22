@@ -32,9 +32,24 @@ enum SharedTimingTest {
             try manager.createDirectory(at: bigCopy.deletingLastPathComponent(), withIntermediateDirectories: true)
             try manager.copyItem(at: big, to: bigCopy)
             let container = try ModelContainer(for: schema, migrationPlan: OinklyBudgetMigrationPlan.self, configurations: ModelConfiguration(schema: schema, url: bigCopy, cloudKitDatabase: .none))
+            // The old way (account by account) on a container nothing has been read from yet, for a fair comparison
+            let slowCopy = root.appendingPathComponent("slow-open/OinklyBudget.store")
+            try manager.createDirectory(at: slowCopy.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try manager.copyItem(at: big, to: slowCopy)
+            let slowContainer = try ModelContainer(for: schema, migrationPlan: OinklyBudgetMigrationPlan.self, configurations: ModelConfiguration(schema: schema, url: slowCopy, cloudKitDatabase: .none))
+            let slowRecords = try time("portable file: the old account-by-account way (main thread)") { try DataBackup.slowTransactions(in: slowContainer.mainContext) }
             let backupFile = try time("portable file: read everything into a backup (main thread)") { try DataBackup.make(from: container.mainContext) }
             let backupJSON = try time("portable file: turn it into JSON (main thread)") { try DataBackup.plainJSON(backupFile) }
             NSLog("TIMING: the JSON is \(backupJSON.count / 1_000_000) MB")
+            // The two ways must give the same transactions
+            func canonical(_ records: [BackupFile.TransactionRecord]) throws -> Data {
+                let ordered = records.sorted { ($0.accountID, $0.date, $0.createdAt, $0.payee, $0.amount) < ($1.accountID, $1.date, $1.createdAt, $1.payee, $1.amount) }
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .secondsSince1970
+                encoder.outputFormatting = [.sortedKeys]
+                return try encoder.encode(ordered)
+            }
+            NSLog("TIMING: the fast and the slow way give the same transactions: \(try canonical(slowRecords) == canonical(backupFile.transactions))")
             let backupCopy = ShadowFolder(inside: root.appendingPathComponent("backup-copy", isDirectory: true))
             let snapshotInfo = try time("backup copy: snapshot and seal (background)") { try backupCopy.write(from: big, dataID: "timing", source: "This Mac", appVersion: "1.0") }
             try time("backup copy: seal and write the portable file (background)") { try backupCopy.writePortable(json: backupJSON, info: DataBackup.portableInfo(backupFile), matching: snapshotInfo, appVersion: "1.0") }

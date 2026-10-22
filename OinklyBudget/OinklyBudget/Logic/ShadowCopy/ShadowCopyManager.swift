@@ -56,7 +56,28 @@ final class ShadowCopyManager {
     private var observers: [NSObjectProtocol] = []
     private var failures = 0
 
-    var isSetUp: Bool { UserDefaults.standard.data(forKey: Self.bookmarkKey) != nil }
+    var isSetUp: Bool {
+        #if DEBUG
+        if let preview { return preview.isSetUp }
+        #endif
+        return UserDefaults.standard.data(forKey: Self.bookmarkKey) != nil
+    }
+
+    #if DEBUG
+    /// For the debug picture of Settings only: shows the page as if a backup copy were (or weren't) set up.
+    var preview: (isSetUp: Bool, status: Status)?
+
+    func showPreview(isSetUp: Bool, status: Status, path: String?, copies: Int, bytes: Int64, lastCopy: Date?, lastPortable: Date?, portables: Int) {
+        preview = (isSetUp, status)
+        self.status = status
+        folderPath = path
+        versionCount = copies
+        size = bytes
+        self.lastCopy = lastCopy
+        self.lastPortable = lastPortable
+        portableCount = portables
+    }
+    #endif
 
     private init() {
         refreshStatus()

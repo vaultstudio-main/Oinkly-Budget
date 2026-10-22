@@ -392,7 +392,7 @@ enum HelpContent {
                 "• When you turn on sharing, you are asked to choose a backup copy folder too. It keeps the peace between your edits and the other person's, and is kept up to date each time the shared data is saved.",
                 "## When it is copied",
                 "• A few minutes after you change something, when you hide the app, and when you quit.",
-                "• Beside each copy, a portable .pig file is made about once a day, when you quit, and when you press Copy Now. It is one file with everything in it, including your settings, so it also works on another Mac or after an update changes the database. The newest five are kept. On a very large data file it is only made when you quit or press Copy Now, because building it holds the window for a few seconds.",
+                "• Beside each copy, a portable .pig file is made about once a day, when you quit, and when you press Copy Now. It is one file with everything in it, including your settings, so it also works on another Mac or after an update changes the database. The newest five are kept. On a very large data file (over about 40,000 transactions) it is only made when you quit or press Copy Now, because building it holds the window for a moment: about a second for every 25,000 transactions.",
                 "• While you share your data, each time the shared data is saved.",
                 "• It keeps the latest copy, the ten before it, and one per day for a week.",
                 "## The status in the bottom bar",
@@ -409,6 +409,7 @@ enum HelpContent {
                 "## Good to know",
                 "• The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.",
                 "• Erase All Data keeps the backup copy unless you choose to delete it too, so an erase can still be undone.",
+                "• Receipts and photos nothing uses any more are removed from the backup copy after 30 days. A receipt that the latest copy or any older copy uses is always kept.",
                 "• Turn Off stops the copying. What is in the folder stays there.",
             ]),
 

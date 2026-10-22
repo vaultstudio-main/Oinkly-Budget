@@ -322,26 +322,15 @@ enum DataBackup {
         let liveBills = try context.fetch(FetchDescriptor<Bill>()).live
         let billIDs = Dictionary(uniqueKeysWithValues: liveBills.enumerated().map { ($1.persistentModelID, $0) })
 
+        // Every transaction in one fetch. Going account by account and reading each account's list of transactions was
+        // what made a backup slow on a large file (about four times slower in the timing test).
+        let transactionsFetch = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date), SortDescriptor(\.createdAt)])
+        for t in try context.fetch(transactionsFetch) where t.isLive {
+            guard let account = t.account, account.isLive, let accountID = ids[account.persistentModelID] else { continue }
+            file.transactions.append(transactionRecord(t, accountID: accountID, billIDs: billIDs, ruleIDs: ruleIDs))
+        }
         for account in accounts {
             guard let accountID = ids[account.persistentModelID] else { continue }
-            for t in account.transactions.live {
-                file.transactions.append(.init(
-                    accountID: accountID, date: t.date, payee: t.payee,
-                    categoryKey: t.category?.isLive == true ? t.category?.systemKey : nil,
-                    memo: t.memo, amount: text(t.amount), status: t.status.rawValue,
-                    transferID: t.transferID?.uuidString, paymentType: t.paymentType?.rawValue,
-                    customMethodName: t.customMethod?.isLive == true ? t.customMethod?.name : nil,
-                    checkNumber: t.checkNumber, createdAt: t.createdAt, receiptData: t.receiptData,
-                    noReceipt: t.noReceipt, isBillPayment: t.isBillPayment, isAtmWithdrawal: t.isAtmWithdrawal,
-                    paidBillIndex: t.paidBill?.isLive == true ? billIDs[t.paidBill!.persistentModelID] : nil,
-                    paidDueDate: t.paidDueDate, isOpeningDeposit: t.isOpeningDeposit,
-                    splits: t.splits.isEmpty ? nil : t.splits.sorted { $0.order < $1.order }.map {
-                        .init(categoryKey: $0.category?.isLive == true ? $0.category?.systemKey : nil,
-                              amount: text($0.amount), memo: $0.memo, order: $0.order)
-                    },
-                    tagNames: t.tags.isEmpty ? nil : t.tagNames,
-                    recurringIndex: t.recurring.flatMap { $0.isLive ? ruleIDs[$0.persistentModelID] : nil }))
-            }
             for h in account.holdings.live {
                 file.holdings.append(.init(
                     accountID: accountID, name: h.name, symbol: h.symbol, shares: text(h.shares), price: text(h.price),
@@ -381,6 +370,44 @@ enum DataBackup {
         )
         return file
     }
+
+    /// One transaction as it is written in a backup.
+    private static func transactionRecord(_ t: Transaction, accountID: Int, billIDs: [PersistentIdentifier: Int], ruleIDs: [PersistentIdentifier: Int]) -> BackupFile.TransactionRecord {
+        .init(
+            accountID: accountID, date: t.date, payee: t.payee,
+            categoryKey: t.category?.isLive == true ? t.category?.systemKey : nil,
+            memo: t.memo, amount: text(t.amount), status: t.status.rawValue,
+            transferID: t.transferID?.uuidString, paymentType: t.paymentType?.rawValue,
+            customMethodName: t.customMethod?.isLive == true ? t.customMethod?.name : nil,
+            checkNumber: t.checkNumber, createdAt: t.createdAt, receiptData: t.receiptData,
+            noReceipt: t.noReceipt, isBillPayment: t.isBillPayment, isAtmWithdrawal: t.isAtmWithdrawal,
+            paidBillIndex: t.paidBill?.isLive == true ? billIDs[t.paidBill!.persistentModelID] : nil,
+            paidDueDate: t.paidDueDate, isOpeningDeposit: t.isOpeningDeposit,
+            splits: t.splits.isEmpty ? nil : t.splits.sorted { $0.order < $1.order }.map {
+                .init(categoryKey: $0.category?.isLive == true ? $0.category?.systemKey : nil,
+                      amount: text($0.amount), memo: $0.memo, order: $0.order)
+            },
+            tagNames: t.tags.isEmpty ? nil : t.tagNames,
+            recurringIndex: t.recurring.flatMap { $0.isLive ? ruleIDs[$0.persistentModelID] : nil })
+    }
+
+    #if DEBUG
+    /// The transactions the slow way (account by account, one at a time), to check the fast way gives the same backup.
+    static func slowTransactions(in context: ModelContext) throws -> [BackupFile.TransactionRecord] {
+        let accounts = try context.fetch(FetchDescriptor<Account>(sortBy: [SortDescriptor(\.name)])).live
+        let ids = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($1.persistentModelID, $0) })
+        let liveRules = try context.fetch(FetchDescriptor<RecurringTransaction>(sortBy: [SortDescriptor(\.createdAt)])).live
+            .filter { $0.account?.isLive == true && ids[$0.account!.persistentModelID] != nil }
+        let ruleIDs = Dictionary(uniqueKeysWithValues: liveRules.enumerated().map { ($1.persistentModelID, $0) })
+        let billIDs = Dictionary(uniqueKeysWithValues: try context.fetch(FetchDescriptor<Bill>()).live.enumerated().map { ($1.persistentModelID, $0) })
+        var result: [BackupFile.TransactionRecord] = []
+        for account in accounts {
+            guard let accountID = ids[account.persistentModelID] else { continue }
+            for t in account.transactions.live { result.append(transactionRecord(t, accountID: accountID, billIDs: billIDs, ruleIDs: ruleIDs)) }
+        }
+        return result
+    }
+    #endif
 
     /// The backup as plain JSON, before it is sealed. Building it needs the main thread; sealing it does not.
     static func plainJSON(_ file: BackupFile) throws -> Data {

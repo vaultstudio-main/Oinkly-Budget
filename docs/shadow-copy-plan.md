@@ -58,6 +58,13 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - **Restoring:** the Restore list shows snapshots, then portable files. When no snapshot is usable the start-up screen offers the portable file; a portable restore happens at the next start into a fresh data file, after a safety copy. The setup screen has one **Restore…** button that takes a `.pig` file, a `.pigdata` copy, or the backup copy folder.
 - Hardening test S31 (11 checks); 197 hardening checks pass in all.
 
+## Built in stage 6
+
+- **The portable file is about four times faster to build:** transactions are read in one fetch instead of account by account (2.7 s to 0.73 s for 20,000 transactions in the timing test; the two ways give identical transactions). Roughly a second for every 25,000. The timed copies still skip the portable file once a build takes over 1.5 s (about 40,000 transactions); quitting and Copy Now always make one.
+- **Receipt clean-up in the backup copy:** each copy's note lists the receipts it uses; a receipt is removed after 30 days when neither the latest copy nor any older copy uses it, and nothing is removed if any copy's note can't be read. Portable files carry their receipts inside, so they don't count.
+- **Settings layout** checked from a picture of the page (with and without a backup copy): Copy Now, Restore… and Show in Finder stay on the row, Change Folder… and Turn Off… moved into a More menu, the footer says what is made and when, and the row says "Snapshots kept".
+- Hardening test S32 (6 checks): 203 in all.
+
 ## Not done yet
 
 - Older builds can't open a converted folder (they look for the old file names): update both logins' test builds together.

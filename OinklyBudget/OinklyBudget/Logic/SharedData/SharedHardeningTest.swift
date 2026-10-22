@@ -877,6 +877,35 @@ enum SharedHardeningTest {
             try Data("x".utf8).write(to: oldFolder.appendingPathComponent("marker.pigdata"))
             let migrated = ShadowFolder(inside: oldParent)
             check("S31 a folder from the shadow copy days is moved to the new name", migrated.exists && !manager.fileExists(atPath: oldFolder.path) && manager.fileExists(atPath: migrated.url.appendingPathComponent("marker.pigdata").path))
+
+            // S32: receipt clean-up in the backup copy
+            let shadow8 = ShadowFolder(inside: root.appendingPathComponent("shadow-8", isDirectory: true))
+            let work32 = root.appendingPathComponent("w32/OinklyBudget.store")
+            let usedNow32 = "55555555-5555-4555-8555-555555555555", usedByOlder32 = "66666666-6666-4666-8666-666666666666"
+            let unusedOld32 = "77777777-7777-4777-8777-777777777777", unusedNew32 = "88888888-8888-4888-8888-888888888888"
+            try makeStore(pointingTo: [usedByOlder32], at: work32)
+            try shadow8.write(from: work32, dataID: "data-8", source: "This Mac", appVersion: "1.0")
+            let pool32 = shadow8.receiptsURL.appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+            try manager.createDirectory(at: pool32, withIntermediateDirectories: true)
+            let plain32 = root.appendingPathComponent("plain-32")
+            try Data("receipt".utf8).write(to: plain32)
+            for (name, age) in [(usedNow32, 90), (usedByOlder32, 90), (unusedOld32, 90), (unusedNew32, 5)] {
+                let file = pool32.appendingPathComponent(name + ".pigdata")
+                try SealedFile.seal(plain32, to: file, kind: "receipt", appVersion: "1.0")
+                try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-Double(age) * 86_400)], ofItemAtPath: file.path)
+            }
+            try makeStore(pointingTo: [usedNow32], at: work32)
+            try shadow8.write(from: work32, dataID: "data-8", source: "This Mac", appVersion: "1.0", now: .now.addingTimeInterval(60))
+            func there32(_ name: String) -> Bool { manager.fileExists(atPath: pool32.appendingPathComponent(name + ".pigdata").path) }
+            check("S32 each copy's note lists the receipts it uses", shadow8.readInfo()?.attachments == [usedNow32] && shadow8.olderVersions().first?.info.attachments == [usedByOlder32])
+            check("S32 an old receipt nothing uses is removed", !there32(unusedOld32))
+            check("S32 a receipt the latest copy uses is kept", there32(usedNow32))
+            check("S32 a receipt only an older copy uses is kept", there32(usedByOlder32))
+            check("S32 a new receipt nothing uses yet is kept", there32(unusedNew32))
+            // an older copy whose note can't be read stops the clean-up
+            try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: pool32.appendingPathComponent(unusedNew32 + ".pigdata").path)
+            if let older32 = shadow8.olderVersions().first { try Data(repeating: 0, count: 4_096).write(to: older32.url) }
+            check("S32 nothing is removed when a copy's note can't be read", shadow8.removeUnusedReceipts() == 0 && there32(unusedNew32) && there32(usedNow32))
         } catch {
             check("no error", false, error.localizedDescription)
         }
