@@ -185,7 +185,7 @@ struct BudgetTrendReport: View {
             history.categories.reduce(0.0) { $0 + (history.spent[$1.persistentModelID]?[index] ?? 0) }
         }
 
-        ReportPanel(title: "Budget Trend", summary: "Total spent in your budgeted categories against total budget, and the next six months at your recent average.") {
+        ReportPanel(title: "Budget Trend", summary: "Spent each month against your total budget, the dotted line.") {
             if history.categories.isEmpty {
                 ReportEmpty(message: "No budgets are set.", height: 190)
             } else {
@@ -198,11 +198,25 @@ struct BudgetTrendReport: View {
                 }
                 let past = history.months.indices.map { Point(date: history.months[$0], kind: "Spent", value: totals[$0], projected: false) }
                 let limit = (history.months + future.dropFirst().map(\.date)).map { Point(date: $0, kind: "Budget", value: budget, projected: false) }
+                let top = max(budget, totals.max() ?? 0, average) * 1.18
+                // Say what each line is before the chart, so nobody has to guess.
+                ReportKey(items: [.init(color: .accentColor, text: "Spent"),
+                                  .init(color: .accentColor, text: "Expected", dashed: true),
+                                  .init(color: .secondary, text: "Total budget", dashed: true)])
                 Chart {
                     ForEach(limit) { point in
                         LineMark(x: .value("Month", point.date, unit: .month), y: .value("Amount", point.value), series: .value("Series", "Budget"))
                             .foregroundStyle(Color.secondary.opacity(0.6))
                             .lineStyle(StrokeStyle(lineWidth: 2, dash: [2, 3]))
+                    }
+                    // The budget line is labelled on the line itself.
+                    if let last = limit.last {
+                        PointMark(x: .value("Month", last.date, unit: .month), y: .value("Amount", last.value))
+                            .opacity(0)
+                            .annotation(position: .bottom, alignment: .trailing, spacing: 2) {
+                                Text("Budget \(ReportFormat.money(budget))")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            }
                     }
                     ForEach(past) { point in
                         LineMark(x: .value("Month", point.date, unit: .month), y: .value("Amount", point.value), series: .value("Series", "Spent"))
@@ -216,11 +230,10 @@ struct BudgetTrendReport: View {
                             .lineStyle(StrokeStyle(lineWidth: 2.5, dash: [5, 4]))
                     }
                 }
+                .chartYScale(domain: 0...max(top, 1))
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                 .frame(height: 190)
-                ReportKey(items: [.init(color: .accentColor, text: "Spent"), .init(color: .accentColor, text: "Next 6 months", dashed: true),
-                                  .init(color: .secondary, text: "Total budget", dashed: true)])
             }
         }
     }
