@@ -323,6 +323,42 @@ nonisolated struct SharedDataFolder: Sendable {
         }
     }
 
+    // MARK: Receipt clean-up
+
+    /// How long an attachment must have been in the shared folder before it can be removed for not being used.
+    static let attachmentGraceDays = 30
+
+    /// Removes receipt and photo files nothing uses any more, so the shared folder doesn't grow for ever. A file is only
+    /// removed when it is older than 30 days and no saved copy of the data points to it: not the current data, not any
+    /// previous save (going back to one needs its receipts) and not a recovered copy. If any of those can't be read,
+    /// nothing is removed. Returns how many files were removed.
+    @discardableResult
+    func removeUnusedAttachments(now: Date = .now) -> Int {
+        let root = StoreFiles.supportURL(for: storeURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+        guard let files = try? manager.contentsOfDirectory(at: root, includingPropertiesForKeys: [.contentModificationDateKey]), !files.isEmpty else { return 0 }
+        var stores = [storeURL] + versions().map(\.url)
+        if let others = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
+            stores += others.filter { $0.pathExtension == "store" && $0.lastPathComponent.contains("recovered") }
+        }
+        var used = Set<String>()
+        for store in stores where manager.fileExists(atPath: store.path) {
+            guard let names = try? SQLiteStore.attachmentReferences(of: store) else {
+                appendLog("receipt clean-up skipped: \(store.lastPathComponent) couldn't be read", now: now)
+                return 0
+            }
+            used.formUnion(names)
+        }
+        let cutoff = now.addingTimeInterval(-Double(Self.attachmentGraceDays) * 86_400)
+        var removed = 0
+        for file in files where !used.contains(file.lastPathComponent) {
+            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now
+            guard modified < cutoff else { continue }
+            if (try? manager.removeItem(at: file)) != nil { removed += 1 }
+        }
+        if removed > 0 { appendLog("removed \(removed) receipt file\(removed == 1 ? "" : "s") nothing uses any more", now: now) }
+        return removed
+    }
+
     // MARK: Previous saves and the save log
 
     /// Keeps the file that is about to be replaced, with a note of who saved it and when, then trims the old ones.

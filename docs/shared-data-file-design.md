@@ -353,3 +353,13 @@ Saves are fast enough that nothing needs tuning: the two-minute save interval, t
 **Changed because of these tests:** a save now refuses to write over data saved by a newer version of the app; and leftover temporary files older than ten minutes are removed at each save.
 
 **Not covered by a script (needs the owner):** a real sleep and wake of a login holding the lock, a real force-quit and Open Anyway between two logins, a real full disk, and receipts made in the app (the test uses a stand-in file).
+
+## 25. Two-login test with receipts, and receipt clean-up (2026-10-21)
+
+**Owner's result with the build from section 24:** it works on both logins. Both can see receipts, and both can add and remove transactions, with no crashes and no forced quits.
+
+**How receipts are stored (read from the owner's shared file).** A small receipt sits inside the database column. A larger one is a file in `.OinklyBudget_SUPPORT/_EXTERNAL_DATA/<UUID>`, and the column holds a short pointer: a 0x02 byte, the 36-character name, a 0x00 byte. Clean-up reads those pointers from every data column of every table.
+
+**Built (decision D12).** At a clean close (quit or Close for Others), after the final save, the app removes files in `_EXTERNAL_DATA` that are older than 30 days and that no saved copy points to: not the current data, not any previous save (going back needs its receipts), not a recovered copy. If any saved copy can't be read, nothing is removed. Removals are written to the save log. **Tested** in the hardening test (S11): a file in use, a file only a previous save uses and a new unused file are kept; an old unused file is removed; an unreadable previous save stops the clean-up. 31 of 31 hardening checks pass.
+
+**Phase 3 status.** Done: previous saves and restore, save log, receipt clean-up, large-file timing. Not built, and recommended to drop (the owner hasn't decided): Open Recent, Move This File and Create a New Data File, which need several data files in the one fixed folder. The shared data file feature is complete for 1.0 except for the release work (Help, notes, App Review notes).

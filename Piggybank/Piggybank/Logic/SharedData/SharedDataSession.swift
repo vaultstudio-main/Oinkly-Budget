@@ -361,6 +361,8 @@ final class SharedDataSession {
                 // Still ours? If another login took the lock, nothing is written.
                 guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
                 let info = try folder.checkIn(from: working, baseRevision: base, by: name, appVersion: version)
+                // A clean close is the moment to tidy up the receipts nothing uses any more.
+                if release { folder.removeUnusedAttachments() }
                 if release { folder.release(token: token) }
                 return .success(info)
             } catch {

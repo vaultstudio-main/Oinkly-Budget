@@ -1,5 +1,6 @@
 #if DEBUG
 import Foundation
+import SQLite3
 
 /// `-sharedHardeningTest` tries the things that go wrong with a shared data file, on throwaway folders, using a copy of
 /// this Mac's own data, then quits. Never touches /Users/Shared/OinklyBudget. Debug only.
@@ -160,6 +161,47 @@ enum SharedHardeningTest {
             check("S10 a receipt reaches the shared folder and the next copy", manager.fileExists(atPath: shared10.path) && manager.fileExists(atPath: StoreFiles.supportURL(for: opened).appendingPathComponent("_EXTERNAL_DATA/AAAA").path))
             let perms = (try? manager.attributesOfItem(atPath: shared10.path)[.posixPermissions] as? Int) ?? 0
             check("S10 and any login can replace it", perms == 0o666, String(perms, radix: 8))
+
+            // S11: receipt clean-up removes only what nothing uses, and only when old enough
+            func pointer(_ name: String) -> String { "x'02" + Array(name.utf8).map { String(format: "%02x", $0) }.joined() + "00'" }
+            func makeStore(pointingTo names: [String], at url: URL) throws {
+                try? manager.removeItem(at: url)
+                try manager.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try manager.copyItem(at: source, to: url)
+                var db: OpaquePointer?
+                guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK, let db else { throw StoreError.failed("can't open") }
+                defer { sqlite3_close(db) }
+                sqlite3_exec(db, "UPDATE ZTRANSACTION SET ZRECEIPTDATA = NULL", nil, nil, nil)
+                for (index, name) in names.enumerated() {
+                    guard sqlite3_exec(db, "UPDATE ZTRANSACTION SET ZRECEIPTDATA = \(pointer(name)) WHERE Z_PK = (SELECT Z_PK FROM ZTRANSACTION ORDER BY Z_PK LIMIT 1 OFFSET \(index))", nil, nil, nil) == SQLITE_OK else { throw StoreError.failed(String(cString: sqlite3_errmsg(db))) }
+                }
+            }
+            let s11 = try fresh("s11")
+            let inUse = "11111111-1111-4111-8111-111111111111", inOldSave = "22222222-2222-4222-8222-222222222222"
+            let unusedOld = "33333333-3333-4333-8333-333333333333", unusedNew = "44444444-4444-4444-8444-444444444444"
+            let work11 = root.appendingPathComponent("w11/OinklyBudget.store")
+            try makeStore(pointingTo: [inOldSave], at: work11)
+            try s11.checkIn(from: work11, baseRevision: nil, by: "A", appVersion: "1.0")
+            try makeStore(pointingTo: [inUse], at: work11)
+            try s11.checkIn(from: work11, baseRevision: 1, by: "A", appVersion: "1.0")
+            let external = StoreFiles.supportURL(for: s11.storeURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+            try manager.createDirectory(at: external, withIntermediateDirectories: true)
+            for (name, age) in [(inUse, 90), (inOldSave, 90), (unusedOld, 90), (unusedNew, 5)] {
+                let file = external.appendingPathComponent(name)
+                try Data("receipt".utf8).write(to: file)
+                try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-Double(age) * 86_400)], ofItemAtPath: file.path)
+            }
+            check("S11 the pointers are read", try SQLiteStore.attachmentReferences(of: s11.storeURL) == [inUse])
+            let removed = s11.removeUnusedAttachments()
+            func there(_ name: String) -> Bool { manager.fileExists(atPath: external.appendingPathComponent(name).path) }
+            check("S11 an old unused receipt is removed", removed == 1 && !there(unusedOld), "removed \(removed)")
+            check("S11 a receipt in use is kept", there(inUse))
+            check("S11 a receipt only a previous save uses is kept", there(inOldSave))
+            check("S11 a new unused receipt is kept", there(unusedNew))
+            // an unreadable saved copy stops the clean-up altogether
+            try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: external.appendingPathComponent(unusedNew).path)
+            if let old = s11.versions().first { try Data(repeating: 0, count: 4096).write(to: old.url) }
+            check("S11 nothing is removed when a saved copy can't be read", s11.removeUnusedAttachments() == 0 && there(unusedNew) && there(inUse))
         } catch {
             check("no error", false, error.localizedDescription)
         }

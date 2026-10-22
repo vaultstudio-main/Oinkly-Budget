@@ -111,6 +111,41 @@ nonisolated enum SQLiteStore {
         return result
     }
 
+    /// The names of the attachment files this database points to. SwiftData keeps a large receipt or photo in a file
+    /// beside the database and stores a short pointer to it in the column: a 0x02 byte, the file's name (a UUID, 36
+    /// characters) and a 0x00 byte. Smaller ones sit inside the column itself and have no file. Every data column of every
+    /// table is looked at, so a receipt, an account photo or anything added later is covered.
+    static func attachmentReferences(of url: URL) throws -> Set<String> {
+        let db = try open(url, readOnly: true)
+        defer { sqlite3_close(db) }
+        var pairs: [(table: String, column: String)] = []
+        var statement: OpaquePointer?
+        let find = """
+        SELECT m.name, p.name FROM sqlite_master m, pragma_table_info(m.name) p
+        WHERE m.type = 'table' AND m.name LIKE 'Z%' AND m.name NOT LIKE 'Z\\_%' ESCAPE '\\' AND upper(p.type) = 'BLOB'
+        """
+        guard sqlite3_prepare_v2(db, find, -1, &statement, nil) == SQLITE_OK else { throw StoreError.failed(String(cString: sqlite3_errmsg(db))) }
+        while sqlite3_step(statement) == SQLITE_ROW {
+            pairs.append((String(cString: sqlite3_column_text(statement, 0)), String(cString: sqlite3_column_text(statement, 1))))
+        }
+        sqlite3_finalize(statement)
+
+        var names = Set<String>()
+        for (table, column) in pairs {
+            var rows: OpaquePointer?
+            let query = "SELECT \"\(column)\" FROM \"\(table)\" WHERE typeof(\"\(column)\") = 'blob' AND length(\"\(column)\") = 38"
+            guard sqlite3_prepare_v2(db, query, -1, &rows, nil) == SQLITE_OK else { throw StoreError.failed(String(cString: sqlite3_errmsg(db))) }
+            while sqlite3_step(rows) == SQLITE_ROW {
+                guard let bytes = sqlite3_column_blob(rows, 0), sqlite3_column_bytes(rows, 0) == 38 else { continue }
+                let data = Data(bytes: bytes, count: 38)
+                guard data.first == 0x02, data.last == 0x00, let name = String(data: data.subdata(in: 1..<37), encoding: .ascii) else { continue }
+                names.insert(name)
+            }
+            sqlite3_finalize(rows)
+        }
+        return names
+    }
+
     static func integrityIsOK(_ url: URL) throws -> Bool {
         let db = try open(url, readOnly: true)
         defer { sqlite3_close(db) }
