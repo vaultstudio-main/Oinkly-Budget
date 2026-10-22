@@ -102,8 +102,8 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Shots: S-B8a (split editor), S-B8b (register row), S-B8c (detail window).
 
 ### B9. Tags (Planned)
-- Labels with colours; many per transaction; shown as chips; report filter; Settings screen to rename, recolour, merge, delete.
-- Shots: S-B9a (tag picker), S-B9b (register with chips), S-B9c (report filtered by a tag), S-B9d (Tags settings).
+- Labels with colours; many per transaction; shown as chips in the register; Settings screen to rename, recolour, merge, delete. Tags stay in the transaction area only: no overview page (Summary, Reports) has a tag selector (decided 2026-10-21).
+- Shots: S-B9a (tag picker), S-B9b (register with chips), S-B9d (Tags settings).
 
 ### B10. Recurring transactions (Planned)
 - Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
@@ -257,7 +257,6 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-B8c | Detail window listing the parts | Double-click | Help-split-detail | – | – |
 | S-B9a | Tag picker | Edit Transaction | Help-tags | features | – |
 | S-B9b | Register with tag chips | Register | Help-tags-register | – | – |
-| S-B9c | A report filtered by a tag | Reports | Help-tags-report | – | – |
 | S-B9d | Tags settings | Settings ▸ Tags | Help-tags-settings | – | – |
 | S-B10a | Recurring rules screen | Bills & Recurring ▸ Recurring tab | Help-recurring | features | yes |
 | S-B10b | Rule editor | Add a rule | Help-recurring-edit | – | – |

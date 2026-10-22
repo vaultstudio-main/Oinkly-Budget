@@ -37,7 +37,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 3. **Priority bills on the Summary.** The next five important bills due within 20 days.
 4. **Budgets page** for every category with a budget.
 5. **Split transactions** *(if built).* One payment across categories.
-6. **Tags** *(if built).* Label transactions and filter reports.
+6. **Tags** *(if built).* Label transactions.
 7. **Recurring transactions** *(if built).* Rules that make pending entries for you to confirm, and a cash flow forecast.
 8. **Export to PDF and CSV.** Every account and the Transactions page. Print by opening the PDF.
 9. **Import a statement.** Preview, map the columns, skip duplicates, undo.

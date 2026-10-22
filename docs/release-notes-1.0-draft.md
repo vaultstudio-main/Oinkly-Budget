@@ -42,7 +42,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Autofill: type a payee you have used before and the category, amount, memo and payment method fill in.
 - Clean Up (Settings ▸ Clean Up): find and replace in payee names, merge look-alike payees, and move a category's transactions to another category (with the option to delete the old custom categories). Undo the last change.
 - Split transactions *(if built)*: one payment across several categories, with parts that must add up to the total.
-- Tags *(if built)*: label transactions, show tags in the register and filter reports by tag.
+- Tags *(if built)*: label transactions, show tags in the register.
 - Recurring transactions *(if built)*: rules for paycheques, rent and more that add pending transactions for you to confirm, and feed the cash flow forecast.
 
 ### Export and import
