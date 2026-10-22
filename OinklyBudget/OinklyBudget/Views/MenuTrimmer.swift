@@ -7,11 +7,23 @@ import UserNotifications
 enum MenuTrimmer {
     private static let removed: Set<String> = ["Edit", "View", "Window"]
     private static var isInstalled = false
+    /// A menu is open. Changing a menu while someone is looking at it makes its rows jump or vanish, so nothing is
+    /// touched until it closes.
+    private static var isTracking = false
+    private static var wantsTrim = false
 
     static func install() {
         guard !isInstalled else { return }
         isInstalled = true
         trim()
+        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { _ in
+            isTracking = true
+        }
+        NotificationCenter.default.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { _ in
+            isTracking = false
+            // Whatever came back while the menu was open goes now that it has closed.
+            if wantsTrim { DispatchQueue.main.async { trim() } }
+        }
         NotificationCenter.default.addObserver(forName: NSMenu.didAddItemNotification, object: nil, queue: .main) { _ in
             DispatchQueue.main.async { trim() }
         }
@@ -32,6 +44,14 @@ enum MenuTrimmer {
 
     private static func trim() {
         guard let menu = NSApp.mainMenu else { return }
+        // Also covers a menu the system opened without telling us: the run loop is in its tracking mode while one is open.
+        if isTracking || RunLoop.current.currentMode == .eventTracking {
+            wantsTrim = true
+            // Dragging a window also puts the run loop in this mode, with no end-of-menu signal to follow, so look again soon.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { if wantsTrim { trim() } }
+            return
+        }
+        wantsTrim = false
         for item in menu.items where removed.contains(item.submenu?.title ?? item.title) {
             menu.removeItem(item)
         }
