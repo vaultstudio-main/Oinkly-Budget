@@ -30,23 +30,23 @@ struct SharedDataSection: View {
                     .foregroundStyle(messageIsError ? Color.orange : Theme.green)
             }
         } header: {
-            Text("Shared Data File")
+            Text("Sharing")
         } footer: {
             Text(SharedDataSession.isEnabled
-                 ? "Everyone who shares uses the data in /Users/Shared/OinklyBudget, one at a time. If another user has it open, Oinkly Budget waits for them to quit."
-                 : "Lets other user accounts on this Mac use the same data, one at a time. Nothing is sent anywhere.")
+                 ? "Other users of this Mac use the same data, one at a time."
+                 : "Lets other users of this Mac use your data, one at a time.")
         }
-        .alert("Share your data with other users of this Mac?", isPresented: $warning) {
+        .alert("Share your data?", isPresented: $warning) {
             Button("Share") { turnOn() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Oinkly Budget will copy your data into /Users/Shared/OinklyBudget. That folder can be opened by every user account on this Mac. Your data stays on this Mac and is never sent anywhere, but anyone who can sign in to this Mac can read it. Your original data is not changed or removed.")
+            Text("Your data is copied to /Users/Shared/OinklyBudget. Anyone with an account on this Mac can read it. Your own copy is not changed.")
         }
         .confirmationDialog("Stop sharing?", isPresented: $confirmingStop, titleVisibility: .visible) {
-            Button("Stop Sharing and Use the Shared Data on This Mac") { turnOff() }
+            Button("Stop Sharing") { turnOff() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This Mac gets a copy of the latest shared data, and a copy of what it had before is kept in Application Support ▸ Backups. Other users keep sharing.")
+            Text("This Mac keeps a copy of the latest data. Other users keep sharing.")
         }
         .sheet(isPresented: Binding(get: { versions != nil }, set: { if !$0 { versions = nil } })) {
             PreviousSavesSheet(versions: versions ?? [])
@@ -62,8 +62,8 @@ struct SharedDataSection: View {
     private var notSharing: some View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Share This Data").font(.body.weight(.medium))
-                Text("Copies your data into a shared folder so other users of this Mac can use it too.")
+                Text("Share with Other Users").font(.body.weight(.medium))
+                Text("Other users of this Mac can open this data, one at a time.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -75,22 +75,19 @@ struct SharedDataSection: View {
 
     @ViewBuilder
     private var sharing: some View {
-        Label("Shared with other users of this Mac", systemImage: "person.2.fill").foregroundStyle(Theme.green)
+        Label("Sharing is on", systemImage: "person.2.fill").foregroundStyle(Theme.green)
         LabeledContent("Folder", value: SharedDataFolder.defaultURL.path)
-        if let since = session.openSince {
-            LabeledContent("Open by you since", value: since.formatted(date: .omitted, time: .shortened))
-        }
         if let saved = session.lastSaved {
-            LabeledContent("Last saved to the shared data", value: saved.formatted(date: .abbreviated, time: .shortened))
+            LabeledContent("Last saved", value: saved.formatted(date: .abbreviated, time: .shortened))
         }
         if let error = session.errorMessage {
             Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Color.orange).font(.callout)
         }
         HStack {
             Button("Save Now") { saveNow() }.disabled(working || !session.isActive || session.lostLock)
-            Button("Close for Others") { closeForOthers() }
+            Button("Save and Quit") { closeForOthers() }
                 .disabled(working || !session.isActive || session.lostLock)
-                .help("Saves and quits, so another user can open the data.")
+                .help("Saves and quits so another user can open the data")
             Button("Previous Saves…") { showPreviousSaves() }.disabled(working || !session.isActive || session.lostLock)
             Button("Check Sharing…") { checkSharing() }.disabled(working)
             Spacer()
@@ -168,7 +165,7 @@ private struct PreviousSavesSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Previous Saves").font(.title2.bold())
-            Text("Every time the shared data is saved, the one before it is kept. Oinkly Budget keeps the last \(SharedDataFolder.keepNewest) saves and one for each of the last \(SharedDataFolder.keepDays) days. Going back saves what you have now first, so you can come back to it.")
+            Text("Each save keeps the one before it. Going back saves what you have now first, so you can return to it.")
                 .font(.callout).foregroundStyle(.secondary)
             if versions.isEmpty {
                 Text("There are no previous saves yet.").foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 120)
@@ -177,7 +174,7 @@ private struct PreviousSavesSheet: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))
-                            Text("Saved by \(version.info.savedBy), save number \(version.info.revision)").font(.caption).foregroundStyle(.secondary)
+                            Text("Saved by \(version.info.savedBy)").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Go Back to This…") { chosen = version }.disabled(restoring)
@@ -198,7 +195,7 @@ private struct PreviousSavesSheet: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             if let chosen {
-                Text("The shared data goes back to how it was on \(chosen.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What is open now is saved first, and stays in the list. Oinkly Budget restarts.")
+                Text("Goes back to \(chosen.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What is open now is saved first. Oinkly Budget restarts.")
             }
         }
     }

@@ -50,6 +50,23 @@ final class SharedDataSession {
     private var isDirty = false
     private var isCheckingIn = false
 
+    /// How the shared data stands, for the dot in the status bar.
+    enum Status: Equatable {
+        /// Everything is saved to the shared data.
+        case saved
+        /// There are changes that will be saved within a couple of minutes, or are being saved now.
+        case unsaved
+        case problem(String)
+    }
+
+    /// Nil when this copy isn't using shared data.
+    var status: Status? {
+        guard Self.isEnabled, isActive else { return nil }
+        if lostLock { return .problem("Someone else opened the shared data. Quit and open Oinkly Budget again.") }
+        if let errorMessage { return .problem(errorMessage) }
+        return isDirty || isCheckingIn ? .unsaved : .saved
+    }
+
     static let enabledKey = "sharedData.enabled"
     private static let nextLaunchKey = "sharedData.nextLaunch"
 

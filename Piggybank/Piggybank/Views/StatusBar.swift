@@ -25,6 +25,7 @@ struct StatusBar: View {
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer()
+                SharingStatusDot()
                 Button {
                     openWindow(id: "help")
                 } label: {
@@ -54,6 +55,53 @@ struct StatusBarHost<Page: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onPreferenceChange(StatusBarTextKey.self) { text = $0 }
             StatusBar(text: text ?? fallback)
+        }
+    }
+}
+
+/// A small coloured dot for the shared data, shown only while sharing is on: green when everything is saved to the shared
+/// data, yellow while changes are waiting to be saved (click to save now), red when something is wrong.
+private struct SharingStatusDot: View {
+    private var session: SharedDataSession { SharedDataSession.shared }
+
+    var body: some View {
+        if let status = session.status {
+            Button {
+                if status == .unsaved { Task { await session.checkInNow(release: false) } }
+            } label: {
+                HStack(spacing: 5) {
+                    Circle().fill(color(status)).frame(width: 8, height: 8)
+                    Text(label(status)).foregroundStyle(.secondary)
+                }
+            }
+            .buttonStyle(.plain)
+            .help(detail(status))
+            .accessibilityLabel("Sharing: \(label(status))")
+            .accessibilityHint(detail(status))
+        }
+    }
+
+    private func color(_ status: SharedDataSession.Status) -> Color {
+        switch status {
+        case .saved: Theme.green
+        case .unsaved: .yellow
+        case .problem: Theme.red
+        }
+    }
+
+    private func label(_ status: SharedDataSession.Status) -> String {
+        switch status {
+        case .saved: "Shared · Saved"
+        case .unsaved: "Shared · Not saved yet"
+        case .problem: "Shared · Problem"
+        }
+    }
+
+    private func detail(_ status: SharedDataSession.Status) -> String {
+        switch status {
+        case .saved: "Everything is saved to the shared data."
+        case .unsaved: "Changes are saved to the shared data every couple of minutes, and when you hide or quit. Click to save now."
+        case .problem(let why): why
         }
     }
 }

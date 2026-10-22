@@ -462,7 +462,7 @@ struct DataSettingsView: View {
                 Button("Erase All Data", role: .destructive) { confirmingErase = true }
                     .disabled(SharedDataSession.isEnabled)
                 if SharedDataSession.isEnabled {
-                    Text("Erasing is off while data is shared, because it would erase it for everyone. Stop sharing first.")
+                    Text("Erasing is off while sharing. Stop sharing first.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
