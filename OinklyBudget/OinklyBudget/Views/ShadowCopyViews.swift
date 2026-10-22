@@ -10,12 +10,13 @@ import AppKit
 struct ShadowDatabaseStatusLabel: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     private var database: DatabaseStatus { DatabaseStatus.shared }
+    @Environment(\.openSettings) private var openSettings
 
     static let name = "Shadow Copy Database"
 
     var body: some View {
         if !ScreenshotMode.isOn {
-            Button { openSettings() } label: {
+            Button { showShadowCopySettings() } label: {
                 TimelineView(.periodic(from: .now, by: 30)) { _ in
                     let look = Self.look(database: database.state, lastSaved: database.lastSaved, shadow: manager.status,
                                          sharing: SharedDataSession.shared.status != nil)
@@ -34,9 +35,12 @@ struct ShadowDatabaseStatusLabel: View {
         }
     }
 
-    private func openSettings() {
+    /// Opens Settings on Data & Backup and scrolls down to the Shadow Copy part.
+    private func showShadowCopySettings() {
         UserDefaults.standard.set("data", forKey: MacSettingsView.tabKey)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        manager.revealRequested = true
+        openSettings()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     struct Look {
@@ -126,6 +130,9 @@ struct ShadowSetupSheet: View {
 
 /// Settings ▸ Data & Backup ▸ Shadow Copy.
 struct ShadowCopySection: View {
+    /// What Settings scrolls to when the status in the bottom bar is clicked.
+    static let scrollID = "shadowCopySection"
+
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     @State private var restoring = false
     @State private var confirmingOff = false
@@ -150,6 +157,7 @@ struct ShadowCopySection: View {
         } footer: {
             Text("The shadow copy is a plain copy of your data and is not encrypted. Anyone who can open its folder can read it, and a folder in iCloud Drive is also on Apple's servers.")
         }
+        .id(Self.scrollID)
         .task { await manager.reloadDetails() }
         .sheet(isPresented: $restoring) { ShadowRestoreSheet() }
         .confirmationDialog("Turn off the shadow copy?", isPresented: $confirmingOff, titleVisibility: .visible) {

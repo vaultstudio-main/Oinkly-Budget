@@ -26,6 +26,8 @@ final class ShadowCopyManager {
     private(set) var versionCount = 0
     private(set) var size: Int64 = 0
     private(set) var folderPath: String?
+    /// True when something asked Settings to scroll to the shadow copy. Settings clears it once it has.
+    var revealRequested = false
 
     private static let bookmarkKey = "shadowCopyFolderBookmark"
     private static let snoozeKey = "shadowCopyAskAgainAfter"

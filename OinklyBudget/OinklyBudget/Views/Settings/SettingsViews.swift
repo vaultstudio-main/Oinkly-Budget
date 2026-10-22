@@ -429,6 +429,7 @@ struct DataSettingsView: View {
 
     var body: some View {
         let count = transactionCount
+        ScrollViewReader { proxy in
         Form {
             // Only shows once there are a great many transactions.
             if BackupReminder.prompt(
@@ -500,6 +501,20 @@ struct DataSettingsView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone." + (ShadowCopyManager.shared.isSetUp ? " Your shadow copy stays unless you choose to delete it too, so the erase can still be undone from it." : ""))
+        }
+        // Clicking the status in the bottom bar comes here: scroll to the Shadow Copy part.
+        .onAppear { scrollToShadowCopy(proxy) }
+        .onChange(of: ShadowCopyManager.shared.revealRequested) { _, _ in scrollToShadowCopy(proxy) }
+        }
+    }
+
+    private func scrollToShadowCopy(_ proxy: ScrollViewProxy) {
+        guard ShadowCopyManager.shared.revealRequested else { return }
+        Task { @MainActor in
+            // Let the page lay itself out first.
+            try? await Task.sleep(for: .milliseconds(350))
+            withAnimation { proxy.scrollTo(ShadowCopySection.scrollID, anchor: .top) }
+            ShadowCopyManager.shared.revealRequested = false
         }
     }
 
