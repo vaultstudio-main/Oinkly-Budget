@@ -24,6 +24,8 @@ enum StoreReset {
         } else {
             UserDefaults.standard.removeObject(forKey: budgetsKey)
         }
+        // Every account is going, so a choice of accounts for the Month Outlook has nothing left to refer to.
+        UserDefaults.standard.removeObject(forKey: MonthOutlook.excludedKey)
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)

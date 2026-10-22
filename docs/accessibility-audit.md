@@ -10,7 +10,7 @@ Added (built):
 
 | Keys | Command | Where |
 |---|---|---|
-| ⌘1 to ⌘8 | Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets | new Go menu |
+| ⌘1 to ⌘9 | Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets, Month Outlook | new Go menu |
 | ⌘E | Edit Transaction | new Transaction menu |
 | ⌘I | View Details | Transaction menu |
 | ⇧⌘R | Make Recurring | Transaction menu |
@@ -19,7 +19,7 @@ The Transaction commands act on the one selected row of the register that is sho
 
 ## VoiceOver labels (built)
 
-Before this step the whole app had four accessibility labels. Added labels to the controls that had only an icon: previous and next month and period arrows, clear search, delete buttons on goal entries, tag remove, delete and colour buttons, the split part remove button and its amount field, and the recurring rule actions menu. Account pictures are marked decorative. Tag chips read as "Tag name". Priority bill rows and recurring rule rows read as one item each. Page titles, card titles and report titles are headings, so VoiceOver can jump between them.
+Before this step the whole app had four accessibility labels. Added labels to the controls that had only an icon: previous and next month and period arrows, clear search, delete buttons on goal entries, tag remove, delete and colour buttons, the split part remove button and its amount field, and the recurring rule actions menu. Account pictures are marked decorative. Tag chips read as "Tag name". Priority bill rows and recurring rule rows read as one item each. Page titles, card titles and report titles are headings, so VoiceOver can jump between them. On the Month Outlook, each income, bill and budget row reads as one item with its name, date, state and amounts, and the Left to Save figure reads in full; the Budget vs Actual rows read the same way.
 
 ## Still to do
 

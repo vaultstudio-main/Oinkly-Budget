@@ -18,7 +18,7 @@ Apple is not rejecting the app. This is a request for information because the de
 6. Add a bill and pay it (Bills, Pay a Bill).
 7. Show the budget and a goal.
 8. Show a report and the spending charts.
-9. Open Settings: Reminders tab (custom reminder), Import & Export tab (export a backup, CSV import).
+9. Open Settings: Reminders tab (custom reminder), Data & Backup tab (Manual Backup ▸ Save Backup…, Backup Copy), and CSV import from an account page.
 10. Show Help and About.
 11. Show that nothing asks for a login, a bank connection or a purchase inside the app.
 
@@ -35,6 +35,9 @@ No sign-in, account or login is needed. On first launch the app is empty. To exp
 
 **4. External services**
 None. The app does not use any servers, data providers, authentication services, payment processors, analytics, advertising or AI services. It makes no network requests. All data is stored on the user's Mac. Local notifications (bill and custom reminders) use Apple's UserNotifications framework on the device.
+
+**4a. Files and folders**
+Two optional features use folders, and both are off by default. Backup Copy (Settings ▸ Data & Backup) keeps a spare copy of the user's data in a folder the user picks with the system's open panel; the app uses the user-selected files permission and a security-scoped bookmark to reopen it. Sharing (same tab) lets other Mac user accounts on the same Mac take turns using the same data through the folder /Users/Shared/OinklyBudget, which is covered by a narrow sandbox exception. Neither feature connects to a network. If the user picks a folder in iCloud Drive for the backup copy, macOS itself syncs that folder; the app says so in Help.
 
 **5. Regional differences**
 None. The app works the same in every region. Amounts use the user's Mac currency and date formatting settings.

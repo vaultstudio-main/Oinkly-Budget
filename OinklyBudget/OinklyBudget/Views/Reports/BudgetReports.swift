@@ -112,6 +112,10 @@ private struct BudgetUseRow: View {
             .frame(width: 130, alignment: .trailing)
         }
         .frame(height: 34)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(over
+            ? "\(row.name), \(ReportFormat.money(row.spent - row.limit)) over budget. Spent \(ReportFormat.money(row.spent)) of \(ReportFormat.money(row.limit))"
+            : "\(row.name), \(ReportFormat.money(row.limit - row.spent)) left. Spent \(ReportFormat.money(row.spent)) of \(ReportFormat.money(row.limit))")
     }
 }
 

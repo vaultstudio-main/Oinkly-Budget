@@ -21,22 +21,28 @@ budget,finance,money,bills,expenses,accounts,loans,net worth,checking,savings,re
 Oinkly Budget keeps your whole financial picture in one place, and keeps it private. Everything you enter stays on your own Mac. There is no account to create, no sign-in, no ads and no tracking.
 
 KEEP EVERY ACCOUNT TOGETHER
-Checking, savings, cash, credit cards, loans, mortgages, investments and assets all live side by side. Each account has its own register with a running balance, and you can see everything together on one Transactions page. Split a payment across categories, label transactions with tags, and attach a receipt photo or the PDF bill.
+Checking, savings, cash, credit cards, loans, mortgages, investments and assets all live side by side. Each account has its own register with a running balance, and you can see everything together on one Transactions page. Split payments, add tags, and attach receipts.
 
 NEVER MISS A BILL
-A calendar shows what is due, what is paid and what is next. Tick bills off as you pay them, or pay a bill in one step: it comes out of your account, comes off what you owe, ticks the bill off and files under the right category. Get a reminder before each bill, with extra attention for the ones that matter most.
+A calendar shows what is due, what is paid and what is next. Tick bills off as you pay them, or pay a bill in one step: it comes out of your account, comes off what you owe, ticks the bill off and files under the right category. Get reminders before bills are due.
 
 REPEATING TRANSACTIONS
-Set up your paycheque, rent or anything else that repeats. Each date adds a pending entry for you to confirm, and shows in the calendar, the menu bar, your reminders and the widget.
+Set up your paycheque, rent or anything else that repeats. Each date adds a pending entry for you to confirm, and shows in the calendar, menu bar and widget.
 
 PLAN AND TRACK
-Set monthly budgets for your categories, and goals that follow your accounts so progress updates itself. Reports show income against spending, where your money goes, what you owe and how your investments are growing, with six-month projections you can see at a glance.
+Set monthly budgets for your categories, and goals that follow your accounts so progress updates itself. Reports show income against spending, where your money goes, what you owe and how your investments are growing, with six-month projections.
+
+SEE WHAT IS LEFT TO SAVE
+Month Outlook adds up your paycheques, bills and budgets for any month and shows what will be left over. Link a bill to the payment that paid it, and a bill that ran over or under shows as it happened. Leave out accounts or cash budgets you don't want counted.
 
 ALWAYS IN SIGHT
-A menu bar item and a widget list what is coming up this month: bills, repeating transactions and your own reminders, marked and in date order. They show names and dates only, never amounts. A small dot at the bottom of the window tells you your data is saved.
+A menu bar item and a widget list what is coming up this month: bills, repeating transactions and your own reminders, in date order. They show names and dates only, never amounts. It can start quietly in the menu bar when you log in.
+
+A SPARE COPY, YOUR WAY
+Pick a folder, such as one in iCloud Drive, and Oinkly Budget keeps a backup copy there on its own. Save a backup file any time, and restore from either.
 
 OLD SCHOOL ON PURPOSE
-Oinkly Budget doesn't link to your bank or any online account, and it never asks for a login. You go through your own statements and bills and enter what happened. When you handle your own numbers, you know where you stand and what your budget really is. You can also import a CSV file you've downloaded yourself, with a preview first and Undo afterwards.
+Oinkly Budget doesn't link to your bank or any online account, and it never asks for a login. You enter what happened from your own statements and bills, so you know where you stand. You can also import a CSV file you've downloaded yourself, with a preview first and Undo afterwards.
 
 DETAILS THAT FEEL RIGHT
 • Credit limits are real: a charge that would reach a card's limit is stopped before it's saved
@@ -89,9 +95,13 @@ account, then use File ▸ New Transaction to add a few transactions. Bills and 
 page and Reports show the result. Notifications are optional and local; the app asks the first time a reminder is scheduled.
 The app makes no network connections and collects no data. It has no encryption of its own.
 The widget and the menu bar item read a small local file (names and dates only) through an App Group.
-The app has a narrow sandbox exception for one folder, /Users/Shared/OinklyBudget, used only by the optional Sharing section in
-Settings, which lets other Mac user accounts on the same Mac take turns using the same data. It is off by default and nothing
-leaves the Mac.
+The app has a narrow sandbox exception for one folder, /Users/Shared/OinklyBudget, used only by the optional Sharing switch in
+Settings ▸ Data & Backup, which lets other Mac user accounts on the same Mac take turns using the same data. It is off by default
+and nothing leaves the Mac.
+The app also asks for a folder the person picks (the user-selected files permission, with a security-scoped bookmark so it can
+be reopened). It is used only by the optional Backup Copy switch in the same place, which keeps a spare copy of the data in
+that folder. It is off by default. If the person picks a folder in iCloud Drive, macOS syncs that folder; the app itself makes
+no network connections. Backup files are in the app's own file format (a wrapper, not encryption).
 
 ## Screenshots
 Upload from `docs/app-store-screenshots` (2880×1800). Suggested order and caption ideas for each:

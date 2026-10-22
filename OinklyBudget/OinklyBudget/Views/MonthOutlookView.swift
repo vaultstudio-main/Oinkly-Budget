@@ -144,6 +144,7 @@ private struct OutlookBody: View {
                     Text(left, format: .appCurrency)
                         .font(.system(size: 40, weight: .bold))
                         .foregroundStyle(left < 0 ? Theme.red : Theme.green)
+                        .accessibilityLabel("Left to save \(left.formatted(.appCurrency))")
                     Spacer()
                     Text(month.formatted(.dateTime.month(.wide).year())).font(.headline).foregroundStyle(.secondary)
                 }
@@ -261,6 +262,17 @@ private struct OutlookRow: View {
             }
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+    }
+
+    /// What VoiceOver reads for the whole row: name, date, state, and the amount with how far it was from expected.
+    private var spoken: String {
+        var text = "\(line.title), \(subtitle), \(line.counted.formatted(.appCurrency))"
+        if line.actual != nil, line.difference != 0 {
+            text += ", \(abs(line.difference).formatted(.appCurrency)) \(line.difference > 0 ? "more" : "less") than the expected \(line.expected.formatted(.appCurrency))"
+        }
+        return text
     }
 
     private var symbol: String {
@@ -327,5 +339,15 @@ private struct BudgetOutlookRow: View {
             }
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+    }
+
+    private var spoken: String {
+        var text = "\(budget.category.name) budget, counts as \(budget.counted.formatted(.appCurrency)). Limit \(budget.limit.formatted(.appCurrency)), spent \(budget.spent.formatted(.appCurrency))"
+        if budget.planned > 0 { text += ", still to come \(budget.planned.formatted(.appCurrency))" }
+        text += budget.over > 0 ? ", \(budget.over.formatted(.appCurrency)) over" : ", \(budget.remaining.formatted(.appCurrency)) set aside"
+        if !budget.inside.isEmpty { text += ". Includes " + budget.inside.map(\.title).joined(separator: ", ") }
+        return text
     }
 }
