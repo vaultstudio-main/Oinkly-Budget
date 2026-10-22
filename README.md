@@ -1,4 +1,4 @@
-# Oinkly Budget (Piggybank)
+# Oinkly Budget
 
 A Mac personal-finance app: accounts of every kind, registers, bills and repeating transactions, budgets, goals, investments and liabilities, reports, reconcile, receipts, CSV import and export, and `.pig` backups. No bank linking, no accounts, no network. Made by Vault Studio.
 
@@ -8,12 +8,12 @@ Version 1.0 (build 5) is the first public release.
 
 | Folder | What is in it |
 |---|---|
-| `Piggybank/` | The Xcode project (scheme Piggybank): the app, the widget extension and the shared code |
+| `OinklyBudget/` | The Xcode project (OinklyBudget.xcodeproj, scheme OinklyBudget): the app, the widget extension and the shared code |
 | `docs/` | The release plan, feature list, release notes, App Store text, screenshot notes, data safety plan and the 1.1 plan |
 | `website-vaultstudio/` | The Vault Studio website, including the Oinkly Budget pages |
 | `scripts/` | `make-help-images.py`, which turns the app's own screenshots into Help, website and App Store pictures |
 
-Never run git inside `Piggybank/Piggybank/Piggybank`: it holds a stray nested repository.
+Never run git inside `OinklyBudget/OinklyBudget`: it holds a stray nested repository.
 
 ## Branches and tags
 
@@ -38,7 +38,7 @@ The full list, with how each feature works, is in [docs/feature-master-list-1.0.
 
 ## Data safety
 
-The database is `PiggybankSchemaV3` (a migration plan carries V1 and V2 files forward). Reminders and saved CSV import formats are stored in the database, so backups carry them. See [docs/data-integrity-plan.md](docs/data-integrity-plan.md) for the protections and tests. Debug-only launch tests live in the source under `Logic/SharedData/`.
+The database is `OinklyBudgetSchemaV3` (a migration plan carries V1 and V2 files forward). Reminders and saved CSV import formats are stored in the database, so backups carry them. See [docs/data-integrity-plan.md](docs/data-integrity-plan.md) for the protections and tests. Debug-only launch tests live in the source under `Logic/SharedData/`.
 
 ## Release
 

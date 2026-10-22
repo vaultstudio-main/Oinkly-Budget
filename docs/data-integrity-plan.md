@@ -17,8 +17,8 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 | Frozen V1 shape and lightweight V1 to V2 and V2 to V3 migrations | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real database from the original build (1.0 build 1, tag `app-review-original-1.0`) opened by the current build, test data set |
 | One-time step after migration (routing numbers, opening-deposit flag, tax flags, primary checking) | `Logic/SchemaUpgrade.swift` | Same test |
 | Safety copy before first V2 open (data file, side files, receipts folder) | `Logic/StoreSafetyCopy.swift` | Same test |
-| Data file pinned to the app's own folder, so the App Group can't move it | `PiggybankApp.swift`, `AppStore.localStoreURL` | Found and fixed by comparing the original build and the new one |
-| Open failure shows an error screen, not an empty database | `PiggybankApp.swift`, `StartupState` | By design, not forced yet |
+| Data file pinned to the app's own folder, so the App Group can't move it | `OinklyBudgetApp.swift`, `AppStore.localStoreURL` | Found and fixed by comparing the original build and the new one |
+| Open failure shows an error screen, not an empty database | `OinklyBudgetApp.swift`, `StartupState` | By design, not forced yet |
 
 ## Gaps to close (each becomes a test below)
 

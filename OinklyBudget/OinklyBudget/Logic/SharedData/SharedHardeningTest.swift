@@ -235,7 +235,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: PiggybankSchemaV3.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV3.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -383,7 +383,7 @@ enum SharedHardeningTest {
             check("S21 no snapshot means no lines", WidgetLines.make(nil, now: wNow, calendar: gregorian).isEmpty)
 
             // S22: reminders and saved import layouts live in the database, and a 2.0 data file opens in 3.0 without loss
-            let v2 = Schema(versionedSchema: PiggybankSchemaV2.self)
+            let v2 = Schema(versionedSchema: OinklyBudgetSchemaV2.self)
             let v2Store = root.appendingPathComponent("v2-file/OinklyBudget.store")
             try manager.createDirectory(at: v2Store.deletingLastPathComponent(), withIntermediateDirectories: true)
             do {
@@ -392,7 +392,7 @@ enum SharedHardeningTest {
                 old.mainContext.insert(Tag(name: "Kept tag"))
                 try old.mainContext.save()
             }
-            let upgraded = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self,
+            let upgraded = try ModelContainer(for: schema, migrationPlan: OinklyBudgetMigrationPlan.self,
                                               configurations: ModelConfiguration(schema: schema, url: v2Store, cloudKitDatabase: .none))
             let uc = upgraded.mainContext
             check("S22 a 2.0 data file opens in 3.0 with its data", ((try? uc.fetch(FetchDescriptor<Account>())) ?? []).contains { $0.name == "Kept through the upgrade" }

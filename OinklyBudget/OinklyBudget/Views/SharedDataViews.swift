@@ -16,7 +16,7 @@ struct SharedDataSection: View {
     @State private var message: String?
     @State private var messageIsError = false
 
-    private var localStore: URL { AppStore.localStoreURL(for: Schema(versionedSchema: PiggybankSchemaV3.self)) }
+    private var localStore: URL { AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV3.self)) }
 
     var body: some View {
         Section {

@@ -6,7 +6,7 @@ Take the raw pictures first (debug build, never your real data):
 Then run this from the repository folder:
     python3 scripts/make-help-images.py /Users/Shared/OinklyBudget/shots
 
-It uses only macOS's own `sips`. Help images go into Piggybank/Piggybank/Assets.xcassets as Help-*.imageset, website images
+It uses only macOS's own `sips`. Help images go into OinklyBudget/OinklyBudget/Assets.xcassets as Help-*.imageset, website images
 into website-vaultstudio/website/images, and the App Store set into docs/app-store-screenshots.
 """
 import json
@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
-assets = root / "Piggybank/Piggybank/Assets.xcassets"
+assets = root / "OinklyBudget/OinklyBudget/Assets.xcassets"
 web = root / "website-vaultstudio/website/images"
 store = root / "docs/app-store-screenshots"
 raw = Path(sys.argv[1] if len(sys.argv) > 1 else "/Users/Shared/OinklyBudget/shots")

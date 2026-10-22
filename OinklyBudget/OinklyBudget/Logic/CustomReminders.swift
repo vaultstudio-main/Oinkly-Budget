@@ -111,7 +111,7 @@ final class CustomReminders {
         }
     }
 
-    private static var context: ModelContext? { PiggybankAppDelegate.container?.mainContext }
+    private static var context: ModelContext? { OinklyBudgetAppDelegate.container?.mainContext }
 
     private static func stored() -> [CustomReminder] {
         context.map { SettingsRecords.reminders(in: $0) } ?? []

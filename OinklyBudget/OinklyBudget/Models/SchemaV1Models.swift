@@ -3,8 +3,8 @@ import SwiftData
 
 /// The ten models exactly as the 1.0 release stored them. They are only here so an existing 1.0 database can be
 /// opened and moved to the current shape. Never change them, and never use them in the app. Everything else works with
-/// the models in `PiggybankSchemaV2`.
-extension PiggybankSchemaV1 {
+/// the models in `OinklyBudgetSchemaV2`.
+extension OinklyBudgetSchemaV1 {
     @Model
     final class Account {
         var name: String = ""

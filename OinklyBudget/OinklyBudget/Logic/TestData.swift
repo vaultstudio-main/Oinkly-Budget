@@ -43,7 +43,7 @@ enum TestData {
     /// Small everyday purchases added for every day of the history, to make the transaction count large.
     /// About 4 a day gives roughly 4,000 over two years.
     static var everydayPurchasesPerDay: Int {
-        // For load testing: `open -n Piggybank.app --args -piggybank.testPurchasesPerDay 12`.
+        // For load testing: `open -n OinklyBudget.app --args -piggybank.testPurchasesPerDay 12`.
         let override = UserDefaults.standard.integer(forKey: "piggybank.testPurchasesPerDay")
         return override > 0 ? override : 4
     }

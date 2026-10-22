@@ -35,4 +35,4 @@ page's header and footer. Each app should have its own support and privacy page,
 ## Keep it honest
 The privacy page says the app collects nothing and makes no network connections. That is true today. If a future
 version adds anything that sends data (sync, analytics, crash reports, update checks), update `privacy.html`, the App
-Privacy answers in App Store Connect, and `Piggybank/Piggybank/PrivacyInfo.xcprivacy` together.
+Privacy answers in App Store Connect, and `OinklyBudget/OinklyBudget/PrivacyInfo.xcprivacy` together.

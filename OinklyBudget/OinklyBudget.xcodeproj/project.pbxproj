@@ -38,14 +38,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B1B4832F3077491F001D82A7 /* Piggybank */ = {
+		B1B4832F3077491F001D82A7 /* OinklyBudget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Piggybank;
+			path = OinklyBudget;
 			sourceTree = "<group>";
 		};
-		C0DE00000000000000000003 /* PiggybankWidgets */ = {
+		C0DE00000000000000000003 /* OinklyBudgetWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = PiggybankWidgets;
+			path = OinklyBudgetWidgets;
 			sourceTree = "<group>";
 		};
 		C0DE00000000000000000004 /* Shared */ = {
@@ -72,8 +72,8 @@
 		B1B483243077491F001D82A7 = {
 			isa = PBXGroup;
 			children = (
-				B1B4832F3077491F001D82A7 /* Piggybank */,
-				C0DE00000000000000000003 /* PiggybankWidgets */,
+				B1B4832F3077491F001D82A7 /* OinklyBudget */,
+				C0DE00000000000000000003 /* OinklyBudgetWidgets */,
 				C0DE00000000000000000004 /* Shared */,
 				B1B4832E3077491F001D82A7 /* Products */,
 			);
@@ -91,9 +91,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		B1B4832C3077491F001D82A7 /* Piggybank */ = {
+		B1B4832C3077491F001D82A7 /* OinklyBudget */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = B1B4833B3077491F001D82A7 /* Build configuration list for PBXNativeTarget "Piggybank" */;
+			buildConfigurationList = B1B4833B3077491F001D82A7 /* Build configuration list for PBXNativeTarget "OinklyBudget" */;
 			buildPhases = (
 				B1B483293077491F001D82A7 /* Sources */,
 				B1B4832A3077491F001D82A7 /* Frameworks */,
@@ -106,11 +106,11 @@
 				C0DE0000000000000000000E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				B1B4832F3077491F001D82A7 /* Piggybank */,
+				B1B4832F3077491F001D82A7 /* OinklyBudget */,
 				C0DE00000000000000000004 /* Shared */,
 			);
-			name = Piggybank;
-			productName = Piggybank;
+			name = OinklyBudget;
+			productName = OinklyBudget;
 			productReference = B1B4832D3077491F001D82A7 /* OinklyBudget.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -125,7 +125,7 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
-				C0DE00000000000000000003 /* PiggybankWidgets */,
+				C0DE00000000000000000003 /* OinklyBudgetWidgets */,
 				C0DE00000000000000000004 /* Shared */,
 			);
 			name = OinklyBudgetWidgets;
@@ -151,7 +151,7 @@
 					};
 				};
 			};
-			buildConfigurationList = B1B483283077491F001D82A7 /* Build configuration list for PBXProject "Piggybank" */;
+			buildConfigurationList = B1B483283077491F001D82A7 /* Build configuration list for PBXProject "OinklyBudget" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -165,7 +165,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				B1B4832C3077491F001D82A7 /* Piggybank */,
+				B1B4832C3077491F001D82A7 /* OinklyBudget */,
 				C0DE00000000000000000001 /* OinklyBudgetWidgets */,
 			);
 		};
@@ -206,7 +206,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		B1B4833C3077491F001D82A7 /* Debug configuration for PBXNativeTarget "Piggybank" */ = {
+		B1B4833C3077491F001D82A7 /* Debug configuration for PBXNativeTarget "OinklyBudget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -243,7 +243,7 @@
 			};
 			name = Debug;
 		};
-		B1B4833D3077491F001D82A7 /* Release configuration for PBXNativeTarget "Piggybank" */ = {
+		B1B4833D3077491F001D82A7 /* Release configuration for PBXNativeTarget "OinklyBudget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
@@ -280,7 +280,7 @@
 			};
 			name = Release;
 		};
-		B1B4833E3077491F001D82A7 /* Debug configuration for PBXProject "Piggybank" */ = {
+		B1B4833E3077491F001D82A7 /* Debug configuration for PBXProject "OinklyBudget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -344,7 +344,7 @@
 			};
 			name = Debug;
 		};
-		B1B4833F3077491F001D82A7 /* Release configuration for PBXProject "Piggybank" */ = {
+		B1B4833F3077491F001D82A7 /* Release configuration for PBXProject "OinklyBudget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -469,19 +469,19 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		B1B483283077491F001D82A7 /* Build configuration list for PBXProject "Piggybank" */ = {
+		B1B483283077491F001D82A7 /* Build configuration list for PBXProject "OinklyBudget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B1B4833E3077491F001D82A7 /* Debug configuration for PBXProject "Piggybank" */,
-				B1B4833F3077491F001D82A7 /* Release configuration for PBXProject "Piggybank" */,
+				B1B4833E3077491F001D82A7 /* Debug configuration for PBXProject "OinklyBudget" */,
+				B1B4833F3077491F001D82A7 /* Release configuration for PBXProject "OinklyBudget" */,
 			);
 			defaultConfigurationName = Release;
 		};
-		B1B4833B3077491F001D82A7 /* Build configuration list for PBXNativeTarget "Piggybank" */ = {
+		B1B4833B3077491F001D82A7 /* Build configuration list for PBXNativeTarget "OinklyBudget" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				B1B4833C3077491F001D82A7 /* Debug configuration for PBXNativeTarget "Piggybank" */,
-				B1B4833D3077491F001D82A7 /* Release configuration for PBXNativeTarget "Piggybank" */,
+				B1B4833C3077491F001D82A7 /* Debug configuration for PBXNativeTarget "OinklyBudget" */,
+				B1B4833D3077491F001D82A7 /* Release configuration for PBXNativeTarget "OinklyBudget" */,
 			);
 			defaultConfigurationName = Release;
 		};

@@ -140,9 +140,9 @@ Rough effort: 1 to 2 days of generation and review (mostly choosing among candid
 ## 11. Prompt to start the project (paste into a new session)
 
 ```text
-You are helping with Oinkly Budget (code name Piggybank), a Mac-only SwiftUI and SwiftData personal finance app, repository at /Users/dstibich/Documents/Code_Bank/Piggybank. The 1.0 work is on branch main. Do not touch main. Create a new branch from main called default-artwork and work there, committing only when I say yes.
+You are helping with Oinkly Budget (formerly code-named Piggybank), a Mac-only SwiftUI and SwiftData personal finance app, repository at /Users/dstibich/Documents/Code_Bank/Piggybank. The 1.0 work is on branch main. Do not touch main. Create a new branch from main called default-artwork and work there, committing only when I say yes.
 
-Your job: carry out docs/default-account-artwork-plan.md. Read it first, then read docs/feature-master-list-1.0.md, Piggybank/Piggybank/Views/AccountArtwork.swift (today's code-drawn default pictures), docs/data-integrity-plan.md and docs/accessibility-audit.md.
+Your job: carry out docs/default-account-artwork-plan.md. Read it first, then read docs/feature-master-list-1.0.md, OinklyBudget/OinklyBudget/Views/AccountArtwork.swift (today's code-drawn default pictures), docs/data-integrity-plan.md and docs/accessibility-audit.md.
 
 Goal: replace the single code-drawn default picture per account kind with AI-generated artwork made in Draw Things on this Mac: about 26 subjects, 3 style variants each, as transparent 900x600 cut-outs, shown on one of 10 code-drawn colour-theme gradients, with a picker in the account edit screen. People's own photos must keep working exactly as today.
 

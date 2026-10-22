@@ -70,12 +70,12 @@ struct SavedImportLayout: Codable, Identifiable, Equatable {
 
     /// Kept in the database, so everyone who shares the data has the same saved layouts.
     static func load() -> [SavedImportLayout] {
-        guard !ScreenshotMode.isOn, let context = PiggybankAppDelegate.container?.mainContext else { return [] }
+        guard !ScreenshotMode.isOn, let context = OinklyBudgetAppDelegate.container?.mainContext else { return [] }
         return SettingsRecords.importLayouts(in: context)
     }
 
     static func store(_ layouts: [SavedImportLayout]) {
-        guard !ScreenshotMode.isOn, let context = PiggybankAppDelegate.container?.mainContext else { return }
+        guard !ScreenshotMode.isOn, let context = OinklyBudgetAppDelegate.container?.mainContext else { return }
         SettingsRecords.setImportLayouts(layouts, in: context)
         context.saveNow()
     }

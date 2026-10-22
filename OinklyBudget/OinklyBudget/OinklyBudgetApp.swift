@@ -2,13 +2,13 @@ import SwiftUI
 import SwiftData
 
 @main
-struct PiggybankApp: App {
+struct OinklyBudgetApp: App {
     let container: ModelContainer
-    @NSApplicationDelegateAdaptor(PiggybankAppDelegate.self) private var appDelegate
+    @NSApplicationDelegateAdaptor(OinklyBudgetAppDelegate.self) private var appDelegate
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: PiggybankSchemaV3.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV3.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // The first time this version opens the data file, keep a copy of it as it was.
@@ -43,7 +43,7 @@ struct PiggybankApp: App {
         }
         if SharedDataSession.shared.decision == nil && !ScreenshotMode.isOn { StoreReset.performIfRequested(for: configuration) }
         do {
-            container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)
+            container = try ModelContainer(for: schema, migrationPlan: OinklyBudgetMigrationPlan.self, configurations: configuration)
         } catch {
             // Keep going with throwaway storage so the boot window can explain what went wrong.
             // The main window never opens in this state.
@@ -58,7 +58,7 @@ struct PiggybankApp: App {
         // Repeating transactions that came due while the app was closed.
         Recurring.run(in: container.mainContext)
         NotificationCenter.default.removeObserver(launchSaves)
-        PiggybankAppDelegate.container = container
+        OinklyBudgetAppDelegate.container = container
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)
         #if DEBUG

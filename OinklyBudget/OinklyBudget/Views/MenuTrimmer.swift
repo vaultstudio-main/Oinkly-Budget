@@ -2,7 +2,7 @@ import AppKit
 import SwiftData
 import UserNotifications
 
-/// Keeps the Mac menu bar to the Apple menu, Piggybank, File and Help. SwiftUI adds Edit, View and Window on its own
+/// Keeps the Mac menu bar to the Apple menu, Oinkly Budget, File and Help. SwiftUI adds Edit, View and Window on its own
 /// and rebuilds them from time to time, so this removes them again whenever they come back.
 enum MenuTrimmer {
     private static let removed: Set<String> = ["Edit", "View", "Window"]
@@ -100,7 +100,7 @@ enum MenuTrimmer {
     }
 }
 
-final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Set by the app at launch so a backup opened from Finder can reach the data.
     nonisolated(unsafe) static var container: ModelContainer?
 
@@ -158,7 +158,7 @@ final class PiggybankAppDelegate: NSObject, NSApplicationDelegate, UNUserNotific
             _ = await alert.beginSheetModal(for: window)
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in await PiggybankAppDelegate.refreshReminders() }
+            Task { @MainActor in await OinklyBudgetAppDelegate.refreshReminders() }
         }
         // Planned reminders only look 45 days ahead, so top them up now and then even if nobody opens the app.
         Task { @MainActor in
@@ -217,7 +217,7 @@ enum BackupOpener {
         for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "Oinkly Budget" && $0.isVisible }) {
             try? await Task.sleep(for: .milliseconds(250))
         }
-        guard let container = PiggybankAppDelegate.container else { return }
+        guard let container = OinklyBudgetAppDelegate.container else { return }
         let file: BackupFile
         do {
             file = try DataBackup.decode(try Data(contentsOf: url))

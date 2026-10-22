@@ -365,7 +365,7 @@ final class SharedDataSession {
         guard isActive, !lostLock, let folder, !isCheckingIn else { return }
         isCheckingIn = true
         defer { isCheckingIn = false }
-        if let container = PiggybankAppDelegate.container {
+        if let container = OinklyBudgetAppDelegate.container {
             // Changes that haven't been written yet count as changes, even before the save notice arrives.
             if container.mainContext.hasChanges { isDirty = true }
             try? container.mainContext.save()

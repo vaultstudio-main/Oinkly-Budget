@@ -28,7 +28,7 @@ final class DatabaseStatus {
         guard task == nil else { return }
         task = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                if let context = PiggybankAppDelegate.container?.mainContext { self?.poll(context: context) }
+                if let context = OinklyBudgetAppDelegate.container?.mainContext { self?.poll(context: context) }
                 try? await Task.sleep(for: .seconds(1))
             }
         }

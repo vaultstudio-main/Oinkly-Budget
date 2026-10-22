@@ -31,7 +31,7 @@ nonisolated struct SharedLock: Codable, Equatable, Sendable {
 /// About the finished data file: when it was last saved and by whom.
 nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var formatVersion: Int
-    /// The database shape (PiggybankSchemaV3 is 3). An older app refuses newer data.
+    /// The database shape (OinklyBudgetSchemaV3 is 3). An older app refuses newer data.
     var schemaVersion: Int
     /// Goes up by one at every save, so two copies can tell whether the file changed while they were away.
     var revision: Int

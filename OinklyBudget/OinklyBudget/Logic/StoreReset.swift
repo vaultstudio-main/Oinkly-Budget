@@ -5,7 +5,7 @@ import SwiftData
 /// ties the app up, so instead the database files are removed while the app is not using them: the next launch
 /// deletes them before opening the database, and the app starts fresh. Needs no time however much data there is.
 enum StoreReset {
-    /// Also settable from the command line: `open -a Piggybank --args -piggybank.resetStoreOnLaunch YES`.
+    /// Also settable from the command line: `open -a OinklyBudget --args -piggybank.resetStoreOnLaunch YES`.
     static let key = "piggybank.resetStoreOnLaunch"
 
     private static let budgetsKey = "piggybank.budgetsToKeepAfterReset"

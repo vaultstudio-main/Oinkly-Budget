@@ -5,7 +5,7 @@ accounts are ever on screen. They are retaken in one go whenever the screens cha
 
 ## How to retake them
 
-1. Build the debug app (Xcode, scheme Piggybank).
+1. Build the debug app (Xcode, scheme OinklyBudget).
 2. Run it with these launch arguments (the `YES` after `-screenshotMode` matters; without it macOS reads the folder
    as a file to open):
 

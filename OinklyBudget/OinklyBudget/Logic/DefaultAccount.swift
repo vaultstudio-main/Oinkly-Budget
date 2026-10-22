@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// Cash on Hand is the one account every Piggybank has. It can't be deleted or given another type, so there is always
+/// Cash on Hand is the one account every Oinkly Budget has. It can't be deleted or given another type, so there is always
 /// somewhere to record the cash you carry.
 extension Account {
     static let defaultName = "Cash on Hand"
