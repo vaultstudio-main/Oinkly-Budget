@@ -208,7 +208,7 @@ private struct GoalCard: View {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 12) {
                             if let account = goal.followedAccount {
-                                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type, account: account)
                                     .frame(width: 64, height: 44)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                             } else {
@@ -785,7 +785,7 @@ private struct LoanPlanCard: View {
         GoalCardBackground {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
-                    AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                    AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type, account: account)
                         .frame(width: 64, height: 44)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading, spacing: 2) {

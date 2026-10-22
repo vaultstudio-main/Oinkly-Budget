@@ -38,10 +38,21 @@ enum OinklyBudgetSchemaV3: VersionedSchema {
     }
 }
 
+/// Adds one model and nothing else: the colour a person picked for an account's or a bill's default picture. Every
+/// existing model is unchanged, so the move from V3 is automatic.
+enum OinklyBudgetSchemaV4: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(4, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        OinklyBudgetSchemaV3.models + [ArtworkChoice.self]
+    }
+}
+
 enum OinklyBudgetMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self] }
+    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self] }
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: OinklyBudgetSchemaV1.self, toVersion: OinklyBudgetSchemaV2.self),
-         .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self)]
+         .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self),
+         .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self)]
     }
 }

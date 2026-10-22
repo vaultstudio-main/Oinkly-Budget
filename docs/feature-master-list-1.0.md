@@ -50,6 +50,12 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ---
 
+### A7. Picture colours (Built)
+- The picture the app draws for an account or bill without a photo can be given one of eight colours (Ocean, Berry, Sunset, Forest, Indigo, Gold, Rose, Graphite) in the account editor and the bill editor, under Picture Colour. Automatic keeps the colour of the account group.
+- The choice shows on the account details card, in goals and in the bills lists, and it is saved in backups. A bill with no colour of its own uses its loan's.
+- Kept in its own record in the database (data format 4), found by account type and name or by the bill's creation time, so renaming an account in its editor carries the colour along. Photos still win over the drawn picture.
+- New pictures and custom artwork are planned for 1.1.
+
 ## B. Transactions
 
 ### B1. Status colors (Built)

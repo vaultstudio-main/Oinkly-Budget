@@ -33,6 +33,71 @@ final class ImportLayoutRecord {
     }
 }
 
+/// The colour a person picked for an account's or a bill's default picture. It has its own record, found by a key made from
+/// the account's type and name or the bill's creation time, so the account and bill models stay exactly as they were.
+/// No choice means the picture keeps the colour of its account group.
+@Model
+final class ArtworkChoice {
+    var key: String = ""
+    /// Which colour theme (see `ArtworkTheme`). Zero is Automatic and is never stored.
+    var theme: Int = 0
+    var createdAt: Date = Date.now
+
+    init(key: String, theme: Int) {
+        self.key = key
+        self.theme = theme
+    }
+}
+
+enum ArtworkChoices {
+    static func key(for account: Account) -> String { "account|\(account.type.rawValue)|\(account.name)" }
+    static func key(for bill: Bill) -> String { "bill|" + String(format: "%.6f", bill.createdAt.timeIntervalSinceReferenceDate) }
+
+    private static func all(in context: ModelContext) -> [ArtworkChoice] {
+        ((try? context.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).live
+    }
+
+    static func theme(for account: Account) -> Int { account.isLive ? theme(forKey: key(for: account), in: account.modelContext) : 0 }
+    static func theme(for bill: Bill) -> Int { bill.isLive ? theme(forKey: key(for: bill), in: bill.modelContext) : 0 }
+
+    private static func theme(forKey key: String, in context: ModelContext?) -> Int {
+        guard let context else { return 0 }
+        return all(in: context).first { $0.key == key }?.theme ?? 0
+    }
+
+    /// Remembers the colour for an account, or forgets it when it is Automatic. `previousKey` is the key it had before a
+    /// rename. Does not save.
+    static func set(_ theme: Int, for account: Account, previousKey: String? = nil, in context: ModelContext) {
+        apply(theme, key: key(for: account), previousKey: previousKey, in: context)
+    }
+
+    static func set(_ theme: Int, for bill: Bill, in context: ModelContext) {
+        apply(theme, key: key(for: bill), previousKey: nil, in: context)
+    }
+
+    static func apply(_ theme: Int, key: String, previousKey: String? = nil, in context: ModelContext) {
+        let valid = ArtworkTheme.isValid(theme) ? theme : 0
+        let existing = all(in: context)
+        for old in existing where old.key == previousKey && old.key != key { context.delete(old) }
+        let mine = existing.filter { $0.key == key }
+        for extra in mine.dropFirst() { context.delete(extra) }
+        if valid == 0 {
+            for choice in mine { context.delete(choice) }
+        } else if let choice = mine.first {
+            if choice.theme != valid { choice.theme = valid }
+        } else {
+            context.insert(ArtworkChoice(key: key, theme: valid))
+        }
+    }
+
+    /// Choices whose account or bill is gone (or was renamed somewhere that doesn't carry the colour along).
+    static func removeOrphans(in context: ModelContext) {
+        let accounts = Set(((try? context.fetch(FetchDescriptor<Account>())) ?? []).live.map { key(for: $0) })
+        let bills = Set(((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live.map { key(for: $0) })
+        for choice in all(in: context) where !accounts.contains(choice.key) && !bills.contains(choice.key) { context.delete(choice) }
+    }
+}
+
 /// Reading and writing the records above. `legacyKey` is where earlier builds kept the same list in this Mac's
 /// preferences; `adoptLegacy` moves it into the database once.
 enum SettingsRecords {

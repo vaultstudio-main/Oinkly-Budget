@@ -26,6 +26,8 @@ enum SchemaUpgrade {
         // Reminders and saved import layouts used to be kept in this login's preferences.
         if !ScreenshotMode.isOn { SettingsRecords.adoptLegacy(in: context) }
 
+        ArtworkChoices.removeOrphans(in: context)
+
         seedTaxFlags(in: context)
         context.saveNow()
     }

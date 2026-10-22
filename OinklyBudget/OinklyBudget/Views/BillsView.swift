@@ -218,7 +218,7 @@ private struct BillSetupRow: View {
         if bill.isLive {
             Button(action: onEdit) {
                 HStack(spacing: 10) {
-                    AccountPicture(data: bill.displayPhotoData, type: bill.loan?.isLive == true ? bill.loan?.type : nil)
+                    AccountPicture(data: bill.displayPhotoData, type: bill.loan?.isLive == true ? bill.loan?.type : nil, bill: bill)
                         .frame(width: 32, height: 32)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
                     VStack(alignment: .leading, spacing: 2) {
@@ -270,7 +270,7 @@ private struct BillRow: View {
 
                 Button(action: onEdit) {
                     HStack {
-                        AccountPicture(data: item.bill.displayPhotoData, type: item.bill.loan?.isLive == true ? item.bill.loan?.type : nil)
+                        AccountPicture(data: item.bill.displayPhotoData, type: item.bill.loan?.isLive == true ? item.bill.loan?.type : nil, bill: item.bill)
                             .frame(width: 36, height: 36)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
                         VStack(alignment: .leading, spacing: 2) {
@@ -439,6 +439,7 @@ struct BillEditView: View {
     @State private var notes: String
     @State private var category: Category?
     @State private var photoData: Data?
+    @State private var artworkTheme = 0
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var confirmingDelete = false
 
@@ -453,6 +454,7 @@ struct BillEditView: View {
         _remindDays = State(initialValue: bill?.remindDaysBefore ?? 3)
         _notes = State(initialValue: bill?.notes ?? "")
         _photoData = State(initialValue: bill?.photoData)
+        _artworkTheme = State(initialValue: bill.map { ArtworkChoices.theme(for: $0) } ?? 0)
         _category = State(initialValue: bill?.category)
     }
 
@@ -504,8 +506,13 @@ struct BillEditView: View {
                 } footer: {
                     Text("Choose how many days ahead you want to be reminded. Reminders are planned for 9 AM.")
                 }
+                if photoData == nil && inheritedPhoto == nil {
+                    Section("Picture Colour") {
+                        ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)
+                    }
+                }
                 Section("Photo") {
-                    AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil)
+                    AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: artworkTheme)
                         .frame(maxWidth: .infinity)
                         .frame(height: 160)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -584,7 +591,9 @@ struct BillEditView: View {
             created.photoData = photoData
             created.category = category
             modelContext.insert(created)
+            ArtworkChoices.set(artworkTheme, for: created, in: modelContext)
         }
+        if let bill { ArtworkChoices.set(artworkTheme, for: bill, in: modelContext) }
         modelContext.saveNow()
         Task { await BillNotifier.refresh(in: modelContext) }
         dismiss()

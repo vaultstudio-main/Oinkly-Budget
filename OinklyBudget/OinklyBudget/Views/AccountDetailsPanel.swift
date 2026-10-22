@@ -195,7 +195,7 @@ struct AccountDetailsPanel: View {
         }
         return Panel(title: "\(account.financingWord) Details") {
             withBalance {
-                AccountPicture(data: account.photoData, type: account.type)
+                AccountPicture(data: account.photoData, type: account.type, account: account)
                     .frame(width: 150, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 14) {
@@ -376,7 +376,7 @@ struct AccountDetailsPanel: View {
         ]
         return Panel(title: "Account Details") {
             withBalance {
-                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
+                AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type, account: account)
                     .frame(width: 150, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 14) {

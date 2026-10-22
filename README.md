@@ -38,7 +38,7 @@ The full list, with how each feature works, is in [docs/feature-master-list-1.0.
 
 ## Data safety
 
-The database is `OinklyBudgetSchemaV3` (a migration plan carries V1 and V2 files forward). Reminders and saved CSV import formats are stored in the database, so backups carry them. See [docs/data-integrity-plan.md](docs/data-integrity-plan.md) for the protections and tests. Debug-only launch tests live in the source under `Logic/SharedData/`.
+The database is `OinklyBudgetSchemaV4` (a migration plan carries V1, V2 and V3 files forward). Reminders, saved CSV import formats and picture colours are stored in the database, so backups carry them. See [docs/data-integrity-plan.md](docs/data-integrity-plan.md) for the protections and tests. Debug-only launch tests live in the source under `Logic/SharedData/`.
 
 ## Release
 

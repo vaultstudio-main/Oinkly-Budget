@@ -130,6 +130,8 @@ struct BackupFile: Codable {
         var wireRoutingNumber: String?
         var digitalRoutingNumber: String?
         var isPrimaryChecking: Bool?
+        /// The colour picked for the default picture. Added in 1.0; absent in older files.
+        var artworkTheme: Int?
     }
 
     struct PayeeRecord: Codable {
@@ -235,6 +237,7 @@ struct BackupFile: Codable {
         /// Added after version 1 files existed, so older backups simply leave it out.
         var photoData: Data?
         var categoryKey: String?
+        var artworkTheme: Int?
     }
 
     /// A short description for the confirmation message.
@@ -285,6 +288,9 @@ enum DataBackup {
         let liveTags = try context.fetch(FetchDescriptor<Tag>()).live
         if !liveTags.isEmpty { file.tags = liveTags.map { .init(name: $0.name, colorHex: $0.colorHex) } }
 
+        let choices = ((try? context.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).live
+        let themeByKey = Dictionary(choices.map { ($0.key, $0.theme) }, uniquingKeysWith: { first, _ in first })
+
         file.accounts = accounts.enumerated().map { index, a in
             .init(id: index, name: a.name, type: a.type.rawValue, openingBalance: text(a.openingBalance), isClosed: a.isClosed,
                   institution: a.institution, accountNumber: a.accountNumber, routingNumber: a.routingNumber,
@@ -293,7 +299,7 @@ enum DataBackup {
                   interestRate: a.interestRate, isLease: a.isLease, vin: a.vin, notes: a.notes, photoData: a.photoData,
                   creditLimit: text(a.creditLimit), isDefault: a.isDefault,
                   wireRoutingNumber: a.wireRoutingNumber, digitalRoutingNumber: a.digitalRoutingNumber,
-                  isPrimaryChecking: a.isPrimaryChecking)
+                  isPrimaryChecking: a.isPrimaryChecking, artworkTheme: themeByKey[ArtworkChoices.key(for: a)])
         }
 
         let liveRules = try context.fetch(FetchDescriptor<RecurringTransaction>(sortBy: [SortDescriptor(\.createdAt)])).live
@@ -350,7 +356,8 @@ enum DataBackup {
                   notes: b.notes, paidDates: b.paidDates,
                   loanAccountID: b.loan?.isLive == true ? ids[b.loan!.persistentModelID] : nil,
                   createdAt: b.createdAt, photoData: b.photoData,
-                  categoryKey: b.category?.isLive == true ? b.category?.systemKey : nil)
+                  categoryKey: b.category?.isLive == true ? b.category?.systemKey : nil,
+                  artworkTheme: themeByKey[ArtworkChoices.key(for: b)])
         }
 
         file.paymentMethods = try context.fetch(FetchDescriptor<CustomPaymentMethod>()).live.map { .init(name: $0.name, symbol: $0.symbol) }
@@ -422,6 +429,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<Bill>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<ArtworkChoice>()) { context.delete(item) }
         // A backup from before these were kept in the data has none: leave the current ones alone then.
         if let reminders = file.reminders { SettingsRecords.setReminders(reminders, in: context) }
         if let layouts = file.importLayouts { SettingsRecords.setImportLayouts(layouts, in: context) }
@@ -473,6 +481,7 @@ enum DataBackup {
             account.digitalRoutingNumber = record.digitalRoutingNumber ?? ""
             account.isPrimaryChecking = record.isPrimaryChecking ?? false
             context.insert(account)
+            if let theme = record.artworkTheme, theme > 0, ArtworkTheme.isValid(theme) { context.insert(ArtworkChoice(key: ArtworkChoices.key(for: account), theme: theme)) }
             accounts[record.id] = account
         }
 
@@ -571,6 +580,7 @@ enum DataBackup {
             bill.photoData = record.photoData
             bill.category = record.categoryKey.flatMap { byKey[$0] }
             context.insert(bill)
+            if let theme = record.artworkTheme, theme > 0, ArtworkTheme.isValid(theme) { context.insert(ArtworkChoice(key: ArtworkChoices.key(for: bill), theme: theme)) }
             restoredBills.append(bill)
         }
         // Reconnect each bill payment to the bill it settled.

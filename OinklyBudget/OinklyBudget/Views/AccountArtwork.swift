@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// What an account (or bill) looks like when the user hasn't chosen a photo: a small flat illustration, drawn in code,
 /// on a gradient that matches the account's group. Every account type has one so the app looks the same everywhere.
@@ -30,20 +31,45 @@ extension AccountType {
     }
 }
 
+/// The colours a person can give a default picture. Zero is Automatic: the colour of the account's group.
+enum ArtworkTheme {
+    struct Option { let name: String; let top: Color; let bottom: Color }
+
+    /// Themes 1 to 8, in the order shown. Never reorder or remove one: the number is what gets saved.
+    static let options: [Option] = [
+        Option(name: "Ocean", top: Color(red: 0.20, green: 0.74, blue: 0.72), bottom: Color(red: 0.13, green: 0.45, blue: 0.80)),
+        Option(name: "Berry", top: Color(red: 0.93, green: 0.45, blue: 0.67), bottom: Color(red: 0.46, green: 0.31, blue: 0.82)),
+        Option(name: "Sunset", top: Color(red: 0.99, green: 0.62, blue: 0.30), bottom: Color(red: 0.88, green: 0.28, blue: 0.38)),
+        Option(name: "Forest", top: Color(red: 0.35, green: 0.80, blue: 0.45), bottom: Color(red: 0.10, green: 0.50, blue: 0.55)),
+        Option(name: "Indigo", top: Color(red: 0.40, green: 0.70, blue: 0.98), bottom: Color(red: 0.28, green: 0.34, blue: 0.82)),
+        Option(name: "Gold", top: Color(red: 0.98, green: 0.80, blue: 0.28), bottom: Color(red: 0.93, green: 0.50, blue: 0.15)),
+        Option(name: "Rose", top: Color(red: 0.98, green: 0.55, blue: 0.55), bottom: Color(red: 0.80, green: 0.20, blue: 0.40)),
+        Option(name: "Graphite", top: Color(red: 0.55, green: 0.60, blue: 0.68), bottom: Color(red: 0.22, green: 0.26, blue: 0.34)),
+    ]
+
+    static func isValid(_ theme: Int) -> Bool { theme >= 0 && theme <= options.count }
+    static func name(_ theme: Int) -> String { theme >= 1 && theme <= options.count ? options[theme - 1].name : "Automatic" }
+
+    static func colors(_ theme: Int) -> (top: Color, bottom: Color)? {
+        guard theme >= 1 && theme <= options.count else { return nil }
+        return (options[theme - 1].top, options[theme - 1].bottom)
+    }
+}
+
 /// The default picture for an account type, or for a bill that has no account behind it.
 struct AccountArtwork: View {
     private let kind: ArtworkKind
     private let colors: (top: Color, bottom: Color)
 
-    init(type: AccountType) {
+    init(type: AccountType, theme: Int = 0) {
         kind = type.artworkKind
-        colors = Self.palette(for: type.group)
+        colors = ArtworkTheme.colors(theme) ?? Self.palette(for: type.group)
     }
 
     /// A bill with no loan behind it.
-    init() {
+    init(theme: Int = 0) {
         kind = .bill
-        colors = (Color(red: 0.98, green: 0.69, blue: 0.25), Color(red: 0.93, green: 0.40, blue: 0.20))
+        colors = ArtworkTheme.colors(theme) ?? (Color(red: 0.98, green: 0.69, blue: 0.25), Color(red: 0.93, green: 0.40, blue: 0.20))
     }
 
     private static func palette(for group: AccountGroup) -> (top: Color, bottom: Color) {
@@ -261,18 +287,103 @@ struct AccountArtwork: View {
 struct AccountPicture: View {
     let data: Data?
     let type: AccountType?
+    /// The colour to show, when the screen already knows it (an editor, before it is saved).
+    private let theme: Int?
+    private let account: Account?
+    private let bill: Bill?
+    @Query private var choices: [ArtworkChoice]
+
+    /// Pass the account or bill the picture is for, and it shows the colour that was picked for it.
+    init(data: Data?, type: AccountType?, theme: Int? = nil, account: Account? = nil, bill: Bill? = nil) {
+        self.data = data
+        self.type = type
+        self.theme = theme
+        self.account = account
+        self.bill = bill
+    }
+
+    private var chosenTheme: Int {
+        if let theme { return theme }
+        func pick(_ key: String) -> Int? { choices.live.first { $0.key == key }?.theme }
+        if let bill, bill.isLive {
+            if let own = pick(ArtworkChoices.key(for: bill)) { return own }
+            if let loan = bill.loan, loan.isLive { return pick(ArtworkChoices.key(for: loan)) ?? 0 }
+        }
+        if let account, account.isLive { return pick(ArtworkChoices.key(for: account)) ?? 0 }
+        return 0
+    }
 
     var body: some View {
         Group {
             if let image = AccountPhoto.image(from: data) {
                 image.resizable().scaledToFill()
             } else if let type {
-                AccountArtwork(type: type)
+                AccountArtwork(type: type, theme: chosenTheme)
             } else {
-                AccountArtwork()
+                AccountArtwork(theme: chosenTheme)
             }
         }
         // A decoration. The account's name and type are read from the text beside it.
         .accessibilityHidden(true)
     }
 }
+
+/// A row of small pictures in each colour, to pick the one an account or bill uses when it has no photo.
+struct ArtworkThemePicker: View {
+    let type: AccountType?
+    @Binding var theme: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 64), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(0...ArtworkTheme.options.count, id: \.self) { number in
+                    Button { theme = number } label: {
+                        Group {
+                            if let type { AccountArtwork(type: type, theme: number) } else { AccountArtwork(theme: number) }
+                        }
+                        .frame(width: 58, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(theme == number ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: theme == number ? 3 : 1))
+                    }
+                    .buttonStyle(.plain)
+                    .help(ArtworkTheme.name(number))
+                    .accessibilityLabel(ArtworkTheme.name(number))
+                    .accessibilityAddTraits(theme == number ? .isSelected : [])
+                }
+            }
+            Text(theme == 0 ? "Automatic: the colour that goes with this kind of account." : ArtworkTheme.name(theme))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+#if DEBUG
+extension ArtworkThemePicker {
+    /// `-artworkCheck <folder>` draws the colour row for a few kinds of account into PNG files and quits. Debug only.
+    @MainActor
+    static func runCheckIfRequested() {
+        let arguments = CommandLine.arguments
+        guard let flag = arguments.firstIndex(of: "-artworkCheck"), flag + 1 < arguments.count else { return }
+        let folder = URL(fileURLWithPath: arguments[flag + 1], isDirectory: true)
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let cases: [(String, AccountType?)] = [("checking", .checking), ("credit-card", .creditCard), ("mortgage", .mortgage), ("investment", .brokerage), ("bill", nil)]
+        for (name, type) in cases {
+            let view = VStack(alignment: .leading, spacing: 10) {
+                ArtworkThemePicker(type: type, theme: .constant(2))
+                HStack { ForEach(0...ArtworkTheme.options.count, id: \.self) { n in
+                    Group { if let type { AccountArtwork(type: type, theme: n) } else { AccountArtwork(theme: n) } }
+                        .frame(width: 150, height: 100).clipShape(RoundedRectangle(cornerRadius: 10))
+                } }
+            }
+            .padding(20).frame(width: 1400).background(Color(white: 0.96)).environment(\.colorScheme, .light)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 1
+            if let image = renderer.nsImage, let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: folder.appendingPathComponent("artwork-\(name).png"))
+            }
+        }
+        exit(0)
+    }
+}
+#endif

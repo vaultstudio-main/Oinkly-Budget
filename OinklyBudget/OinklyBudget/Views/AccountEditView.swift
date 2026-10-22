@@ -32,6 +32,7 @@ struct AccountEditView: View {
     @State private var hasStartDate: Bool
     @State private var startDate: Date
     @State private var photoData: Data?
+    @State private var artworkTheme = 0
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var openingBalance: Decimal
     @State private var notes: String
@@ -62,6 +63,7 @@ struct AccountEditView: View {
         _startDate = State(initialValue: account?.loanStartDate ?? .now)
         _payoffDate = State(initialValue: account?.payoffDate ?? Calendar.current.date(byAdding: .year, value: 3, to: .now) ?? .now)
         _photoData = State(initialValue: account?.photoData)
+        _artworkTheme = State(initialValue: account.map { ArtworkChoices.theme(for: $0) } ?? 0)
         // An account whose money began as a deposit shows that amount here.
         _openingBalance = State(initialValue: account.flatMap { OpeningDeposit.existing(in: $0)?.amount } ?? account?.openingBalance ?? 0)
         _notes = State(initialValue: account?.notes ?? "")
@@ -196,9 +198,15 @@ struct AccountEditView: View {
                     }
                 }
 
+                if photoData == nil || !(type.group == .loans || type.group == .assets) {
+                    Section("Picture Colour") {
+                        ArtworkThemePicker(type: type, theme: $artworkTheme)
+                    }
+                }
+
                 if type.group == .loans || type.group == .assets {
                     Section("Photo") {
-                        AccountPicture(data: photoData, type: type)
+                        AccountPicture(data: photoData, type: type, theme: artworkTheme)
                             .frame(maxWidth: .infinity)
                             .frame(height: 180)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -294,6 +302,7 @@ struct AccountEditView: View {
 
     private func save() {
         let target = account ?? Account(name: "", type: type)
+        let previousArtworkKey = account.map { ArtworkChoices.key(for: $0) }
         target.name = String(name.trimmingCharacters(in: .whitespaces).prefix(Account.maxNameLength))
         target.type = type
         // Cash on hand has no bank details.
@@ -346,6 +355,7 @@ struct AccountEditView: View {
             }
         }
         LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
+        ArtworkChoices.set(artworkTheme, for: target, previousKey: previousArtworkKey, in: modelContext)
         modelContext.saveNow()
         if type == .checking && isPrimary {
             PrimaryChecking.set(target, in: modelContext)

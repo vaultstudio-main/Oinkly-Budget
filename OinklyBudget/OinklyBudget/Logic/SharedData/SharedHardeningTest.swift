@@ -92,7 +92,7 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 4
+            newer.schemaVersion = 5
             let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
             try encoder.encode(newer).write(to: s5.infoURL)
             var refusedOpen = false, refusedSave = false
@@ -235,7 +235,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV3.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -436,6 +436,41 @@ enum SharedHardeningTest {
             SettingsRecords.adoptLegacy(in: uc, defaults: defaults)
             try uc.save()
             check("S22 old reminders are moved in once, none twice", SettingsRecords.reminders(in: uc).map(\.title) == ["Both of us", "From preferences"], "\(SettingsRecords.reminders(in: uc).map(\.title))")
+
+            // S23: the colour picked for a default picture, kept in its own record
+            let artAccount = Account(name: "Colourful", type: .savings, openingBalance: 0)
+            let artBill = Bill(name: "Colourful bill", amount: 10, frequency: .monthly, dueDate: .now)
+            uc.insert(artAccount); uc.insert(artBill)
+            ArtworkChoices.set(3, for: artAccount, in: uc)
+            ArtworkChoices.set(5, for: artBill, in: uc)
+            try uc.save()
+            check("S23 a colour is remembered for an account and a bill", ArtworkChoices.theme(for: artAccount) == 3 && ArtworkChoices.theme(for: artBill) == 5)
+            check("S23 no choice means Automatic", ArtworkChoices.theme(for: try uc.fetch(FetchDescriptor<Account>()).first { $0.name == "Kept through the upgrade" }!) == 0)
+            ArtworkChoices.set(4, for: artAccount, in: uc)
+            ArtworkChoices.set(4, for: artAccount, in: uc)
+            try uc.save()
+            check("S23 changing it keeps one record", ArtworkChoices.theme(for: artAccount) == 4 && ((try? uc.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).filter { $0.key == ArtworkChoices.key(for: artAccount) }.count == 1)
+            ArtworkChoices.set(99, for: artBill, in: uc)
+            try uc.save()
+            check("S23 a colour that doesn't exist becomes Automatic", ArtworkChoices.theme(for: artBill) == 0)
+            let artBackup = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: uc)))
+            check("S23 a backup holds the colour", artBackup.accounts.first { $0.name == "Colourful" }?.artworkTheme == 4)
+            try DataBackup.restore(artBackup, into: uc)
+            let restoredArt = try uc.fetch(FetchDescriptor<Account>()).first { $0.name == "Colourful" }
+            check("S23 and a restore brings it back", restoredArt.map { ArtworkChoices.theme(for: $0) } == 4)
+            // Renaming moves the colour with the account
+            if let restoredArt {
+                let before = ArtworkChoices.key(for: restoredArt)
+                restoredArt.name = "Renamed colourful"
+                ArtworkChoices.set(4, for: restoredArt, previousKey: before, in: uc)
+                try uc.save()
+                check("S23 a rename keeps the colour with no stray copy", ArtworkChoices.theme(for: restoredArt) == 4 && ((try? uc.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).count == 1)
+                uc.delete(restoredArt)
+            }
+            try uc.save()
+            ArtworkChoices.removeOrphans(in: uc)
+            try uc.save()
+            check("S23 deleting the account leaves no stray choice", ((try? uc.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).isEmpty)
         } catch {
             check("no error", false, error.localizedDescription)
         }

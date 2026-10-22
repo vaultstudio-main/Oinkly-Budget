@@ -48,6 +48,7 @@ enum ReleaseNotes {
                 "Reminders before each bill is due, a priority alert for important bills, and a reminder on the morning of each repeating transaction. Reminders for repeating transactions never show an amount.",
                 "Your own reminders in Settings ▸ Reminders: review the budget each month, check bills each week, back up, or anything else, with a notification that opens the page you choose. They are saved with your data, so a backup includes them.",
                 "Loans and credit cards with a due date add their own bill.",
+                "Pick one of eight colours for the picture an account or bill shows until you add a photo, in the account editor and the bill editor.",
                 "Pay a Bill records the payment on both sides, with a payment method and status, and files under the bill's category so it shows in reports. Deleting the payment marks that bill unpaid again. Attach the PDF bill or a photo when you pay.",
                 "Transfers between your own accounts, never touching debts or investments.",
                 "Photos on bills, and a loan's photo is used for its bill.",

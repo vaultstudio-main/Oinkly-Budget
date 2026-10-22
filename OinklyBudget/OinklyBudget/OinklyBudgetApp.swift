@@ -8,7 +8,7 @@ struct OinklyBudgetApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV3.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // The first time this version opens the data file, keep a copy of it as it was.
@@ -16,6 +16,7 @@ struct OinklyBudgetApp: App {
         SharedFolderSelfTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         ClosingCountdown.runTestIfRequested()
         WidgetSnapshotWriter.runCheckIfRequested()
+        ArtworkThemePicker.runCheckIfRequested()
         SharedHardeningTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
