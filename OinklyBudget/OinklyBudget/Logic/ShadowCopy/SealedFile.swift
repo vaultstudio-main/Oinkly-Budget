@@ -121,7 +121,7 @@ nonisolated enum SealedFile {
         }
         let headerLength = start.suffix(4).reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
         let bodyStart = UInt64(marker.count + 4) + UInt64(headerLength)
-        guard headerLength > 0, headerLength < 1_000_000, bodyStart + UInt64(fingerprintLength) <= total else { throw SealedError.damaged("its header is cut short") }
+        guard headerLength > 0, headerLength < 32_000_000, bodyStart + UInt64(fingerprintLength) <= total else { throw SealedError.damaged("its header is cut short") }
         guard let headerData = try handle.read(upToCount: Int(headerLength)), headerData.count == Int(headerLength),
               let header = try? decodeInfo(SealedHeader.self, from: headerData) else { throw SealedError.damaged("its header can't be read") }
         if header.formatVersion > formatVersion { throw SealedError.newerFormat }
@@ -193,5 +193,35 @@ nonisolated enum SealedFile {
         if rename(temporary.path, plain.path) != 0 {
             throw SealedError.damaged("it couldn't be put in place (\(String(cString: strerror(errno))))")
         }
+    }
+
+    // MARK: In memory
+
+    /// Whether these bytes are a sealed file.
+    static func isSealed(_ data: Data) -> Bool { data.starts(with: marker) }
+
+    /// Seals bytes held in memory (a backup being saved) and returns the sealed file's bytes.
+    static func sealData(_ data: Data, kind: String, info: Data? = nil, appVersion: String) throws -> Data {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Sealing-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let plain = folder.appendingPathComponent("plain")
+        let sealed = folder.appendingPathComponent("sealed.\(fileExtension)")
+        try data.write(to: plain)
+        try seal(plain, to: sealed, kind: kind, info: info, appVersion: appVersion)
+        return try Data(contentsOf: sealed)
+    }
+
+    /// Unpacks sealed bytes held in memory. A damaged or unrecognised file throws.
+    static func unsealData(_ data: Data) throws -> Data {
+        guard isSealed(data) else { throw SealedError.notSealed }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Sealing-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let sealed = folder.appendingPathComponent("sealed.\(fileExtension)")
+        let plain = folder.appendingPathComponent("plain")
+        try data.write(to: sealed)
+        try unseal(sealed, to: plain)
+        return try Data(contentsOf: plain)
     }
 }

@@ -14,7 +14,7 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - **Status:** one combined label for this Mac's database and the shadow copy, called "Shadow Copy Database", in the bottom bar. The worst state wins: red "Database · Problem" or "Shadow Copy · Problem", then orange for the shadow copy (Not set up, Out of date, Folder not found, Other data), then yellow (Saving…, Copying…), then green "Copied 5 min. ago". Without a shadow copy set up it shows the orange Not set up nudge. While sharing, the Shared dot is separate and this one only reports a database problem. Clicking it opens Settings ▸ Data & Backup.
 - **Asking:** once the person has added some data, a sheet explains it (including that it is not encrypted); "Not now" waits a week, "Don't ask again" stops it.
 - **Erase All Data:** offers "Erase Everything and Delete the Shadow Copy" next to the plain erase, which leaves the shadow copy so the erase can be undone.
-- **Privacy:** plain, unencrypted copy; the setup sheet, the Settings footer and a Read Me in the folder say so.
+- **Privacy:** the files are in Oinkly Budget's own format but not encrypted (a wrapper keeps out casual readers, not someone determined); the setup sheet, the Settings footer and Help say so.
 
 ## Where the files are
 
@@ -43,9 +43,16 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - The `.pigdata` file type and the restore offer when one is opened from Finder.
 - Turning sharing on asks for a shadow copy folder too ("to keep the peace between your edits and the other person's"), with "Share Without a Shadow Copy" as the other choice.
 
+## Built in stage 4
+
+- **`.pig` backups are sealed** with the same wrapper (kind "backup"); old plain JSON `.pig` files still open. The `.pig` file type now conforms to plain data, not JSON.
+- **The shared folder is in the sealed format (format 2):** the data and every previous save and recovered copy are `.pigdata`; each file's note (revision, who saved, record counts, the receipts it uses) lives in its header, so the data and its note can't get out of step; the lock, the log and the members notes are binary `.pigmeta` files; receipts are sealed in a `Receipts/` folder. Receipt clean-up reads the receipts each save lists in its note, and stops if any save's note can't be read.
+- **Existing shared folders are converted once** by whoever opens them first, holding the lock: receipts, previous saves, recovered copies and the log are converted first and the data file is put in place last, so a conversion that is cut short leaves the old data untouched and is redone. A lock written by an older copy of the app still counts. Damaged old data is refused and left alone.
+- Hardening test S29 (21 checks) covers the conversion; S1 to S11 were updated for the sealed files. All 180 hardening checks, the self test and the timing test pass.
+
 ## Not done yet
 
-- The shared folder still uses plain files (`OinklyBudget.store`, `info.json`, `lock.json`, `members`, `previous saves`, `save log.txt`). Putting those into the same sealed format needs a one-time conversion of existing shared folders and changes the most-tested code, so it is the next step. `.pig` backups are still JSON.
+- Older builds can't open a converted folder (they look for the old file names): update both logins' test builds together.
 
 - The status label's Settings link, the folder permission across a restart, the quit-time copy, the restore and the rescue screen have been built and the logic tested, but not yet tried by hand in the running app.
 - Speed and size with a large data file, and with the folder in iCloud Drive.

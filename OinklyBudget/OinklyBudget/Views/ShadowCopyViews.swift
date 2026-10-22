@@ -107,7 +107,7 @@ struct ShadowSetupSheet: View {
             Label("Protect your data with a shadow copy", systemImage: "shield.lefthalf.filled")
                 .font(.title3.weight(.semibold))
             Text("A shadow copy is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
-            Text("It is a plain copy of your data and is not encrypted. Anyone who can open that folder can read it, and a folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with.")
+            Text("It is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             HStack {
@@ -155,7 +155,7 @@ struct ShadowCopySection: View {
         } header: {
             Text("Shadow Copy")
         } footer: {
-            Text("The shadow copy is a plain copy of your data and is not encrypted. Anyone who can open its folder can read it, and a folder in iCloud Drive is also on Apple's servers.")
+            Text("The shadow copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }

@@ -21,6 +21,17 @@ enum SharedHardeningTest {
             }
             try? manager.removeItem(at: root)
         }
+        /// Changes the note inside a shared folder's sealed data file, keeping the data.
+        func rewriteNote(_ folder: SharedDataFolder, _ change: (inout SharedInfo) -> Void) throws {
+            guard var note = folder.readInfo() else { throw StoreError.failed("no note") }
+            change(&note)
+            let plain = root.appendingPathComponent("rewrite-\(UUID().uuidString).store")
+            defer { try? manager.removeItem(at: plain) }
+            try SealedFile.unseal(folder.storeURL, to: plain)
+            let encoder = PropertyListEncoder()
+            encoder.outputFormat = .binary
+            try SealedFile.seal(plain, to: folder.storeURL, kind: "shared", info: try encoder.encode(note), appVersion: "1.0")
+        }
         func unwrap<T>(_ value: T?) throws -> T {
             guard let value else { throw CocoaError(.fileNoSuchFile) }
             return value
@@ -64,14 +75,12 @@ enum SharedHardeningTest {
             try s2.checkIn(from: source, baseRevision: 1, by: "A", appVersion: "1.0")
             check("S2 an old leftover is removed", !manager.fileExists(atPath: leftover.path))
             check("S2 a file being written right now is left alone", manager.fileExists(atPath: fresh2.path))
-            check("S2 the shared data is still good", try SQLiteStore.counts(of: s2.storeURL) == counts)
-            // a crash after the new file was put in place but before the note was written
+            check("S2 the shared data is still good", s2.readInfo()?.counts == counts && SealedFile.isIntact(s2.storeURL))
+            // the note lives inside the data file, so the two can't be out of step
             let s2b = try fresh("s2b")
             try s2b.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
-            let info = s2b.readInfo()
             try s2b.checkIn(from: source, baseRevision: 1, by: "A", appVersion: "1.0")
-            if let info { try JSONEncoder().encode(info).write(to: s2b.infoURL) } // the note says the old revision again
-            check("S2 data and note out of step still opens", opens(s2b, "w2b"))
+            check("S2 the note and the data are one file, and it opens", s2b.readInfo()?.revision == 2 && opens(s2b, "w2b"))
 
             // S3: asleep with the lock, taken over meanwhile
             let s3 = try fresh("s3")
@@ -97,14 +106,12 @@ enum SharedHardeningTest {
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
             newer.schemaVersion = 5
-            let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601
-            try encoder.encode(newer).write(to: s5.infoURL)
+            try rewriteNote(s5) { $0.schemaVersion = 5 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            let s5Counts = try SQLiteStore.counts(of: s5.storeURL)
-            check("S5 newer data isn't written over", refusedSave && s5Counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 5 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -123,8 +130,7 @@ enum SharedHardeningTest {
             try s7.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             try s7.checkIn(from: source, baseRevision: 1, by: "A", appVersion: "1.0")
             let saved = s7.versions()
-            let s7Counts = try saved.first.map { try SQLiteStore.counts(of: $0.url) }
-            check("S7 the earlier save is listed and opens", saved.count == 1 && s7Counts == counts)
+            check("S7 the earlier save is listed and opens", saved.count == 1 && saved.first?.info.counts == counts && SealedFile.isIntact(saved[0].url))
 
             // S8: a damaged working copy is never written into the shared data
             let s8 = try fresh("s8")
@@ -148,8 +154,8 @@ enum SharedHardeningTest {
             try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-3600)], ofItemAtPath: s9.lockURL.path)
             if case .heldBy(_, let isStale) = try s9.acquire(me) { check("S9 an old unreadable lock is stale", isStale) } else { check("S9 an old unreadable lock is stale", false) }
             check("S9 and can be taken over", try s9.acquire(me, takeOver: true) == .acquired)
-            try Data("not json".utf8).write(to: s9.infoURL)
-            check("S9 a damaged note doesn't stop opening", opens(s9, "w9"))
+            try Data("not a sealed file".utf8).write(to: s9.storeURL)
+            check("S9 a damaged data file is refused, not opened", !opens(s9, "w9"))
 
             // S10: the receipts folder travels, and only new files are copied
             let s10 = try fresh("s10")
@@ -160,10 +166,10 @@ enum SharedHardeningTest {
             try manager.createDirectory(at: support, withIntermediateDirectories: true)
             try Data("receipt one".utf8).write(to: support.appendingPathComponent("AAAA"))
             try s10.checkIn(from: work10, baseRevision: nil, by: "A", appVersion: "1.0")
-            let shared10 = StoreFiles.supportURL(for: s10.storeURL).appendingPathComponent("_EXTERNAL_DATA/AAAA")
+            let shared10 = s10.receiptsURL.appendingPathComponent("_EXTERNAL_DATA/AAAA.pigdata")
             let opened = root.appendingPathComponent("o10/OinklyBudget.store")
             try s10.checkOut(to: opened)
-            check("S10 a receipt reaches the shared folder and the next copy", manager.fileExists(atPath: shared10.path) && manager.fileExists(atPath: StoreFiles.supportURL(for: opened).appendingPathComponent("_EXTERNAL_DATA/AAAA").path))
+            check("S10 a receipt reaches the shared folder sealed, and the next copy", manager.fileExists(atPath: shared10.path) && (try? Data(contentsOf: shared10)) != Data("receipt one".utf8) && manager.fileExists(atPath: StoreFiles.supportURL(for: opened).appendingPathComponent("_EXTERNAL_DATA/AAAA").path))
             let perms = (try? manager.attributesOfItem(atPath: shared10.path)[.posixPermissions] as? Int) ?? 0
             check("S10 and any login can replace it", perms == 0o666, String(perms, radix: 8))
 
@@ -189,22 +195,24 @@ enum SharedHardeningTest {
             try s11.checkIn(from: work11, baseRevision: nil, by: "A", appVersion: "1.0")
             try makeStore(pointingTo: [inUse], at: work11)
             try s11.checkIn(from: work11, baseRevision: 1, by: "A", appVersion: "1.0")
-            let external = StoreFiles.supportURL(for: s11.storeURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+            let external = s11.receiptsURL.appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
             try manager.createDirectory(at: external, withIntermediateDirectories: true)
+            let receiptPlain11 = root.appendingPathComponent("receipt-plain-11")
+            try Data("receipt".utf8).write(to: receiptPlain11)
             for (name, age) in [(inUse, 90), (inOldSave, 90), (unusedOld, 90), (unusedNew, 5)] {
-                let file = external.appendingPathComponent(name)
-                try Data("receipt".utf8).write(to: file)
+                let file = external.appendingPathComponent(name + ".pigdata")
+                try SealedFile.seal(receiptPlain11, to: file, kind: "receipt", appVersion: "1.0")
                 try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-Double(age) * 86_400)], ofItemAtPath: file.path)
             }
-            check("S11 the pointers are read", try SQLiteStore.attachmentReferences(of: s11.storeURL) == [inUse])
+            check("S11 the receipts a save uses are in its note", s11.readInfo()?.attachments == [inUse])
             let removed = s11.removeUnusedAttachments()
-            func there(_ name: String) -> Bool { manager.fileExists(atPath: external.appendingPathComponent(name).path) }
+            func there(_ name: String) -> Bool { manager.fileExists(atPath: external.appendingPathComponent(name + ".pigdata").path) }
             check("S11 an old unused receipt is removed", removed == 1 && !there(unusedOld), "removed \(removed)")
             check("S11 a receipt in use is kept", there(inUse))
             check("S11 a receipt only a previous save uses is kept", there(inOldSave))
             check("S11 a new unused receipt is kept", there(unusedNew))
             // an unreadable saved copy stops the clean-up altogether
-            try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: external.appendingPathComponent(unusedNew).path)
+            try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: external.appendingPathComponent(unusedNew + ".pigdata").path)
             if let old = s11.versions().first { try Data(repeating: 0, count: 4096).write(to: old.url) }
             check("S11 nothing is removed when a saved copy can't be read", s11.removeUnusedAttachments() == 0 && there(unusedNew) && there(inUse))
 
@@ -612,8 +620,8 @@ enum SharedHardeningTest {
             guard let version3 = shadow3.allVersions().first, let version4 = shadow4.allVersions().first, let version5 = shadow5.allVersions().first else { throw CocoaError(.fileNoSuchFile) }
             // The folder is gone
             try SharedRescue.rebuild(sharedGone, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
-            let gotBack = try SQLiteStore.counts(of: sharedGone.storeURL)
-            check("S26 a missing shared folder is made again from the shadow copy", sharedGone.hasStore && gotBack["ZACCOUNT"] == version3.info.accounts && gotBack["ZTRANSACTION"] == version3.info.transactions)
+            let gotBack = sharedGone.readInfo()?.counts ?? [:]
+            check("S26 a missing shared folder is made again from the shadow copy", sharedGone.hasStore && SealedFile.isIntact(sharedGone.storeURL) && gotBack["ZACCOUNT"] == version3.info.accounts && gotBack["ZTRANSACTION"] == version3.info.transactions)
             check("S26 it carries on the shadow copy's data ID and numbering", sharedGone.readInfo()?.fileID == version3.info.sharedFileID && (sharedGone.readInfo()?.revision ?? 0) >= (version3.info.sharedRevision ?? 0))
             check("S26 and the two agree afterwards", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == nil)
             check("S26 the lock is let go afterwards", sharedGone.holder() == nil)
@@ -627,7 +635,8 @@ enum SharedHardeningTest {
             check("S26 different shared data can be replaced by the shadow copy's", ShadowCheck.lookAtSharedData(sharedOther, shadow: shadow5, dataID: "data-3") == nil && sharedOther.readInfo()?.fileID == "another-shared-data")
             // Damaged shared data
             try SharedRescue.rebuild(sharedBad, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
-            check("S26 damaged shared data is replaced and the damaged file kept", (try? SQLiteStore.integrityIsOK(sharedBad.storeURL)) == true && !sharedBad.versions().isEmpty)
+            check("S26 damaged shared data is replaced and the damaged file kept", SealedFile.isIntact(sharedBad.storeURL) && sharedBad.readInfo() != nil
+                  && ((try? manager.contentsOfDirectory(atPath: sharedBad.historyURL.path)) ?? []).contains { $0.hasSuffix(".bad") })
             // Somebody has it open
             let busy26 = try tester("s26-busy")
             _ = try busy26.acquire(lock("other-login"))
@@ -643,7 +652,7 @@ enum SharedHardeningTest {
             try earlier.checkIn(from: source, baseRevision: 1, by: "Me Myself", appVersion: "1.0")
             try Data("damaged".utf8).write(to: earlier.storeURL)
             let restoredEarlier = try SharedRescue.restoreNewestGoodEarlierSave(earlier, me: me26, appVersion: "1.0", staging: staging26)
-            check("S26 the newest good earlier save is put back", restoredEarlier && (try? SQLiteStore.integrityIsOK(earlier.storeURL)) == true)
+            check("S26 the newest good earlier save is put back", restoredEarlier && SealedFile.isIntact(earlier.storeURL) && earlier.readInfo() != nil)
             let none = try fresh("s26-none")
             check("S26 with no earlier save nothing is changed", (try? SharedRescue.restoreNewestGoodEarlierSave(none, me: me26, appVersion: "1.0", staging: staging26)) == false)
 
@@ -733,6 +742,92 @@ enum SharedHardeningTest {
                 _ = try? shadow6.write(from: receiptSource, dataID: "data-6", source: "This Mac", appVersion: "1.0")
                 let after = (try? manager.attributesOfItem(atPath: sealedReceipt.path)[.modificationDate] as? Date) ?? nil
                 return before != nil && before == after
+            }())
+
+            // S29: a shared folder from before the sealed format is converted once, without losing anything
+            let legacy = try fresh("s29-legacy")
+            let jsonEncoder = JSONEncoder(); jsonEncoder.dateEncodingStrategy = .iso8601
+            let oldSaved = Date.now.addingTimeInterval(-3 * 86_400)
+            let oldInfo = SharedInfo(formatVersion: 1, schemaVersion: 4, revision: 7, savedAt: oldSaved, savedBy: "Old Builder", appVersion: "0.9", fileID: "legacy-file-id")
+            try manager.copyItem(at: source, to: legacy.legacyStoreURL)
+            try jsonEncoder.encode(oldInfo).write(to: legacy.legacyInfoURL)
+            try manager.createDirectory(at: legacy.historyURL, withIntermediateDirectories: true)
+            var olderInfo = oldInfo
+            olderInfo.revision = 6
+            olderInfo.savedAt = oldSaved.addingTimeInterval(-3_600)
+            let olderStore = legacy.historyURL.appendingPathComponent("save 6 old.store")
+            try manager.copyItem(at: source, to: olderStore)
+            try jsonEncoder.encode(olderInfo).write(to: olderStore.deletingPathExtension().appendingPathExtension("json"))
+            let legacySupport = StoreFiles.supportURL(for: legacy.legacyStoreURL).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+            try manager.createDirectory(at: legacySupport, withIntermediateDirectories: true)
+            let oldReceipt = Data((0..<3_000).map { UInt8(truncatingIfNeeded: $0 &* 7) })
+            try oldReceipt.write(to: legacySupport.appendingPathComponent("OLDRECEIPT"))
+            try Data("2026-10-01  08:00:00  saved by Old Builder as save number 7\n".utf8).write(to: legacy.legacyLogURL)
+            check("S29 an old folder counts as having data, in the old format", legacy.hasData && legacy.hasLegacyData && !legacy.hasStore)
+            check("S29 its note is still readable before converting", legacy.readInfo()?.revision == 7 && legacy.readInfo()?.fileID == "legacy-file-id")
+            // an old copy of the app holding the lock still counts
+            var oldLock = lock("old-app")
+            oldLock.fullName = "Old App"
+            try jsonEncoder.encode(oldLock).write(to: legacy.legacyLockURL)
+            check("S29 a lock under the old name still counts", { () -> Bool in
+                if case .heldBy(let held, _)? = try? legacy.acquire(lock("new-app")) { return held.userName == "old-app" }
+                return false
+            }())
+            try manager.removeItem(at: legacy.legacyLockURL)
+            check("S29 the shadow checks understand an old folder", ShadowCheck.lookAtSharedData(legacy, shadow: ShadowFolder(inside: root.appendingPathComponent("no-shadow-29")), dataID: "x") == nil)
+            // convert
+            let converted = try legacy.convertLegacyIfNeeded(appVersion: "1.0")
+            check("S29 the folder is converted", converted && legacy.hasStore && !legacy.hasLegacyData && SealedFile.isIntact(legacy.storeURL))
+            check("S29 the numbering and data ID carry over", legacy.readInfo()?.revision == 7 && legacy.readInfo()?.fileID == "legacy-file-id" && legacy.readInfo()?.savedBy == "Old Builder")
+            check("S29 the records are the same", legacy.readInfo()?.counts == counts)
+            check("S29 the previous save is converted", legacy.versions().map(\.info.revision) == [6] && legacy.versions().first.map { SealedFile.isIntact($0.url) } == true)
+            check("S29 the receipt is sealed in the new place", manager.fileExists(atPath: legacy.receiptsURL.appendingPathComponent("_EXTERNAL_DATA/OLDRECEIPT.pigdata").path))
+            let openedLegacy = root.appendingPathComponent("o29/OinklyBudget.store")
+            try legacy.checkOut(to: openedLegacy)
+            check("S29 and it comes back exactly when the data is opened", (try? Data(contentsOf: StoreFiles.supportURL(for: openedLegacy).appendingPathComponent("_EXTERNAL_DATA/OLDRECEIPT"))) == oldReceipt)
+            check("S29 the log is kept", legacy.recentLog().contains { $0.contains("save number 7") } && legacy.recentLog().contains { $0.contains("converted") })
+            let leftovers29 = ((try? manager.contentsOfDirectory(atPath: legacy.url.path)) ?? []).filter { $0.hasSuffix(".store") || $0.hasSuffix(".json") || $0.hasSuffix(".txt") }
+            check("S29 the old files are gone", leftovers29.isEmpty && !manager.fileExists(atPath: StoreFiles.supportURL(for: legacy.legacyStoreURL).path) && ((try? manager.contentsOfDirectory(atPath: legacy.historyURL.path)) ?? []).allSatisfy { $0.hasSuffix(".pigdata") }, "\(leftovers29)")
+            check("S29 nothing in the folder is plain text, JSON or a database", { () -> Bool in
+                guard let walker = manager.enumerator(at: legacy.url, includingPropertiesForKeys: [.isDirectoryKey]) else { return false }
+                for case let item as URL in walker where (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true {
+                    if !["pigdata", "pigmeta"].contains(item.pathExtension) { return false }
+                }
+                return true
+            }())
+            check("S29 converting again does nothing", try legacy.convertLegacyIfNeeded(appVersion: "1.0") == false)
+            // damaged old data is not converted, and stays as it was
+            let legacyBad = try fresh("s29-bad")
+            try Data(repeating: 0xAB, count: 4_096).write(to: legacyBad.legacyStoreURL)
+            check("S29 damaged old data is refused and left alone", (try? legacyBad.convertLegacyIfNeeded(appVersion: "1.0")) == nil && !legacyBad.hasStore && legacyBad.hasLegacyData)
+            // a new save into a converted folder works and the earlier data is kept
+            let afterConvert = try legacy.checkIn(from: source, baseRevision: 7, by: "New Builder", appVersion: "1.0")
+            check("S29 a save after converting carries on from the old numbering", afterConvert.revision == 8 && legacy.versions().contains { $0.info.revision == 7 })
+            // two logins both try to convert at once: only the one holding the lock may, so the second finds it done
+            let legacy2 = try fresh("s29-two")
+            try manager.copyItem(at: source, to: legacy2.legacyStoreURL)
+            try jsonEncoder.encode(oldInfo).write(to: legacy2.legacyInfoURL)
+            _ = try legacy2.convertLegacyIfNeeded(appVersion: "1.0")
+            check("S29 a second look at a converted folder finds nothing to do", try legacy2.convertLegacyIfNeeded(appVersion: "1.0") == false && legacy2.readInfo()?.revision == 7)
+
+            // S30: .pig backups are sealed, and old plain ones still open
+            let backup30 = try DataBackup.make(from: uc)
+            let sealedBackup = try DataBackup.encode(backup30)
+            check("S30 a saved backup is sealed, not JSON", SealedFile.isSealed(sealedBackup) && (try? JSONSerialization.jsonObject(with: sealedBackup)) == nil
+                  && String(data: sealedBackup.prefix(4_096), encoding: .utf8) == nil)
+            check("S30 and it reads back the same", (try? DataBackup.decode(sealedBackup).summary) == backup30.summary)
+            let plainEncoder = JSONEncoder()
+            plainEncoder.dateEncodingStrategy = .secondsSince1970
+            let plainBackup30 = try plainEncoder.encode(backup30)
+            check("S30 a plain backup from an earlier build still opens", (try? DataBackup.decode(plainBackup30).summary) == backup30.summary)
+            var damagedBackup = sealedBackup
+            damagedBackup[damagedBackup.count / 2] ^= 0xFF
+            check("S30 a damaged backup is refused", (try? DataBackup.decode(damagedBackup)) == nil)
+            check("S30 so is something that isn't a backup", (try? DataBackup.decode(Data("hello".utf8))) == nil)
+            check("S30 the header says what it is without opening it", { () -> Bool in
+                let file = root.appendingPathComponent("backup30.pig")
+                try? sealedBackup.write(to: file)
+                return (try? SealedFile.readHeader(file))?.kind == "backup"
             }())
         } catch {
             check("no error", false, error.localizedDescription)

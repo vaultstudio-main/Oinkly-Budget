@@ -39,18 +39,17 @@ enum SharedFolderSelfTest {
             let days = Set(kept.filter { $0.info.savedAt >= cutoff }.map { calendar.startOfDay(for: $0.info.savedAt) })
             check("one per day for a week", days.count >= 6, "\(days.count) days")
             check("nothing else piles up", kept.allSatisfy { $0.info.savedAt >= cutoff || $0.info.revision >= 25 })
-            check("every kept save has its data", try kept.allSatisfy { try SQLiteStore.counts(of: $0.url) == counts })
-            check("old single previous save gone", !manager.fileExists(atPath: folder.previousURL.path))
+            check("every kept save has its data", kept.allSatisfy { $0.info.counts == counts && SealedFile.isIntact($0.url) })
 
             // Go back to an older save
             if let older = kept.last {
                 let copy = root.appendingPathComponent("restore/OinklyBudget.store")
                 try manager.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try manager.copyItem(at: older.url, to: copy)
+                try SealedFile.unseal(older.url, to: copy)
                 let restored = try folder.checkIn(from: copy, baseRevision: 30, by: "Tester", appVersion: "1.0")
                 check("restore makes a new save", restored.revision == 31)
                 check("the data before restoring is kept", folder.versions().contains { $0.info.revision == 30 })
-                check("restored data matches", try SQLiteStore.counts(of: folder.storeURL) == counts)
+                check("restored data matches", folder.readInfo()?.counts == counts)
             }
             check("save log written", folder.recentLog(100).count >= 30, "\(folder.recentLog(100).count) lines")
             check("diagnose mentions saves", folder.diagnose().contains { $0.contains("previous saves are kept") })

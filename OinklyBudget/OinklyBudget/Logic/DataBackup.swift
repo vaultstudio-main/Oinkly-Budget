@@ -254,7 +254,7 @@ struct BackupFile: Codable {
 enum DataBackup {
     /// Backups are saved as `.pig` files, a type the app declares in its Info.plist so Finder shows them with the app's icon.
     static let fileExtension = "pig"
-    static let fileType = UTType(exportedAs: "vault.Piggybank.backup", conformingTo: .json)
+    static let fileType = UTType(exportedAs: "vault.Piggybank.backup", conformingTo: .data)
 
     enum BackupError: LocalizedError {
         case unreadable
@@ -382,17 +382,26 @@ enum DataBackup {
         return file
     }
 
+    /// The backup as it is saved: sealed in Oinkly Budget's own file format, so only Oinkly Budget can open it.
     static func encode(_ file: BackupFile) throws -> Data {
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .secondsSince1970
-        return try encoder.encode(file)
+        return try SealedFile.sealData(try encoder.encode(file), kind: "backup", info: Data(file.summary.utf8), appVersion: AppVersion.display)
     }
 
+    /// Reads a backup: a sealed one, or a plain JSON one saved by an earlier build.
     static func decode(_ data: Data) throws -> BackupFile {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .secondsSince1970
-        guard let file = try? decoder.decode(BackupFile.self, from: data) else { throw BackupError.unreadable }
+        let body: Data
+        if SealedFile.isSealed(data) {
+            do { body = try SealedFile.unsealData(data) }
+            catch SealedError.newerFormat { throw BackupError.newerVersion(BackupFile.currentVersion + 1) }
+            catch { throw BackupError.unreadable }
+        } else {
+            body = data
+        }
+        guard let file = try? decoder.decode(BackupFile.self, from: body) else { throw BackupError.unreadable }
         guard file.version <= BackupFile.currentVersion else { throw BackupError.newerVersion(file.version) }
         return file
     }

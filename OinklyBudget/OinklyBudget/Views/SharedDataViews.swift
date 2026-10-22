@@ -509,7 +509,7 @@ private struct SharedShadowRescue: View {
             if accessing { parent.stopAccessingSecurityScopedResource() }
         }
         hasEarlierSave = await Task.detached {
-            SharedDataFolder.standard.versions().contains { (try? SQLiteStore.integrityIsOK($0.url)) == true }
+            SharedDataFolder.standard.versions().contains { SealedFile.isIntact($0.url) }
         }.value
         loaded = true
     }
@@ -530,7 +530,7 @@ struct ShareSetupSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Share your data?", systemImage: "person.2.fill").font(.title3.weight(.semibold))
-            Text("Your data is copied to \(SharedDataFolder.defaultURL.path). Anyone with an account on this Mac can read it. Your own copy is not changed.")
+            Text("Your data is copied to \(SharedDataFolder.defaultURL.path), in Oinkly Budget's own file format, so only Oinkly Budget can open it. Every user of this Mac can use it, and it is not encrypted. Your own copy is not changed.")
 
             VStack(alignment: .leading, spacing: 8) {
                 Label("Keep a shadow copy for yourself", systemImage: "shield.lefthalf.filled").font(.headline)

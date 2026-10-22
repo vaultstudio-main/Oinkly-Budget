@@ -334,14 +334,20 @@ nonisolated enum ShadowCheck {
 
     /// Looks at the shared data against the shadow copy before the app opens it. Nil means all is well.
     static func lookAtSharedData(_ shared: SharedDataFolder, shadow: ShadowFolder, dataID: String) -> ShadowFinding? {
-        guard shared.exists, shared.hasStore else {
+        guard shared.exists, shared.hasData else {
             return shadow.readInfo() != nil && shadow.hasStore ? .sharedMissing : nil
         }
-        do {
-            guard try SQLiteStore.integrityIsOK(shared.storeURL) else { return .sharedUnreadable("it failed its integrity check") }
-            _ = try SQLiteStore.counts(of: shared.storeURL)
-        } catch {
-            return .sharedUnreadable(error.localizedDescription)
+        if shared.hasStore {
+            // Sealed data: the fingerprint says whether it is whole, and the note inside says what it is.
+            guard SealedFile.isIntact(shared.storeURL) else { return .sharedUnreadable("it failed its check") }
+            guard shared.readInfo() != nil else { return .sharedUnreadable("its note can't be read") }
+        } else {
+            // Data from before the sealed format, which is converted when it is opened.
+            do {
+                guard try SQLiteStore.integrityIsOK(shared.legacyStoreURL) else { return .sharedUnreadable("it failed its integrity check") }
+            } catch {
+                return .sharedUnreadable(error.localizedDescription)
+            }
         }
         guard let info = shadow.readInfo(), shadow.hasStore, let shared = shared.readInfo() else { return nil }
         guard belongs(info, dataID: dataID, sharedFileID: shared.fileID) else { return .sharedIsDifferent }
@@ -373,13 +379,13 @@ nonisolated enum SharedRescue {
     /// Makes the newest good earlier save in the shared folder the current data again. Returns false when there is none.
     static func restoreNewestGoodEarlierSave(_ shared: SharedDataFolder, me: SharedLock, appVersion: String, staging: URL) throws -> Bool {
         let manager = FileManager.default
-        guard let version = shared.versions().first(where: { (try? SQLiteStore.integrityIsOK($0.url)) == true && (try? SQLiteStore.counts(of: $0.url)) != nil }) else { return false }
+        guard let version = shared.versions().first(where: { SealedFile.isIntact($0.url) }) else { return false }
         try? manager.removeItem(at: staging)
         try manager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? manager.removeItem(at: staging) }
         let staged = staging.appendingPathComponent(SharedDataFolder.storeName)
-        try manager.copyItem(at: version.url, to: staged)
-        try StoreFiles.copyAttachments(from: shared.storeURL, to: staged)
+        try SealedFile.unseal(version.url, to: staged)
+        try shared.restoreReceipts(into: staged)
         try put(staged, into: shared, me: me, appVersion: appVersion, fileID: version.info.fileID.isEmpty ? nil : version.info.fileID, revisionAtLeast: nil,
                 note: "put back from the earlier save number \(version.info.revision)")
         return true

@@ -151,6 +151,8 @@ final class SharedDataSession {
     /// silently. Returns a message to show the person when something was recovered.
     private func openWorkingCopy(from folder: SharedDataFolder) throws -> String? {
         let manager = FileManager.default
+        // A folder from before the sealed format is converted once, by whoever opens it first.
+        try folder.convertLegacyIfNeeded(appVersion: appVersion)
         let info = folder.readInfo()
         var message: String?
 
@@ -259,18 +261,29 @@ final class SharedDataSession {
     /// is kept in Application Support ▸ Backups. The shared data stays where it is for the other logins, unless
     /// `removeSharedFolder` is true and nobody else uses it: then the folder goes to the Trash as well.
     func stopSharing(localStore: URL, removeSharedFolder: Bool = false) async throws {
-        var source = Self.workingStore
+        // The data to bring to this Mac: the working copy, or the saved shared data (which is unpacked first).
+        var useSharedData = false
         if isActive, !lostLock {
             await checkInNow(release: true)
-            if let folder, folder.hasStore, !isDirty { source = folder.storeURL }
+            if let folder, folder.hasStore, !isDirty { useSharedData = true }
         } else if let folder, folder.hasStore {
-            source = folder.storeURL
+            useSharedData = true
         }
+        let sharedFolder = folder ?? SharedDataFolder.standard
+        let workingStore = Self.workingStore
         let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
             .appendingPathComponent("Before stopping sharing (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
         try await Task.detached {
             if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
-            let copy = try StoreFiles.snapshot(of: source, into: URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true))
+            let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedStaging", isDirectory: true)
+            let copy: URL
+            if useSharedData {
+                try? FileManager.default.removeItem(at: staging)
+                copy = staging.appendingPathComponent("OinklyBudget.store")
+                try sharedFolder.unpackLatest(to: copy)
+            } else {
+                copy = try StoreFiles.snapshot(of: workingStore, into: staging)
+            }
             defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
             StoreFiles.remove(store: localStore)
             try FileManager.default.createDirectory(at: localStore.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -278,7 +291,7 @@ final class SharedDataSession {
             try StoreFiles.copyAttachments(from: copy, to: localStore)
         }.value
         #if DEBUG
-        NSLog("SHARED: stopped sharing. Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.appendingPathComponent("OinklyBudget.store").path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from \(source.path)")
+        NSLog("SHARED: stopped sharing. Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.appendingPathComponent("OinklyBudget.store").path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from the \(useSharedData ? "saved shared data" : "working copy")")
         #endif
         // This Mac has its copy now. Take this login's note away, and remove the shared folder when asked and safe.
         let leaving = me
@@ -349,7 +362,8 @@ final class SharedDataSession {
             try? FileManager.default.removeItem(at: staging)
             try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
             let copy = staging.appendingPathComponent(SharedDataFolder.storeName)
-            try FileManager.default.copyItem(at: version.url, to: copy)
+            try SealedFile.unseal(version.url, to: copy)
+            try folder.restoreReceipts(into: copy)
             guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
             let info = try folder.checkIn(from: copy, baseRevision: base, by: name, appVersion: appVersion)
             folder.appendLog("restored the save from \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)) (number \(version.info.revision)) as save number \(info.revision)")
