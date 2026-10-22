@@ -70,6 +70,7 @@ Welcome to Oinkly Budget 1.0. Accounts of every kind, a bills calendar with remi
 - Restoring a backup first saves a copy of what is there now, so it can always be undone.
 - Upgrades are safe: a copy of your data is made before the first open, and a file that can't be opened shows an error instead of an empty app.
 - A reminder to save a backup once you have a very large number of transactions.
+- A shadow copy: a second copy of your data in a folder you choose, kept up to date on its own with a few older versions. If your data goes missing or can't be opened, the app offers to restore from it. A bottom-bar label shows whether it is up to date.
 
 ### Menu bar, reminders and widget
 - The menu bar pop-up lists this month's bills and repeating transactions together, each marked, with the date and days to go. Tick a bill to mark it paid. The number beside the pig counts what is due within three days. Closing the window keeps the app running so the item stays.

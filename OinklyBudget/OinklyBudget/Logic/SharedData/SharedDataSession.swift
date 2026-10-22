@@ -22,6 +22,8 @@ final class SharedDataSession {
         case heldBy(SharedLock, isStale: Bool)
         case folderProblem(String)
         case failed(String)
+        /// The shared data and the shadow copy disagree; the person decides before anything opens.
+        case shadowFound(ShadowFinding)
     }
 
     enum Outcome {
@@ -99,6 +101,11 @@ final class SharedDataSession {
         let folder = SharedDataFolder.standard
         self.folder = folder
         let openAnyway = Self.takeNextLaunchChoice()
+        // The shadow copy gets a look first: missing, damaged, older or different shared data is put to the person.
+        if let finding = ShadowCopyManager.sharedFinding(folder, localStore: AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV4.self))) {
+            decision = .shadowFound(finding)
+            return .waiting
+        }
         guard folder.exists, folder.hasData else {
             decision = .folderProblem("The shared data can't be found in \(folder.url.path). It may have been moved or deleted.")
             return .waiting
@@ -194,6 +201,24 @@ final class SharedDataSession {
 
     /// The other copy has let go: start again, which takes the lock and opens the data.
     func tryAgain() { Self.relaunch() }
+
+    /// Opens the shared data as it is, without asking about the shadow copy this time.
+    func openSharedAsItIs() {
+        UserDefaults.standard.set(true, forKey: ShadowCopyManager.skipSharedCheckKey)
+        Self.relaunch()
+    }
+
+    /// Makes the newest good earlier save in the shared folder the current data, then starts again. Returns false when
+    /// there is no good earlier save.
+    func restoreNewestGoodEarlierSave() async throws -> Bool {
+        let shared = SharedDataFolder.standard
+        let lock = me
+        let version = appVersion
+        let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedRescue", isDirectory: true)
+        let restored = try await Task.detached { try SharedRescue.restoreNewestGoodEarlierSave(shared, me: lock, appVersion: version, staging: staging) }.value
+        if restored { Self.relaunch() }
+        return restored
+    }
 
     /// The other copy has gone quiet: take the lock anyway.
     func openAnyway() {

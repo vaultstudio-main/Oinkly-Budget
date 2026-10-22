@@ -28,11 +28,15 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - `StartupState.isHoldingPlace`: while the app is on a stand-in database, reminders, notifications, the widget file and the shadow copy are left alone (this closes the problem found in the menu review, on this branch only).
 - Tests: hardening test S25 (26 checks).
 
-## Not done yet (stage 2)
+## Built in stage 2
 
-- Sharing: the checks against the shared data exist and are tested (`lookAtSharedData`) but are not yet shown on the waiting screen, and there is no "rebuild the shared folder from the shadow copy" yet.
-- "Restore from a shadow copy" on the setup screen, for a new Mac.
-- Help topic and release notes.
+- Sharing: the checks against the shared data run before the shared data is opened. Missing, damaged, older, or different shared data stops the app on the waiting screen with the choices: restore from the shadow copy (the newest good one or an older one), use the newest good earlier save in the shared folder, open the shared data as it is, or use this Mac's own data. Putting data back keeps what was there as an earlier save, takes the lock first, and carries on the shadow copy's numbering and data ID (`SharedRescue`).
+- "Restore from a Shadow Copy" on the setup screen, for a new Mac: choose the folder that holds the shadow copy; the restore happens at the next start and the shadow copy's data ID is adopted.
+- Help topic "Shadow Copy" and a release notes line.
+- Hardening test S26 (12 checks). One earlier test (S17) was made stricter about amounts, because it could fail by chance on an ID that contained "1234".
+
+## Not done yet
+
 - The status label's Settings link, the folder permission across a restart, the quit-time copy, the restore and the rescue screen have been built and the logic tested, but not yet tried by hand in the running app.
 - Speed and size with a large data file, and with the folder in iCloud Drive.
 - Whether to put the receipts clean-up (old receipts nothing uses) into the shadow folder.

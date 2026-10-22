@@ -14,6 +14,7 @@ struct AccountSetupView: View {
     /// Only accounts added here. Cash on Hand is built in.
     private var accounts: [Account] { allAccounts.live.addedByUser }
     @State private var newAccountType: AccountType?
+    @State private var shadowProblem: String?
 
     var body: some View {
         wideBody
@@ -124,6 +125,19 @@ struct AccountSetupView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+
+                    Button {
+                        if let problem = ShadowCopyManager.shared.restoreFromChosenFolder() { shadowProblem = problem }
+                    } label: {
+                        Label("Restore from a Shadow Copy", systemImage: "shield.lefthalf.filled")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .controlSize(.large)
+                    .help("Bring back your data from a shadow copy folder, such as one in iCloud Drive")
+
+                    if let shadowProblem {
+                        Text(shadowProblem).font(.caption).foregroundStyle(.orange).multilineTextAlignment(.center)
+                    }
                 }
             }
             .padding(20)

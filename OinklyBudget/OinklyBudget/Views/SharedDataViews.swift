@@ -305,6 +305,8 @@ struct SharedWaitingView: View {
                 Button("Use This Mac's Own Data") { SharedDataSession.shared.useThisMacsData() }
                 Button("Quit") { NSApp.terminate(nil) }
             }
+        case .shadowFound(let finding):
+            SharedShadowRescue(finding: finding)
         case .failed(let text):
             message("The shared data couldn't be opened.", text + " Nothing was changed.")
             HStack {
@@ -392,5 +394,128 @@ private struct StopSharingSheet: View {
             let user = NSUserName(), full = NSFullUserName()
             others = await Task.detached { SharedDataFolder.standard.otherUsers(besides: user, fullName: full) }.value
         }
+    }
+}
+
+
+/// Shown when the shared data and the shadow copy disagree. Offers the shadow copy, an earlier save in the shared folder,
+/// or carrying on as it is. Nothing changes until the person chooses.
+private struct SharedShadowRescue: View {
+    let finding: ShadowFinding
+
+    @State private var best: ShadowVersion?
+    @State private var versions: [ShadowVersion] = []
+    @State private var hasEarlierSave = false
+    @State private var loaded = false
+    @State private var working = false
+    @State private var error: String?
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(finding.title).font(.headline).foregroundStyle(.white).multilineTextAlignment(.center)
+            Text(explanation).font(.callout).foregroundStyle(.white.opacity(0.85)).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            if let best {
+                Text("Newest good shadow copy: \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.accounts) accounts and \(best.info.transactions.formatted()) transactions.")
+                    .font(.callout.weight(.medium)).foregroundStyle(.white).multilineTextAlignment(.center)
+            } else if loaded {
+                Text("No good copy was found in the shadow folder.").font(.callout.weight(.medium)).foregroundStyle(.white)
+            } else {
+                ProgressView().controlSize(.small).tint(.white)
+            }
+            if let error { Text(error).font(.callout).foregroundStyle(.orange).multilineTextAlignment(.center) }
+            buttons.disabled(working)
+        }
+        .task { await load() }
+    }
+
+    private var explanation: String {
+        switch finding {
+        case .sharedOlder(let shared, let shadow):
+            "The shared data is at save \(shared) but your shadow copy is from save \(shadow). The shared data may have been restored to an older state or replaced."
+        case .sharedIsDifferent:
+            "Your shadow copy was made from other shared data. The folder may have been swapped for different data."
+        case .sharedMissing:
+            "There is no shared data in the shared folder, but you have a shadow copy of it."
+        case .sharedUnreadable(let why):
+            "The shared data can't be read (\(why)). Nothing has been changed."
+        default:
+            ""
+        }
+    }
+
+    private var canOpenAsItIs: Bool {
+        switch finding {
+        case .sharedOlder, .sharedIsDifferent: true
+        default: false
+        }
+    }
+
+    @ViewBuilder
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            if let best {
+                Button("Restore from Shadow Copy") { restore(best) }.keyboardShortcut(.defaultAction)
+            }
+            if versions.count > 1 {
+                Menu("Older Shadow Copy") {
+                    ForEach(versions) { version in
+                        Button("\(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)) · \(version.info.transactions.formatted()) transactions") { restore(version) }
+                    }
+                }
+                .fixedSize()
+            }
+            if hasEarlierSave, case .sharedUnreadable = finding {
+                Button("Use the Newest Good Earlier Save") { restoreEarlier() }
+            }
+        }
+        HStack(spacing: 8) {
+            if canOpenAsItIs { Button("Open the Shared Data As It Is") { SharedDataSession.shared.openSharedAsItIs() } }
+            Button("Use This Mac's Own Data") { SharedDataSession.shared.useThisMacsData() }
+            Button("Quit") { NSApp.terminate(nil) }
+        }
+    }
+
+    private func restore(_ version: ShadowVersion) {
+        working = true
+        error = nil
+        Task {
+            do {
+                try await ShadowCopyManager.shared.rebuildShared(from: version)
+                SharedDataSession.shared.tryAgain()
+            } catch {
+                working = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func restoreEarlier() {
+        working = true
+        error = nil
+        Task {
+            do {
+                if try await SharedDataSession.shared.restoreNewestGoodEarlierSave() == false {
+                    working = false
+                    error = "There is no good earlier save."
+                }
+            } catch {
+                working = false
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func load() async {
+        versions = await ShadowCopyManager.shared.versions()
+        if let parent = ShadowCopyManager.shared.resolveParent() {
+            let accessing = parent.startAccessingSecurityScopedResource()
+            let folder = ShadowFolder(inside: parent)
+            best = await Task.detached { folder.newestGoodVersion() }.value
+            if accessing { parent.stopAccessingSecurityScopedResource() }
+        }
+        hasEarlierSave = await Task.detached {
+            SharedDataFolder.standard.versions().contains { (try? SQLiteStore.integrityIsOK($0.url)) == true }
+        }.value
+        loaded = true
     }
 }

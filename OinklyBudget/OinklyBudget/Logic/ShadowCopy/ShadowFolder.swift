@@ -343,3 +343,53 @@ nonisolated enum ShadowCheck {
         return nil
     }
 }
+
+/// Putting the shared data back: from a shadow copy, or from the newest good earlier save in the shared folder.
+nonisolated enum SharedRescue {
+    /// Replaces the shared data with `version` of the shadow copy. The folder is made again if it is gone; whatever is
+    /// there now is kept as an earlier save. Carries on the shadow copy's numbering and data ID, so the two agree.
+    static func rebuild(_ shared: SharedDataFolder, from version: ShadowVersion, in shadow: ShadowFolder, me: SharedLock, appVersion: String,
+                        staging: URL) throws {
+        guard shadow.isGood(version) else { throw ShadowError.verifyFailed("that copy didn't pass its check") }
+        let manager = FileManager.default
+        try? manager.removeItem(at: staging)
+        try manager.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: staging) }
+        let staged = staging.appendingPathComponent(SharedDataFolder.storeName)
+        try manager.copyItem(at: version.url, to: staged)
+        // The receipts all live beside the latest copy.
+        try StoreFiles.copyAttachments(from: shadow.storeURL, to: staged)
+        try put(staged, into: shared, me: me, appVersion: appVersion, fileID: version.info.sharedFileID, revisionAtLeast: version.info.sharedRevision,
+                note: "put back from the shadow copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))")
+    }
+
+    /// Makes the newest good earlier save in the shared folder the current data again. Returns false when there is none.
+    static func restoreNewestGoodEarlierSave(_ shared: SharedDataFolder, me: SharedLock, appVersion: String, staging: URL) throws -> Bool {
+        let manager = FileManager.default
+        guard let version = shared.versions().first(where: { (try? SQLiteStore.integrityIsOK($0.url)) == true && (try? SQLiteStore.counts(of: $0.url)) != nil }) else { return false }
+        try? manager.removeItem(at: staging)
+        try manager.createDirectory(at: staging, withIntermediateDirectories: true)
+        defer { try? manager.removeItem(at: staging) }
+        let staged = staging.appendingPathComponent(SharedDataFolder.storeName)
+        try manager.copyItem(at: version.url, to: staged)
+        try StoreFiles.copyAttachments(from: shared.storeURL, to: staged)
+        try put(staged, into: shared, me: me, appVersion: appVersion, fileID: version.info.fileID.isEmpty ? nil : version.info.fileID, revisionAtLeast: nil,
+                note: "put back from the earlier save number \(version.info.revision)")
+        return true
+    }
+
+    private static func put(_ staged: URL, into shared: SharedDataFolder, me: SharedLock, appVersion: String, fileID: String?, revisionAtLeast: Int?, note: String) throws {
+        try shared.ensureFolder()
+        var mine = me
+        mine.since = .now
+        mine.heartbeat = .now
+        guard case .acquired = try shared.acquire(mine, takeOver: true) else {
+            throw ShadowError.unavailable("someone has the shared data open right now")
+        }
+        defer { shared.release(token: mine.token) }
+        let current = shared.readInfo()
+        try shared.checkIn(from: staged, baseRevision: shared.hasStore ? current?.revision : nil, by: me.fullName.isEmpty ? me.userName : me.fullName,
+                           appVersion: appVersion, fileID: fileID ?? current?.fileID, revisionAtLeast: revisionAtLeast)
+        shared.appendLog(note)
+    }
+}

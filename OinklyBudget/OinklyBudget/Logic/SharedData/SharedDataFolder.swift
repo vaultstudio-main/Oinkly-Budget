@@ -317,7 +317,8 @@ nonisolated struct SharedDataFolder: Sendable {
     /// kept beside it as one step of undo. If anything fails, the shared file is left exactly as it was.
     /// `baseRevision` is the revision this copy was checked out from; if the shared file has moved on, nothing is written.
     @discardableResult
-    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, now: Date = .now) throws -> SharedInfo {
+    func checkIn(from working: URL, baseRevision: Int?, by name: String, appVersion: String, now: Date = .now,
+                 fileID forcedFileID: String? = nil, revisionAtLeast: Int? = nil) throws -> SharedInfo {
         guard exists else { throw SharedDataError.folderUnavailable("it can't be found") }
         let current = readInfo()
         if let baseRevision, let current, current.revision != baseRevision { throw SharedDataError.changedMeanwhile }
@@ -346,8 +347,9 @@ nonisolated struct SharedDataFolder: Sendable {
         if rename(temporary.path, storeURL.path) != 0 {
             throw SharedDataError.copyFailed("the new file couldn't replace the old one (\(String(cString: strerror(errno))))")
         }
-        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: (current?.revision ?? 0) + 1,
-                              savedAt: now, savedBy: name, appVersion: appVersion, fileID: current?.fileID ?? UUID().uuidString)
+        // Putting data back from a shadow copy carries on that copy's numbering, so the two still agree afterwards.
+        let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: max((current?.revision ?? 0) + 1, revisionAtLeast ?? 0),
+                              savedAt: now, savedBy: name, appVersion: appVersion, fileID: forcedFileID ?? current?.fileID ?? UUID().uuidString)
         try writeInfo(info)
         appendLog("saved by \(name) as save number \(info.revision) (Oinkly Budget \(appVersion))", now: now)
         return info

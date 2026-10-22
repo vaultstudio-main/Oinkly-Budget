@@ -307,7 +307,7 @@ enum SharedHardeningTest {
             let round = try decoder17.decode(WidgetSnapshot.self, from: encoder17.encode(snapshot17))
             check("S17 the widget file carries repeating transactions", round.repeating.count == ahead.count && round.repeating.first?.name == ahead.first?.rule.payee)
             let json17 = String(data: try encoder17.encode(snapshot17), encoding: .utf8) ?? ""
-            check("S17 and no amounts", !json17.contains("1234") && !json17.contains("987"))
+            check("S17 and no amounts", !json17.contains("1234.56") && !json17.contains("987.65") && !json17.lowercased().contains("amount"))
             let oldFile = Data("{\"updated\":\"2026-10-01T10:00:00Z\",\"bills\":[],\"reminders\":[]}".utf8)
             check("S17 an older widget file still reads", (try? decoder17.decode(WidgetSnapshot.self, from: oldFile))?.repeating.isEmpty == true)
 
@@ -597,6 +597,48 @@ enum SharedHardeningTest {
                 if case .sharedUnreadable = ShadowCheck.lookAtSharedData(sharedBad, shadow: shadow3, dataID: "data-3") { return true }
                 return false
             }())
+
+            // S26: putting the shared data back from the shadow copy or from an earlier save
+            let staging26 = root.appendingPathComponent("rescue-staging", isDirectory: true)
+            var me26 = lock("me")
+            me26.fullName = "Me Myself"
+            guard let version3 = shadow3.allVersions().first, let version4 = shadow4.allVersions().first, let version5 = shadow5.allVersions().first else { throw CocoaError(.fileNoSuchFile) }
+            // The folder is gone
+            try SharedRescue.rebuild(sharedGone, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
+            let gotBack = try SQLiteStore.counts(of: sharedGone.storeURL)
+            check("S26 a missing shared folder is made again from the shadow copy", sharedGone.hasStore && gotBack["ZACCOUNT"] == version3.info.accounts && gotBack["ZTRANSACTION"] == version3.info.transactions)
+            check("S26 it carries on the shadow copy's data ID and numbering", sharedGone.readInfo()?.fileID == version3.info.sharedFileID && (sharedGone.readInfo()?.revision ?? 0) >= (version3.info.sharedRevision ?? 0))
+            check("S26 and the two agree afterwards", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == nil)
+            check("S26 the lock is let go afterwards", sharedGone.holder() == nil)
+            // Shared data older than the shadow copy
+            try SharedRescue.rebuild(sharedA, from: version4, in: shadow4, me: me26, appVersion: "1.0", staging: staging26)
+            check("S26 shared data that went backwards is put right", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow4, dataID: "data-3") == nil && (sharedA.readInfo()?.revision ?? 0) >= (version4.info.sharedRevision ?? 99))
+            check("S26 what was there is kept as an earlier save", !sharedA.versions().isEmpty)
+            // Different shared data
+            let sharedOther = try tester("s26-other", saver: "Pat Else")
+            try SharedRescue.rebuild(sharedOther, from: version5, in: shadow5, me: me26, appVersion: "1.0", staging: staging26)
+            check("S26 different shared data can be replaced by the shadow copy's", ShadowCheck.lookAtSharedData(sharedOther, shadow: shadow5, dataID: "data-3") == nil && sharedOther.readInfo()?.fileID == "another-shared-data")
+            // Damaged shared data
+            try SharedRescue.rebuild(sharedBad, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
+            check("S26 damaged shared data is replaced and the damaged file kept", (try? SQLiteStore.integrityIsOK(sharedBad.storeURL)) == true && !sharedBad.versions().isEmpty)
+            // Somebody has it open
+            let busy26 = try tester("s26-busy")
+            _ = try busy26.acquire(lock("other-login"))
+            let busyBefore = busy26.readInfo()
+            check("S26 nothing is put back while someone has the shared data open", (try? SharedRescue.rebuild(busy26, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)) == nil && busy26.readInfo() == busyBefore)
+            // A damaged copy is refused
+            check("S26 a damaged shadow copy is refused", { () -> Bool in
+                guard let latest = shadow.allVersions().first(where: { $0.isLatest }) else { return false }
+                return (try? SharedRescue.rebuild(try! fresh("s26-refused"), from: latest, in: shadow, me: me26, appVersion: "1.0", staging: staging26)) == nil
+            }())
+            // An earlier save in the shared folder
+            let earlier = try tester("s26-earlier")
+            try earlier.checkIn(from: source, baseRevision: 1, by: "Me Myself", appVersion: "1.0")
+            try Data("damaged".utf8).write(to: earlier.storeURL)
+            let restoredEarlier = try SharedRescue.restoreNewestGoodEarlierSave(earlier, me: me26, appVersion: "1.0", staging: staging26)
+            check("S26 the newest good earlier save is put back", restoredEarlier && (try? SQLiteStore.integrityIsOK(earlier.storeURL)) == true)
+            let none = try fresh("s26-none")
+            check("S26 with no earlier save nothing is changed", (try? SharedRescue.restoreNewestGoodEarlierSave(none, me: me26, appVersion: "1.0", staging: staging26)) == false)
         } catch {
             check("no error", false, error.localizedDescription)
         }

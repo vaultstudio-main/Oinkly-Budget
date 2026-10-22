@@ -31,6 +31,7 @@ final class ShadowCopyManager {
     private static let snoozeKey = "shadowCopyAskAgainAfter"
     private static let declinedKey = "shadowCopyDontAsk"
     static let skipCheckKey = "shadowCopySkipCheckOnce"
+    static let skipSharedCheckKey = "shadowCopySkipSharedCheckOnce"
     static let restoreKey = "shadowCopyRestorePending"
 
     /// How long after a change the app waits before copying, so a burst of edits makes one copy.
@@ -350,6 +351,64 @@ final class ShadowCopyManager {
         return ShadowCheck.lookAtOwnData(store: localStore, shadow: ShadowFolder(inside: parent), dataID: dataID(beside: localStore))
     }
 
+    /// Looks at the shared data against the shadow copy before the app opens it. Nil means all is well.
+    nonisolated static func sharedFinding(_ shared: SharedDataFolder, localStore: URL) -> ShadowFinding? {
+        let defaults = UserDefaults.standard
+        if defaults.bool(forKey: skipSharedCheckKey) {
+            defaults.removeObject(forKey: skipSharedCheckKey)
+            return nil
+        }
+        guard let data = defaults.data(forKey: bookmarkKey) else { return nil }
+        var stale = false
+        guard let parent = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale) else { return nil }
+        let accessing = parent.startAccessingSecurityScopedResource()
+        defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
+        return ShadowCheck.lookAtSharedData(shared, shadow: ShadowFolder(inside: parent), dataID: dataID(beside: localStore))
+    }
+
+    /// Puts the shared data back from a copy in the shadow folder.
+    func rebuildShared(from version: ShadowVersion, shared: SharedDataFolder = .standard) async throws {
+        guard let parent = resolveParent() else { throw ShadowError.unavailable("the shadow copy folder can't be found") }
+        let accessing = parent.startAccessingSecurityScopedResource()
+        defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
+        let me = SharedLock(token: UUID().uuidString, userName: NSUserName(), fullName: NSFullUserName(), since: .now, heartbeat: .now,
+                            pid: ProcessInfo.processInfo.processIdentifier, host: ProcessInfo.processInfo.hostName)
+        let appVersion = AppVersion.display
+        let staging = URL.applicationSupportDirectory.appendingPathComponent("SharedRescue", isDirectory: true)
+        try await Task.detached {
+            try SharedRescue.rebuild(shared, from: version, in: ShadowFolder(inside: parent), me: me, appVersion: appVersion, staging: staging)
+        }.value
+    }
+
+    /// For a new Mac: asks for the folder that holds a shadow copy, remembers it, and restores the newest good copy at
+    /// the next start. Returns false when nothing was chosen or the folder holds no shadow copy.
+    func restoreFromChosenFolder() -> String? {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.message = "Choose the folder that contains “\(ShadowFolder.folderName)”."
+        panel.prompt = "Choose"
+        guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer { if accessing { url.stopAccessingSecurityScopedResource() } }
+        let folder = ShadowFolder(inside: url)
+        guard folder.exists else {
+            return FileManager.default.fileExists(atPath: url.appendingPathComponent(ShadowFolder.storeName).path)
+                ? "That is the shadow copy folder itself. Choose the folder that contains it instead."
+                : "There is no “\(ShadowFolder.folderName)” folder in there."
+        }
+        guard let best = folder.newestGoodVersion() else { return "That shadow copy has no good copy in it." }
+        guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else {
+            return "The app couldn't keep access to that folder."
+        }
+        guard ClosingCountdown.run(.restart, reason: "It restarts to bring back your data from the shadow copy made \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.transactions.formatted()) transactions.") else { return nil }
+        UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
+        UserDefaults.standard.set(best.url.path, forKey: Self.restoreKey)
+        UserDefaults.standard.synchronize()
+        AppStore.relaunch()
+        return nil
+    }
+
     // MARK: This data's name
 
     /// A name for this Mac's data, kept beside the data file, so a shadow copy of other data is noticed.
@@ -398,6 +457,9 @@ final class ShadowCopyManager {
                 .appendingPathComponent("Before restoring a shadow copy (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
             if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
             try folder.restore(version, to: localStore)
+            // This data now is the data the shadow copy came from, on a new Mac as much as on the old one.
+            let idFile = localStore.deletingLastPathComponent().appendingPathComponent("shadow-data-id.txt")
+            if !version.info.dataID.isEmpty { try? version.info.dataID.write(to: idFile, atomically: true, encoding: .utf8) }
             return "Restored your data from the shadow copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What was there before is in Application Support ▸ Backups."
         } catch {
             return "The shadow copy couldn't be restored: \(error.localizedDescription) Your data was not changed."
