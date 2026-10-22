@@ -37,12 +37,19 @@ struct BudgetVsActualReport: View {
     @Query(sort: \Category.name) private var allCategories: [Category]
     @Environment(\.reportInputs) private var inputs
 
-    private struct Row: Identifiable {
+    fileprivate struct Row: Identifiable {
         let name: String
         let percent: Double
         let spent: Double
         let limit: Double
         var id: String { name }
+    }
+
+    private func legend(_ color: Color, _ text: String) -> some View {
+        HStack(spacing: 5) {
+            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 10, height: 10)
+            Text(text).font(.caption).foregroundStyle(.secondary)
+        }
     }
 
     var body: some View {
@@ -53,30 +60,58 @@ struct BudgetVsActualReport: View {
             return Row(name: category.name, percent: spent / max(limit, 1) * 100, spent: spent, limit: limit)
         }
         // Most used first, so what needs attention is at the top. The rest are one line each.
-        let rows = Array(all.sorted { $0.percent > $1.percent }.prefix(12))
+        let rows = Array(all.sorted { $0.percent > $1.percent }.prefix(10))
         let budgeted = history.categories.reduce(0.0) { $0 + $1.monthlyLimit.doubleValue }
         let spent = all.reduce(0.0) { $0 + $1.spent }
 
-        return ReportPanel(title: "Budget vs Actual", summary: "How much of each budget is used so far this month. The line is 100%.",
+        return ReportPanel(title: "Budget vs Actual", summary: "How much of each budget you have used so far this month, the ones closest to or past their limit first.",
                            headline: history.categories.isEmpty ? nil : "\(ReportFormat.money(spent)) of \(ReportFormat.money(budgeted))",
                            headlineNote: history.categories.isEmpty ? nil : "\(ReportFormat.money(max(budgeted - spent, 0))) left · showing \(rows.count) of \(all.count)") {
             if history.categories.isEmpty {
                 ReportEmpty(message: "No budgets are set. Add some in Settings ▸ Categories.", height: 190)
             } else {
-                Chart(rows) { row in
-                    BarMark(x: .value("Used", min(row.percent, 150)), y: .value("Category", row.name))
-                        .foregroundStyle(barColor(row.percent / 100))
-                        .cornerRadius(3)
-                        .annotation(position: .trailing) {
-                            Text("\(ReportFormat.money(row.spent)) of \(ReportFormat.money(row.limit))").font(.caption2).foregroundStyle(.secondary)
-                        }
-                    RuleMark(x: .value("Budget", 100)).foregroundStyle(.secondary.opacity(0.6)).lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 14) {
+                        legend(Theme.green, "Within budget")
+                        legend(.orange, "Nearly used (85% or more)")
+                        legend(Theme.red, "Over budget")
+                        Spacer()
+                        Text("The tick marks the budget").font(.caption).foregroundStyle(.secondary)
+                    }
+                    ForEach(rows) { row in BudgetUseRow(row: row) }
                 }
-                .chartXScale(domain: 0...190)
-                .chartXAxis { AxisMarks(values: [0, 50, 100, 150]) { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text("\(Int(n))%") } } } }
-                .frame(height: CGFloat(rows.count) * 28 + 20)
             }
         }
+    }
+}
+
+/// One budget: its name, a bar for what has been spent with a tick at the limit, and how much is left or over.
+private struct BudgetUseRow: View {
+    let row: BudgetVsActualReport.Row
+
+    var body: some View {
+        let over = row.spent > row.limit
+        let scale = max(row.spent, row.limit, 1)
+        HStack(spacing: 12) {
+            Text(row.name).font(.callout).lineLimit(1).frame(width: 150, alignment: .leading)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.primary.opacity(0.08))
+                    Capsule().fill(barColor(row.percent / 100)).frame(width: max(proxy.size.width * row.spent / scale, 4))
+                    Rectangle().fill(Color.primary.opacity(0.7)).frame(width: 2, height: 16)
+                        .offset(x: proxy.size.width * row.limit / scale - 1)
+                }
+            }
+            .frame(height: 16)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(over ? "\(ReportFormat.money(row.spent - row.limit)) over" : "\(ReportFormat.money(row.limit - row.spent)) left")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(over ? Theme.red : Color.primary)
+                Text("\(ReportFormat.money(row.spent)) of \(ReportFormat.money(row.limit))").font(.caption2).foregroundStyle(.secondary)
+            }
+            .frame(width: 130, alignment: .trailing)
+        }
+        .frame(height: 34)
     }
 }
 
