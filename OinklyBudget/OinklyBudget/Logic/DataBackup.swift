@@ -118,6 +118,8 @@ struct BackupFile: Codable {
         var showOnBudgets: Bool
         /// Added in 1.0; absent in older files.
         var isTaxRelated: Bool?
+        /// A cash budget, left out of the Month Outlook. Added in 1.0; absent in older files.
+        var isCashBudget: Bool?
     }
 
     struct AccountRecord: Codable {
@@ -296,10 +298,11 @@ enum DataBackup {
         let accounts = try context.fetch(FetchDescriptor<Account>(sortBy: [SortDescriptor(\.name)])).live
         let ids = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($1.persistentModelID, $0) })
 
+        let cashKeys = CashBudgets.keys(in: context)
         file.categories = try context.fetch(FetchDescriptor<Category>()).live.map {
             .init(key: $0.systemKey, name: $0.name, colorHex: $0.colorHex, symbol: $0.symbol,
                   monthlyLimit: text($0.monthlyLimit), isIncome: $0.isIncome, showOnBudgets: $0.showOnBudgets,
-                  isTaxRelated: $0.isTaxRelated)
+                  isTaxRelated: $0.isTaxRelated, isCashBudget: cashKeys.contains(CashBudgets.key(for: $0)))
         }
 
         let liveTags = try context.fetch(FetchDescriptor<Tag>()).live
@@ -501,6 +504,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<ArtworkChoice>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<OutlookSnapshot>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<CashBudgetMark>()) { context.delete(item) }
         for record in file.outlooks ?? [] {
             context.insert(OutlookSnapshot(monthKey: record.monthKey, incomeTotal: record.incomeTotal, billsTotal: record.billsTotal,
                                            budgetsTotal: record.budgetsTotal, otherSpending: record.otherSpending, leftToSave: record.leftToSave,
@@ -523,12 +527,14 @@ enum DataBackup {
                 existing.monthlyLimit = decimal(record.monthlyLimit)
                 existing.showOnBudgets = record.showOnBudgets
                 existing.isTaxRelated = record.isTaxRelated ?? false
+                if record.isCashBudget == true { CashBudgets.set(true, for: existing, in: context) }
             } else if let key = record.key, key.hasPrefix(Category.customKeyPrefix) {
                 let made = Category(name: record.name, colorHex: record.colorHex, symbol: record.symbol,
                                     monthlyLimit: decimal(record.monthlyLimit), isIncome: record.isIncome, systemKey: key)
                 made.showOnBudgets = record.showOnBudgets
                 made.isTaxRelated = record.isTaxRelated ?? false
                 context.insert(made)
+                if record.isCashBudget == true { CashBudgets.set(true, for: made, in: context) }
                 byKey[key] = made
             }
         }

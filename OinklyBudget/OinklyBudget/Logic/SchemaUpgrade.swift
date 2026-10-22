@@ -27,6 +27,7 @@ enum SchemaUpgrade {
         if !ScreenshotMode.isOn { SettingsRecords.adoptLegacy(in: context) }
 
         ArtworkChoices.removeOrphans(in: context)
+        CashBudgets.removeOrphans(in: context)
 
         seedTaxFlags(in: context)
         context.saveNow()

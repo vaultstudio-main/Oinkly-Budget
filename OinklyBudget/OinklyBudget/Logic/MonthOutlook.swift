@@ -96,7 +96,7 @@ struct MonthOutlook {
     /// Works out the outlook for the month containing `month`. `monthTransactions` is every transaction dated in it.
     static func build(
         month: Date, bills: [Bill], rules: [RecurringTransaction], categories: [Category], monthTransactions: [Transaction],
-        excludedAccounts: Set<String> = [], now: Date = .now, calendar: Calendar = .current
+        excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], now: Date = .now, calendar: Calendar = .current
     ) -> MonthOutlook {
         func counts(_ account: Account?) -> Bool { account.map { !excludedAccounts.contains(accountKey($0)) } ?? true }
         let interval = calendar.dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 86400 * 30)
@@ -104,7 +104,9 @@ struct MonthOutlook {
         let last = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
         let live = monthTransactions.filter { $0.isLive && $0.account?.isLive == true && counts($0.account) }
 
-        let budgeted = categories.live.filter { !$0.isIncome && $0.showOnBudgets && $0.monthlyLimit > 0 }
+        // Cash budgets are paid for in cash, so they are not part of the outlook: not their budget, not their bills, not their spending.
+        func isCash(_ category: Category?) -> Bool { category.map { cashBudgetKeys.contains(CashBudgets.key(for: $0)) } ?? false }
+        let budgeted = categories.live.filter { !$0.isIncome && $0.showOnBudgets && $0.monthlyLimit > 0 && !isCash($0) }
         let budgetIDs = Set(budgeted.map(\.persistentModelID))
         let spent = Budget.spentTable(live, month: start, calendar: calendar)
         var planned: [PersistentIdentifier: Decimal] = [:]
@@ -114,6 +116,7 @@ struct MonthOutlook {
 
         /// A line goes inside its budget when its category has one, otherwise it stands alone.
         func place(_ line: Line, category: Category?, plannedAmount: Decimal) {
+            if isCash(category) { return }
             if let id = category?.persistentModelID, budgetIDs.contains(id) {
                 planned[id, default: 0] += plannedAmount
                 inside[id, default: []].append(line)
@@ -173,6 +176,7 @@ struct MonthOutlook {
             if transaction.paidBill != nil || transaction.recurring != nil { continue }
             for part in transaction.categoryParts {
                 if let id = part.category?.persistentModelID, budgetIDs.contains(id) { continue }
+                if isCash(part.category) { continue }
                 if part.amount < 0 {
                     otherSpending -= part.amount
                 } else if part.category?.isIncome == true || part.category == nil {

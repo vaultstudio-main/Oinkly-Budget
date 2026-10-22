@@ -105,13 +105,13 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 6
-            try rewriteNote(s5) { $0.schemaVersion = 6 }
+            newer.schemaVersion = 7
+            try rewriteNote(s5) { $0.schemaVersion = 7 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 6 && s5.readInfo()?.counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 7 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -247,7 +247,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV5.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV6.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -922,7 +922,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2030, month: 1, day: d))! }
-                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV5.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Outlook bank", type: .checking, openingBalance: 0)
                 let groceries = Category(name: "Outlook groceries", colorHex: "34C759", symbol: "cart", monthlyLimit: 400)
                 let electric = Bill(name: "Electric", amount: 90, frequency: .monthly, dueDate: day(10))
@@ -988,6 +988,30 @@ enum SharedHardeningTest {
                 check("S35 a backup holds the saved month", copy.outlooks?.first?.leftToSave == linked.leftToSave)
                 try DataBackup.restore(copy, into: oc)
                 check("S35 a restore brings it back", OutlookSnapshots.snapshot(for: day(1), in: oc)?.leftToSave == linked.leftToSave)
+                // Cash budgets are left out
+                let cashCategory = groceries
+                let noCash = MonthOutlook.build(month: day(1), bills: [inBudget], rules: [], categories: [cashCategory],
+                                                monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()), now: day(15), calendar: calendar)
+                let withCash = MonthOutlook.build(month: day(1), bills: [inBudget], rules: [], categories: [cashCategory],
+                                                  monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()),
+                                                  cashBudgetKeys: [CashBudgets.key(for: cashCategory)], now: day(15), calendar: calendar)
+                check("S35 a cash budget is not in the outlook, nor its bills or spending",
+                      withCash.budgets.isEmpty && withCash.bills.isEmpty && withCash.otherSpending == noCash.otherSpending, "\(withCash.budgets.count) \(withCash.bills.count) \(withCash.otherSpending)")
+                let cashy = Category(name: "Cash envelope", colorHex: "34C759", symbol: "tag", monthlyLimit: 50, isIncome: false, systemKey: Category.customKeyPrefix + "cashy")
+                oc.insert(cashy)
+                CashBudgets.set(true, for: cashy, in: oc)
+                CashBudgets.set(true, for: cashy, in: oc)
+                try oc.save()
+                check("S35 marking a budget as cash keeps one record", CashBudgets.isCash(cashy) && ((try? oc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).count == 1)
+                let cashBackup = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: oc)))
+                try DataBackup.restore(cashBackup, into: oc)
+                let restoredCashy = try oc.fetch(FetchDescriptor<Category>()).first { $0.systemKey == Category.customKeyPrefix + "cashy" }
+                check("S35 a restore brings the cash budget mark back", restoredCashy.map { CashBudgets.isCash($0) } == true)
+                if let restoredCashy { oc.delete(restoredCashy) }
+                try oc.save()
+                CashBudgets.removeOrphans(in: oc)
+                try oc.save()
+                check("S35 deleting the budget leaves no stray mark", ((try? oc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).isEmpty)
             }
         } catch {
             check("no error", false, error.localizedDescription)

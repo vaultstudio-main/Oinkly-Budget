@@ -8,11 +8,13 @@ struct BudgetEditView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var limit: Decimal
     @State private var isTaxRelated: Bool
+    @State private var isCashBudget: Bool
 
     init(category: Category) {
         self.category = category
         _limit = State(initialValue: category.monthlyLimit)
         _isTaxRelated = State(initialValue: category.isTaxRelated)
+        _isCashBudget = State(initialValue: CashBudgets.isCash(category))
     }
 
     var body: some View {
@@ -31,9 +33,12 @@ struct BudgetEditView: View {
                 }
                 if !category.isIncome {
                     Toggle("Counts as tax-related", isOn: $isTaxRelated)
+                    Toggle("Counts as a cash budget", isOn: $isCashBudget)
+                    Text("A cash budget is paid for in cash, so the Month Outlook leaves it out.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section {
-                    Text("Categories are built in and the same on every device. Only the budget amount and the tax flag can be changed.")
+                    Text("Categories are built in and the same on every device. Only the budget amount, the tax flag and the cash budget flag can be changed.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -48,6 +53,7 @@ struct BudgetEditView: View {
                     Button("Save") {
                         category.monthlyLimit = max(limit, 0)
                         category.isTaxRelated = isTaxRelated
+                        if let context = category.modelContext { CashBudgets.set(isCashBudget && !category.isIncome, for: category, in: context) }
                         dismiss()
                     }
                 }
@@ -68,6 +74,7 @@ struct CustomBudgetEditView: View {
     @State private var limit: Decimal?
     @State private var isIncome: Bool
     @State private var isTaxRelated: Bool
+    @State private var isCashBudget: Bool
     @State private var confirmingDelete = false
 
     init(category: Category?) {
@@ -76,6 +83,7 @@ struct CustomBudgetEditView: View {
         _limit = State(initialValue: category.map(\.monthlyLimit))
         _isIncome = State(initialValue: category?.isIncome ?? false)
         _isTaxRelated = State(initialValue: category?.isTaxRelated ?? false)
+        _isCashBudget = State(initialValue: category.map { CashBudgets.isCash($0) } ?? false)
     }
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -96,6 +104,7 @@ struct CustomBudgetEditView: View {
                     if !isIncome {
                         CurrencyField("Monthly budget", value: $limit)
                         Toggle("Counts as tax-related", isOn: $isTaxRelated)
+                        Toggle("Counts as a cash budget", isOn: $isCashBudget)
                     }
                 } footer: {
                     Text(isIncome ? "This also adds a new income category you can pick when you record a transaction."
@@ -138,6 +147,7 @@ struct CustomBudgetEditView: View {
             category.monthlyLimit = amount
             category.isTaxRelated = isIncome ? false : isTaxRelated
             category.isIncome = isIncome
+            CashBudgets.set(isCashBudget && !isIncome, for: category, in: modelContext)
             if kindChanged {
                 category.colorHex = colorHex
                 category.symbol = symbol
@@ -147,6 +157,7 @@ struct CustomBudgetEditView: View {
                                 systemKey: Category.customKeyPrefix + UUID().uuidString)
             made.isTaxRelated = isIncome ? false : isTaxRelated
             modelContext.insert(made)
+            CashBudgets.set(isCashBudget && !isIncome, for: made, in: modelContext)
         }
         modelContext.saveNow()
         dismiss()

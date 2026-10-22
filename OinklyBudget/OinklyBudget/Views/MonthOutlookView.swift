@@ -81,6 +81,7 @@ private struct OutlookBody: View {
     @Query private var allRules: [RecurringTransaction]
     @Query private var allCategories: [Category]
     @Query private var snapshots: [OutlookSnapshot]
+    @Query private var cashMarks: [CashBudgetMark]
 
     /// The figures kept when this month closed, for a month that is over.
     private var snapshot: OutlookSnapshot? {
@@ -104,7 +105,8 @@ private struct OutlookBody: View {
 
     var body: some View {
         let outlook = MonthOutlook.build(month: month, bills: allBills.live, rules: allRules.live, categories: allCategories.live,
-                                         monthTransactions: transactions, excludedAccounts: excluded)
+                                         monthTransactions: transactions, excludedAccounts: excluded,
+                                         cashBudgetKeys: Set(cashMarks.live.map(\.key)))
         let kept = snapshot
         let totals = kept.map { Totals(income: $0.incomeTotal, bills: $0.billsTotal, budgets: $0.budgetsTotal, other: $0.otherSpending, left: $0.leftToSave,
                                        billDifference: $0.billDifference, overspend: $0.budgetOverspend) }

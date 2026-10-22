@@ -167,6 +167,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Bills in a budgeted category are counted inside that budget; a paid bill counts at the linked payment's amount; transfers and investment accounts are left out.
 - Linking a bill to a payment: Link button beside a bill with a likely transaction nearby, Link a Payment… and Unlink Payment on a bill's menu, Pay a Bill links automatically. The bill line shows more or less than expected.
 - An Accounts button on the page chooses which accounts count (all by default, investments never). Kept in preferences by account type and name, and included in Manual Backup; a bill is left out when its linked payment came from an unticked account.
+- Cash budgets: Counts as a cash budget on any expense budget (built-in or your own) leaves that budget, its bills and its spending out of the outlook. A new standalone record (CashBudgetMark, database shape 6), included in Manual Backup.
 - Tests: S35.
 
 ---

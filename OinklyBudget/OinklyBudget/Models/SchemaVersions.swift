@@ -58,12 +58,23 @@ enum OinklyBudgetSchemaV5: VersionedSchema {
     }
 }
 
+/// Adds one model and nothing else: which budgets are cash budgets, left out of the Month Outlook. Every existing model is
+/// unchanged, so the move from V5 is automatic.
+enum OinklyBudgetSchemaV6: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(6, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        OinklyBudgetSchemaV5.models + [CashBudgetMark.self]
+    }
+}
+
 enum OinklyBudgetMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self] }
+    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self, OinklyBudgetSchemaV6.self] }
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: OinklyBudgetSchemaV1.self, toVersion: OinklyBudgetSchemaV2.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self),
-         .lightweight(fromVersion: OinklyBudgetSchemaV4.self, toVersion: OinklyBudgetSchemaV5.self)]
+         .lightweight(fromVersion: OinklyBudgetSchemaV4.self, toVersion: OinklyBudgetSchemaV5.self),
+         .lightweight(fromVersion: OinklyBudgetSchemaV5.self, toVersion: OinklyBudgetSchemaV6.self)]
     }
 }

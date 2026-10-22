@@ -246,7 +246,8 @@ enum OutlookSnapshots {
         return MonthOutlook.build(month: start, bills: ((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live,
                                   rules: ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live,
                                   categories: ((try? context.fetch(FetchDescriptor<Category>())) ?? []).live, monthTransactions: transactions,
-                                  excludedAccounts: MonthOutlook.excluded(from: UserDefaults.standard.string(forKey: MonthOutlook.excludedKey) ?? ""))
+                                  excludedAccounts: MonthOutlook.excluded(from: UserDefaults.standard.string(forKey: MonthOutlook.excludedKey) ?? ""),
+                                  cashBudgetKeys: CashBudgets.keys(in: context))
     }
 
     /// Keeps the figures of last month, if they haven't been kept yet. Does nothing before there is any data.
@@ -259,5 +260,49 @@ enum OutlookSnapshots {
         guard built.incomeTotal != 0 || built.outTotal != 0 else { return }
         context.insert(OutlookSnapshot(monthKey: key(for: last), outlook: built))
         context.saveNow()
+    }
+}
+
+/// Marks a budget as a cash budget: paid for in cash, so the Month Outlook leaves it out. Its own record, found by the
+/// category's key, so the category model stays exactly as it was.
+@Model
+final class CashBudgetMark {
+    var key: String = ""
+    var createdAt: Date = Date.now
+
+    init(key: String) { self.key = key }
+}
+
+enum CashBudgets {
+    /// Built-in and custom categories keep a stable key; anything else is found by name.
+    static func key(for category: Category) -> String { category.systemKey ?? "name|" + category.name }
+
+    private static func all(in context: ModelContext) -> [CashBudgetMark] {
+        ((try? context.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).live
+    }
+
+    static func keys(in context: ModelContext) -> Set<String> { Set(all(in: context).map(\.key)) }
+
+    static func isCash(_ category: Category) -> Bool {
+        guard category.isLive, let context = category.modelContext else { return false }
+        return keys(in: context).contains(key(for: category))
+    }
+
+    /// Marks or unmarks a category. Does not save.
+    static func set(_ cash: Bool, for category: Category, in context: ModelContext) {
+        let wanted = key(for: category)
+        let mine = all(in: context).filter { $0.key == wanted }
+        if cash {
+            for extra in mine.dropFirst() { context.delete(extra) }
+            if mine.isEmpty { context.insert(CashBudgetMark(key: wanted)) }
+        } else {
+            for mark in mine { context.delete(mark) }
+        }
+    }
+
+    /// Marks for categories that are gone.
+    static func removeOrphans(in context: ModelContext) {
+        let present = Set(((try? context.fetch(FetchDescriptor<Category>())) ?? []).live.map { key(for: $0) })
+        for mark in all(in: context) where !present.contains(mark.key) { context.delete(mark) }
     }
 }
