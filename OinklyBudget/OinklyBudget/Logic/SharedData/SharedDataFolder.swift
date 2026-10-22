@@ -42,6 +42,23 @@ nonisolated struct SharedInfo: Codable, Equatable, Sendable {
     var fileID: String
 }
 
+/// A login that uses the shared data. Each one leaves a small note in the `members` folder when it starts and when it
+/// saves, and takes its note away when it stops sharing.
+nonisolated struct SharedMember: Codable, Equatable, Sendable {
+    var userName: String
+    var fullName: String
+    var lastSeen: Date
+
+    var displayName: String { fullName.isEmpty ? userName : fullName }
+}
+
+/// Someone other than this login who still looks like they use the shared data, and why.
+nonisolated struct SharedOtherUser: Equatable, Sendable {
+    var name: String
+    var lastSeen: Date
+    var why: String
+}
+
 /// One earlier finished save kept in the `previous saves` folder.
 nonisolated struct SharedVersion: Identifiable, Equatable, Sendable {
     var url: URL
@@ -89,6 +106,9 @@ nonisolated struct SharedDataFolder: Sendable {
     static let previousName = "OinklyBudget (previous save).store"
     static let historyName = "previous saves"
     static let logName = "save log.txt"
+    static let membersName = "members"
+    /// A login that has used the shared data this recently still counts as sharing it.
+    static let stillSharingDays = 30
     /// How many of the newest saves are kept, and how many days back one save per day is kept as well.
     static let keepNewest = 5
     static let keepDays = 7
@@ -103,6 +123,7 @@ nonisolated struct SharedDataFolder: Sendable {
     var previousURL: URL { url.appendingPathComponent(Self.previousName) }
     var historyURL: URL { url.appendingPathComponent(Self.historyName) }
     var logURL: URL { url.appendingPathComponent(Self.logName) }
+    var membersURL: URL { url.appendingPathComponent(Self.membersName, isDirectory: true) }
 
     private var manager: FileManager { .default }
 
@@ -479,6 +500,75 @@ nonisolated struct SharedDataFolder: Sendable {
         }
     }
 
+    // MARK: Who shares it
+
+    private func memberURL(_ userName: String) -> URL {
+        // An account name is plain, but never let one reach outside the folder.
+        let safe = userName.map { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "-" || $0 == "." ? $0 : "_" }
+        return membersURL.appendingPathComponent(String(safe) + ".json")
+    }
+
+    /// Says this login uses the shared data. Failing to write it never matters to the data itself.
+    func noteMember(userName: String, fullName: String, now: Date = .now) {
+        guard exists else { return }
+        if !manager.fileExists(atPath: membersURL.path) {
+            mkdir(membersURL.path, 0o777)
+            chmod(membersURL.path, 0o777)
+        }
+        let member = SharedMember(userName: userName, fullName: fullName, lastSeen: now)
+        if let data = try? Self.encoder.encode(member) { try? write(data, to: memberURL(userName)) }
+    }
+
+    /// Takes this login's note away, because it stopped sharing.
+    func removeMember(userName: String) {
+        try? manager.removeItem(at: memberURL(userName))
+    }
+
+    func members() -> [SharedMember] {
+        guard let files = try? manager.contentsOfDirectory(at: membersURL, includingPropertiesForKeys: nil) else { return [] }
+        return files.filter { $0.pathExtension == "json" }.compactMap { file in
+            (try? Data(contentsOf: file)).flatMap { try? Self.decoder.decode(SharedMember.self, from: $0) }
+        }
+    }
+
+    /// Everyone besides this login who has used the shared data in the last 30 days: a note they left, a lock they hold,
+    /// or a save they made. Copies of the app from before the notes existed show up through their saves. If it can't
+    /// be told, the answer errs towards "someone does".
+    func otherUsers(besides userName: String, fullName: String, now: Date = .now) -> [SharedOtherUser] {
+        let since = now.addingTimeInterval(-Double(Self.stillSharingDays) * 86_400)
+        var found: [String: SharedOtherUser] = [:]
+        func add(_ name: String, _ date: Date, _ why: String) {
+            guard !name.isEmpty, name != userName, name != fullName else { return }
+            if let existing = found[name], existing.lastSeen >= date { return }
+            found[name] = SharedOtherUser(name: name, lastSeen: date, why: why)
+        }
+        for member in members() where member.lastSeen >= since && member.userName != userName {
+            add(member.displayName, member.lastSeen, "has sharing on")
+        }
+        if let holder = holder(now: now), holder.lock.userName != userName {
+            add(holder.lock.displayName, holder.lock.heartbeat, holder.isStale ? "had it open and may have stopped" : "has it open now")
+        }
+        let saves = [readInfo()].compactMap { $0 } + versions().map(\.info)
+        for info in saves where info.savedAt >= since {
+            add(info.savedBy, info.savedAt, "saved a change")
+        }
+        return found.values.sorted { $0.lastSeen > $1.lastSeen }
+    }
+
+    /// Moves the whole shared folder to the Trash, so it can still be put back. If the Trash can't be used, it is removed
+    /// instead. Returns whether it went to the Trash. Only called once the caller knows nobody else uses it.
+    @discardableResult
+    func removeEverything(useTrash: Bool = true) throws -> Bool {
+        do {
+            guard useTrash else { throw CocoaError(.fileWriteUnknown) }
+            try manager.trashItem(at: url, resultingItemURL: nil)
+            return true
+        } catch {
+            do { try manager.removeItem(at: url) } catch { throw SharedDataError.folderUnavailable(error.localizedDescription) }
+            return false
+        }
+    }
+
     // MARK: Check Sharing
 
     /// A plain-words report on the folder, for when something doesn't work.
@@ -497,6 +587,10 @@ nonisolated struct SharedDataFolder: Sendable {
         stat(url.path, &folder)
         let mode = folder.st_mode & 0o7777
         lines.append(mode & 0o1000 == 0 && mode & 0o777 == 0o777 ? "OK: open to every user." : "PROBLEM: it must be open to every user (777, not sticky).")
+        let sharing = members()
+        if !sharing.isEmpty {
+            lines.append("Shared by: " + sharing.sorted { $0.lastSeen > $1.lastSeen }.map { "\($0.displayName) (last used \($0.lastSeen.formatted(date: .abbreviated, time: .shortened)))" }.joined(separator: ", "))
+        }
         let values = try? url.resourceValues(forKeys: [.volumeIsLocalKey, .volumeAvailableCapacityForImportantUsageKey])
         lines.append(values?.volumeIsLocal == true ? "OK: on this Mac's own disk." : "PROBLEM: not on this Mac's own disk.")
         if let free = values?.volumeAvailableCapacityForImportantUsage { lines.append("Free space: \(ByteCountFormatter.string(fromByteCount: free, countStyle: .file)).") }

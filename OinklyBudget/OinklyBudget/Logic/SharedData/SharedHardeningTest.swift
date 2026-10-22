@@ -471,6 +471,48 @@ enum SharedHardeningTest {
             ArtworkChoices.removeOrphans(in: uc)
             try uc.save()
             check("S23 deleting the account leaves no stray choice", ((try? uc.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).isEmpty)
+
+            // S24: stopping sharing and removing the shared folder, only when nobody else uses it
+            func tester(_ name: String, saver: String? = nil) throws -> SharedDataFolder {
+                let folder = try fresh(name)
+                try folder.checkIn(from: source, baseRevision: nil, by: saver ?? "Me Myself", appVersion: "1.0")
+                return folder
+            }
+            let myLock = lock("me")
+            var mine = myLock
+            mine.fullName = "Me Myself"
+            let s24a = try tester("s24a")
+            s24a.noteMember(userName: "me", fullName: "Me Myself")
+            check("S24 a login that shares leaves a note", s24a.members().map(\.userName) == ["me"])
+            check("S24 alone, nobody else is found", s24a.otherUsers(besides: "me", fullName: "Me Myself").isEmpty)
+            s24a.noteMember(userName: "sam", fullName: "Sam Other", now: .now.addingTimeInterval(-10 * 86_400))
+            check("S24 another login seen lately is found", s24a.otherUsers(besides: "me", fullName: "Me Myself").map(\.name) == ["Sam Other"])
+            s24a.noteMember(userName: "sam", fullName: "Sam Other", now: .now.addingTimeInterval(-40 * 86_400))
+            check("S24 one not seen for over 30 days is not", s24a.otherUsers(besides: "me", fullName: "Me Myself").isEmpty)
+            let s24b = try tester("s24b", saver: "Pat Else")
+            check("S24 a save by someone else counts, even without a note", s24b.otherUsers(besides: "me", fullName: "Me Myself").map(\.name) == ["Pat Else"])
+            let s24c = try tester("s24c")
+            _ = try s24c.acquire(lock("other-login"))
+            check("S24 someone holding it open counts", s24c.otherUsers(besides: "me", fullName: "Me Myself").map(\.name) == ["other-login"])
+            // The choice itself
+            let keep = try tester("s24-keep")
+            keep.noteMember(userName: "me", fullName: "Me Myself")
+            let noteKeep = SharedDataSession.leaveSharedFolder(as: mine, remove: false, folder: keep, useTrash: false)
+            check("S24 without the choice the folder stays and only this login's note goes", noteKeep == nil && keep.exists && keep.members().isEmpty)
+            let shared = try tester("s24-shared", saver: "Pat Else")
+            shared.noteMember(userName: "pat", fullName: "Pat Else")
+            let noteShared = SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: shared, useTrash: false)
+            check("S24 with someone else still sharing nothing is removed", shared.exists && shared.hasStore && (noteShared ?? "").contains("left in place"), noteShared ?? "")
+            let busy = try tester("s24-busy")
+            _ = try busy.acquire(lock("other-login"))
+            let noteBusy = SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: busy, useTrash: false)
+            check("S24 while someone has it open nothing is removed", busy.exists && (noteBusy ?? "").contains("left in place"), noteBusy ?? "")
+            let alone = try tester("s24-alone")
+            alone.noteMember(userName: "me", fullName: "Me Myself")
+            let noteAlone = SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: alone, useTrash: false)
+            check("S24 when nobody else uses it the folder is removed", !alone.exists && (noteAlone ?? "").contains("removed"), noteAlone ?? "")
+            let gone = SharedDataFolder(url: root.appendingPathComponent("never-made", isDirectory: true))
+            check("S24 a folder that is already gone is fine", SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: gone, useTrash: false) == nil)
         } catch {
             check("no error", false, error.localizedDescription)
         }

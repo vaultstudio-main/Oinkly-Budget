@@ -42,11 +42,8 @@ struct SharedDataSection: View {
         } message: {
             Text("Your data is copied to /Users/Shared/OinklyBudget. Anyone with an account on this Mac can read it. Your own copy is not changed.")
         }
-        .confirmationDialog("Stop sharing?", isPresented: $confirmingStop, titleVisibility: .visible) {
-            Button("Stop Sharing") { turnOff() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This Mac keeps a copy of the latest data. Other users keep sharing.")
+        .sheet(isPresented: $confirmingStop) {
+            StopSharingSheet { removeFolder in turnOff(removeFolder: removeFolder) }
         }
         .sheet(isPresented: Binding(get: { versions != nil }, set: { if !$0 { versions = nil } })) {
             PreviousSavesSheet(versions: versions ?? [])
@@ -113,11 +110,11 @@ struct SharedDataSection: View {
         }
     }
 
-    private func turnOff() {
+    private func turnOff(removeFolder: Bool) {
         guard ClosingCountdown.run(.restart, reason: "It restarts to stop sharing. Finish anything you are doing now.") else { return }
         working = true
         Task {
-            do { try await session.stopSharing(localStore: localStore) }
+            do { try await session.stopSharing(localStore: localStore, removeSharedFolder: removeFolder) }
             catch {
                 working = false
                 show("Sharing wasn't stopped: \(error.localizedDescription)", error: true)
@@ -345,6 +342,55 @@ struct SharedWaitingView: View {
                 decision = .folderProblem(text)
                 return
             }
+        }
+    }
+}
+
+
+/// Asks before sharing stops, and offers to remove the shared folder when nobody else uses it.
+private struct StopSharingSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onStop: (Bool) -> Void
+
+    @State private var others: [SharedOtherUser]?
+    @State private var removeFolder = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Stop sharing?").font(.title3.weight(.semibold))
+            Text("This Mac keeps a copy of the latest data. Other users keep sharing.")
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("Also remove the shared folder", isOn: $removeFolder)
+                    .disabled(others?.isEmpty != true)
+                if let others {
+                    if others.isEmpty {
+                        Text("Moves \(SharedDataFolder.defaultURL.path) to the Trash, with its saved history. Choose this when you are the last one using it.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        Text("Not available: " + others.prefix(3).map { "\($0.name) \($0.why) (\($0.lastSeen.formatted(date: .abbreviated, time: .omitted)))" }.joined(separator: "; ")
+                             + ". The folder stays so they can keep using it. The last person to stop sharing can remove it.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text("Checking who else uses it…").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }
+                Button("Stop Sharing") {
+                    let remove = removeFolder && others?.isEmpty == true
+                    dismiss()
+                    onStop(remove)
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 460)
+        .task {
+            let user = NSUserName(), full = NSFullUserName()
+            others = await Task.detached { SharedDataFolder.standard.otherUsers(besides: user, fullName: full) }.value
         }
     }
 }

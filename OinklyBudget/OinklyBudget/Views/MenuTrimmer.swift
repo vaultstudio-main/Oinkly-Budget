@@ -142,6 +142,21 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
                 await SharedDataSession.shared.checkInNow(release: false)
             }
         }
+        // Say what happened to the shared folder after stopping sharing.
+        Task { @MainActor in
+            guard let note = UserDefaults.standard.string(forKey: SharedDataSession.stopNoteKey) else { return }
+            UserDefaults.standard.removeObject(forKey: SharedDataSession.stopNoteKey)
+            var window: NSWindow?
+            for _ in 0..<80 where window == nil {
+                try? await Task.sleep(for: .milliseconds(500))
+                window = NSApp.windows.first { $0.title == "Oinkly Budget" && $0.isVisible }
+            }
+            guard let window else { return }
+            let alert = NSAlert()
+            alert.messageText = "Sharing stopped"
+            alert.informativeText = note
+            _ = await alert.beginSheetModal(for: window)
+        }
         // Say so when the shared data had to be recovered after an unexpected close.
         Task { @MainActor in
             guard SharedDataSession.shared.notice != nil else { return }

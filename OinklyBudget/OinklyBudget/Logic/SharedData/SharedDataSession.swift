@@ -116,6 +116,7 @@ final class SharedDataSession {
             let recovered: String?
             do { recovered = try openWorkingCopy(from: folder) } catch { folder.release(token: mine.token); throw error }
             isActive = true
+            folder.noteMember(userName: mine.userName, fullName: mine.fullName)
             lastSaved = folder.readInfo()?.savedAt
             if let recovered { notice = recovered }
             startTimers()
@@ -218,13 +219,15 @@ final class SharedDataSession {
             try folder.createStore(from: localStore, by: NSFullUserName(), appVersion: appVersion)
         }
         removeMarker()
+        folder.noteMember(userName: me.userName, fullName: me.fullName)
         UserDefaults.standard.set(true, forKey: Self.enabledKey)
         Self.relaunch()
     }
 
     /// Back to this Mac's own data. The latest shared data is copied to this Mac, after a copy of what this Mac had
-    /// is kept in Application Support ▸ Backups. The shared data stays where it is for the other logins.
-    func stopSharing(localStore: URL) async throws {
+    /// is kept in Application Support ▸ Backups. The shared data stays where it is for the other logins, unless
+    /// `removeSharedFolder` is true and nobody else uses it: then the folder goes to the Trash as well.
+    func stopSharing(localStore: URL, removeSharedFolder: Bool = false) async throws {
         var source = Self.workingStore
         if isActive, !lostLock {
             await checkInNow(release: true)
@@ -246,12 +249,45 @@ final class SharedDataSession {
         #if DEBUG
         NSLog("SHARED: stopped sharing. Safety copy of this Mac's data: \(FileManager.default.fileExists(atPath: backups.appendingPathComponent("OinklyBudget.store").path) ? "made at \(backups.path)" : "none (no local data)"). This Mac's data now comes from \(source.path)")
         #endif
+        // This Mac has its copy now. Take this login's note away, and remove the shared folder when asked and safe.
+        let leaving = me
+        let note: String? = await Task.detached { Self.leaveSharedFolder(as: leaving, remove: removeSharedFolder) }.value
+        if let note { UserDefaults.standard.set(note, forKey: Self.stopNoteKey) }
         stopTimers()
         isActive = false
         UserDefaults.standard.set(false, forKey: Self.enabledKey)
         StoreFiles.remove(store: Self.workingStore)
         try? FileManager.default.removeItem(at: Self.workingDirectory)
         Self.relaunch()
+    }
+
+    /// Said once, after the restart that follows stopping sharing.
+    static let stopNoteKey = "sharingStopNote"
+
+    /// Takes this login out of the shared folder. When `remove` is true it also moves the folder to the Trash, but only if
+    /// nobody else has used it in the last 30 days, and only after taking the lock so nobody opens it meanwhile. Returns
+    /// what to tell the person, or nil when there is nothing to say.
+    nonisolated static func leaveSharedFolder(as me: SharedLock, remove: Bool, folder: SharedDataFolder = .standard, useTrash: Bool = true) -> String? {
+        guard folder.exists else { return nil }
+        folder.removeMember(userName: me.userName)
+        guard remove else { return nil }
+        let others = folder.otherUsers(besides: me.userName, fullName: me.fullName)
+        if let first = others.first {
+            let who = others.count == 1 ? first.name : "\(first.name) and \(others.count - 1) more"
+            return "The shared folder was left in place because \(who) still uses it. The last person to stop sharing can remove it."
+        }
+        var mine = me
+        mine.since = .now
+        mine.heartbeat = .now
+        guard case .acquired? = try? folder.acquire(mine) else {
+            return "The shared folder was left in place because someone has it open right now."
+        }
+        do {
+            return try folder.removeEverything(useTrash: useTrash) ? "The shared folder was moved to the Trash." : "The shared folder was removed."
+        } catch {
+            folder.release(token: me.token)
+            return "The shared folder couldn't be removed: \(error.localizedDescription) It is still in place."
+        }
     }
 
     /// Saves, lets go of the lock so someone else can use the data, and quits.
@@ -377,6 +413,7 @@ final class SharedDataSession {
             return
         }
         let name = NSFullUserName()
+        let user = NSUserName()
         let version = appVersion
         let token = me.token
         let working = Self.workingStore
@@ -386,6 +423,7 @@ final class SharedDataSession {
                 // Still ours? If another login took the lock, nothing is written.
                 guard folder.holds(token: token) else { throw SharedDataError.changedMeanwhile }
                 let info = try folder.checkIn(from: working, baseRevision: base, by: name, appVersion: version)
+                folder.noteMember(userName: user, fullName: name)
                 // A clean close is the moment to tidy up the receipts nothing uses any more.
                 if release { folder.removeUnusedAttachments() }
                 if release { folder.release(token: token) }
