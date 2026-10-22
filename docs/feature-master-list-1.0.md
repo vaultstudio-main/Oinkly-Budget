@@ -171,8 +171,8 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### D3c. Weekly and cash budgets (Built)
 - A budget is set as a monthly or weekly amount (Budget is: Monthly or Weekly in both budget forms). A weekly amount is kept in its own record (BudgetPeriod, database shape 8, in Manual Backup); the category's monthly amount holds its monthly equivalent (weekly x 52 / 12, to the cent), so reports, the Summary and the Month Outlook need no change.
-- The Budgets page has two tabs. Monthly: non-cash budgets for a month; a weekly budget shows its monthly equivalent, a "$N a week" note and a "This week" bar while the current month is showing. Cash: cash budgets (Counts as a cash budget) with a week selector (previous, next, This Week); weekly cash budgets show the week's spending, monthly ones show their month; all spending in the category counts, from every account.
-- Settings > Categories lists a weekly budget as "$N a week". Tests: S41. Debug: `-screenshotOnly page-budgets` takes both tabs.
+- The Budgets page has two tabs. Monthly: the budgets set as a monthly amount, a month at a time. Weekly: the budgets set as a weekly amount, with a week selector (previous, next, This Week); the tiles show the weekly total, spent, left and the monthly maximum of all weekly budgets, and each card shows its monthly maximum. A cash budget (Counts as a cash budget) carries a Cash label on its card on either tab; all spending in the category counts, from every account.
+- Settings > Categories lists a weekly budget as "$N a week". Tests: S41. Debug: `-screenshotOnly page-budgets` takes both tabs (page-budgets, page-budgets-weekly).
 
 ### D3a. Month Outlook (Built)
 - Overview ▸ Month Outlook (⌘9): for the chosen month, money in (recurring income plus other income), bills and repeating expenses, each budget at the larger of its limit and what was spent, and everything else spent; the result is Left to Save. Past months show the figures kept when they closed (a new standalone record, OutlookSnapshot, in database shape 5; also in Manual Backup). Future months show what is expected.

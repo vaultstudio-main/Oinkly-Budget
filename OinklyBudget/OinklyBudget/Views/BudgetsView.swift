@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 
-/// Progress on every budget. The Monthly tab shows the budgets that aren't cash budgets for a month; the Cash tab shows the cash
-/// budgets a week at a time. A budget set as a weekly amount reads as its weekly amount on the Cash tab, and as its monthly
-/// equivalent on the Monthly tab, with this week's progress under it. Click a budget to change its amount. Budgets you have
-/// hidden, or made yourself, are set in Settings ▸ Categories.
+/// Progress on every budget. The Monthly tab shows the budgets set as a monthly amount, a month at a time; the Weekly tab shows the
+/// ones set as a weekly amount, a week at a time, with the monthly maximum they add up to. A cash budget is marked as one on its
+/// card, whichever tab it is on. Click a budget to change its amount. Budgets you have hidden, or made yourself, are set in
+/// Settings ▸ Categories.
 struct BudgetsView: View {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.modelContext) private var modelContext
@@ -13,7 +13,7 @@ struct BudgetsView: View {
     @Query private var periods: [BudgetPeriod]
 
     private enum Tab: String, CaseIterable, Identifiable {
-        case monthly = "Monthly", cash = "Cash"
+        case monthly = "Monthly", weekly = "Weekly"
         var id: Self { self }
     }
 
@@ -55,10 +55,9 @@ struct BudgetsView: View {
         let category: Category
         let limit: Decimal
         let spent: Decimal
-        let caption: String?
-        /// For a weekly budget on the Monthly tab: this week so far.
-        var weekSpent: Decimal?
-        var weekLimit: Decimal?
+        let isCash: Bool
+        /// For a weekly budget: what its weekly amount adds up to in a month.
+        var monthlyMaximum: Decimal?
         var id: PersistentIdentifier { category.persistentModelID }
     }
 
@@ -88,9 +87,9 @@ struct BudgetsView: View {
             ScrollView {
                 VStack(spacing: 14) {
                     if tab == .monthly {
-                        monthlyContent(all.filter { !isCash($0) }, weekly: weekly)
+                        monthlyContent(all.filter { weekly[CashBudgets.key(for: $0)] == nil }, isCash: isCash)
                     } else {
-                        cashContent(all.filter(isCash), weekly: weekly)
+                        weeklyContent(all.filter { weekly[CashBudgets.key(for: $0)] != nil }, weekly: weekly, isCash: isCash)
                     }
                 }
                 .padding(16)
@@ -100,7 +99,7 @@ struct BudgetsView: View {
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
             if let action = note.userInfo?["action"] as? String, action.hasPrefix("budgetsTab:") {
-                tab = action.hasSuffix("cash") ? .cash : .monthly
+                tab = action.hasSuffix("weekly") ? .weekly : .monthly
             }
         }
         #endif
@@ -112,20 +111,10 @@ struct BudgetsView: View {
     // MARK: Monthly
 
     @ViewBuilder
-    private func monthlyContent(_ budgets: [Category], weekly: [String: Decimal]) -> some View {
+    private func monthlyContent(_ budgets: [Category], isCash: (Category) -> Bool) -> some View {
         let monthInterval = interval(ofMonth: month)
         let table = Budget.spentTable(transactions(from: monthInterval.start, to: monthInterval.end), interval: monthInterval)
-        let isCurrentMonth = MonthFilter.isCurrent(month)
-        // This week's progress for weekly budgets, only while looking at the current month.
-        let currentWeek = interval(ofWeek: Self.weekStart(of: .now))
-        let weekTable = isCurrentMonth && weekly.isEmpty == false
-            ? Budget.spentTable(transactions(from: currentWeek.start, to: currentWeek.end), interval: currentWeek) : nil
-        let shown = budgets.map { category -> Shown in
-            let amount = weekly[CashBudgets.key(for: category)]
-            return Shown(category: category, limit: category.monthlyLimit, spent: table[category],
-                         caption: amount.map { "\($0.formatted(.appCurrency)) a week" },
-                         weekSpent: amount != nil ? weekTable?[category] : nil, weekLimit: amount)
-        }
+        let shown = budgets.map { Shown(category: $0, limit: $0.monthlyLimit, spent: table[$0], isCash: isCash($0)) }
         let budgeted = shown.reduce(Decimal(0)) { $0 + $1.limit }
         let spent = shown.reduce(Decimal(0)) { $0 + $1.spent }
 
@@ -135,9 +124,9 @@ struct BudgetsView: View {
             total(budgeted - spent < 0 ? "Over" : "Left", abs(budgeted - spent), note: "across all budgets",
                   color: budgeted - spent < 0 ? Theme.red : Theme.green)
         }
-        helpLine("Click a budget to change its amount. Cash budgets are on the Cash tab.")
+        helpLine("Click a budget to change its amount. Budgets set as a weekly amount are on the Weekly tab.")
         if shown.isEmpty {
-            Text("No budgets are set. Choose Set Hidden and Custom Budgets above, or add some in Settings ▸ Categories.")
+            Text("No monthly budgets are set. Choose Set Hidden and Custom Budgets above, or add some in Settings ▸ Categories.")
                 .foregroundStyle(.secondary)
                 .padding(.top, 30)
         } else {
@@ -145,52 +134,38 @@ struct BudgetsView: View {
         }
     }
 
-    // MARK: Cash
+    // MARK: Weekly
 
     @ViewBuilder
-    private func cashContent(_ budgets: [Category], weekly: [String: Decimal]) -> some View {
+    private func weeklyContent(_ budgets: [Category], weekly: [String: Decimal], isCash: (Category) -> Bool) -> some View {
         let weekInterval = interval(ofWeek: week)
-        let monthInterval = interval(ofMonth: MonthFilter.start(of: week))
-        let from = min(weekInterval.start, monthInterval.start)
-        let to = max(weekInterval.end, monthInterval.end)
-        let fetched = transactions(from: from, to: to)
-        let weekTable = Budget.spentTable(fetched, interval: weekInterval)
-        let monthTable = Budget.spentTable(fetched, interval: monthInterval)
-        let weeklyBudgets = budgets.filter { weekly[CashBudgets.key(for: $0)] != nil }
-        let monthlyBudgets = budgets.filter { weekly[CashBudgets.key(for: $0)] == nil }
-        let weeklyShown = weeklyBudgets.map { Shown(category: $0, limit: weekly[CashBudgets.key(for: $0)] ?? 0, spent: weekTable[$0], caption: "a week") }
-        let monthlyShown = monthlyBudgets.map {
-            Shown(category: $0, limit: $0.monthlyLimit, spent: monthTable[$0], caption: "a month, \(monthInterval.start.formatted(.dateTime.month(.wide)))")
+        let table = Budget.spentTable(transactions(from: weekInterval.start, to: weekInterval.end), interval: weekInterval)
+        let shown = budgets.map { category -> Shown in
+            Shown(category: category, limit: weekly[CashBudgets.key(for: category)] ?? 0, spent: table[category],
+                  isCash: isCash(category), monthlyMaximum: category.monthlyLimit)
         }
-        // The totals use whichever kind there is, weekly first, so every figure in them is for the same period.
-        let tiles = weeklyShown.isEmpty ? monthlyShown : weeklyShown
-        let budgeted = tiles.reduce(Decimal(0)) { $0 + $1.limit }
-        let spent = tiles.reduce(Decimal(0)) { $0 + $1.spent }
+        let budgeted = shown.reduce(Decimal(0)) { $0 + $1.limit }
+        let spent = shown.reduce(Decimal(0)) { $0 + $1.spent }
+        let monthlyMaximum = shown.reduce(Decimal(0)) { $0 + ($1.monthlyMaximum ?? 0) }
 
-        if budgets.isEmpty {
+        if shown.isEmpty {
             VStack(spacing: 10) {
-                Image(systemName: "banknote").font(.system(size: 34)).foregroundStyle(.secondary)
-                Text("No cash budgets yet").font(.headline)
-                Text("Edit a budget and tick Counts as a cash budget, and it appears here, where you can follow it a week at a time. Cash budgets are left out of the Month Outlook.")
+                Image(systemName: "calendar.badge.clock").font(.system(size: 34)).foregroundStyle(.secondary)
+                Text("No weekly budgets yet").font(.headline)
+                Text("Edit a budget and choose Weekly, and it appears here, where you can follow it a week at a time. Its monthly maximum is added up for you.")
                     .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 440)
             }
             .padding(.top, 50)
         } else {
             HStack(spacing: 12) {
-                total("Budgeted", budgeted, note: weeklyShown.isEmpty ? "this month" : "this week")
-                total("Spent", spent, note: weeklyShown.isEmpty ? "this month" : "this week")
-                total(budgeted - spent < 0 ? "Over" : "Left", abs(budgeted - spent), note: "across the cash budgets",
+                total("Weekly budget", budgeted, note: "\(shown.count) budget\(shown.count == 1 ? "" : "s")")
+                total("Spent", spent, note: "this week")
+                total(budgeted - spent < 0 ? "Over" : "Left", abs(budgeted - spent), note: "this week",
                       color: budgeted - spent < 0 ? Theme.red : Theme.green)
+                total("Monthly maximum", monthlyMaximum, note: "all weekly budgets, about 4.33 weeks a month")
             }
             helpLine("Click a budget to change its amount. Spending from every account in the category counts.")
-            if !weeklyShown.isEmpty {
-                sectionTitle("Week of \(weekInterval.start.formatted(.dateTime.month(.abbreviated).day()))")
-                grid(weeklyShown)
-            }
-            if !monthlyShown.isEmpty {
-                sectionTitle("Monthly cash budgets")
-                grid(monthlyShown)
-            }
+            grid(shown)
         }
     }
 
@@ -258,6 +233,14 @@ struct BudgetsView: View {
                 CategoryBadge(category: item.category, size: 26)
                 Text(item.category.name).font(.subheadline.weight(.semibold)).lineLimit(1)
                 Spacer()
+                if item.isCash {
+                    Label("Cash", systemImage: "banknote")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Theme.green.opacity(0.15), in: Capsule())
+                        .foregroundStyle(Theme.green)
+                        .help("A cash budget: paid for in cash, so the Month Outlook leaves it out")
+                }
             }
             bar(spent: item.spent, limit: item.limit)
             HStack {
@@ -268,20 +251,12 @@ struct BudgetsView: View {
                     .font(.caption)
                     .foregroundStyle(over ? Theme.red : .secondary)
             }
-            if let caption = item.caption {
-                Text(caption).font(.caption).foregroundStyle(.secondary)
-            }
-            if let weekSpent = item.weekSpent, let weekLimit = item.weekLimit {
+            if let monthlyMaximum = item.monthlyMaximum {
                 Divider()
-                Text("THIS WEEK").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
-                bar(spent: weekSpent, limit: weekLimit)
                 HStack {
-                    Text(weekSpent, format: .appCurrency).font(.caption.weight(.semibold))
-                    Text("of \(weekLimit.formatted(.appCurrency))").font(.caption).foregroundStyle(.secondary)
+                    Text("MONTHLY MAXIMUM").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
                     Spacer()
-                    Text(weekSpent > weekLimit ? "Over by \((weekSpent - weekLimit).formatted(.appCurrency))" : "\((weekLimit - weekSpent).formatted(.appCurrency)) left")
-                        .font(.caption)
-                        .foregroundStyle(weekSpent > weekLimit ? Theme.red : .secondary)
+                    Text(monthlyMaximum, format: .appCurrency).font(.caption.weight(.semibold))
                 }
             }
         }
