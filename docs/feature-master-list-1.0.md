@@ -166,6 +166,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Overview ▸ Month Outlook (⌘9): for the chosen month, money in (recurring income plus other income), bills and repeating expenses, each budget at the larger of its limit and what was spent, and everything else spent; the result is Left to Save. Past months show the figures kept when they closed (a new standalone record, OutlookSnapshot, in database shape 5; also in Manual Backup). Future months show what is expected.
 - Bills in a budgeted category are counted inside that budget; a paid bill counts at the linked payment's amount; transfers and investment accounts are left out.
 - Linking a bill to a payment: Link button beside a bill with a likely transaction nearby, Link a Payment… and Unlink Payment on a bill's menu, Pay a Bill links automatically. The bill line shows more or less than expected.
+- An Accounts button on the page chooses which accounts count (all by default, investments never). Kept in preferences by account type and name, and included in Manual Backup; a bill is left out when its linked payment came from an unticked account.
 - Tests: S35.
 
 ---

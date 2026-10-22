@@ -955,6 +955,24 @@ enum SharedHardeningTest {
                 try oc.save()
                 let unlinked = try outlook()
                 check("S35 unlinking puts the bill back to expected and unpaid", unlinked.bills.first?.counted == 90 && !electric.isPaid(on: day(10)) && unlinked.billDifference == 0)
+                // Accounts can be left out
+                let other = Account(name: "Outlook business", type: .checking, openingBalance: 0)
+                oc.insert(other)
+                oc.insert(Transaction(account: other, date: day(7), payee: "Business lunch", category: groceries, amount: -75))
+                oc.insert(Transaction(account: other, date: day(8), payee: "Client paid", category: nil, amount: 900))
+                try oc.save()
+                let withBoth = try outlook()
+                let without = MonthOutlook.build(month: day(1), bills: [electric], rules: [paycheque], categories: [groceries],
+                                                 monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()),
+                                                 excludedAccounts: [MonthOutlook.accountKey(other)], now: day(15), calendar: calendar)
+                check("S35 an account left out takes its income and spending out", withBoth.otherIncome - without.otherIncome == 900 && without.budgets.first?.spent == (withBoth.budgets.first?.spent ?? 0) - 75)
+                check("S35 the choice is kept as text and read back", MonthOutlook.excluded(from: MonthOutlook.stored([MonthOutlook.accountKey(other), "x|y"])) == [MonthOutlook.accountKey(other), "x|y"])
+                BillLink.link(draft, to: electric, due: day(10), calendar: calendar)
+                let paidFromElsewhere = MonthOutlook.build(month: day(1), bills: [electric], rules: [], categories: [groceries], monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()),
+                                                           excludedAccounts: [MonthOutlook.accountKey(bank)], now: day(15), calendar: calendar)
+                check("S35 a bill paid from an account that is left out is left out", paidFromElsewhere.bills.isEmpty)
+                BillLink.unlink(draft, calendar: calendar)
+                try oc.save()
                 // A bill inside a budget is counted once
                 let inBudget = Bill(name: "Cart club", amount: 25, frequency: .monthly, dueDate: day(20))
                 inBudget.category = groceries
@@ -962,7 +980,7 @@ enum SharedHardeningTest {
                 let both = MonthOutlook.build(month: day(1), bills: [inBudget], rules: [], categories: [groceries],
                                               monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()), now: day(15), calendar: calendar)
                 check("S35 a bill in a budgeted category sits inside the budget, not beside it", both.bills.isEmpty && both.budgets.first?.inside.count == 1 && both.budgets.first?.planned == 25)
-                check("S35 and the budget still counts at spent plus planned when that is more", both.budgets.first?.counted == 475, "\(both.budgets.first?.counted ?? 0)")
+                check("S35 and the budget still counts at spent plus planned when that is more", both.budgets.first?.counted == (both.budgets.first?.spent ?? 0) + 25, "\(both.budgets.first?.counted ?? 0)")
                 // The saved figures of a closed month survive a backup and restore
                 oc.insert(OutlookSnapshot(monthKey: OutlookSnapshots.key(for: day(1)), outlook: linked))
                 try oc.save()

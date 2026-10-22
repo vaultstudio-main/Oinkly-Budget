@@ -73,6 +73,8 @@ struct BackupFile: Codable {
         /// Added in 1.0; absent in older files.
         var paperChoice: String?
         var exportStyle: String?
+        /// Accounts left out of the Month Outlook. Added in 1.0; absent in older files.
+        var outlookExcludedAccounts: String?
     }
 
     struct PaymentMethodRecord: Codable {
@@ -386,7 +388,8 @@ enum DataBackup {
             appearance: AppSettings.shared.appearance.rawValue,
             billRemindersOn: BillNotifier.isEnabled,
             paperChoice: AppSettings.shared.paperChoice.rawValue,
-            exportStyle: AppSettings.shared.exportStyle.rawValue
+            exportStyle: AppSettings.shared.exportStyle.rawValue,
+            outlookExcludedAccounts: UserDefaults.standard.string(forKey: MonthOutlook.excludedKey)
         )
         return file
     }
@@ -692,6 +695,7 @@ enum DataBackup {
             if let appearance = Appearance(rawValue: settings.appearance) { AppSettings.shared.setAppearance(appearance) }
             UserDefaults.standard.set(settings.billRemindersOn, forKey: BillNotifier.enabledKey)
             if let raw = settings.paperChoice, let choice = PaperChoice(rawValue: raw) { AppSettings.shared.setPaperChoice(choice) }
+            if let stored = settings.outlookExcludedAccounts { UserDefaults.standard.set(stored, forKey: MonthOutlook.excludedKey) }
             if let raw = settings.exportStyle, let style = ExportStyle(rawValue: raw) { AppSettings.shared.setExportStyle(style) }
         }
     }

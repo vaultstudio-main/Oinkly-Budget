@@ -5,6 +5,13 @@ import SwiftData
 /// (at its limit, or what has been spent if that is more). Bills count at what really came out once a payment is linked.
 struct MonthOutlookView: View {
     @State private var month = MonthFilter.start(of: .now)
+    @State private var choosingAccounts = false
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+    @AppStorage(MonthOutlook.excludedKey) private var excludedStored = ""
+
+    /// Accounts the outlook can count: everything except investments, which hold no bills or budgets.
+    private var countable: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
+    private var leftOut: Int { countable.filter { MonthOutlook.excluded(from: excludedStored).contains(MonthOutlook.accountKey($0)) }.count }
 
     private var range: ClosedRange<Date> {
         let current = MonthFilter.start(of: .now)
@@ -14,15 +21,61 @@ struct MonthOutlookView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PinnedHeader("Month Outlook") { MonthSelector(month: $month, range: range) }
-            OutlookBody(month: month)
+            PinnedHeader("Month Outlook") {
+                HStack {
+                    MonthSelector(month: $month, range: range)
+                    Spacer()
+                    Button {
+                        choosingAccounts = true
+                    } label: {
+                        Label(leftOut == 0 ? "All Accounts" : "\(countable.count - leftOut) of \(countable.count) Accounts", systemImage: "slider.horizontal.3")
+                    }
+                    .help("Choose which accounts are counted in the Month Outlook")
+                    .popover(isPresented: $choosingAccounts, arrowEdge: .bottom) { accountChooser }
+                }
+            }
+            OutlookBody(month: month, excluded: MonthOutlook.excluded(from: excludedStored))
         }
         .background(Theme.background)
     }
 }
 
+extension MonthOutlookView {
+    /// A tick beside each account: ticked accounts are counted.
+    fileprivate var accountChooser: some View {
+        let excluded = MonthOutlook.excluded(from: excludedStored)
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Accounts to count").font(.headline)
+            Text("Only ticked accounts count toward the outlook: their income, spending and repeating transactions. A bill is left out when the payment linked to it came from an account that is unticked.")
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            ForEach(countable) { account in
+                Toggle(isOn: Binding(
+                    get: { !MonthOutlook.excluded(from: excludedStored).contains(MonthOutlook.accountKey(account)) },
+                    set: { counted in
+                        var keys = MonthOutlook.excluded(from: excludedStored)
+                        if counted { keys.remove(MonthOutlook.accountKey(account)) } else { keys.insert(MonthOutlook.accountKey(account)) }
+                        excludedStored = MonthOutlook.stored(keys)
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(account.name)
+                        Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            HStack {
+                Button("All") { excludedStored = "" }.disabled(excluded.isEmpty)
+                Spacer()
+            }
+        }
+        .padding(16)
+        .frame(width: 340)
+    }
+}
+
 private struct OutlookBody: View {
     let month: Date
+    let excluded: Set<String>
     @Query private var transactions: [Transaction]
     @Query private var allBills: [Bill]
     @Query private var allRules: [RecurringTransaction]
@@ -39,8 +92,9 @@ private struct OutlookBody: View {
         let income, bills, budgets, other, left, billDifference, overspend: Decimal
     }
 
-    init(month: Date) {
+    init(month: Date, excluded: Set<String>) {
         self.month = month
+        self.excluded = excluded
         let end = Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month
         _transactions = Query(filter: #Predicate<Transaction> { $0.date >= month && $0.date < end })
     }
@@ -50,7 +104,7 @@ private struct OutlookBody: View {
 
     var body: some View {
         let outlook = MonthOutlook.build(month: month, bills: allBills.live, rules: allRules.live, categories: allCategories.live,
-                                         monthTransactions: transactions)
+                                         monthTransactions: transactions, excludedAccounts: excluded)
         let kept = snapshot
         let totals = kept.map { Totals(income: $0.incomeTotal, bills: $0.billsTotal, budgets: $0.budgetsTotal, other: $0.otherSpending, left: $0.leftToSave,
                                        billDifference: $0.billDifference, overspend: $0.budgetOverspend) }

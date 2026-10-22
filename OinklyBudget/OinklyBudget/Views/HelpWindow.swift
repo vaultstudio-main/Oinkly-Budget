@@ -280,6 +280,7 @@ enum HelpContent {
                 "• Bills and repeating expenses: each one for the month, as expected until it is paid. A bill with a linked payment counts at what really came out, and the page says how much more or less that was.",
                 "• Budgets: each budget counts at its limit, or at what you have spent if that is more, so money you set aside stays set aside and overspending lowers what is left. Bills and repeating expenses in a budget's category are counted inside that budget, not twice.",
                 "• Everything else: spending that belongs to no bill and no budget, as it happens.",
+                "• Accounts: the Accounts button at the top picks which accounts count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
                 "• Left to save is money in, less all of that. For a month that has ended, the figures from when it closed are kept, so changing a bill or budget later doesn't rewrite it. Transfers and investment accounts are left out.",
             ]),
 

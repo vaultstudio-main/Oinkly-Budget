@@ -245,7 +245,8 @@ enum OutlookSnapshots {
         let transactions = (try? context.fetch(FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { $0.date >= start && $0.date < end }))) ?? []
         return MonthOutlook.build(month: start, bills: ((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live,
                                   rules: ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live,
-                                  categories: ((try? context.fetch(FetchDescriptor<Category>())) ?? []).live, monthTransactions: transactions)
+                                  categories: ((try? context.fetch(FetchDescriptor<Category>())) ?? []).live, monthTransactions: transactions,
+                                  excludedAccounts: MonthOutlook.excluded(from: UserDefaults.standard.string(forKey: MonthOutlook.excludedKey) ?? ""))
     }
 
     /// Keeps the figures of last month, if they haven't been kept yet. Does nothing before there is any data.

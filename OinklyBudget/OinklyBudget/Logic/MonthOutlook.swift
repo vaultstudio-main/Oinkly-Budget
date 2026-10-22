@@ -77,17 +77,32 @@ struct MonthOutlook {
     /// Budgets that have run past their limit, added up.
     var budgetOverspend: Decimal { budgets.reduce(0) { $0 + $1.over } }
 
+    // MARK: Which accounts count
+
+    /// Accounts the person left out of the outlook, kept in preferences by a key of account type and name.
+    static let excludedKey = "outlookExcludedAccounts"
+
+    static func accountKey(_ account: Account) -> String { "\(account.type.rawValue)|\(account.name)" }
+
+    /// The keys of the accounts left out, stored as one line each.
+    static func excluded(from stored: String) -> Set<String> {
+        Set(stored.split(separator: "\n").map(String.init))
+    }
+
+    static func stored(_ keys: Set<String>) -> String { keys.sorted().joined(separator: "\n") }
+
     // MARK: Building
 
     /// Works out the outlook for the month containing `month`. `monthTransactions` is every transaction dated in it.
     static func build(
         month: Date, bills: [Bill], rules: [RecurringTransaction], categories: [Category], monthTransactions: [Transaction],
-        now: Date = .now, calendar: Calendar = .current
+        excludedAccounts: Set<String> = [], now: Date = .now, calendar: Calendar = .current
     ) -> MonthOutlook {
+        func counts(_ account: Account?) -> Bool { account.map { !excludedAccounts.contains(accountKey($0)) } ?? true }
         let interval = calendar.dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 86400 * 30)
         let start = interval.start
         let last = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
-        let live = monthTransactions.filter { $0.isLive && $0.account?.isLive == true }
+        let live = monthTransactions.filter { $0.isLive && $0.account?.isLive == true && counts($0.account) }
 
         let budgeted = categories.live.filter { !$0.isIncome && $0.showOnBudgets && $0.monthlyLimit > 0 }
         let budgetIDs = Set(budgeted.map(\.persistentModelID))
@@ -111,6 +126,8 @@ struct MonthOutlook {
         for item in Bills.occurrences(bills, from: start, through: last, now: now, calendar: calendar) {
             let bill = item.bill
             let linked = BillLink.payments(of: bill, on: item.date, calendar: calendar)
+            // Paid from an account that is left out: not part of this outlook.
+            if !linked.isEmpty, !linked.contains(where: { counts($0.account) }) { continue }
             let actual = BillLink.actual(of: bill, on: item.date, calendar: calendar)
             let status: Status
             if let actual {
@@ -132,7 +149,7 @@ struct MonthOutlook {
         }
 
         // Paycheques and other repeating transactions.
-        for item in Recurring.occurrences(rules, from: start, through: last, now: now, calendar: calendar) {
+        for item in Recurring.occurrences(rules.filter { counts($0.account) }, from: start, through: last, now: now, calendar: calendar) {
             let rule = item.rule
             let entered = item.kind == .added
             if rule.amount > 0 {
