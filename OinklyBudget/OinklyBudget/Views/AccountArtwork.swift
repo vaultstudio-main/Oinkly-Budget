@@ -238,14 +238,26 @@ struct AccountArtwork: View {
             context.fill(s.round(0.08, 0.84, 0.84, 0.03, 0.015), with: .color(white))
 
         case .retirement:
-            context.fill(Path(ellipseIn: s.rect(0.14, 0.76, 0.72, 0.12)), with: .color(soft))
-            context.fill(s.round(0.485, 0.40, 0.03, 0.42, 0.01), with: .color(white))
-            var canopy = context
-            canopy.clip(to: Path(s.rect(0, 0, 1, 0.46)))
-            canopy.fill(Path(ellipseIn: s.rect(0.12, 0.12, 0.76, 0.68)), with: .color(white))
-            // Stripes cut into the canopy.
-            for x in [0.31, 0.69] as [CGFloat] {
-                canopy.fill(s.polygon([(0.5, 0.12), (x - 0.045, 0.46), (x + 0.045, 0.46)]), with: .color(deep.opacity(0.55)))
+            // A nest with a golden egg: savings left to grow.
+            let gold = Color(red: 1.0, green: 0.84, blue: 0.36)
+            context.fill(Path(ellipseIn: s.rect(0.36, 0.16, 0.28, 0.40)), with: .color(gold))
+            context.fill(Path(ellipseIn: s.rect(0.42, 0.23, 0.07, 0.11)), with: .color(white.opacity(0.75)))
+            // The bowl of the nest hides the bottom of the egg, so the egg sits in it.
+            var nest = context
+            nest.clip(to: Path(s.rect(0, 0.46, 1, 0.5)))
+            nest.fill(Path(ellipseIn: s.rect(0.10, 0.36, 0.80, 0.50)), with: .color(white))
+            // Twigs woven across the bowl.
+            for (y, lift) in [(0.58, 0.10), (0.68, 0.10), (0.77, 0.08)] as [(CGFloat, CGFloat)] {
+                var twig = Path()
+                twig.move(to: s.point(0.12, y))
+                twig.addQuadCurve(to: s.point(0.88, y), control: s.point(0.5, y + lift))
+                nest.stroke(twig, with: .color(deep.opacity(0.5)), lineWidth: 0.022 * s.side)
+            }
+            for (x, y) in [(0.30, 0.52), (0.52, 0.50), (0.72, 0.53)] as [(CGFloat, CGFloat)] {
+                var twig = Path()
+                twig.move(to: s.point(x, y))
+                twig.addLine(to: s.point(x + 0.07, y + 0.24))
+                nest.stroke(twig, with: .color(deep.opacity(0.4)), lineWidth: 0.02 * s.side)
             }
 
         case .crypto:
@@ -367,7 +379,7 @@ extension ArtworkThemePicker {
         guard let flag = arguments.firstIndex(of: "-artworkCheck"), flag + 1 < arguments.count else { return }
         let folder = URL(fileURLWithPath: arguments[flag + 1], isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let cases: [(String, AccountType?)] = [("checking", .checking), ("credit-card", .creditCard), ("mortgage", .mortgage), ("investment", .brokerage), ("bill", nil)]
+        let cases: [(String, AccountType?)] = [("checking", .checking), ("credit-card", .creditCard), ("mortgage", .mortgage), ("investment", .brokerage), ("retirement", .rothIRA), ("bill", nil)]
         for (name, type) in cases {
             let view = VStack(alignment: .leading, spacing: 10) {
                 ArtworkThemePicker(type: type, theme: .constant(2))
