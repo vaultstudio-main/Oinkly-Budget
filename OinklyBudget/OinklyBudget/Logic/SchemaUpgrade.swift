@@ -30,6 +30,7 @@ enum SchemaUpgrade {
         CashBudgets.removeOrphans(in: context)
         BillPaySources.removeOrphans(in: context)
         BudgetPeriods.removeOrphans(in: context)
+        BillMethods.removeOrphans(in: context)
 
         seedTaxFlags(in: context)
         context.saveNow()

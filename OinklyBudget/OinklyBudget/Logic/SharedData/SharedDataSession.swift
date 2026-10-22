@@ -102,7 +102,7 @@ final class SharedDataSession {
         self.folder = folder
         let openAnyway = Self.takeNextLaunchChoice()
         // The backup copy gets a look first: missing, damaged, older or different shared data is put to the person.
-        if let finding = ShadowCopyManager.sharedFinding(folder, localStore: AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self))) {
+        if let finding = ShadowCopyManager.sharedFinding(folder, localStore: AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self))) {
             decision = .shadowFound(finding)
             return .waiting
         }

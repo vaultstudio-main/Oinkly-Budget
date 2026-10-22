@@ -263,6 +263,8 @@ struct BackupFile: Codable {
         /// Added in 1.0; absent in older files.
         var paysFromIndex: Int?
         var paysFromMadeThrough: Date?
+        /// The payment method the bill is usually paid with, as a built-in method's raw value or "custom:" and a name.
+        var paymentMethodRaw: String?
     }
 
     /// A short description for the confirmation message.
@@ -382,7 +384,8 @@ enum DataBackup {
                   createdAt: b.createdAt, photoData: b.photoData,
                   categoryKey: b.category?.isLive == true ? b.category?.systemKey : nil,
                   artworkTheme: themeByKey[ArtworkChoices.key(for: b)],
-                  paysFromIndex: paySource(b)?.0, paysFromMadeThrough: paySource(b)?.1)
+                  paysFromIndex: paySource(b)?.0, paysFromMadeThrough: paySource(b)?.1,
+                  paymentMethodRaw: BillMethods.raw(for: b, in: context))
         }
 
         file.paymentMethods = try context.fetch(FetchDescriptor<CustomPaymentMethod>()).live.map { .init(name: $0.name, symbol: $0.symbol) }
@@ -523,6 +526,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<CashBudgetMark>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<BillPaySource>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<BudgetPeriod>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<BillMethod>()) { context.delete(item) }
         for record in file.outlooks ?? [] {
             context.insert(OutlookSnapshot(monthKey: record.monthKey, incomeTotal: record.incomeTotal, billsTotal: record.billsTotal,
                                            budgetsTotal: record.budgetsTotal, otherSpending: record.otherSpending, leftToSave: record.leftToSave,
@@ -688,6 +692,7 @@ enum DataBackup {
                 source.madeThrough = record.paysFromMadeThrough
                 context.insert(source)
             }
+            if let raw = record.paymentMethodRaw, !raw.isEmpty { context.insert(BillMethod(billKey: BillMethods.key(for: bill), methodRaw: raw)) }
             restoredBills.append(bill)
         }
         // Reconnect each bill payment to the bill it settled.

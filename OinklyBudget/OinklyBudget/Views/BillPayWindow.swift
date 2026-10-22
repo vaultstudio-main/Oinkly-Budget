@@ -176,7 +176,10 @@ struct BillPayWindow: View {
 
     private func prefill(_ new: Choice?) {
         switch new {
-        case .bill(let bill) where bill.isLive: amount = bill.amount > 0 ? bill.amount : amount
+        case .bill(let bill) where bill.isLive:
+            amount = bill.amount > 0 ? bill.amount : amount
+            // The way this bill is usually paid becomes the starting choice, and can still be changed.
+            if let usual = BillMethods.choice(for: bill, in: modelContext) { paymentChoice = usual }
         case .account(let account) where account.isLive: amount = account.monthlyPayment > 0 ? account.monthlyPayment : amount
         default: break
         }

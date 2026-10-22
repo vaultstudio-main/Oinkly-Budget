@@ -21,6 +21,7 @@ enum BillEntries {
         entry.paidBill = bill
         entry.paidDueDate = day
         if let locked = account.lockedPaymentType { entry.paymentChoice = .type(locked) }
+        else if let usual = BillMethods.choice(for: bill, in: context) { entry.paymentChoice = usual }
         context.insert(entry)
         return entry
     }
@@ -57,7 +58,11 @@ enum BillEntries {
         if linked.isEmpty {
             makeEntry(for: bill, on: due, in: account, state: .reconciled, context: context, calendar: calendar)
         } else {
-            for entry in linked where entry.state != .reconciled { entry.state = .reconciled }
+            for entry in linked {
+                if entry.state != .reconciled { entry.state = .reconciled }
+                // Ticking also fills in the usual payment method, if the entry has none yet and the account doesn't set one.
+                if entry.paymentChoice == nil, account.lockedPaymentType == nil, let usual = BillMethods.choice(for: bill, in: context) { entry.paymentChoice = usual }
+            }
         }
     }
 

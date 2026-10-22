@@ -505,6 +505,8 @@ struct BillEditView: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
     /// The account this bill comes out of, for the pending entry it makes on each due date. Optional.
     @State private var paysFrom: Account?
+    /// How this bill is usually paid. Optional.
+    @State private var paymentChoice: PaymentChoice?
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var confirmingDelete = false
 
@@ -562,6 +564,11 @@ struct BillEditView: View {
                             Text("Repeats from this date, so a bill first due on the 15th falls on the 15th every time.")
                         }
                     }
+                }
+                Section {
+                    Picker("Payment method", selection: $paymentChoice) { PaymentTypeOptions(keeping: paymentChoice) }
+                } footer: {
+                    Text("Optional. How this bill is usually paid, such as Auto Pay or Check. It is used for the pending entry the bill makes, when you tick the bill off, and as the starting choice in Pay a Bill.")
                 }
                 if bill?.loan == nil {
                     Section {
@@ -645,7 +652,12 @@ struct BillEditView: View {
             }
         }
         .macSheetFrame(minHeight: 620)
-        .onAppear { if let bill { paysFrom = BillPaySources.account(for: bill, in: modelContext) } }
+        .onAppear {
+            if let bill {
+                paysFrom = BillPaySources.account(for: bill, in: modelContext)
+                paymentChoice = BillMethods.choice(for: bill, in: modelContext)
+            }
+        }
     }
 
     private func save() {
@@ -674,10 +686,12 @@ struct BillEditView: View {
             modelContext.insert(created)
             ArtworkChoices.set(artworkTheme, for: created, in: modelContext)
             BillPaySources.set(paysFrom, for: created, in: modelContext)
+            BillMethods.set(paymentChoice, for: created, in: modelContext)
         }
         if let bill {
             ArtworkChoices.set(artworkTheme, for: bill, in: modelContext)
             if bill.loan == nil { BillPaySources.set(paysFrom, for: bill, in: modelContext) }
+            BillMethods.set(paymentChoice, for: bill, in: modelContext)
         }
         modelContext.saveNow()
         BillEntries.run(in: modelContext)

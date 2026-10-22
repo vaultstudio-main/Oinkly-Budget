@@ -444,3 +444,65 @@ enum BudgetPeriods {
         for record in all(in: context) where !present.contains(record.key) { context.delete(record) }
     }
 }
+
+/// The payment method a bill is usually paid with, so the entry it makes, a tick on its checkmark and Pay a Bill all start with
+/// it. Its own record, found by the bill's key, so the bill model stays as it was. The method is kept as text, a built-in
+/// method's raw value or "custom:" and the name of one of your own, the same way a repeating transaction keeps it.
+@Model
+final class BillMethod {
+    var billKey: String = ""
+    var methodRaw: String = ""
+    var createdAt: Date = Date.now
+
+    init(billKey: String, methodRaw: String) {
+        self.billKey = billKey
+        self.methodRaw = methodRaw
+    }
+}
+
+enum BillMethods {
+    static func key(for bill: Bill) -> String { ArtworkChoices.key(for: bill) }
+
+    private static func all(in context: ModelContext) -> [BillMethod] {
+        ((try? context.fetch(FetchDescriptor<BillMethod>())) ?? []).live
+    }
+
+    /// The method text kept for a bill, for a backup.
+    static func raw(for bill: Bill, in context: ModelContext) -> String? {
+        guard bill.isLive else { return nil }
+        let found = all(in: context).first { $0.billKey == key(for: bill) }?.methodRaw
+        return (found?.isEmpty ?? true) ? nil : found
+    }
+
+    /// The method a bill is usually paid with, if one was chosen and it still exists.
+    static func choice(for bill: Bill, in context: ModelContext) -> PaymentChoice? {
+        guard let raw = raw(for: bill, in: context) else { return nil }
+        if let type = PayeeMemory.builtInMethod(raw) { return .type(type) }
+        if raw.hasPrefix("custom:") {
+            let name = String(raw.dropFirst("custom:".count))
+            let methods = ((try? context.fetch(FetchDescriptor<CustomPaymentMethod>())) ?? []).live
+            if let method = methods.first(where: { $0.name == name }) { return .custom(method) }
+        }
+        return nil
+    }
+
+    /// Sets or clears the method for a bill. Does not save.
+    static func set(_ choice: PaymentChoice?, for bill: Bill, in context: ModelContext) {
+        let wanted = key(for: bill)
+        let mine = all(in: context).filter { $0.billKey == wanted }
+        for extra in mine.dropFirst() { context.delete(extra) }
+        let text = PayeeMemory.raw(choice)
+        guard !text.isEmpty else {
+            for record in mine { context.delete(record) }
+            return
+        }
+        if let existing = mine.first { if existing.methodRaw != text { existing.methodRaw = text } }
+        else { context.insert(BillMethod(billKey: wanted, methodRaw: text)) }
+    }
+
+    /// Records for bills that are gone.
+    static func removeOrphans(in context: ModelContext) {
+        let bills = Set(((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live.map { key(for: $0) })
+        for record in all(in: context) where !bills.contains(record.billKey) { context.delete(record) }
+    }
+}

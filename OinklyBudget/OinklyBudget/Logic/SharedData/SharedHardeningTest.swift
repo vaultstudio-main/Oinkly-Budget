@@ -105,13 +105,13 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 9
-            try rewriteNote(s5) { $0.schemaVersion = 9 }
+            newer.schemaVersion = 10
+            try rewriteNote(s5) { $0.schemaVersion = 10 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 9 && s5.readInfo()?.counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 10 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -247,7 +247,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV8.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV9.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -922,7 +922,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2030, month: 1, day: d))! }
-                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Outlook bank", type: .checking, openingBalance: 0)
                 let groceries = Category(name: "Outlook groceries", colorHex: "34C759", symbol: "cart", monthlyLimit: 400)
                 let electric = Bill(name: "Electric", amount: 90, frequency: .monthly, dueDate: day(10))
@@ -1045,7 +1045,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: .now)
-                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let loan = Bill(name: "Auto Loan", amount: 400, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -12, to: today)!, isImportant: true)
                 let insurance = Bill(name: "Insurance", amount: 100, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 4, to: today)!, isImportant: true)
                 let notImportant = Bill(name: "Gym", amount: 30, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -3, to: today)!)
@@ -1060,7 +1060,7 @@ enum SharedHardeningTest {
 
             // S39: ticking an entry a repeating rule made
             do {
-                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let income = Transaction(account: nil, date: .now, payee: "Pay", amount: 2_000)
                 rc.insert(income)
                 income.state = .pending
@@ -1082,7 +1082,7 @@ enum SharedHardeningTest {
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: .now)
                 func ago(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: today)! }
-                let bc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Bills bank", type: .checking, openingBalance: 0)
                 bc.insert(bank)
                 let power = Bill(name: "Power", amount: 90, frequency: .monthly, dueDate: ago(5))
@@ -1138,7 +1138,7 @@ enum SharedHardeningTest {
             // S41: weekly budgets
             do {
                 let calendar = Calendar.current
-                let wc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let wc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 check("S41 a weekly amount is read as about a month: 100 a week is 433.33", BudgetPeriods.monthly(fromWeekly: 100) == Decimal(string: "433.33"))
                 check("S41 and 15 a week is 65", BudgetPeriods.monthly(fromWeekly: 15) == 65)
                 func month(_ m: Int, year: Int = 2026) -> Date { DateComponents(calendar: calendar, year: year, month: m, day: 10).date! }
@@ -1185,6 +1185,54 @@ enum SharedHardeningTest {
                     try wc.save()
                     check("S41 deleting the budget leaves no stray record", ((try? wc.fetch(FetchDescriptor<BudgetPeriod>())) ?? []).isEmpty)
                 }
+            }
+
+            // S42: the payment method a bill is usually paid with
+            do {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                let mc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bank = Account(name: "Method bank", type: .checking, openingBalance: 0)
+                let own = CustomPaymentMethod(name: "Company Card", symbol: "creditcard")
+                mc.insert(bank); mc.insert(own)
+                let power = Bill(name: "Power", amount: 90, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -4, to: today)!)
+                let rent = Bill(name: "Rent", amount: 800, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -3, to: today)!)
+                let net = Bill(name: "Internet", amount: 60, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -2, to: today)!)
+                for bill in [power, rent, net] { mc.insert(bill) }
+                BillPaySources.set(bank, for: power, in: mc); BillPaySources.set(bank, for: rent, in: mc); BillPaySources.set(bank, for: net, in: mc)
+                BillMethods.set(.type(.autoPay), for: power, in: mc)
+                BillMethods.set(.custom(own), for: rent, in: mc)
+                try mc.save()
+                check("S42 a bill remembers its usual method", { if case .type(.autoPay)? = BillMethods.choice(for: power, in: mc) { return true } else { return false } }())
+                check("S42 and one of your own methods, by name", { if case .custom(let found)? = BillMethods.choice(for: rent, in: mc) { return found === own } else { return false } }())
+                check("S42 a bill with none has none", BillMethods.choice(for: net, in: mc) == nil)
+                BillEntries.run(in: mc)
+                try mc.save()
+                func entry(_ bill: Bill) -> Transaction? { BillLink.payments(of: bill, on: bill.dueDate).first }
+                check("S42 the pending entry starts with the bill's method", { if case .type(.autoPay)? = entry(power)?.paymentChoice { return true } else { return false } }())
+                check("S42 and with one of your own", { if case .custom(let found)? = entry(rent)?.paymentChoice { return found === own } else { return false } }())
+                check("S42 a bill with no method makes an entry with none", entry(net)?.paymentChoice == nil)
+                // Choosing a method later fills it in when the bill is ticked
+                BillMethods.set(.type(.check), for: net, in: mc)
+                BillEntries.markPaid(net, on: net.dueDate, in: mc)
+                check("S42 ticking a bill fills in the method an entry was missing", { if case .type(.check)? = entry(net)?.paymentChoice { return true } else { return false } }())
+                // Changing and clearing it
+                BillMethods.set(.type(.debitCard), for: power, in: mc)
+                BillMethods.set(.type(.debitCard), for: power, in: mc)
+                try mc.save()
+                check("S42 changing it keeps one record", ((try? mc.fetch(FetchDescriptor<BillMethod>())) ?? []).filter { $0.billKey == BillMethods.key(for: power) }.count == 1)
+                let backup = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: mc)))
+                try DataBackup.restore(backup, into: mc)
+                let restoredPower = try mc.fetch(FetchDescriptor<Bill>()).first { $0.name == "Power" }
+                check("S42 a backup brings back the method", restoredPower.flatMap { BillMethods.choice(for: $0, in: mc) } != nil && { if case .type(.debitCard)? = restoredPower.flatMap({ BillMethods.choice(for: $0, in: mc) }) { return true } else { return false } }())
+                if let restoredPower { BillMethods.set(nil, for: restoredPower, in: mc) }
+                try mc.save()
+                check("S42 clearing it removes the record", restoredPower.map { BillMethods.choice(for: $0, in: mc) } == .some(nil))
+                for bill in try mc.fetch(FetchDescriptor<Bill>()) { mc.delete(bill) }
+                try mc.save()
+                BillMethods.removeOrphans(in: mc)
+                try mc.save()
+                check("S42 deleting the bills leaves no stray record", ((try? mc.fetch(FetchDescriptor<BillMethod>())) ?? []).isEmpty)
             }
         } catch {
             check("no error", false, error.localizedDescription)

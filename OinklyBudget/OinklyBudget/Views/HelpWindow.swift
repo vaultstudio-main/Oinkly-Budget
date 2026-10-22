@@ -262,6 +262,7 @@ enum HelpContent {
                 "## Adding a bill",
                 "Press Add a Bill under the calendar. Give it a name, amount, how often it repeats (once, weekly, every two weeks, monthly, every three months, yearly) and the first due date.",
                 "• Category: choose where the bill's payments appear in your reports, such as Phone & Internet.",
+                "• Payment method: optionally choose how the bill is usually paid, such as Auto Pay or Check, or one of your own methods. The pending entry the bill makes starts with it, ticking the bill off fills it in on an entry that has none, and Pay a Bill starts with it too, and you can still change it there.",
                 "• Pays from: optionally pick the account the bill comes out of. On each due date the bill adds a pending entry to that account, linked to the bill. Loan and card bills don't have this, because Pay a Bill handles them.",
                 "• Important: marks it so it raises a priority alert as it gets close and shows on the Summary.",
                 "• Reminders: pick how many days before it's due. Reminders arrive at 9 AM.",
