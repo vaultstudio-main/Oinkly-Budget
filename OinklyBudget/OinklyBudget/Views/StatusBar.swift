@@ -102,19 +102,28 @@ private struct SharingStatusDot: View {
 }
 
 /// A small coloured dot for this Mac's database: green when everything is saved, yellow while changes are being saved,
-/// red when saving keeps failing.
+/// red when saving keeps failing. While sharing is on, the sharing dot says whether the data is saved, so this one only
+/// appears when saving on this Mac has gone wrong.
 private struct DatabaseStatusDot: View {
     private var status: DatabaseStatus { DatabaseStatus.shared }
 
+    private var isHiddenWhileSharing: Bool {
+        guard SharedDataSession.shared.status != nil else { return false }
+        if case .problem = status.state { return false }
+        return true
+    }
+
     var body: some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label).foregroundStyle(.secondary)
+        if !isHiddenWhileSharing {
+            HStack(spacing: 5) {
+                Circle().fill(color).frame(width: 8, height: 8)
+                Text(label).foregroundStyle(.secondary)
+            }
+            .help(detail)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Database: \(label)")
+            .accessibilityHint(detail)
         }
-        .help(detail)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Database: \(label)")
-        .accessibilityHint(detail)
     }
 
     private var color: Color {
