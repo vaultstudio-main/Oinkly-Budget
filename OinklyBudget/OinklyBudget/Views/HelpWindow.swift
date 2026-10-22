@@ -309,6 +309,8 @@ enum HelpContent {
                 "Categories are split into Expenses and Income. Built-in categories are the same everywhere and can't be renamed or deleted.",
                 "• Set a monthly budget on an expense category in Settings ▸ Categories. It appears on the Summary and on the Budgets page.",
                 "• The Budgets page lists every category that has a budget: budgeted, spent and left, with a progress bar. Categories with a zero budget are hidden.",
+                "• Click any budget on the Budgets page to change its amount. Budgets of your own can also be renamed or deleted there.",
+                "• Set Hidden and Custom Budgets opens Settings ▸ Categories. There you can give any category a budget, show or hide it on the Budgets page, and add budgets of your own.",
                 "• Add Custom Category lets you create your own, as an Expense or as Income. You can rename and delete your own.",
                 "• Counts as tax-related: tick it on any category and the tax report follows it. Charity, Healthcare, Taxes and similar starter categories are already ticked for you.",
                 "• Payment methods work the same way: add your own in Settings ▸ Payment Methods.",

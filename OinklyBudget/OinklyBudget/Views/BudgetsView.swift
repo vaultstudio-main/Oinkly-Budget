@@ -1,11 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// Progress on every budget for a month. Budgets are changed in Settings, not here.
+/// Progress on every budget for a month. Click a budget to change its amount. Budgets you have hidden, or made yourself,
+/// are set in Settings ▸ Categories.
 struct BudgetsView: View {
     @Environment(\.openSettings) private var openSettings
     @Query(sort: \Category.name) private var allCategories: [Category]
     @State private var month = MonthFilter.start(of: .now)
+    @State private var editing: Category?
 
     private var range: ClosedRange<Date> {
         let current = MonthFilter.start(of: .now)
@@ -44,25 +46,31 @@ struct BudgetsView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Image(systemName: "info.circle").foregroundStyle(.secondary)
-                    Text("To change these budgets, go to Settings.")
+                    Image(systemName: "hand.tap").foregroundStyle(.secondary)
+                    Text("Click a budget to change its amount.")
                     Spacer()
-                    Button("Open Categories in Settings") {
+                    Button {
                         UserDefaults.standard.set("categories", forKey: MacSettingsView.tabKey)
                         openSettings()
+                    } label: {
+                        Label("Set Hidden and Custom Budgets…", systemImage: "slider.horizontal.3")
                     }
+                    .help("Opens Settings ▸ Categories, where you can set a budget on any category, show or hide it here, and add budgets of your own")
                 }
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
                 if budgets.isEmpty {
-                    Text("No budgets are set. Add some in Settings ▸ Categories.")
+                    Text("No budgets are set. Choose Set Hidden and Custom Budgets above, or add some in Settings ▸ Categories.")
                         .foregroundStyle(.secondary)
                         .padding(.top, 30)
                 } else {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 230), spacing: 12)], spacing: 12) {
                         ForEach(budgets) { category in
-                            card(category, spent: table[category])
+                            Button { editing = category } label: { card(category, spent: table[category]) }
+                                .buttonStyle(.plain)
+                                .help("Click to change the \(category.name) budget")
+                                .accessibilityHint("Opens the budget to change its amount")
                         }
                     }
                 }
@@ -70,6 +78,9 @@ struct BudgetsView: View {
             .padding(16)
         }
         .background(Theme.background)
+        .sheet(item: $editing, onDismiss: { modelContext.saveNow() }) { category in
+            if category.isCustom { CustomBudgetEditView(category: category) } else { BudgetEditView(category: category) }
+        }
     }
 
     /// A centred total, the same width as its neighbours.
@@ -110,5 +121,6 @@ struct BudgetsView: View {
         }
         .padding(12)
         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+        .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 }
