@@ -41,7 +41,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 8. **Export to PDF and CSV.** Every account and the Transactions page. Print by opening the PDF.
 9. **Import a statement.** Preview, map the columns, skip duplicates, undo.
 10. **Clean Up and autofill.** Find and replace payees and categories, merge duplicates, memory for payee, category, memo and payment method.
-11. **Widgets.** Upcoming bills and reminders, no amounts or account details.
+11. **Widgets.** One Upcoming Transactions widget (small, medium, large) with bills, repeating transactions and reminders, no amounts or account details.
 12. **Safe updates.** An automatic safety copy of your data before the first open in the new version.
 13. **The basics** stay in the base list: accounts, bills, receipts, reminders, backups, menu bar item.
 

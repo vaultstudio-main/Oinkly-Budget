@@ -51,7 +51,7 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-B10c | `Help-recurring-pending` | Pending entry made by a rule | Register |
 | S-C1 | `Help-priority-bills` | Summary with Priority Bills | Summary |
 | S-C2 | `Help-menu-bar` | Menu bar pop-up | Click the menu bar item |
-| S-C3a | `Help-widgets` | Both widgets on the desktop | Desktop (owner takes this) |
+| S-C3a | `Help-widgets` | The widget on the desktop, small, medium and large | Desktop (owner takes this) |
 | S-C3b | `Help-widget-gallery` | Widget gallery | Edit widgets (owner takes this) |
 | S-D1a | `Help-goal-edit` | Goal editor with the account link | Planning ▸ New Goal |
 | S-D1b | `Help-goal-section` | Goal section close-up | Any linked account |

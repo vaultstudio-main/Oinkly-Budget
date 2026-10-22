@@ -55,7 +55,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Updates are safer: a copy of your data is made before the first open in 1.0, and a file that can't be opened shows an error instead of an empty app.
 
 ### Widgets and the menu bar
-- Two widgets in small, medium and large: Upcoming Bills (bills and repeating transactions) and Reminders. Edit a widget to choose which bills (all or important only), how far ahead and whether repeating transactions show, or which reminders. They show names and dates only, never amounts or account details.
+- One widget, Upcoming Transactions, in small, medium and large: your bills, repeating transactions and reminders in one list, marked and in date order, the same as the menu bar item. Edit the widget to choose all or important bills, how far ahead (this month by default), and whether repeating transactions and reminders show. Names and dates only; no amounts.
 - The menu bar pop-up lists this month's bills and repeating transactions together, each marked, with the date and days to go.
 
 ### Around the app

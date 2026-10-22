@@ -349,6 +349,38 @@ enum SharedHardeningTest {
             check("S20 saved after the wait", dbStatus.state == .saved && !fileContext.hasChanges && dbStatus.lastSaved != nil)
             let waiting = try fileContext.fetch(FetchDescriptor<Account>()).filter { $0.name == "Waiting to save" }
             check("S20 and it really is in the database", waiting.count == 1)
+
+            // S21: what the widget lists
+            let wNow = gregorian.date(from: DateComponents(year: 2026, month: 10, day: 10, hour: 12)) ?? .now
+            func d(_ day: Int, month: Int = 10, hour: Int = 0) -> Date { gregorian.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour)) ?? .now }
+            let wSnapshot = WidgetSnapshot(
+                updated: wNow,
+                bills: [
+                    .init(id: "b1", name: "Electric", due: d(12), isImportant: true, isOverdue: false),
+                    .init(id: "b2", name: "Water", due: d(28), isImportant: false, isOverdue: false),
+                    .init(id: "b3", name: "Internet", due: d(2), isImportant: false, isOverdue: true),
+                    .init(id: "b4", name: "Next month's bill", due: d(3, month: 11), isImportant: false, isOverdue: false),
+                ],
+                reminders: [
+                    .init(id: "m1", title: "Review my budget", next: d(11, hour: 9)),
+                    .init(id: "m2", title: "Back up my data", next: d(2, month: 11, hour: 9)),
+                ],
+                repeating: [
+                    .init(id: "r1", name: "Paycheque", due: d(15), isOverdue: false),
+                    .init(id: "r2", name: "Gym", due: d(8), isOverdue: true),
+                    .init(id: "r3", name: "Next month's rule", due: d(1, month: 11), isOverdue: false),
+                ])
+            let month = WidgetLines.make(wSnapshot, now: wNow, calendar: gregorian)
+            check("S21 this month lists bills, repeating and reminders", Set(month.map(\.kind)) == [.bill, .repeating, .reminder], "\(month.map(\.name))")
+            check("S21 nothing from next month", !month.contains { $0.name.hasPrefix("Next month") || $0.name == "Back up my data" })
+            check("S21 overdue first, then soonest", month.map(\.name) == ["Internet", "Gym", "Review my budget", "Electric", "Paycheque", "Water"], "\(month.map(\.name))")
+            let week = WidgetLines.make(wSnapshot, now: wNow, options: .init(lookAheadDays: 7), calendar: gregorian)
+            check("S21 seven days leaves out what is further off", week.contains { $0.name == "Electric" } && week.contains { $0.name == "Paycheque" } && !week.contains { $0.name == "Water" }, "\(week.map(\.name))")
+            let important = WidgetLines.make(wSnapshot, now: wNow, options: .init(onlyImportant: true), calendar: gregorian)
+            check("S21 important bills only drops repeating ones", important.allSatisfy { $0.kind != .repeating && ($0.kind != .bill || $0.isImportant) })
+            let bare = WidgetLines.make(wSnapshot, now: wNow, options: .init(includeRepeating: false, includeReminders: false), calendar: gregorian)
+            check("S21 switches turn repeating and reminders off", bare.allSatisfy { $0.kind == .bill })
+            check("S21 no snapshot means no lines", WidgetLines.make(nil, now: wNow, calendar: gregorian).isEmpty)
         } catch {
             check("no error", false, error.localizedDescription)
         }

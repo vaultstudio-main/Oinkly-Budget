@@ -123,11 +123,13 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Shots: S-C2.
 
 ### C3. Widgets (Built)
-- Two widgets in three sizes (small, medium, large): Upcoming Bills (the next bills and repeating transactions due, names and dates only) and Reminders (your own reminders and when they are next).
-- **Choices.** Right-click a widget and choose Edit Widget. Upcoming Bills: Show (all bills or important bills only), Look ahead (7, 14 or 30 days) and Include repeating transactions. Reminders: pick which reminders show, or leave empty for all of them. The large size lists about 9 bills or 8 reminders.
-- No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open Oinkly Budget to show your bills here."
-- Add them from the widget gallery (edit widgets on the desktop or in Notification Center).
-- Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery), S-C3c (Edit Widget choices).
+- One widget, **Upcoming Transactions**, in three sizes. It lists what the menu bar item lists, in one list: bills, repeating transactions and your own reminders, each marked Bill, Repeating or Reminder, overdue first and then soonest first. Names and dates only: no amounts, balances or account details ever appear.
+- **Small:** three lines, each with a day word (Today, Tomorrow, Friday, Oct 24). **Medium:** four lines with the marker and day word, and a count line under the title. **Large:** nine lines, each with the date and how many days away it is ("Fri, Oct 24 · in 3 days"), and a summary of how many bills, repeating transactions, reminders and overdue items there are.
+- **Choices.** Right-click the widget and choose Edit Widget: Bills (all, or important only), Look ahead (this month, 7, 14 or 30 days), Include repeating transactions, Include my reminders. The default is this month, the same as the menu bar item.
+- It reads a small file the app writes on your Mac and updates after the app saves. If the app has never run: "Open Oinkly Budget to show what is coming up here."
+- The separate Reminders widget was folded into this one.
+- Add it from the widget gallery (edit widgets on the desktop or in Notification Center).
+- Shots: S-C3a (the widget on the desktop in three sizes), S-C3b (widget gallery), S-C3c (Edit Widget choices).
 
 ---
 
@@ -253,7 +255,7 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-B10c | Pending entry made by a rule | Register | Help-recurring-pending | – | – |
 | S-C1 | Summary with Priority Bills | Summary | Help-priority-bills | features | yes |
 | S-C2 | Menu bar pop-up | Click the menu bar item | Help-menu-bar | features | – |
-| S-C3a | Both widgets on the desktop | Desktop (owner takes this) | Help-widgets | features | yes |
+| S-C3a | The widget on the desktop, three sizes | Desktop (owner takes this) | Help-widgets | features | yes |
 | S-C3b | Widget gallery | Edit widgets (owner takes this) | Help-widget-gallery | – | – |
 | S-C3c | Edit Widget choices | Right-click a widget (owner takes this) | Help-widget-choices | – | – |
 | S-D1a | Goal editor with the account link | Planning ▸ New Goal | Help-goal-edit | features | – |

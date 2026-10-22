@@ -2,13 +2,12 @@ import SwiftUI
 import WidgetKit
 import AppIntents
 
-/// Widgets for OinklyBudget: upcoming bills, and your own reminders. They show names and dates only. There are no
-/// amounts or account details, and nothing leaves the Mac.
+/// The Oinkly Budget widget: bills, repeating transactions and your own reminders in one list, in three sizes. It shows
+/// names and dates only. There are no amounts or account details, and nothing leaves the Mac.
 @main
 struct OinklyWidgets: WidgetBundle {
     var body: some Widget {
-        UpcomingBillsWidget()
-        RemindersWidget()
+        UpcomingWidget()
     }
 }
 
@@ -23,48 +22,26 @@ enum BillScope: String, AppEnum {
 }
 
 enum LookAhead: Int, AppEnum {
-    case week = 7, twoWeeks = 14, month = 30
+    case thisMonth = 0, week = 7, twoWeeks = 14, month = 30
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "How far ahead"
     static let caseDisplayRepresentations: [LookAhead: DisplayRepresentation] = [
-        .week: "7 days", .twoWeeks: "14 days", .month: "30 days",
+        .thisMonth: "This month", .week: "7 days", .twoWeeks: "14 days", .month: "30 days",
     ]
 }
 
-struct UpcomingBillsIntent: WidgetConfigurationIntent {
-    static let title: LocalizedStringResource = "Upcoming Bills"
-    static let description = IntentDescription("Choose which bills show and how far ahead to look. Names and dates only.")
+struct UpcomingIntent: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Upcoming Transactions"
+    static let description = IntentDescription("Choose what shows and how far ahead to look. Names and dates only.")
 
-    @Parameter(title: "Show", default: .all) var scope: BillScope
-    @Parameter(title: "Look ahead", default: .month) var lookAhead: LookAhead
+    @Parameter(title: "Bills", default: .all) var scope: BillScope
+    @Parameter(title: "Look ahead", default: .thisMonth) var lookAhead: LookAhead
     @Parameter(title: "Include repeating transactions", default: true) var includeRepeating: Bool
-}
+    @Parameter(title: "Include my reminders", default: true) var includeReminders: Bool
 
-/// One of the person's own reminders, offered in the Reminders widget's choices. The titles come from the snapshot the
-/// app wrote, so the widget never reads the app's data.
-struct ReminderChoice: AppEntity {
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Reminder"
-    static let defaultQuery = ReminderChoiceQuery()
-
-    let id: String
-    let title: String
-
-    var displayRepresentation: DisplayRepresentation { DisplayRepresentation(title: "\(title)") }
-}
-
-struct ReminderChoiceQuery: EntityQuery {
-    private func all() -> [ReminderChoice] {
-        (WidgetSnapshot.load()?.reminders ?? []).map { ReminderChoice(id: $0.id, title: $0.title) }
+    var options: WidgetLines.Options {
+        WidgetLines.Options(onlyImportant: scope == .importantOnly, includeRepeating: includeRepeating, includeReminders: includeReminders,
+                            lookAheadDays: lookAhead == .thisMonth ? nil : lookAhead.rawValue)
     }
-
-    func entities(for identifiers: [String]) async throws -> [ReminderChoice] { all().filter { identifiers.contains($0.id) } }
-    func suggestedEntities() async throws -> [ReminderChoice] { all() }
-}
-
-struct RemindersIntent: WidgetConfigurationIntent {
-    static let title: LocalizedStringResource = "Reminders"
-    static let description = IntentDescription("Choose which reminders show. Leave empty to show them all.")
-
-    @Parameter(title: "Reminders") var reminders: [ReminderChoice]?
 }
 
 // MARK: Timeline
@@ -72,18 +49,15 @@ struct RemindersIntent: WidgetConfigurationIntent {
 struct SnapshotEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot?
-    /// What the person chose for this widget.
-    var onlyImportant = false
-    var includeRepeating = true
-    var lookAheadDays = 30
-    /// Nil shows every reminder.
-    var reminderIDs: Set<String>?
+    var options = WidgetLines.Options()
+
+    var lines: [WidgetLine] { WidgetLines.make(snapshot, now: date, options: options) }
 }
 
-/// Reads the snapshot the app wrote. It makes an entry now and one at each midnight and each due time coming up, so
+/// Reads the snapshot the app wrote. It makes an entry now and one at each midnight and each reminder time coming up, so
 /// "in 3 days" turns into "Tomorrow" and "Today" without the app having to run.
 enum SnapshotTimeline {
-    static func make(onlyImportant: Bool = false, includeRepeating: Bool = true, lookAheadDays: Int = 30, reminderIDs: Set<String>? = nil) -> Timeline<SnapshotEntry> {
+    static func make(options: WidgetLines.Options) -> Timeline<SnapshotEntry> {
         let snapshot = WidgetSnapshot.load()
         let calendar = Calendar.current
         let now = Date()
@@ -94,9 +68,7 @@ enum SnapshotTimeline {
             moments.insert(midnight)
         }
         for reminder in snapshot?.reminders ?? [] where reminder.next > now && reminder.next < midnight { moments.insert(reminder.next) }
-        let entries = moments.sorted().map {
-            SnapshotEntry(date: $0, snapshot: snapshot, onlyImportant: onlyImportant, includeRepeating: includeRepeating, lookAheadDays: lookAheadDays, reminderIDs: reminderIDs)
-        }
+        let entries = moments.sorted().map { SnapshotEntry(date: $0, snapshot: snapshot, options: options) }
         return Timeline(entries: entries, policy: .after(calendar.date(byAdding: .hour, value: 6, to: now) ?? now))
     }
 
@@ -117,35 +89,18 @@ enum SnapshotTimeline {
         ])
 }
 
-struct BillsProvider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SnapshotEntry { SnapshotEntry(date: .now, snapshot: SnapshotTimeline.sample) }
+struct UpcomingProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> SnapshotEntry {
+        SnapshotEntry(date: .now, snapshot: SnapshotTimeline.sample, options: WidgetLines.Options(lookAheadDays: 30))
+    }
 
-    func snapshot(for configuration: UpcomingBillsIntent, in context: Context) async -> SnapshotEntry {
+    func snapshot(for configuration: UpcomingIntent, in context: Context) async -> SnapshotEntry {
         SnapshotEntry(date: .now, snapshot: context.isPreview ? SnapshotTimeline.sample : WidgetSnapshot.load(),
-                      onlyImportant: configuration.scope == .importantOnly, includeRepeating: configuration.includeRepeating,
-                      lookAheadDays: configuration.lookAhead.rawValue)
+                      options: context.isPreview ? WidgetLines.Options(lookAheadDays: 30) : configuration.options)
     }
 
-    func timeline(for configuration: UpcomingBillsIntent, in context: Context) async -> Timeline<SnapshotEntry> {
-        SnapshotTimeline.make(onlyImportant: configuration.scope == .importantOnly, includeRepeating: configuration.includeRepeating,
-                              lookAheadDays: configuration.lookAhead.rawValue)
-    }
-}
-
-struct RemindersProvider: AppIntentTimelineProvider {
-    func placeholder(in context: Context) -> SnapshotEntry { SnapshotEntry(date: .now, snapshot: SnapshotTimeline.sample) }
-
-    private func ids(_ configuration: RemindersIntent) -> Set<String>? {
-        guard let chosen = configuration.reminders, !chosen.isEmpty else { return nil }
-        return Set(chosen.map(\.id))
-    }
-
-    func snapshot(for configuration: RemindersIntent, in context: Context) async -> SnapshotEntry {
-        SnapshotEntry(date: .now, snapshot: context.isPreview ? SnapshotTimeline.sample : WidgetSnapshot.load(), reminderIDs: ids(configuration))
-    }
-
-    func timeline(for configuration: RemindersIntent, in context: Context) async -> Timeline<SnapshotEntry> {
-        SnapshotTimeline.make(reminderIDs: ids(configuration))
+    func timeline(for configuration: UpcomingIntent, in context: Context) async -> Timeline<SnapshotEntry> {
+        SnapshotTimeline.make(options: configuration.options)
     }
 }
 
@@ -163,22 +118,53 @@ private func dayWord(_ date: Date, from now: Date) -> String {
     }
 }
 
-// MARK: Upcoming bills
+/// "Fri, Oct 24 · in 3 days", the way the menu bar item says it.
+private func fullWhen(_ line: WidgetLine, from now: Date) -> String {
+    let calendar = Calendar.current
+    let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: line.date)).day ?? 0
+    let clock = line.kind == .reminder ? ", " + line.date.formatted(date: .omitted, time: .shortened) : ""
+    switch days {
+    case ..<0: return "Overdue by \(-days) day\(days == -1 ? "" : "s")"
+    case 0: return "Today" + clock
+    case 1: return "Tomorrow" + clock
+    default: return line.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()) + clock + " · in \(days) days"
+    }
+}
 
-struct UpcomingBillsWidget: Widget {
+private extension WidgetLine.Kind {
+    var symbol: String {
+        switch self {
+        case .bill: "calendar"
+        case .repeating: "arrow.triangle.2.circlepath"
+        case .reminder: "bell"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .bill: .blue
+        case .repeating: .purple
+        case .reminder: .teal
+        }
+    }
+}
+
+// MARK: Widget
+
+struct UpcomingWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "UpcomingBills", intent: UpcomingBillsIntent.self, provider: BillsProvider()) { entry in
-            UpcomingBillsView(entry: entry)
+        AppIntentConfiguration(kind: "UpcomingBills", intent: UpcomingIntent.self, provider: UpcomingProvider()) { entry in
+            UpcomingView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
                 .widgetURL(URL(string: "\(WidgetSnapshot.scheme)://bills"))
         }
-        .configurationDisplayName("Upcoming Bills")
-        .description("The next bills and repeating transactions that are due. Names and dates only. Edit the widget to choose which and how far ahead.")
+        .configurationDisplayName("Upcoming Transactions")
+        .description("Bills, repeating transactions and your reminders that are coming up, in one list. Names and dates only. Edit the widget to choose what shows and how far ahead.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
-private struct UpcomingBillsView: View {
+private struct UpcomingView: View {
     let entry: SnapshotEntry
     @Environment(\.widgetFamily) private var family
 
@@ -190,61 +176,24 @@ private struct UpcomingBillsView: View {
         }
     }
 
-    /// One line in the widget: a bill or a repeating transaction.
-    private struct Line: Identifiable {
-        let id: String
-        let name: String
-        let due: Date
-        let isImportant: Bool
-        let isOverdue: Bool
-        let isRepeating: Bool
+    private var rangeName: String {
+        entry.options.lookAheadDays.map { "the next \($0) days" } ?? entry.date.formatted(.dateTime.month(.wide))
     }
-
-    /// Overdue first, then important ones, then by date. Only what the widget was set to show.
-    private var lines: [Line] {
-        let calendar = Calendar.current
-        let day = calendar.startOfDay(for: entry.date)
-        let end = calendar.date(byAdding: .day, value: entry.lookAheadDays + 1, to: day) ?? day
-        let bills = (entry.snapshot?.bills ?? []).filter {
-            ($0.due >= day || $0.isOverdue) && $0.due < end && (!entry.onlyImportant || $0.isImportant)
-        }.map { Line(id: "bill-" + $0.id, name: $0.name, due: $0.due, isImportant: $0.isImportant, isOverdue: $0.isOverdue, isRepeating: false) }
-        let repeating = entry.includeRepeating && !entry.onlyImportant ? (entry.snapshot?.repeating ?? []).filter {
-            ($0.due >= day || $0.isOverdue) && $0.due < end
-        }.map { Line(id: "repeat-" + $0.id, name: $0.name, due: $0.due, isImportant: false, isOverdue: $0.isOverdue, isRepeating: true) } : []
-        return (bills + repeating).sorted {
-            let a = $0.due < day, b = $1.due < day
-            if a != b { return a }
-            if $0.isImportant != $1.isImportant { return $0.isImportant }
-            return $0.due < $1.due
-        }
-    }
-
-    private var hasRepeating: Bool { entry.includeRepeating && !(entry.snapshot?.repeating.isEmpty ?? true) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label(hasRepeating ? "Bills & Recurring" : "Bills", systemImage: "calendar")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+        let lines = entry.lines
+        VStack(alignment: .leading, spacing: family == .systemLarge ? 8 : 6) {
+            header(lines)
             if entry.snapshot == nil {
-                Text("Open Oinkly Budget to show your bills here.")
-                    .font(.caption)
+                Text("Open Oinkly Budget to show what is coming up here.")
+                    .font(family == .systemSmall ? .caption : .callout)
                     .foregroundStyle(.secondary)
             } else if lines.isEmpty {
-                Text("Nothing due in the next \(entry.lookAheadDays) days.")
+                Text("Nothing due in \(rangeName).")
                     .font(.callout)
             } else {
                 ForEach(lines.prefix(limit)) { line in
-                    HStack(spacing: 6) {
-                        if line.isImportant { Image(systemName: "star.fill").font(.caption2).foregroundStyle(.orange) }
-                        if line.isRepeating { Image(systemName: "arrow.triangle.2.circlepath").font(.caption2).foregroundStyle(.secondary) }
-                        Text(line.name).font(.callout.weight(.medium)).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(dayWord(line.due, from: entry.date))
-                            .font(.caption)
-                            .foregroundStyle(line.due < Calendar.current.startOfDay(for: entry.date) ? Color.red : Color.secondary)
-                            .lineLimit(1)
-                    }
+                    row(line)
                 }
                 if lines.count > limit {
                     Text("and \(lines.count - limit) more").font(.caption2).foregroundStyle(.secondary)
@@ -254,63 +203,66 @@ private struct UpcomingBillsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-}
 
-// MARK: Reminders
-
-struct RemindersWidget: Widget {
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "Reminders", intent: RemindersIntent.self, provider: RemindersProvider()) { entry in
-            RemindersView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
-                .widgetURL(URL(string: "\(WidgetSnapshot.scheme)://summary"))
-        }
-        .configurationDisplayName("Reminders")
-        .description("Your own reminders from Oinkly Budget, and when they are next. Edit the widget to choose which ones.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-private struct RemindersView: View {
-    let entry: SnapshotEntry
-    @Environment(\.widgetFamily) private var family
-
-    private var limit: Int {
-        switch family {
-        case .systemSmall: 3
-        case .systemLarge: 8
-        default: 4
-        }
-    }
-
-    private var reminders: [WidgetSnapshot.Reminder] {
-        (entry.snapshot?.reminders ?? []).filter { $0.next >= entry.date && (entry.reminderIDs?.contains($0.id) ?? true) }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("Reminders", systemImage: "bell")
+    private func header(_ lines: [WidgetLine]) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label(family == .systemSmall ? "Upcoming" : "Upcoming Transactions", systemImage: "calendar")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            if entry.snapshot == nil {
-                Text("Open Oinkly Budget to show your reminders here.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if reminders.isEmpty {
-                Text("No reminders. Add one in Oinkly Budget ▸ Settings ▸ Reminders.")
-                    .font(.caption)
-            } else {
-                ForEach(reminders.prefix(limit)) { reminder in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(reminder.title).font(.callout.weight(.medium)).lineLimit(1)
-                        Text("\(dayWord(reminder.next, from: entry.date)), \(reminder.next.formatted(date: .omitted, time: .shortened))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+            if family != .systemSmall, entry.snapshot != nil {
+                Text(summary(lines))
+                    .font(family == .systemLarge ? .subheadline.weight(.semibold) : .caption)
+                    .foregroundStyle(family == .systemLarge ? Color.primary : Color.secondary)
             }
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func summary(_ lines: [WidgetLine]) -> String {
+        let bills = lines.filter { $0.kind == .bill }.count
+        let repeating = lines.filter { $0.kind == .repeating }.count
+        let reminders = lines.filter { $0.kind == .reminder }.count
+        var parts: [String] = []
+        if bills > 0 { parts.append("\(bills) bill\(bills == 1 ? "" : "s")") }
+        if repeating > 0 { parts.append("\(repeating) repeating") }
+        if reminders > 0 { parts.append("\(reminders) reminder\(reminders == 1 ? "" : "s")") }
+        let overdue = lines.filter(\.isOverdue).count
+        if overdue > 0 { parts.append("\(overdue) overdue") }
+        return parts.isEmpty ? "Nothing due in \(rangeName)" : parts.joined(separator: " · ") + " · \(rangeName)"
+    }
+
+    @ViewBuilder
+    private func row(_ line: WidgetLine) -> some View {
+        switch family {
+        case .systemSmall:
+            HStack(spacing: 5) {
+                Image(systemName: line.kind.symbol).font(.caption2).foregroundStyle(line.kind.color)
+                Text(line.name).font(.callout.weight(.medium)).lineLimit(1)
+                Spacer(minLength: 4)
+                Text(dayWord(line.date, from: entry.date))
+                    .font(.caption)
+                    .foregroundStyle(line.isOverdue ? Color.red : Color.secondary)
+                    .lineLimit(1)
+            }
+        default:
+            HStack(spacing: 8) {
+                Image(systemName: line.kind.symbol).font(.callout).foregroundStyle(line.kind.color).frame(width: 18)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 5) {
+                        Text(line.name).font(.callout.weight(.medium)).lineLimit(1)
+                        if line.isImportant { Image(systemName: "exclamationmark.circle.fill").font(.caption2).foregroundStyle(.orange) }
+                        Text(line.kind.title)
+                            .font(.system(size: 9, weight: .semibold))
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(line.kind.color.opacity(0.16), in: Capsule())
+                            .foregroundStyle(line.kind.color)
+                    }
+                    Text(family == .systemLarge ? fullWhen(line, from: entry.date) : dayWord(line.date, from: entry.date))
+                        .font(.caption)
+                        .foregroundStyle(line.isOverdue ? Color.red : Color.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+        }
     }
 }
