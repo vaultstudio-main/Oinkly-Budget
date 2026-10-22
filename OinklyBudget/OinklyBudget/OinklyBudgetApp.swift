@@ -19,6 +19,7 @@ struct OinklyBudgetApp: App {
         ClosingCountdown.runTestIfRequested()
         WidgetSnapshotWriter.runCheckIfRequested()
         ArtworkThemePicker.runCheckIfRequested()
+        CategorySetupView.runCheckIfRequested()
         ShadowViewsCheck.runIfRequested()
         SharedHardeningTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))

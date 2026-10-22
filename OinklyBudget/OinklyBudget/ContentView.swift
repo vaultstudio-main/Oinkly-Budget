@@ -9,6 +9,8 @@ struct ContentView: View {
     @Query private var allAccounts: [Account]
     @State private var hasChecked = false
     @State private var isSettingUp = false
+    /// The second step of setup, after the accounts: the budgets.
+    @State private var isChoosingBudgets = false
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -26,8 +28,12 @@ struct ContentView: View {
         ZStack {
             if !hasChecked {
                 Color.clear
+            } else if isSettingUp && isChoosingBudgets {
+                CategorySetupView { withAnimation { isSettingUp = false; isChoosingBudgets = false } }
             } else if isSettingUp {
-                AccountSetupView { withAnimation { isSettingUp = false } }
+                // Done goes on to the budgets; Skip for now goes straight into the app.
+                AccountSetupView(onFinish: { withAnimation { isChoosingBudgets = true } },
+                                 onSkip: { withAnimation { isSettingUp = false } })
             } else {
                 MacRootView()
             }
@@ -41,6 +47,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankDataLoaded)) { _ in
             isSettingUp = false
+            isChoosingBudgets = false
         }
         // Erasing or deleting the last account brings the setup screen back.
         .onChange(of: allAccounts.live.addedByUser.count) { _, count in

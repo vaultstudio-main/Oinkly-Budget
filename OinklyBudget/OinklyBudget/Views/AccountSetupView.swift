@@ -7,6 +7,8 @@ import UniformTypeIdentifiers
 /// Lets you add every kind of account, then continue into the app.
 struct AccountSetupView: View {
     let onFinish: () -> Void
+    /// What Skip for now does; without one, it finishes like Done.
+    var onSkip: (() -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Account.name) private var allAccounts: [Account]
@@ -106,7 +108,7 @@ struct AccountSetupView: View {
                     .controlSize(.large)
                     .disabled(accounts.isEmpty)
 
-                    Button("Skip for now", action: onFinish)
+                    Button("Skip for now") { (onSkip ?? onFinish)() }
                         .buttonStyle(.plain)
                         .foregroundStyle(.secondary)
 

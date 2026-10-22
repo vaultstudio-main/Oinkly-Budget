@@ -34,7 +34,7 @@ enum HelpContent {
             Topic(title: "Welcome", symbol: "hand.wave", lines: [
                 "Oinkly Budget keeps your accounts, bills, budgets, goals and investments on your own Mac. There is no account to create and nothing is sent anywhere.",
                 "## Your first few minutes",
-                "• Add your accounts. The setup screen walks you through it, and Manage Accounts at the bottom of the side panel lets you add more any time.",
+                "• Add your accounts. The setup screen walks you through it, then asks for your budgets: a monthly amount for each category, or zero for none. Suggested Amounts and Clear All give you a start, and Add Your Own makes a category of your own. Manage Accounts at the bottom of the side panel lets you add more accounts any time.",
                 "• Record what happens: File ▸ New Transaction for everyday money in and out, New Credit Card Charge for cards, ATM Withdrawal for cash.",
                 "• Add your bills on the Bills & Recurring page so they show on the calendar and remind you.",
                 "• Open Summary for the big picture and Reports to see where your money goes.",

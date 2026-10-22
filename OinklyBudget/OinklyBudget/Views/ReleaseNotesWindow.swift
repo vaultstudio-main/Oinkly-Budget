@@ -56,6 +56,7 @@ enum ReleaseNotes {
             ("Planning and reports", [
                 "Goals for saving up or paying off debt. Link a goal to an account and its progress follows the balance by itself. Every linked account shows a Goal section: target date, status, what you need each month, your pace, what it takes to catch up, an estimated finish date and a progress bar.",
                 "A Planning page that lists loans with maturity dates and estimated payoff dates beside your goals.",
+                "First-run setup has a second step for budgets: a monthly amount for every category, with Suggested Amounts, Clear All and Add Your Own. Skip for now still goes straight into the app.",
                 "A Month Outlook page: for any month, what you will have left to save after income, bills and budgets. Link a bill to the payment that paid it, and the outlook uses what really came out, so a bill that ran over or under shows as it happened. Closed months keep their figures.",
                 "A Budgets page: budgeted, spent and left for every category that has a budget. Set budgets and your own custom categories in Settings ▸ Categories. Mark any category as tax-related for the tax report.",
                 "Reports with one period button, line charts and six-month projections on net worth, cash flow, debt and loans, goals, budgets, spending, income, bills and investments. Cards without enough data keep their size and say what is needed.",

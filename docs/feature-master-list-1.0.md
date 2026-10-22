@@ -162,6 +162,9 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - A button, Set Hidden and Custom Budgets, opens Settings ▸ Categories, where any category can be given a budget, shown or hidden on this page, and budgets of your own can be added.
 - Shots: S-D3.
 
+### D3b. Budgets in first-run setup (Built)
+- After the accounts, a second setup step lists every expense category with a budget box (zero means none), plus Suggested Amounts, Clear All and Add Your Own, and a running total. Continue opens the app. Skip for now on the accounts step goes straight in. Debug check: `-categorySetupCheck <folder>`.
+
 ### D3a. Month Outlook (Built)
 - Overview ▸ Month Outlook (⌘9): for the chosen month, money in (recurring income plus other income), bills and repeating expenses, each budget at the larger of its limit and what was spent, and everything else spent; the result is Left to Save. Past months show the figures kept when they closed (a new standalone record, OutlookSnapshot, in database shape 5; also in Manual Backup). Future months show what is expected.
 - Bills in a budgeted category are counted inside that budget; a paid bill counts at the linked payment's amount; transfers and investment accounts are left out.
