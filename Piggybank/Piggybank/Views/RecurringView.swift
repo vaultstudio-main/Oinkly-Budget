@@ -35,7 +35,6 @@ struct RecurringView: View {
                 VStack(spacing: 14) {
                     tiles(monthItems, coming: coming)
                     monthCard(monthItems)
-                    rulesCard
                 }
                 .padding(16)
             }
@@ -44,7 +43,7 @@ struct RecurringView: View {
                 VStack(spacing: 14) {
                     MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
                     addButton
-                    comingCard(coming)
+                    rulesCard
                 }
                 .padding(16)
             }
@@ -153,25 +152,10 @@ struct RecurringView: View {
         }
     }
 
-    private func comingCard(_ items: [Recurring.Occurrence]) -> some View {
-        ReportCard(title: "Next 30 Days") {
-            if items.isEmpty {
-                Text(rules.isEmpty ? "No repeating transactions yet. Use Add Recurring above." : "Nothing repeats in the next 30 days.")
-                    .font(.callout).foregroundStyle(.secondary)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(items) { item in
-                        OccurrenceRow(item: item, onEdit: { editing = .edit(item.rule) }, onDelete: { deleting = item.rule }, onChange: changed)
-                        if item.id != items.last?.id { Divider() }
-                    }
-                }
-            }
-        }
-    }
-
-    /// Every rule, with its status, for pausing, resuming and deleting. Paused and finished ones only show here.
+    /// Every rule that is set up, with the day it comes out and the amount, for editing, pausing, resuming and deleting.
+    /// Paused and finished ones only show here. The month's list on the left is where entries are checked off.
     private var rulesCard: some View {
-        ReportCard(title: "All Rules", fillsHeight: false) {
+        ReportCard(title: "All Rules") {
             if rules.isEmpty {
                 ContentUnavailableView("No Recurring Transactions", systemImage: "arrow.triangle.2.circlepath",
                                        description: Text("Add one for a paycheque, rent or anything else that repeats. You can also right-click a transaction in a register and choose Make Recurring."))
@@ -181,7 +165,7 @@ struct RecurringView: View {
                     ForEach(Array(rules.enumerated()), id: \.element.persistentModelID) { index, rule in
                         if index > 0 { Divider() }
                         RuleRow(rule: rule, onEdit: { editing = .edit(rule) }, onDelete: { deleting = rule })
-                            .padding(.vertical, 10)
+                            .padding(.vertical, 8)
                     }
                 }
             }
@@ -203,9 +187,7 @@ private struct OccurrenceRow: View {
     var body: some View {
         if item.rule.isLive {
             HStack(spacing: 12) {
-                Image(systemName: item.kind == .added ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(item.kind == .added ? Theme.green : (item.isOverdue ? Theme.red : Color.secondary))
+                checkOff
                 Button(action: onEdit) {
                     HStack {
                         CategoryBadge(category: item.rule.category, size: 36)
@@ -254,11 +236,39 @@ private struct OccurrenceRow: View {
         }
     }
 
+    private var isPending: Bool { item.entry?.state == .pending }
+
+    /// The mark at the left, which works like a bill's: tick it to say it is done. A date waiting for you (reminder only)
+    /// is added by ticking it. An entry the rule made is ticked to confirm it, and ticked again to take that back.
+    private var checkOff: some View {
+        Button {
+            switch item.kind {
+            case .due:
+                Recurring.makeEntry(for: item.rule, on: item.date, in: modelContext)
+                Recurring.advance(item.rule)
+                onChange()
+            case .added:
+                guard let entry = item.entry, entry.isLive else { return }
+                entry.state = isPending ? .unreconciled : .pending
+                onChange()
+            case .coming:
+                break
+            }
+        } label: {
+            Image(systemName: item.kind == .added ? (isPending ? "circle.lefthalf.filled" : "checkmark.circle.fill") : "circle")
+                .font(.title3)
+                .foregroundStyle(item.kind == .added ? (isPending ? Color.orange : Theme.green) : (item.isOverdue ? Theme.red : Color.secondary))
+        }
+        .buttonStyle(.plain)
+        .disabled(item.kind == .coming)
+        .help(item.kind == .due ? "Add it now" : (item.kind == .added ? (isPending ? "Mark as confirmed" : "Mark as waiting to be confirmed") : "It is added on its date"))
+    }
+
     private var subtitle: String {
         let day = item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
         let tail: String
         switch item.kind {
-        case .added: tail = "Added"
+        case .added: tail = isPending ? "Added · waiting to confirm" : "Added · confirmed"
         case .due: tail = item.isOverdue ? "Overdue" : "Due"
         case .coming: tail = item.rule.frequency.title
         }
@@ -287,43 +297,35 @@ private struct RuleRow: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            CategoryBadge(category: rule.category, size: 34)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(rule.payee).font(.body.weight(.semibold))
-                Text([rule.account?.name, rule.frequency.title, rule.category?.name].compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(rule.amount, format: .appCurrency)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(rule.amount > 0 ? Theme.green : Theme.red)
-                Text(rule.isActive ? "Next: \(rule.nextDate.formatted(.dateTime.month(.abbreviated).day().year()))" : statusText)
-                    .font(.caption)
-                    .foregroundStyle(isDue ? Color.orange : Color.secondary)
-            }
-            .frame(width: 150, alignment: .trailing)
-            .accessibilityElement(children: .combine)
-            Text(statusText)
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 8).padding(.vertical, 2)
-                .background(statusColor.opacity(0.18), in: Capsule())
-                .foregroundStyle(statusColor)
-                .frame(width: 100)
-            if isDue && !rule.autoEnter {
-                Button("Add Now") {
-                    Recurring.makeEntry(for: rule, on: rule.nextDate, in: modelContext)
-                    Recurring.advance(rule)
-                    changed()
+        HStack(alignment: .center, spacing: 10) {
+            Button(action: onEdit) {
+                HStack(spacing: 10) {
+                    CategoryBadge(category: rule.category, size: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(rule.payee).font(.body).lineLimit(1)
+                            if statusText != "Active" {
+                                Text(statusText)
+                                    .font(.caption2.weight(.medium))
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(statusColor.opacity(0.18), in: Capsule())
+                                    .foregroundStyle(statusColor)
+                            }
+                        }
+                        Text(rule.frequency.schedule(from: rule.startDate))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                    Text(rule.amount, format: .appCurrency)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(rule.amount > 0 ? Theme.green : Theme.red)
                 }
-                Button("Skip") {
-                    Recurring.advance(rule)
-                    changed()
-                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
             Menu {
                 Button("Edit", systemImage: "pencil", action: onEdit)
                 if rule.isActive {

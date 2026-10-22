@@ -37,7 +37,6 @@ struct BillsView: View {
 
     var body: some View {
         let monthItems = Bills.occurrences(bills, from: monthStart, through: monthEnd)
-        let upcoming = Bills.upcoming(bills).filter(\.bill.isImportant)
         Group {
             VStack(spacing: 0) {
             HStack {
@@ -67,7 +66,7 @@ struct BillsView: View {
                     VStack(spacing: 14) {
                         MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
                         addBillButton
-                        upcomingCard(upcoming)
+                        allBillsCard
                     }
                     .padding(16)
                 }
@@ -132,18 +131,23 @@ struct BillsView: View {
 
     // MARK: Lists
 
-    private func upcomingCard(_ items: [Bills.Occurrence]) -> some View {
-        ReportCard(title: "Important · Next 30 Days") {
-            if items.isEmpty {
-                Text(bills.isEmpty ? "No bills yet. Use Add a Bill under the calendar."
-                     : (bills.contains(where: \.isImportant) ? "No important bills due in the next 30 days."
-                        : "Mark a bill as important when you add or edit it and it shows up here."))
+    /// Every bill that is set up, with the day it comes out and the amount. The month's list on the left is where they get
+    /// checked off.
+    private var allBillsCard: some View {
+        let today = calendar.startOfDay(for: .now)
+        func next(_ bill: Bill) -> Date {
+            Bills.dates(of: bill, from: today, through: calendar.date(byAdding: .year, value: 2, to: today) ?? today).first ?? bill.dueDate
+        }
+        let sorted = bills.sorted { next($0) < next($1) }
+        return ReportCard(title: "All Bills") {
+            if sorted.isEmpty {
+                Text("No bills yet. Use Add a Bill above.")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(items) { item in
-                        BillRow(item: item, showsYear: false, onEdit: { sheet = .edit(item.bill) }, onDelete: delete)
-                        if item.id != items.last?.id { Divider() }
+                    ForEach(sorted) { bill in
+                        BillSetupRow(bill: bill, onEdit: { sheet = .edit(bill) }, onDelete: delete)
+                        if bill.id != sorted.last?.id { Divider() }
                     }
                 }
             }
@@ -190,6 +194,43 @@ struct BillsView: View {
 }
 
 // MARK: Rows
+
+/// One bill in the list of everything that is set up: its name, when it comes out and the amount.
+private struct BillSetupRow: View {
+    let bill: Bill
+    let onEdit: () -> Void
+    let onDelete: (Bill) -> Void
+
+    var body: some View {
+        if bill.isLive {
+            Button(action: onEdit) {
+                HStack(spacing: 10) {
+                    AccountPicture(data: bill.displayPhotoData, type: bill.loan?.isLive == true ? bill.loan?.type : nil)
+                        .frame(width: 32, height: 32)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(bill.name).font(.body).lineLimit(1)
+                            if bill.isImportant {
+                                Image(systemName: "exclamationmark.circle.fill").font(.caption).foregroundStyle(.orange)
+                            }
+                        }
+                        Text(bill.frequency.schedule(from: bill.dueDate)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                    Text(bill.amount, format: .appCurrency).font(.body.weight(.semibold))
+                }
+                .padding(.vertical, 7)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .contextMenu {
+                Button("Edit", systemImage: "pencil", action: onEdit)
+                Button("Delete Bill", systemImage: "trash", role: .destructive) { onDelete(bill) }
+            }
+        }
+    }
+}
 
 private struct BillRow: View {
     let item: Bills.Occurrence

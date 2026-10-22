@@ -17,6 +17,22 @@ enum BillFrequency: String, CaseIterable, Identifiable {
         }
     }
 
+    /// How often and on which day, for lists of what is set up: "The 5th of every month", "Every Friday". `date` is the
+    /// first date it was set for.
+    func schedule(from date: Date, calendar: Calendar = .current) -> String {
+        let day = calendar.component(.day, from: date)
+        let ordinal = NumberFormatter.ordinal.string(from: NSNumber(value: day)) ?? "\(day)"
+        let weekday = calendar.weekdaySymbols[calendar.component(.weekday, from: date) - 1]
+        switch self {
+        case .once: return date.formatted(.dateTime.month(.abbreviated).day().year())
+        case .weekly: return "Every \(weekday)"
+        case .everyTwoWeeks: return "Every other \(weekday)"
+        case .monthly: return "The \(ordinal) of every month"
+        case .everyThreeMonths: return "The \(ordinal), every 3 months"
+        case .yearly: return "Every \(date.formatted(.dateTime.month(.wide).day()))"
+        }
+    }
+
     /// The date `step` repeats after `start`. Counting from the first date keeps "the 31st" on the last day of short months.
     func date(_ step: Int, after start: Date, calendar: Calendar) -> Date? {
         switch self {
@@ -28,6 +44,15 @@ enum BillFrequency: String, CaseIterable, Identifiable {
         case .yearly: calendar.date(byAdding: .year, value: step, to: start)
         }
     }
+}
+
+private extension NumberFormatter {
+    /// 1st, 2nd, 3rd.
+    static let ordinal: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .ordinal
+        return formatter
+    }()
 }
 
 /// Works out when bills fall due. Shared by the Bills screen and the reminder system.

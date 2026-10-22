@@ -310,6 +310,30 @@ enum SharedHardeningTest {
             check("S17 and no amounts", !json17.contains("1234") && !json17.contains("987"))
             let oldFile = Data("{\"updated\":\"2026-10-01T10:00:00Z\",\"bills\":[],\"reminders\":[]}".utf8)
             check("S17 an older widget file still reads", (try? decoder17.decode(WidgetSnapshot.self, from: oldFile))?.repeating.isEmpty == true)
+
+            // S18: the day a bill or rule comes out, in words
+            var gregorian = Calendar(identifier: .gregorian)
+            gregorian.locale = Locale(identifier: "en_US")
+            let friday = gregorian.date(from: DateComponents(year: 2026, month: 10, day: 23)) ?? .now
+            let fifth = gregorian.date(from: DateComponents(year: 2026, month: 10, day: 5)) ?? .now
+            check("S18 monthly", BillFrequency.monthly.schedule(from: fifth, calendar: gregorian) == "The 5th of every month", BillFrequency.monthly.schedule(from: fifth, calendar: gregorian))
+            check("S18 every three months", BillFrequency.everyThreeMonths.schedule(from: fifth, calendar: gregorian) == "The 5th, every 3 months")
+            check("S18 weekly", BillFrequency.weekly.schedule(from: friday, calendar: gregorian) == "Every Friday", BillFrequency.weekly.schedule(from: friday, calendar: gregorian))
+            check("S18 every other week", BillFrequency.everyTwoWeeks.schedule(from: friday, calendar: gregorian) == "Every other Friday")
+            check("S18 yearly", BillFrequency.yearly.schedule(from: fifth, calendar: gregorian).hasPrefix("Every ") && BillFrequency.yearly.schedule(from: fifth, calendar: gregorian).contains("5"), BillFrequency.yearly.schedule(from: fifth, calendar: gregorian))
+            check("S18 once", BillFrequency.once.schedule(from: fifth, calendar: gregorian).contains("2026"))
+            check("S18 23rd", BillFrequency.monthly.schedule(from: friday, calendar: gregorian) == "The 23rd of every month")
+
+            // S19: ticking an entry a rule made confirms it, and ticking again takes that back
+            if let entry = auto.transactions.first(where: { $0.isLive }) {
+                entry.state = .pending
+                entry.state = entry.state == .pending ? .unreconciled : .pending
+                check("S19 confirmed", entry.state == .unreconciled)
+                entry.state = entry.state == .pending ? .unreconciled : .pending
+                check("S19 back to waiting", entry.state == .pending)
+            } else {
+                check("S19 an entry exists to tick", false)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

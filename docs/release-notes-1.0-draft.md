@@ -56,7 +56,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 
 ### Widgets and the menu bar
 - Two widgets in small, medium and large: Upcoming Bills (bills and repeating transactions) and Reminders. Edit a widget to choose which bills (all or important only), how far ahead and whether repeating transactions show, or which reminders. They show names and dates only, never amounts or account details.
-- The menu bar pop-up shows this month's bills, with important bills for the next 30 days first.
+- The menu bar pop-up lists this month's bills and repeating transactions together, each marked, with the date and days to go.
 
 ### Around the app
 - The side panel has colored icons by account type, a fixed width and can't be collapsed. Budgets is in Overview.

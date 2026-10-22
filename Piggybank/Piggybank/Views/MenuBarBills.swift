@@ -24,34 +24,55 @@ struct MenuBarLabel: View {
     }
 }
 
-/// The menu bar item's pop-up: important bills due in the next 30 days at the top, then the rest of this month's bills.
-/// Works with no window open.
+/// The menu bar item's pop-up: everything due this month in one list, bills and repeating transactions together, each
+/// marked as one or the other, with the date and how many days away it is. Works with no window open.
 struct MenuBarBills: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allBills: [Bill]
     @Query private var allRules: [RecurringTransaction]
     @State private var contentHeight: CGFloat = 400
 
-    private static let windowDays = 30
     private static let maxHeight: CGFloat = 640
+
+    /// One line of the list: a bill or a repeating transaction.
+    private struct Line: Identifiable {
+        enum Source {
+            case bill(Bills.Occurrence)
+            case repeating(Recurring.Occurrence)
+        }
+
+        let source: Source
+        let name: String
+        let date: Date
+        let amount: Decimal
+        let isOverdue: Bool
+        let isImportant: Bool
+        var id: String {
+            switch source {
+            case .bill(let item): "bill-" + item.id
+            case .repeating(let item): "repeat-" + item.id
+            }
+        }
+        var isBill: Bool { if case .bill = source { true } else { false } }
+    }
 
     var body: some View {
         let bills = allBills.live
-        let upcoming = Bills.upcoming(bills, days: Self.windowDays)
-        // Important bills lead, and look 30 days ahead. Everything else is just this calendar month.
-        let monthEnd = Calendar.current.dateInterval(of: .month, for: .now)?.end ?? .distantFuture
+        let calendar = Calendar.current
+        let monthEnd = calendar.dateInterval(of: .month, for: .now)?.end ?? .distantFuture
         let monthName = Date.now.formatted(.dateTime.month(.wide))
-        let important = upcoming.filter(\.bill.isImportant)
-        let others = upcoming.filter { !$0.bill.isImportant && $0.date < monthEnd }
-        let alertIDs = Set(Bills.alerts(bills).map(\.id))
-        let needsAttention = important.contains { !$0.isPaid && ($0.isOverdue || alertIDs.contains($0.id)) }
+        // Overdue ones first, then the rest of this calendar month, soonest first.
+        let billLines = Bills.upcoming(bills, days: 31).filter { $0.date < monthEnd && $0.bill.isLive }.map {
+            Line(source: .bill($0), name: $0.bill.name, date: $0.date, amount: $0.bill.amount, isOverdue: $0.isOverdue, isImportant: $0.bill.isImportant)
+        }
+        let repeatingLines = Recurring.upcoming(allRules.live, days: 31).filter { $0.date < monthEnd && $0.rule.isLive }.map {
+            Line(source: .repeating($0), name: $0.rule.payee, date: $0.date, amount: $0.rule.amount, isOverdue: $0.isOverdue, isImportant: false)
+        }
+        let lines = (billLines + repeatingLines).sorted { $0.date != $1.date ? $0.date < $1.date : $0.name < $1.name }
 
-        let shown = important + others
-        let open = shown.filter { !$0.isPaid }.sorted { $0.date < $1.date }
-        let dueTotal = open.reduce(Decimal(0)) { $0 + $1.bill.amount }
-        let overdue = open.filter(\.isOverdue).count
-        let next = open.first { !$0.isOverdue } ?? open.first
-        let repeating = Recurring.upcoming(allRules.live, days: Self.windowDays)
+        let dueTotal = billLines.reduce(Decimal(0)) { $0 + $1.amount }
+        let overdue = lines.filter(\.isOverdue).count
+        let next = lines.first { !$0.isOverdue } ?? lines.first
 
         // Fixed point sizes, so the pop-up looks the same however the system sizes menu bar windows.
         ScrollView {
@@ -67,57 +88,34 @@ struct MenuBarBills: View {
                         .font(.system(size: 18, weight: .bold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Text(open.isEmpty
-                         ? (repeating.isEmpty ? "Nothing due in \(monthName)" : "\(repeating.count) repeating coming up")
-                         : "\(open.count) bill\(open.count == 1 ? "" : "s") to pay" + (repeating.isEmpty ? "" : " · \(repeating.count) repeating"))
+                    Text(lines.isEmpty ? "Nothing due in \(monthName)" : summary(billLines.count, repeatingLines.count))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
             }
 
-            if !open.isEmpty {
+            if !lines.isEmpty {
                 HStack(spacing: 10) {
-                    stat("To pay", dueTotal.formatted(.appCurrency),
-                         color: .primary)
-                    stat(overdue > 0 ? "Overdue" : "Next bill",
-                         overdue > 0 ? "\(overdue) bill\(overdue == 1 ? "" : "s")"
+                    stat("Bills to pay", dueTotal.formatted(.appCurrency), color: .primary)
+                    stat(overdue > 0 ? "Overdue" : "Next up",
+                         overdue > 0 ? "\(overdue) item\(overdue == 1 ? "" : "s")"
                              : (next.map { $0.date.formatted(.dateTime.month(.abbreviated).day()) } ?? "None"),
                          color: overdue > 0 ? Theme.red : .primary)
                 }
             }
 
-            if !important.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("Important · next 30 days", systemImage: needsAttention ? "exclamationmark.triangle.fill" : "star.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.orange)
-                    ForEach(important) { row($0, highlight: true) }
-                }
-                .padding(12)
-                .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 8))
-            }
-
             VStack(alignment: .leading, spacing: 10) {
-                Text("THIS MONTH · \(monthName.uppercased())")
+                Text(monthName.uppercased())
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.secondary)
-                if others.isEmpty {
-                    Text(bills.isEmpty ? "No bills yet. Add some in Oinkly Budget ▸ Bills."
-                         : (important.isEmpty ? "Nothing else due in \(monthName)." : "No other bills due in \(monthName)."))
+                if lines.isEmpty {
+                    Text(bills.isEmpty && allRules.live.isEmpty ? "Nothing set up yet. Add bills and repeating transactions in Oinkly Budget ▸ Bills & Recurring."
+                         : "Nothing else due in \(monthName).")
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(others) { row($0, highlight: false) }
-                }
-            }
-
-            if !repeating.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("REPEATING · NEXT \(Self.windowDays) DAYS")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    ForEach(repeating) { repeatingRow($0) }
+                    ForEach(lines) { row($0) }
                 }
             }
         }
@@ -127,6 +125,13 @@ struct MenuBarBills: View {
         }
         // Tall lists scroll inside the pop-up instead of running off the screen.
         .frame(width: 400, height: min(max(contentHeight, 160), Self.maxHeight))
+    }
+
+    private func summary(_ bills: Int, _ repeating: Int) -> String {
+        var parts: [String] = []
+        if bills > 0 { parts.append("\(bills) bill\(bills == 1 ? "" : "s") to pay") }
+        if repeating > 0 { parts.append("\(repeating) repeating") }
+        return parts.joined(separator: " · ")
     }
 
     private func stat(_ title: String, _ value: String, color: Color) -> some View {
@@ -145,89 +150,79 @@ struct MenuBarBills: View {
         .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
     }
 
+    /// A bill is paid by ticking it. A repeating transaction that waits for you ("Reminder only") is added by ticking it;
+    /// the others are added on their own on their date.
     @ViewBuilder
-    private func row(_ item: Bills.Occurrence, highlight: Bool) -> some View {
-        if item.bill.isLive {
-            HStack(spacing: 10) {
-                Button {
-                    item.bill.setPaid(true, on: item.date)
-                    modelContext.saveNow()
-                    Task { await BillNotifier.refresh(in: modelContext) }
-                } label: {
-                    Image(systemName: "circle")
-                        .font(.system(size: 18))
-                        .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
+    private func row(_ line: Line) -> some View {
+        HStack(spacing: 10) {
+            tick(line)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(line.name).font(.system(size: 15)).lineLimit(1)
+                    if line.isImportant { Image(systemName: "exclamationmark.circle.fill").font(.system(size: 11)).foregroundStyle(.orange) }
+                    tag(line)
                 }
-                .buttonStyle(.plain)
-                .help("Mark as paid")
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.bill.name).font(.system(size: 15))
-                    Text(when(item))
-                        .font(.system(size: 12))
-                        .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
-                }
-                Spacer()
-                Text(item.bill.amount, format: .appCurrency).font(.system(size: 15, weight: .semibold))
+                Text(when(line.date, overdue: line.isOverdue))
+                    .font(.system(size: 12))
+                    .foregroundStyle(line.isOverdue ? Theme.red : Color.secondary)
             }
+            Spacer()
+            Text(line.amount, format: .appCurrency).font(.system(size: 15, weight: .semibold))
         }
     }
 
-    /// One date of a repeating transaction. One that waits for you ("Reminder only") has a button to add it now.
+    private func tag(_ line: Line) -> some View {
+        Text(line.isBill ? "Bill" : "Repeating")
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 6).padding(.vertical, 1)
+            .background((line.isBill ? Color.blue : Color.purple).opacity(0.16), in: Capsule())
+            .foregroundStyle(line.isBill ? Color.blue : Color.purple)
+    }
+
     @ViewBuilder
-    private func repeatingRow(_ item: Recurring.Occurrence) -> some View {
-        if item.rule.isLive {
-            HStack(spacing: 10) {
-                if item.kind == .due {
-                    Button {
-                        Recurring.makeEntry(for: item.rule, on: item.date, in: modelContext)
-                        Recurring.advance(item.rule)
-                        modelContext.saveNow()
-                        Task { await BillNotifier.refresh(in: modelContext) }
-                    } label: {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 18))
-                            .foregroundStyle(item.isOverdue ? Theme.red : Color.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Add it now")
-                } else {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 18)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.rule.payee).font(.system(size: 15))
-                    Text(repeatingWhen(item))
-                        .font(.system(size: 12))
-                        .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
-                }
-                Spacer()
-                Text(item.rule.amount, format: .appCurrency).font(.system(size: 15, weight: .semibold))
+    private func tick(_ line: Line) -> some View {
+        switch line.source {
+        case .bill(let item):
+            Button {
+                item.bill.setPaid(true, on: item.date)
+                modelContext.saveNow()
+                Task { await BillNotifier.refresh(in: modelContext) }
+            } label: {
+                Image(systemName: "circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
             }
+            .buttonStyle(.plain)
+            .help("Mark as paid")
+        case .repeating(let item) where item.kind == .due:
+            Button {
+                Recurring.makeEntry(for: item.rule, on: item.date, in: modelContext)
+                Recurring.advance(item.rule)
+                modelContext.saveNow()
+                Task { await BillNotifier.refresh(in: modelContext) }
+            } label: {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 18))
+                    .foregroundStyle(item.isOverdue ? Theme.red : Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .help("Add it now")
+        case .repeating:
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: 16))
+                .foregroundStyle(.secondary)
+                .frame(width: 18)
         }
     }
 
-    private func repeatingWhen(_ item: Recurring.Occurrence) -> String {
+    private func when(_ date: Date, overdue: Bool) -> String {
         let calendar = Calendar.current
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: .now), to: item.date).day ?? 0
-        switch days {
-        case ..<0: return "Waiting since \(item.date.formatted(.dateTime.month(.abbreviated).day()))"
-        case 0: return item.kind == .due ? "Waiting for you today" : "Today"
-        case 1: return "Tomorrow"
-        default: return "\(item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) · in \(days) days"
-        }
-    }
-
-    private func when(_ item: Bills.Occurrence) -> String {
-        let calendar = Calendar.current
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: .now), to: item.date).day ?? 0
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: .now), to: date).day ?? 0
         switch days {
         case ..<0: return "Overdue by \(-days) day\(days == -1 ? "" : "s")"
         case 0: return "Due today"
         case 1: return "Due tomorrow"
-        default: return "\(item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) · in \(days) days"
+        default: return "\(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) · in \(days) days"
         }
     }
 }
