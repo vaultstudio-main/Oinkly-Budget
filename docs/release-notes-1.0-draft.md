@@ -60,7 +60,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 
 ### Around the app
 - The side panel has colored icons by account type, a fixed width and can't be collapsed. Budgets is in Overview.
-- A status bar along the bottom of every page, with a Help link.
+- A status bar along the bottom of every page, with a green, yellow or red dot that shows your data is saved.
 - The window title reads "Oinkly Budget".
 - Help and Release Notes open in bigger windows.
 - Keyboard shortcut and accessibility improvements (VoiceOver, larger text).

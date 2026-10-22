@@ -43,7 +43,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 ### A6. Side panel and window shell (Built)
 - Colored icons that match each account type; folders for Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets.
 - Fixed width, can't be dragged, and can't be collapsed.
-- A status bar along the bottom of every page: what you are looking at on the left, a Help link on the right.
+- A status bar along the bottom of every page: what you are looking at on the left, and on the right a dot for the database (green "Database · Saved", yellow "Saving…" while changes are written, red "Problem" if saving keeps failing, with the last saved time on hover) and, when sharing is on, a dot for the shared data (green Saved, yellow Not saved yet and click to save now, red Problem). Help is in the Help menu (⇧⌘/).
 - Budgets appears in Overview.
 - Window title is "Oinkly Budget".
 - Shots: S-A6 (whole window).

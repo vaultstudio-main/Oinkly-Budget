@@ -11,33 +11,28 @@ extension View {
     func statusBarText(_ text: String) -> some View { preference(key: StatusBarTextKey.self, value: text) }
 }
 
-/// A small bar along the bottom of the window, the floor under every page: what you're looking at on the left,
-/// and a quick link to Help on the right. Long lists scroll inside the page above it.
+/// A small bar along the bottom of the window, the floor under every page: what you're looking at on the left, and on the
+/// right whether your data is saved (and whether the shared data is, when sharing is on). Long lists scroll inside the
+/// page above it.
 struct StatusBar: View {
     let text: String
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 0) {
             Divider()
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Text(text)
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
                 Spacer()
                 SharingStatusDot()
-                Button {
-                    openWindow(id: "help")
-                } label: {
-                    Label("Help", systemImage: "questionmark.circle")
-                }
-                .buttonStyle(.link)
-                .help("Open Oinkly Budget Help")
+                DatabaseStatusDot()
             }
             .font(.caption)
             .padding(.horizontal, 14)
             .frame(height: 24)
             .background(.bar)
+            .task { DatabaseStatus.shared.start() }
         }
     }
 
@@ -102,6 +97,48 @@ private struct SharingStatusDot: View {
         case .saved: "Everything is saved to the shared data."
         case .unsaved: "Changes are saved to the shared data every couple of minutes, and when you hide or quit. Click to save now."
         case .problem(let why): why
+        }
+    }
+}
+
+/// A small coloured dot for this Mac's database: green when everything is saved, yellow while changes are being saved,
+/// red when saving keeps failing.
+private struct DatabaseStatusDot: View {
+    private var status: DatabaseStatus { DatabaseStatus.shared }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(label).foregroundStyle(.secondary)
+        }
+        .help(detail)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Database: \(label)")
+        .accessibilityHint(detail)
+    }
+
+    private var color: Color {
+        switch status.state {
+        case .saved: Theme.green
+        case .unsaved: .yellow
+        case .problem: Theme.red
+        }
+    }
+
+    private var label: String {
+        switch status.state {
+        case .saved: "Database · Saved"
+        case .unsaved: "Database · Saving…"
+        case .problem: "Database · Problem"
+        }
+    }
+
+    private var detail: String {
+        switch status.state {
+        case .saved:
+            status.lastSaved.map { "Everything is saved on this Mac. Last saved \($0.formatted(date: .omitted, time: .shortened))." } ?? "Everything is saved on this Mac."
+        case .unsaved: "Your changes are being saved."
+        case .problem(let why): "Your changes couldn't be saved: \(why) They are still in the app. Try again, or back up your data and restart."
         }
     }
 }

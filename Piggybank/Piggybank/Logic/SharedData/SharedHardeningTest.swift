@@ -334,6 +334,21 @@ enum SharedHardeningTest {
             } else {
                 check("S19 an entry exists to tick", false)
             }
+
+            // S20: the database dot
+            let dbStatus = DatabaseStatus()
+            let t0 = Date.now
+            dbStatus.poll(context: fileContext, now: t0)
+            check("S20 nothing waiting means saved", dbStatus.state == .saved)
+            fileContext.insert(Account(name: "Waiting to save", type: .checking, openingBalance: 0))
+            dbStatus.poll(context: fileContext, now: t0.addingTimeInterval(1))
+            check("S20 a change is shown as saving", dbStatus.state == .unsaved)
+            dbStatus.poll(context: fileContext, now: t0.addingTimeInterval(3))
+            check("S20 still saving within the wait", dbStatus.state == .unsaved && fileContext.hasChanges)
+            dbStatus.poll(context: fileContext, now: t0.addingTimeInterval(6))
+            check("S20 saved after the wait", dbStatus.state == .saved && !fileContext.hasChanges && dbStatus.lastSaved != nil)
+            let waiting = try fileContext.fetch(FetchDescriptor<Account>()).filter { $0.name == "Waiting to save" }
+            check("S20 and it really is in the database", waiting.count == 1)
         } catch {
             check("no error", false, error.localizedDescription)
         }
