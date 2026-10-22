@@ -72,6 +72,25 @@ struct NewTransactionWindow: View {
             // The parts' categories have to fit the new direction too.
             for index in parts.indices where parts[index].category?.isIncome == new { parts[index].category = nil }
         }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            guard let action = note.userInfo?["action"] as? String else { return }
+            if action == "splitOn" { isSplitting = true }
+            if action == "splitDemo" {
+                amount = 120
+                payee = "Big Box Store"
+                isSplitting = true
+                func cat(_ name: String) -> Category? { categories.first { $0.name == name } }
+                // Turning the split on starts it with two empty parts, so fill them in a moment later.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    parts = [SplitDraft(category: cat("Groceries"), amount: 70), SplitDraft(category: cat("Shopping"), amount: 30), SplitDraft(category: cat("Pets"), amount: 20)]
+                }
+            }
+            if action.hasPrefix("payee:") { payee = String(action.dropFirst("payee:".count)) }
+            if action.hasPrefix("account:"), let match = accounts.first(where: { $0.name == String(action.dropFirst("account:".count)) }) { account = match }
+        }
+        #endif
         .onChange(of: isSplitting) { _, on in
             if on {
                 parts = Splits.starting(category: category, total: amount)

@@ -263,6 +263,32 @@ private struct RegisterContent: View {
         .sheet(item: $savingAs) { ExportSheet(account: account, kind: $0, startingMonth: month) }
         .sheet(item: $pendingImport) { ImportStatementSheet(account: account, fileURL: $0.url) }
         .sheet(item: $makingRecurring) { RecurringRuleEditor(rule: nil, source: $0) }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            guard let action = note.userInfo?["action"] as? String else { return }
+            if action.hasPrefix("select:") {
+                // "select:Payee" or "select:Payee|amount" to pick one of several with the same payee.
+                let parts = String(action.dropFirst("select:".count)).split(separator: "|", maxSplits: 1).map(String.init)
+                let wanted = parts.count > 1 ? Decimal(string: parts[1]) : nil
+                if let match = monthTransactions.first(where: { $0.isLive && $0.payee == parts[0] && (wanted == nil || abs($0.amount) == abs(wanted!)) }) {
+                    selection = [match.persistentModelID]
+                }
+                return
+            }
+            switch action {
+            case "edit": if let chosen = selectedTransaction { editingDate = chosen }
+            case "details": if let chosen = selectedTransaction { openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: chosen.persistentModelID)) }
+            case "makeRecurring": if let chosen = selectedTransaction { makingRecurring = chosen }
+            case "export:pdf": savingAs = .pdf
+            case "export:csv": savingAs = .csv
+            case "import": pendingImport = PendingImport(url: ScreenshotMode.sampleStatement())
+            case "editDetails": isEditingDetails = true
+            case "newCash": if account.isCashOnHand { openWindow(id: "cash-transaction") }
+            case "closeSheets": editingDate = nil; savingAs = nil; pendingImport = nil; makingRecurring = nil; isEditingDetails = false
+            default: break
+            }
+        }
+        #endif
         .sheet(item: $editingDate) { transaction in
             if transaction.isLive { EditTransactionSheet(transaction: transaction, account: account, categories: categories) }
         }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Oinkly Budget for Mac</title>
-<meta name="description" content="Oinkly Budget is a private personal finance app for the Mac with accounts, bills, budgets, goals and reports.">
+<meta name="description" content="Oinkly Budget is a private personal finance app for the Mac with accounts, bills, repeating transactions, budgets, goals and reports.">
 <link rel="canonical" href="https://vaultstudio.dev/oinklybudget">
 <meta property="og:site_name" content="Vault Studio">
 <meta property="og:title" content="Vault Studio">
@@ -32,10 +32,14 @@
 <h2>What it does</h2>
 <div class="grid">
   <div class="card"><h3>Every kind of account</h3><p>Checking, savings, cash, credit cards, loans, mortgages, investments and assets, together in one place.</p></div>
-  <div class="card"><h3>Bills that don't sneak up</h3><p>A calendar of what is due, reminders before each bill, and one step to pay it so every account stays in step.</p></div>
-  <div class="card"><h3>Budgets and goals</h3><p>Set monthly budgets for your categories and goals for saving up or paying off debt.</p></div>
-  <div class="card"><h3>Clear reports</h3><p>Income against spending, where the money goes, what you owe and how investments are growing.</p></div>
+  <div class="card"><h3>Bills that don't sneak up</h3><p>A calendar of what is due, bills to tick off, reminders before each one, and a single step to pay it so every account stays in step.</p></div>
+  <div class="card"><h3>Repeating transactions</h3><p>Set up your paycheque, rent or anything that repeats. Each date adds an entry for you to confirm, and shows in the calendar, the menu bar and your reminders.</p></div>
+  <div class="card"><h3>Splits and tags</h3><p>Put one payment across several categories, and label transactions with your own colored tags.</p></div>
+  <div class="card"><h3>Budgets and goals</h3><p>Set monthly budgets for your categories, and goals that follow your accounts so progress updates itself.</p></div>
+  <div class="card"><h3>Clear reports</h3><p>Income against spending, where the money goes, what you owe and how investments are growing, with six-month projections.</p></div>
   <div class="card"><h3>Receipts attached</h3><p>Keep a photo or PDF bill with the transaction, or mark it as having none.</p></div>
+  <div class="card"><h3>Menu bar and widget</h3><p>See what is due this month at a glance: bills, repeating transactions and your reminders in one list, names and dates only.</p></div>
+  <div class="card"><h3>Import and export</h3><p>Bring in a CSV from your bank with a preview and Undo, and save statements as PDF or CSV.</p></div>
   <div class="card"><h3>Reminders you set</h3><p>Get a notification to review your budget, check bills or back up, and jump straight to the right page.</p></div>
 </div>
 
@@ -43,24 +47,41 @@
 <div class="callout">
   <p><strong>Oinkly Budget doesn't link to your bank, your cards or any online account, and it never asks for a login.</strong></p>
   <p>You go through your own statements and bills and enter what happened. That's deliberate. When you handle your own numbers, you know exactly where you stand, and you know what your budget really is, instead of watching a feed you didn't touch.</p>
-  <p>Have a file from your bank? You can import a CSV you've downloaded yourself. Nothing is ever connected.</p>
+  <p>Have a file from your bank? You can import a CSV you've downloaded yourself, with a preview first and Undo afterwards. Nothing is ever connected.</p>
 </div>
 
 <h2>Private by design</h2>
-<p>Oinkly Budget keeps everything on your own Mac. There are no accounts, no servers, no advertising and no tracking. Backups are a single file you control. <a href="privacy.html">Read the privacy policy</a>.</p>
+<p>Oinkly Budget keeps everything on your own Mac. There are no accounts, no servers, no advertising and no tracking. Reminders and the widget never show amounts. Backups are a single file you control, and a copy of your data is made before an upgrade. <a href="privacy.html">Read the privacy policy</a>.</p>
 
 <h2>A closer look</h2>
 <p class="muted">Click any picture to see it full size.</p>
 <div class="gallery">
-  <figure><a href="images/transactions.png" target="_blank" rel="noopener"><img src="images/transactions.png" alt="The Transactions page listing every account's transactions for the month" loading="lazy"></a><figcaption>Transactions: every account together, a month at a time.</figcaption></figure>
-  <figure><a href="images/bills.png" target="_blank" rel="noopener"><img src="images/bills.png" alt="The Bills page with a calendar and the list of this month's bills" loading="lazy"></a><figcaption>Bills: a calendar, what is paid, what is due and what is next.</figcaption></figure>
-  <figure><a href="images/register.png" target="_blank" rel="noopener"><img src="images/register.png" alt="A checking account register with a running balance" loading="lazy"></a><figcaption>A register for every account, with a running balance and receipts.</figcaption></figure>
-  <figure><a href="images/card.png" target="_blank" rel="noopener"><img src="images/card.png" alt="A credit card account page showing limit, available credit and payment due" loading="lazy"></a><figcaption>Credit cards: limit, available credit and payment due at a glance.</figcaption></figure>
+  <figure><a href="images/summary.png" target="_blank" rel="noopener"><img src="images/summary.png" alt="The Oinkly Budget Summary page with income and spending, liabilities, investments, priority bills and net worth" loading="lazy"></a><figcaption>Summary: your whole picture, with the bills that matter most.</figcaption></figure>
+  <figure><a href="images/transactions.png" target="_blank" rel="noopener"><img src="images/transactions.png" alt="The Transactions page listing every account's transactions for the month with a search field" loading="lazy"></a><figcaption>Transactions: every account together, a month at a time, with search.</figcaption></figure>
+  <figure><a href="images/register.png" target="_blank" rel="noopener"><img src="images/register.png" alt="A checking account register with the account details, running balance and receipts column" loading="lazy"></a><figcaption>A register for every account, with the details above and a receipt for each transaction.</figcaption></figure>
+  <figure><a href="images/split.png" target="_blank" rel="noopener"><img src="images/split.png" alt="The New Transaction window with a payment split across groceries, shopping and pets" loading="lazy"></a><figcaption>Split one payment across several categories.</figcaption></figure>
+  <figure><a href="images/edit-transaction.png" target="_blank" rel="noopener"><img src="images/edit-transaction.png" alt="Editing a split transaction" loading="lazy"></a><figcaption>Edit anything about a transaction in one place.</figcaption></figure>
+  <figure><a href="images/tags.png" target="_blank" rel="noopener"><img src="images/tags.png" alt="Editing a transaction with a colored tag" loading="lazy"></a><figcaption>Colored tags, as many as you like.</figcaption></figure>
+  <figure><a href="images/pay-bill.png" target="_blank" rel="noopener"><img src="images/pay-bill.png" alt="The Pay a Bill window" loading="lazy"></a><figcaption>Pay a bill in one step: it comes out of your account and comes off what you owe.</figcaption></figure>
+  <figure><a href="images/bills.png" target="_blank" rel="noopener"><img src="images/bills.png" alt="The Bills & Recurring page with the month's bills, a calendar and every bill that is set up" loading="lazy"></a><figcaption>Bills & Recurring: the month's bills to tick off, a calendar and every bill you have set up.</figcaption></figure>
+  <figure><a href="images/recurring.png" target="_blank" rel="noopener"><img src="images/recurring.png" alt="The Recurring tab with this month's repeating transactions, a calendar and all rules" loading="lazy"></a><figcaption>Recurring: paycheques, rent and more that add an entry for you to confirm.</figcaption></figure>
+  <figure><a href="images/add-recurring.png" target="_blank" rel="noopener"><img src="images/add-recurring.png" alt="The recurring rule editor" loading="lazy"></a><figcaption>Set up a repeating transaction in one form.</figcaption></figure>
+  <figure><a href="images/card.png" target="_blank" rel="noopener"><img src="images/card.png" alt="A credit card page with the limit, available credit, payment due and a goal" loading="lazy"></a><figcaption>Credit cards: limit, available credit and payment due, with a goal that follows the card.</figcaption></figure>
   <figure><a href="images/mortgage.png" target="_blank" rel="noopener"><img src="images/mortgage.png" alt="A mortgage page showing payoff progress and payments" loading="lazy"></a><figcaption>Loans and mortgages: what is left, what is paid off and what is next.</figcaption></figure>
-  <figure><a href="images/reports.png" target="_blank" rel="noopener"><img src="images/reports.png" alt="The Reports page showing income against spending for the year" loading="lazy"></a><figcaption>Reports: a month, quarter or year at a glance.</figcaption></figure>
+  <figure><a href="images/savings.png" target="_blank" rel="noopener"><img src="images/savings.png" alt="A savings account with a goal that follows its balance" loading="lazy"></a><figcaption>Goals follow your accounts, so progress updates itself.</figcaption></figure>
+  <figure><a href="images/planning.png" target="_blank" rel="noopener"><img src="images/planning.png" alt="The Planning page with goals" loading="lazy"></a><figcaption>Planning: goals for saving up and paying things off.</figcaption></figure>
+  <figure><a href="images/budgets.png" target="_blank" rel="noopener"><img src="images/budgets.png" alt="The Budgets page with every category's budget, spending and what is left" loading="lazy"></a><figcaption>Budgets: what you set aside, what you spent and what is left.</figcaption></figure>
+  <figure><a href="images/reports.png" target="_blank" rel="noopener"><img src="images/reports.png" alt="The Reports page showing spending by category with a six-month projection" loading="lazy"></a><figcaption>Reports: where your money goes, with projections.</figcaption></figure>
   <figure><a href="images/liabilities.png" target="_blank" rel="noopener"><img src="images/liabilities.png" alt="The Liabilities page showing what is owed across cards and loans" loading="lazy"></a><figcaption>Liabilities: everything you owe in one place.</figcaption></figure>
-  <figure><a href="images/investments.png" target="_blank" rel="noopener"><img src="images/investments.png" alt="The Investments page showing returns by holding" loading="lazy"></a><figcaption>Investments: value, growth and contributions.</figcaption></figure>
-  <figure><a href="images/planning.png" target="_blank" rel="noopener"><img src="images/planning.png" alt="The Planning page with goals" loading="lazy"></a><figcaption>Planning: goals for saving and for paying things off.</figcaption></figure>
+  <figure><a href="images/investments.png" target="_blank" rel="noopener"><img src="images/investments.png" alt="The Investments page showing growth and contributions" loading="lazy"></a><figcaption>Investments: value, growth and contributions.</figcaption></figure>
+  <figure><a href="images/brokerage.png" target="_blank" rel="noopener"><img src="images/brokerage.png" alt="An investment account with its holdings and prices" loading="lazy"></a><figcaption>Holdings, shares and prices for each investment account.</figcaption></figure>
+  <figure><a href="images/cash.png" target="_blank" rel="noopener"><img src="images/cash.png" alt="The Cash on Hand page with the New Cash Transaction button" loading="lazy"></a><figcaption>Cash on Hand fills from ATM withdrawals, so your wallet stays honest.</figcaption></figure>
+  <figure><a href="images/import.png" target="_blank" rel="noopener"><img src="images/import.png" alt="The Import CSV preview with counts and options" loading="lazy"></a><figcaption>Import a bank's CSV file: a preview first, and Undo afterwards.</figcaption></figure>
+  <figure><a href="images/export.png" target="_blank" rel="noopener"><img src="images/export.png" alt="The Export sheet for a PDF statement" loading="lazy"></a><figcaption>Save statements as PDF or CSV.</figcaption></figure>
+  <figure><a href="images/menu-bar.png" target="_blank" rel="noopener"><img src="images/menu-bar.png" alt="The menu bar pop-up listing this month's bills and repeating transactions" loading="lazy"></a><figcaption>The menu bar: this month's bills and repeating transactions, marked and in date order.</figcaption></figure>
+  <figure><a href="images/widget-large.png" target="_blank" rel="noopener"><img src="images/widget-large.png" alt="The large Upcoming Transactions widget" loading="lazy"></a><figcaption>The widget, large: names and dates only.</figcaption></figure>
+  <figure><a href="images/widget-medium.png" target="_blank" rel="noopener"><img src="images/widget-medium.png" alt="The medium Upcoming Transactions widget" loading="lazy"></a><figcaption>The widget, medium.</figcaption></figure>
+  <figure><a href="images/settings-reminders.png" target="_blank" rel="noopener"><img src="images/settings-reminders.png" alt="Settings for reminders" loading="lazy"></a><figcaption>Reminders you set, delivered even when the app is closed.</figcaption></figure>
 </div>
 
 <h2>Good to know</h2>
@@ -68,6 +89,7 @@
   <li><strong>No bank linking.</strong> You enter your own transactions, or import a CSV file you downloaded yourself.</li>
   <li>Made for the <strong>Mac</strong>, running macOS 15 or later (Apple silicon and Intel).</li>
   <li>No iPhone or iPad app and no sync between devices. Move your data between computers with a backup file.</li>
+  <li>Always a way out: a backup is one file, and nothing is held hostage.</li>
   <li>Fast with years of history. It is built to stay quick with very large numbers of transactions.</li>
 </ul>
 

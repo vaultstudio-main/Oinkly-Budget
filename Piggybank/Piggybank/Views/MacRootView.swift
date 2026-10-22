@@ -104,6 +104,10 @@ struct MacRootView: View {
         .toolbar(removing: .title)
         .toolbar { AppNameToolbarItem() }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
+            if let name = note.userInfo?["account"] as? String, let account = accounts.first(where: { $0.name == name }) {
+                selection = .account(account.id)
+                return
+            }
             switch note.userInfo?["page"] as? String {
             case "summary": selection = .summary
             case "transactions": selection = .transactions
@@ -113,6 +117,7 @@ struct MacRootView: View {
             case "budgets": selection = .budgets
             case "liabilities": selection = .liabilities
             case "investments": selection = .investments
+            case "manageAccounts": selection = .manageAccounts
             default: break
             }
         }

@@ -1,38 +1,46 @@
 # Help screenshots
 
-All 18 are in the asset catalog (taken 2026-10-11 at about 1,450 px wide from the test data, light mode). Retake them
-at a larger size using the list below if you want them sharper for the App Store.
+Every picture in Help, on the website and in the App Store is taken by the app itself from made-up data, so no real
+accounts are ever on screen. They are retaken in one go whenever the screens change.
 
-The Help window shows a screenshot under a topic when an image set with the exact name below exists in
-`Piggybank/Assets.xcassets`. A missing image just doesn't show, so you can add them one at a time.
+## How to retake them
 
-## How to take them
-- Use sample data, not your real accounts. A throwaway store with a few made-up accounts, bills and transactions is ideal.
-- Light mode for all of them, so they match. (Settings ▸ General ▸ Interface ▸ Light.)
-- Window about 1200 px wide. Capture just the window (⇧⌘4, press Space, click the window), which keeps its shadow off with Option-click.
-- Save as PNG. Add each as a new Image Set in the asset catalog and name it exactly as in the table.
-- Keep personal details out: names, account numbers, balances you don't want shown.
+1. Build the debug app (Xcode, scheme Piggybank).
+2. Run it with these launch arguments (the `YES` after `-screenshotMode` matters; without it macOS reads the folder
+   as a file to open):
 
-## The list
-| Asset name | Topic | What to show |
+   `OinklyBudget -screenshotMode YES -screenshotDir /Users/Shared/OinklyBudget/shots -appearance light`
+
+   It loads the test data into a throwaway data file, sizes the window to 1600 x 1000, visits every page, window, sheet and
+   Settings tab, writes a PNG of each (about 80), and quits. It takes about five minutes. Leave the Mac alone while it
+   runs: the app brings itself to the front before each picture. The real data file, reminders and widgets are never
+   touched, and the Testing menu is left out.
+3. For the register with its Receipt column, run once more in a wider window:
+
+   `… -screenshotDir /Users/Shared/OinklyBudget/shots-wide -screenshotOnly account-checking -screenshotWidth 1900`
+4. Turn the raw pictures into the final ones:
+
+   `python3 scripts/make-help-images.py /Users/Shared/OinklyBudget/shots /Users/Shared/OinklyBudget/shots-wide`
+
+   That fills `Assets.xcassets` (the `Help-*` image sets Help shows), `website-vaultstudio/website/images` and
+   `docs/app-store-screenshots` (the ten App Store pictures, exactly 2880 x 1800).
+5. Build again so Help picks up the new images. Delete `/Users/Shared/OinklyBudget/shots*` afterwards.
+
+`-screenshotOnly <prefix>` takes just the pictures whose names start with the prefix, and `-screenshotWidth <points>`
+changes the window width.
+
+## Which picture goes under which Help topic
+
+The table is `HelpContent.shotsByTopic` in `Views/HelpWindow.swift`. An asset that has no image yet simply doesn't show.
+The mapping from raw picture to Help image is in `scripts/make-help-images.py`.
+
+## What the app cannot take itself (the owner takes these)
+
+| Asset | Shows | How |
 |---|---|---|
-| Help-welcome | Welcome | Summary page with some data, side panel visible |
-| Help-sidebar | Finding Your Way | Side panel only: Overview items, Cash on Hand, folders expanded |
-| Help-manage-accounts | Adding & Managing Accounts | Settings ▸ Accounts with a few accounts listed |
-| Help-atm-withdrawal | Cash on Hand | The ATM Withdrawal window, From chosen, an amount typed |
-| Help-card-charge | Credit Cards | New Credit Card Charge with a card chosen and Available credit showing |
-| Help-card-details | Credit Cards | A credit card's account page showing limit, available credit, APR, payment due |
-| Help-loan-details | Loans & Mortgages | A loan's account page with progress, payment due and payments left |
-| Help-register | Transactions & Registers | A checking register with a month of transactions and the Receipt column |
-| Help-edit-transaction | Transactions & Registers | The Edit Transaction sheet (right-click a row ▸ Edit Transaction…) |
-| Help-receipt | Receipts & PDF Bills | The receipt sheet with a photo or PDF showing |
-| Help-bills | The Bills Page | Bills page with the calendar, Important list and Add a Bill button |
-| Help-new-bill | The Bills Page | The New Bill form with a category chosen |
-| Help-pay-bill | Paying a Bill | The Pay a Bill window filled in, with Method and Status visible |
-| Help-categories | Categories & Budgets | Settings ▸ Categories with Expenses and Income sections |
-| Help-reports | Summary & Reports | Reports page for a month with spending by category |
-| Help-goals | Goals | Goals page with a savings goal and a debt goal |
-| Help-backup | Backup & Restore | Settings ▸ Import & Export |
-| Help-menu-bar | Menu Bar & Reminders | The menu bar pop-up open, with a priority bill if possible |
+| Help-safety-copy | Finder: Application Support ▸ Backups ▸ Before this update | Finder, after a first launch |
+| A reminder notification | A bill reminder banner | After Send a Test Notification in Settings ▸ Reminders |
+| Widgets on the real desktop | The widget placed on the desktop, and the widget gallery | Edit widgets on the desktop |
+| Menus | File, Go and Transaction menus | ⇧⌘4, Space |
 
-18 shots in total. The ones that help most are Help-welcome, Help-register, Help-pay-bill and Help-bills.
+Everything else, including the menu bar pop-up and the three widget sizes, is drawn by the app from the test data.

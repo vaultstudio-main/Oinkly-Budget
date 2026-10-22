@@ -1,12 +1,12 @@
 {
-  "images" : [
+  "images": [
     {
-      "filename" : "Help-categories.png",
-      "idiom" : "universal"
+      "filename": "Help-categories.png",
+      "idiom": "universal"
     }
   ],
-  "info" : {
-    "author" : "xcode",
-    "version" : 1
+  "info": {
+    "author": "xcode",
+    "version": 1
   }
 }

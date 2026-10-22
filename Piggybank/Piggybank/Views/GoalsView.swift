@@ -131,6 +131,16 @@ struct GoalsView: View {
             Text("The goal and the progress you recorded on it are removed. Your accounts aren't affected.")
         }
         .onAppear { GoalArchiver.archiveReached(in: modelContext) }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            switch note.userInfo?["action"] as? String {
+            case "addGoal": sheet = .add
+            case "goalDetail": detail = goals.first
+            case "closeSheets": sheet = nil; detail = nil
+            default: break
+            }
+        }
+        #endif
         .sheet(item: $sheet) { item in
             switch item {
             case .add: GoalEditView(goal: nil)

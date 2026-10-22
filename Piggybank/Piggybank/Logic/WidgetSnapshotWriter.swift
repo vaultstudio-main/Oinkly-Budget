@@ -19,7 +19,14 @@ enum WidgetSnapshotWriter {
     }
 
     static func refresh(now: Date = .now) {
-        guard let container = PiggybankAppDelegate.container else { return }
+        // Screenshots use made-up data: never write it where the real widgets would read it.
+        guard !ScreenshotMode.isOn, let container = PiggybankAppDelegate.container else { return }
+        let snapshot = makeSnapshot(container: container, now: now)
+        if snapshot.write() { WidgetCenter.shared.reloadAllTimelines() }
+    }
+
+    /// What the widgets are given, from the saved data.
+    static func makeSnapshot(container: ModelContainer, now: Date = .now) -> WidgetSnapshot {
         // A fresh context always reads what has been saved.
         let context = ModelContext(container)
         let bills = ((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live
@@ -43,8 +50,7 @@ enum WidgetSnapshotWriter {
             .map { WidgetSnapshot.Repeating(id: $0.id, name: $0.rule.payee, due: $0.date, isOverdue: $0.isOverdue) }
             .sorted { $0.due < $1.due }
 
-        let snapshot = WidgetSnapshot(updated: now, bills: items, reminders: Array(reminders.prefix(12)), repeating: Array(repeating.prefix(30)))
-        if snapshot.write() { WidgetCenter.shared.reloadAllTimelines() }
+        return WidgetSnapshot(updated: now, bills: items, reminders: Array(reminders.prefix(12)), repeating: Array(repeating.prefix(30)))
     }
 }
 
@@ -92,7 +98,7 @@ extension WidgetSnapshotWriter {
 
     /// Draws the widget's three sizes with the real snapshot into PNG files, so what the widget shows can be looked at.
     @MainActor
-    private static func render(to folder: URL, snapshot: WidgetSnapshot?) {
+    static func render(to folder: URL, snapshot: WidgetSnapshot?, prefix: String = "widget") {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let sizes: [(String, WidgetFamily, CGSize)] = [("small", .systemSmall, CGSize(width: 170, height: 170)),
                                                       ("medium", .systemMedium, CGSize(width: 364, height: 170)),
@@ -102,7 +108,10 @@ extension WidgetSnapshotWriter {
             let view = UpcomingView(entry: entry, forcedFamily: family)
                 .padding(16)
                 .frame(width: size.width, height: size.height, alignment: .topLeading)
-                .background(Color(white: 0.93))
+                .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Color(white: 0.96)))
+                .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.black.opacity(0.08)))
+                .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+                .padding(16)
                 .environment(\.colorScheme, .light)
             let renderer = ImageRenderer(content: view)
             renderer.scale = 2
@@ -110,7 +119,7 @@ extension WidgetSnapshotWriter {
                 NSLog("WIDGETCHECK: could not draw \(name)")
                 continue
             }
-            try? png.write(to: folder.appendingPathComponent("widget-\(name).png"))
+            try? png.write(to: folder.appendingPathComponent("\(prefix)-\(name).png"))
             NSLog("WIDGETCHECK: drew \(name) \(Int(size.width))x\(Int(size.height))")
         }
     }

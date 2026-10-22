@@ -103,7 +103,10 @@ final class CustomReminders {
     }
 
     private init() {
-        if let data = UserDefaults.standard.data(forKey: Self.key),
+        if ScreenshotMode.isOn {
+            // Screenshots show ready-made reminders, never the person's own.
+            items = CustomReminder.presets.prefix(3).map(\.reminder)
+        } else if let data = UserDefaults.standard.data(forKey: Self.key),
            let saved = try? JSONDecoder().decode([CustomReminder].self, from: data) {
             items = saved
         } else {
@@ -113,6 +116,7 @@ final class CustomReminders {
 
     /// Replaces the scheduled notifications with the current set.
     func apply() async {
+        guard !ScreenshotMode.isOn else { return }
         WidgetSnapshotWriter.refreshSoon()
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()

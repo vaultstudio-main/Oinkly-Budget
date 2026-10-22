@@ -71,7 +71,7 @@ struct SavedImportLayout: Codable, Identifiable, Equatable {
     private static let key = "savedImportLayouts"
 
     static func load() -> [SavedImportLayout] {
-        guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+        guard !ScreenshotMode.isOn, let data = UserDefaults.standard.data(forKey: key) else { return [] }
         return (try? JSONDecoder().decode([SavedImportLayout].self, from: data)) ?? []
     }
 

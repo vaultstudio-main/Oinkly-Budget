@@ -76,6 +76,19 @@ struct BillsView: View {
             }
             .background(Theme.background)
         }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            switch note.userInfo?["action"] as? String {
+            case "addBill": sheet = .add(.now)
+            case "editBill": if let bill = bills.first { sheet = .edit(bill) }
+            case "closeSheets": sheet = nil
+            default: break
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotBillsTab)) { note in
+            tab = (note.userInfo?["tab"] as? String) == "recurring" ? .recurring : .bills
+        }
+        #endif
         .sheet(item: $sheet) { item in
             switch item {
             case .add(let date): BillEditView(bill: nil, defaultDate: date)

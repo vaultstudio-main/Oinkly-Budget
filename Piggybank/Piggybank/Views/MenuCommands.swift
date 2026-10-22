@@ -65,7 +65,8 @@ struct FileNewCommands: Commands {
         // Debug builds only: OinklyBudget ▸ Testing opens the window that fills the app with test data or wipes it.
         #if DEBUG
         CommandGroup(after: .appInfo) {
-            Button("Testing") { openWindow(id: "testing") }
+            // Left out of screenshots, so they show only what the app has.
+            if !ScreenshotMode.isOn { Button("Testing") { openWindow(id: "testing") } }
         }
         #endif
 

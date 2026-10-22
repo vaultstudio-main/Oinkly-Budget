@@ -194,7 +194,7 @@ struct AccountDetailsPanel: View {
             ]
         }
         return Panel(title: "\(account.financingWord) Details") {
-            HStack(alignment: .top, spacing: 20) {
+            withBalance {
                 AccountPicture(data: account.photoData, type: account.type)
                     .frame(width: 150, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -219,11 +219,30 @@ struct AccountDetailsPanel: View {
                 if let goal {
                     goalSection(goal)
                 }
+            }
+        }
+    }
+
+    /// The details with the balance and Edit Details at the right. When the window is too narrow for that, the balance moves to
+    /// its own row above the details instead of being squeezed into a column of single characters.
+    private func withBalance<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        let details = content()
+        return ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: 20) {
+                details
                 Spacer()
                 VStack(alignment: .trailing, spacing: 10) {
                     balanceBlock
                     Button("Edit Details", action: onEdit)
                 }
+            }
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Spacer()
+                    balanceBlock
+                    Button("Edit Details", action: onEdit)
+                }
+                HStack(alignment: .top, spacing: 20) { details }
             }
         }
     }
@@ -232,10 +251,11 @@ struct AccountDetailsPanel: View {
     /// a loan's balance is negative because it is money owed.
     private var balanceBlock: some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Text("CURRENT BALANCE").font(.caption).foregroundStyle(.secondary)
+            Text("CURRENT BALANCE").font(.caption).foregroundStyle(.secondary).lineLimit(1)
             Text(account.balance, format: .appCurrency)
                 .font(.system(size: 28, weight: .bold))
                 .foregroundStyle(account.balance < 0 ? Theme.red : .primary)
+                .lineLimit(1)
         }
     }
 
@@ -355,7 +375,7 @@ struct AccountDetailsPanel: View {
             DetailItem("Pending") { pendingSummary },
         ]
         return Panel(title: "Account Details") {
-            HStack(alignment: .top, spacing: 20) {
+            withBalance {
                 AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type)
                     .frame(width: 150, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -367,11 +387,6 @@ struct AccountDetailsPanel: View {
                 }
                 if let goal {
                     goalSection(goal)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 10) {
-                    balanceBlock
-                    Button("Edit Details", action: onEdit)
                 }
             }
         }

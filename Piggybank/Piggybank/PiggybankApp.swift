@@ -19,8 +19,12 @@ struct PiggybankApp: App {
         SharedHardeningTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
-        StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         let configuration: ModelConfiguration
+        if ScreenshotMode.isOn {
+            // Taking screenshots: a throwaway data file, so no real data is shown or changed.
+            configuration = ModelConfiguration(schema: schema, url: ScreenshotMode.storeURL, cloudKitDatabase: .none)
+        } else {
+        StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         #if DEBUG
         SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif
@@ -36,7 +40,8 @@ struct PiggybankApp: App {
             // that the widgets need would move the default data file to the group folder, and an update would open empty.
             configuration = ModelConfiguration(schema: schema, groupContainer: .none, cloudKitDatabase: .none)
         }
-        if SharedDataSession.shared.decision == nil { StoreReset.performIfRequested(for: configuration) }
+        }
+        if SharedDataSession.shared.decision == nil && !ScreenshotMode.isOn { StoreReset.performIfRequested(for: configuration) }
         do {
             container = try ModelContainer(for: schema, migrationPlan: PiggybankMigrationPlan.self, configurations: configuration)
         } catch {
@@ -58,6 +63,7 @@ struct PiggybankApp: App {
         LedgerIndex.shared.start(container: container)
         #if DEBUG
         PermissionSpike.runFromLaunchArgumentsIfRequested()
+        ScreenshotMode.startIfRequested(container: container)
         #endif
     }
 

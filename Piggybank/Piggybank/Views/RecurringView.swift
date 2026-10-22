@@ -49,6 +49,16 @@ struct RecurringView: View {
             }
             .frame(width: 360)
         }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            switch note.userInfo?["action"] as? String {
+            case "addRule": editing = .add
+            case "editRule": if let rule = rules.first { editing = .edit(rule) }
+            case "closeSheets": editing = nil
+            default: break
+            }
+        }
+        #endif
         .sheet(item: $editing) { sheet in
             switch sheet {
             case .add: RecurringRuleEditor(rule: nil, source: nil)

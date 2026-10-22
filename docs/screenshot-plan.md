@@ -2,14 +2,21 @@
 
 Drafted 2026-10-18. Two sets: the screenshots inside Help, and the App Store screenshots. Both are taken last, from the test data, once the app is finished.
 
+## Status (2026-10-21)
+
+All the screenshots are taken, by the app itself, from the test data: about 80 raw pictures covering every page, account
+type, window, sheet and Settings tab, the menu bar pop-up and the three widget sizes. `help-screenshots.md` says how to
+retake them, and `scripts/make-help-images.py` turns them into the 70 Help images, the website pictures and the ten
+App Store pictures. Only four things are left for the owner (see the end of `help-screenshots.md`).
+
 ## Rules for both sets
 
-- Use the debug-only Testing menu: Oinkly Budget ▸ Testing ▸ Fill with Test Data. It replaces all data, so never do it on real data. Wipe and refill before each batch so every shot starts from the same data.
-- Light mode for all of them (Settings ▸ General ▸ Interface ▸ Light), unless a shot is specifically about dark mode.
-- Fixed window size for every shot. Take the whole window with ⇧⌘4, Space, click (Option-click leaves the shadow off).
+- The pictures are taken from a throwaway data file filled with the test data (`-screenshotMode`). Never fill the real
+  data with test data.
+- Light mode, a 1600 x 1000 window, no Testing menu.
 - No real names, account numbers or balances. The test data is made up.
-- Save as PNG. Name files exactly as in the tables.
-- Retake every earlier Help shot, because the app's layout has changed (locked sidebar, new account details, new Summary and Reports).
+- Names are the asset names in the tables below.
+- Retake everything whenever a screen changes.
 
 ## A. Help screenshots
 

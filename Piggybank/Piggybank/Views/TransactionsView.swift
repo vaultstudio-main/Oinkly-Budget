@@ -64,6 +64,11 @@ struct TransactionsView: View {
         }
         .padding(16)
         .background(Theme.background)
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            if let action = note.userInfo?["action"] as? String, action.hasPrefix("search:") { search = String(action.dropFirst("search:".count)) }
+        }
+        #endif
     }
 
     /// A small search box under the title. It lives in the page, not the window toolbar, so the window chrome never moves.

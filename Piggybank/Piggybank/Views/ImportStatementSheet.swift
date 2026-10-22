@@ -37,6 +37,15 @@ struct ImportStatementSheet: View {
     @State private var showsMapping = false
 
     var body: some View {
+        content
+        #if DEBUG
+            .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+                if (note.userInfo?["action"] as? String) == "importMapping" { showsMapping = true }
+            }
+        #endif
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let result {
                 doneView(result)

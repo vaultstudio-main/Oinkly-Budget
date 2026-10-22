@@ -27,6 +27,12 @@ struct ReportsView: View {
             }
             .padding(16)
         }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            if let name = (note.userInfo?["action"] as? String)?.split(separator: ":", maxSplits: 1).last.map(String.init),
+               (note.userInfo?["action"] as? String)?.hasPrefix("reportSection:") == true, let found = ReportSection(rawValue: name) { section = found }
+        }
+        #endif
         .environment(\.reportInputs, ReportInputs(year: yearTransactions.live))
         .background(Theme.background)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }

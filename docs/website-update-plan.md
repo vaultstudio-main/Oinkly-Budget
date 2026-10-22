@@ -78,7 +78,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 
 | Page | Why | Content |
 |---|---|---|
-| `whats-new.html` (optional) | A first-release page is not needed. Later releases add it, and the App Store "What's New" points to it | Release notes for each version in plain language, copied from the in-app notes (see `release-notes-1.0-draft.md`) |
+| `whats-new.html` (optional) | A first-release page is not needed. Later releases add it, and the App Store "What's New" points to it | Release notes for each version in plain language, copied from the in-app notes (see `release-notes-1.0.md`) |
 | `help.html` (optional) | The in-app Help on the web, searchable | Generated from the same text as `help-file-plan.md`. Only if time allows. |
 
 Add any new page to the nav in the header and footer of every page, to `sitemap.xml`, and to the README table.

@@ -196,7 +196,8 @@ struct BootView: View {
         await checker.run(in: modelContext, databaseError: StartupState.databaseError)
         isFinished = true
 
-        if checker.hasFailure || checker.hasWarning { return }
+        // Taking screenshots: carry on whatever the checks say about the throwaway data.
+        if (checker.hasFailure || checker.hasWarning) && !ScreenshotMode.isOn { return }
         try? await Task.sleep(for: .milliseconds(600))
         handOff()
     }

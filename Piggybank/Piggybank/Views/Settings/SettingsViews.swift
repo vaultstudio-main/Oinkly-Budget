@@ -455,7 +455,7 @@ struct DataSettingsView: View {
                 Text("Backup")
             }
 
-            SharedDataSection()
+            if !ScreenshotMode.isOn { SharedDataSection() }
 
 
             Section {
