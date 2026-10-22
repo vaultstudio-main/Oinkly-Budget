@@ -1,9 +1,9 @@
 import AppKit
 import SwiftData
 
-/// Keeps the shadow copy: a second, separate copy of the data in a folder the person chose (Documents, say), refreshed on
+/// Keeps the backup copy: a second, separate copy of the data in a folder the person chose (Documents, say), refreshed on
 /// its own. Alone it copies this Mac's data; while sharing it copies the working copy each time the shared data is
-/// saved, so it matches the shared data. The app never runs on the shadow copy and never writes over the data from it
+/// saved, so it matches the shared data. The app never runs on the backup copy and never writes over the data from it
 /// without asking.
 @MainActor
 @Observable
@@ -26,7 +26,10 @@ final class ShadowCopyManager {
     private(set) var versionCount = 0
     private(set) var size: Int64 = 0
     private(set) var folderPath: String?
-    /// True when something asked Settings to scroll to the shadow copy. Settings clears it once it has.
+    /// When the newest portable .pig file in the backup copy was made.
+    private(set) var lastPortable: Date?
+    private(set) var portableCount = 0
+    /// True when something asked Settings to scroll to the backup copy. Settings clears it once it has.
     var revealRequested = false
 
     private static let bookmarkKey = "shadowCopyFolderBookmark"
@@ -35,6 +38,13 @@ final class ShadowCopyManager {
     static let skipCheckKey = "shadowCopySkipCheckOnce"
     static let skipSharedCheckKey = "shadowCopySkipSharedCheckOnce"
     static let restoreKey = "shadowCopyRestorePending"
+    nonisolated static let portableRestoreKey = "shadowCopyPortableRestorePending"
+    /// A portable file is made at most this often by the timed copies (quitting and Copy Now always make one).
+    static let portableEvery: TimeInterval = 24 * 3600
+    /// Building the portable file holds the window for as long as it takes to read all the data. When that took longer than
+    /// this, the timed copies leave it to quitting and Copy Now, so nobody is ever stuck waiting at a random moment.
+    static let portableBuildLimit: TimeInterval = 1.5
+    private static let portableBuildKey = "shadowCopyPortableBuildSeconds"
 
     /// How long after a change the app waits before copying, so a burst of edits makes one copy.
     static let patience: Duration = .seconds(180)
@@ -128,10 +138,10 @@ final class ShadowCopyManager {
         guard isSetUp, !SharedDataSession.shared.isActive else { return }
         pending?.cancel()
         pending = nil
-        if dirty { await copyNow() }
+        if dirty { await copyNow(portable: .always) }
     }
 
-    /// The shared data was just saved: make the shadow copy match it.
+    /// The shared data was just saved: make the backup copy match it.
     func afterSharedSave(revision: Int, fileID: String) async {
         guard isSetUp else { return }
         await copyNow(source: .shared(revision: revision, fileID: fileID))
@@ -144,8 +154,12 @@ final class ShadowCopyManager {
         case shared(revision: Int, fileID: String)
     }
 
-    /// Makes a copy now. With `onlyIfChanged`, nothing happens when nothing changed since the last one.
-    func copyNow(source: Source = .thisMac, onlyIfChanged: Bool = true) async {
+    /// Whether a copy also makes the portable .pig file: always, only when the last one is a day old, or not at all.
+    enum PortableMode { case never, ifDue, always }
+
+    /// Makes a copy now. With `onlyIfChanged`, nothing happens when nothing changed since the last one. Each copy is a
+    /// snapshot of the data file; a portable .pig file is made beside it when it is due.
+    func copyNow(source: Source = .thisMac, onlyIfChanged: Bool = true, portable: PortableMode = .ifDue) async {
         guard canCopyNow else { return }
         if onlyIfChanged, !dirty, case .thisMac = source, lastCopy != nil { return }
         guard let parent = resolveParent() else {
@@ -170,20 +184,47 @@ final class ShadowCopyManager {
         }
         let id = Self.dataID(beside: AppStore.localStoreURL(for: schema))
         let version = AppVersion.display
+        // The portable file is built here, from what is on screen, because reading the data needs the main thread. Sealing
+        // and writing it happen in the background with the snapshot.
+        let makePortable: Bool
+        switch portable {
+        case .never: makePortable = false
+        case .always: makePortable = true
+        case .ifDue:
+            let lastBuild = UserDefaults.standard.double(forKey: Self.portableBuildKey)
+            makePortable = (lastPortable.map { Date.now.timeIntervalSince($0) > Self.portableEvery } ?? true) && lastBuild < Self.portableBuildLimit
+        }
+        var portableJSON: Data?
+        var portableInfo: PortableInfo?
+        if makePortable, let context = OinklyBudgetAppDelegate.container?.mainContext {
+            let begin = Date()
+            if let file = try? DataBackup.make(from: context), let json = try? DataBackup.plainJSON(file) {
+                portableJSON = json
+                portableInfo = DataBackup.portableInfo(file, source: sourceName)
+            }
+            UserDefaults.standard.set(Date().timeIntervalSince(begin), forKey: Self.portableBuildKey)
+        }
         status = .copying
         dirty = false
         let accessing = parent.startAccessingSecurityScopedResource()
-        let result: Result<ShadowInfo, Error> = await Task.detached {
+        let json = portableJSON
+        let pinfo = portableInfo
+        let result: Result<(ShadowInfo, Bool), Error> = await Task.detached {
             let folder = ShadowFolder(inside: parent)
             if let existing = folder.readInfo(), !ShadowCheck.belongs(existing, dataID: id, sharedFileID: fileID) {
                 return .failure(ShadowCopyManager.OtherData())
             }
-            do { return .success(try folder.write(from: live, dataID: id, source: sourceName, sharedRevision: revision, sharedFileID: fileID, appVersion: version)) }
-            catch { return .failure(error) }
+            do {
+                let info = try folder.write(from: live, dataID: id, source: sourceName, sharedRevision: revision, sharedFileID: fileID, appVersion: version)
+                var wrotePortable = false
+                if let json, let pinfo { wrotePortable = (try? folder.writePortable(json: json, info: pinfo, matching: info, appVersion: version)) ?? false }
+                return .success((info, wrotePortable))
+            } catch { return .failure(error) }
         }.value
         if accessing { parent.stopAccessingSecurityScopedResource() }
         switch result {
-        case .success(let info):
+        case .success(let (info, wrotePortable)):
+            if wrotePortable { lastPortable = pinfo?.savedAt }
             failures = 0
             lastCopy = info.savedAt
             status = .upToDate(info.savedAt)
@@ -222,13 +263,16 @@ final class ShadowCopyManager {
 
     private func refreshDetails(parent: URL) async {
         let accessing = parent.startAccessingSecurityScopedResource()
-        let details: (Int, Int64, Date?) = await Task.detached {
+        let details: (Int, Int64, Date?, Int, Date?) = await Task.detached {
             let folder = ShadowFolder(inside: parent)
-            return (folder.olderVersions().count + (folder.hasStore ? 1 : 0), folder.size(), folder.readInfo()?.savedAt)
+            let portables = folder.portableVersions()
+            return (folder.olderVersions().count + (folder.hasStore ? 1 : 0), folder.size(), folder.readInfo()?.savedAt, portables.count, portables.first?.info.savedAt)
         }.value
         if accessing { parent.stopAccessingSecurityScopedResource() }
         versionCount = details.0
         size = details.1
+        portableCount = details.3
+        lastPortable = details.4
         if lastCopy == nil { lastCopy = details.2 }
         folderPath = parent.path
     }
@@ -254,14 +298,14 @@ final class ShadowCopyManager {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    /// Asks where to keep the shadow copy, remembers the permission, and starts copying.
+    /// Asks where to keep the backup copy, remembers the permission, and starts copying.
     func chooseFolder() {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         panel.directoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
-        panel.message = "Choose where to keep your shadow copy. A folder called “\(ShadowFolder.folderName)” is made inside it."
+        panel.message = "Choose where to keep your backup copy. A folder called “\(ShadowFolder.folderName)” is made inside it."
         panel.prompt = "Choose"
         guard panel.runModal() == .OK, let url = panel.url,
               let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
@@ -271,7 +315,7 @@ final class ShadowCopyManager {
         failures = 0
         status = .behind(nil)
         dirty = true
-        Task { await copyNow(onlyIfChanged: false) }
+        Task { await copyNow(onlyIfChanged: false, portable: .always) }
     }
 
     /// Stops copying. What is already in the folder stays.
@@ -286,7 +330,7 @@ final class ShadowCopyManager {
         status = .notSetUp
     }
 
-    /// Starts a new shadow copy in the same folder, for when the one there is of other data.
+    /// Starts a new backup copy in the same folder, for when the one there is of other data.
     func replaceExisting() async {
         guard let parent = resolveParent() else { return }
         let accessing = parent.startAccessingSecurityScopedResource()
@@ -319,7 +363,7 @@ final class ShadowCopyManager {
 
     // MARK: Asking the first time
 
-    /// True when it is time to offer a shadow copy: nothing set up, the person has put some data in, and they haven't
+    /// True when it is time to offer a backup copy: nothing set up, the person has put some data in, and they haven't
     /// said no. "Not now" waits a week.
     func shouldAsk(hasData: Bool) -> Bool {
         guard !isSetUp, hasData, !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return false }
@@ -334,11 +378,11 @@ final class ShadowCopyManager {
     /// True when quitting should wait for one more copy.
     var needsCopyAtQuit: Bool { isSetUp && dirty && !SharedDataSession.shared.isActive && !StartupState.isHoldingPlace && !ScreenshotMode.isOn }
 
-    /// Whether a shadow copy is set up, for code that runs before the app is ready.
+    /// Whether a backup copy is set up, for code that runs before the app is ready.
     nonisolated static var isSetUpNow: Bool { UserDefaults.standard.data(forKey: bookmarkKey) != nil }
 
-    /// Looks at this Mac's data against the shadow copy before the app opens it. Nil means all is well (or there is no
-    /// shadow copy, or the person chose to keep their data as it is for this start).
+    /// Looks at this Mac's data against the backup copy before the app opens it. Nil means all is well (or there is no
+    /// backup copy, or the person chose to keep their data as it is for this start).
     nonisolated static func launchFinding(localStore: URL) -> ShadowFinding? {
         let defaults = UserDefaults.standard
         if defaults.bool(forKey: skipCheckKey) {
@@ -353,7 +397,7 @@ final class ShadowCopyManager {
         return ShadowCheck.lookAtOwnData(store: localStore, shadow: ShadowFolder(inside: parent), dataID: dataID(beside: localStore))
     }
 
-    /// Looks at the shared data against the shadow copy before the app opens it. Nil means all is well.
+    /// Looks at the shared data against the backup copy before the app opens it. Nil means all is well.
     nonisolated static func sharedFinding(_ shared: SharedDataFolder, localStore: URL) -> ShadowFinding? {
         let defaults = UserDefaults.standard
         if defaults.bool(forKey: skipSharedCheckKey) {
@@ -368,9 +412,9 @@ final class ShadowCopyManager {
         return ShadowCheck.lookAtSharedData(shared, shadow: ShadowFolder(inside: parent), dataID: dataID(beside: localStore))
     }
 
-    /// Puts the shared data back from a copy in the shadow folder.
+    /// Puts the shared data back from a copy in the backup copy folder.
     func rebuildShared(from version: ShadowVersion, shared: SharedDataFolder = .standard) async throws {
-        guard let parent = resolveParent() else { throw ShadowError.unavailable("the shadow copy folder can't be found") }
+        guard let parent = resolveParent() else { throw ShadowError.unavailable("the backup copy folder can't be found") }
         let accessing = parent.startAccessingSecurityScopedResource()
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         let me = SharedLock(token: UUID().uuidString, userName: NSUserName(), fullName: NSFullUserName(), since: .now, heartbeat: .now,
@@ -382,8 +426,8 @@ final class ShadowCopyManager {
         }.value
     }
 
-    /// For a new Mac: asks for the folder that holds a shadow copy, remembers it, and restores the newest good copy at
-    /// the next start. Returns false when nothing was chosen or the folder holds no shadow copy.
+    /// For a new Mac: asks for the folder that holds a backup copy, remembers it, and restores the newest good copy at
+    /// the next start. Returns false when nothing was chosen or the folder holds no backup copy.
     func restoreFromChosenFolder() -> String? {
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
@@ -391,21 +435,32 @@ final class ShadowCopyManager {
         panel.message = "Choose the folder that contains “\(ShadowFolder.folderName)”."
         panel.prompt = "Choose"
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        return restoreFromFolder(url)
+    }
+
+    /// Restores from the backup copy inside `url` (a folder the person chose) at the next start: the newest good snapshot,
+    /// or the newest good portable file when no snapshot is usable. Returns a problem to show, or nil.
+    func restoreFromFolder(_ url: URL) -> String? {
         let accessing = url.startAccessingSecurityScopedResource()
         defer { if accessing { url.stopAccessingSecurityScopedResource() } }
         let folder = ShadowFolder(inside: url)
         guard folder.exists else {
             return FileManager.default.fileExists(atPath: url.appendingPathComponent(ShadowFolder.storeName).path)
-                ? "That is the shadow copy folder itself. Choose the folder that contains it instead."
+                ? "That is the backup copy folder itself. Choose the folder that contains it instead."
                 : "There is no “\(ShadowFolder.folderName)” folder in there."
         }
-        guard let best = folder.newestGoodVersion() else { return "That shadow copy has no good copy in it." }
+        let snapshot = folder.newestGoodVersion()
+        let portable = snapshot == nil ? folder.newestGoodPortable() : nil
+        guard snapshot != nil || portable != nil else { return "That backup copy has no good copy in it." }
         guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else {
             return "The app couldn't keep access to that folder."
         }
-        guard ClosingCountdown.run(.restart, reason: "It restarts to bring back your data from the shadow copy made \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.transactions.formatted()) transactions.") else { return nil }
+        let when = snapshot?.info.savedAt ?? portable?.info.savedAt ?? .now
+        let transactions = snapshot?.info.transactions ?? portable?.info.transactions ?? 0
+        guard ClosingCountdown.run(.restart, reason: "It restarts to bring back your data from the backup copy made \(when.formatted(date: .abbreviated, time: .shortened)), with \(transactions.formatted()) transactions.") else { return nil }
         UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
-        UserDefaults.standard.set(best.url.path, forKey: Self.restoreKey)
+        if let snapshot { UserDefaults.standard.set(snapshot.url.path, forKey: Self.restoreKey) }
+        else if let portable { UserDefaults.standard.set(portable.url.path, forKey: Self.portableRestoreKey) }
         UserDefaults.standard.synchronize()
         AppStore.relaunch()
         return nil
@@ -413,7 +468,7 @@ final class ShadowCopyManager {
 
     // MARK: This data's name
 
-    /// A name for this Mac's data, kept beside the data file, so a shadow copy of other data is noticed.
+    /// A name for this Mac's data, kept beside the data file, so a backup copy of other data is noticed.
     nonisolated static func dataID(beside store: URL) -> String {
         let file = store.deletingLastPathComponent().appendingPathComponent("shadow-data-id.txt")
         if let text = try? String(contentsOf: file, encoding: .utf8), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -431,7 +486,7 @@ final class ShadowCopyManager {
     /// before the app opens its data, with a safety copy of what is there.
     func requestRestore(_ version: ShadowVersion, countdown: Bool = true) -> Bool {
         if countdown {
-            guard ClosingCountdown.run(.restart, reason: "It restarts to restore your data from the shadow copy. Finish anything you are doing now.") else { return false }
+            guard ClosingCountdown.run(.restart, reason: "It restarts to restore your data from the backup copy. Finish anything you are doing now.") else { return false }
         }
         UserDefaults.standard.set(version.url.path, forKey: Self.restoreKey)
         UserDefaults.standard.synchronize()
@@ -446,26 +501,26 @@ final class ShadowCopyManager {
         if defaults.bool(forKey: stagedRestoreKey) { return performStagedRestore(localStore: localStore) }
         guard let path = defaults.string(forKey: restoreKey) else { return nil }
         defaults.removeObject(forKey: restoreKey)
-        guard let data = defaults.data(forKey: bookmarkKey) else { return "The shadow copy folder wasn't set up, so nothing was restored." }
+        guard let data = defaults.data(forKey: bookmarkKey) else { return "The backup copy folder wasn't set up, so nothing was restored." }
         var stale = false
         guard let parent = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale) else {
-            return "The shadow copy folder couldn't be opened, so nothing was restored."
+            return "The backup copy folder couldn't be opened, so nothing was restored."
         }
         let accessing = parent.startAccessingSecurityScopedResource()
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         let folder = ShadowFolder(inside: parent)
-        guard let version = folder.allVersions().first(where: { $0.url.path == path }) else { return "That shadow copy couldn't be found, so nothing was restored." }
+        guard let version = folder.allVersions().first(where: { $0.url.path == path }) else { return "That backup copy couldn't be found, so nothing was restored." }
         do {
             let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
-                .appendingPathComponent("Before restoring a shadow copy (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
+                .appendingPathComponent("Before restoring a backup copy (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
             if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
             try folder.restore(version, to: localStore)
-            // This data now is the data the shadow copy came from, on a new Mac as much as on the old one.
+            // This data now is the data the backup copy came from, on a new Mac as much as on the old one.
             let idFile = localStore.deletingLastPathComponent().appendingPathComponent("shadow-data-id.txt")
             if !version.info.dataID.isEmpty { try? version.info.dataID.write(to: idFile, atomically: true, encoding: .utf8) }
-            return "Restored your data from the shadow copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What was there before is in Application Support ▸ Backups."
+            return "Restored your data from the backup copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What was there before is in Application Support ▸ Backups."
         } catch {
-            return "The shadow copy couldn't be restored: \(error.localizedDescription) Your data was not changed."
+            return "The backup copy couldn't be restored: \(error.localizedDescription) Your data was not changed."
         }
     }
 
@@ -492,7 +547,7 @@ final class ShadowCopyManager {
                 try? id.write(to: localStore.deletingLastPathComponent().appendingPathComponent("shadow-data-id.txt"), atomically: true, encoding: .utf8)
             }
             defaults.removeObject(forKey: stagedRestoreIDKey)
-            return "Restored your data from the copy you opened. What was there before is in Application Support ▸ Backups. Receipts and photos are only brought back when you restore from Settings ▸ Data & Backup ▸ Shadow Copy."
+            return "Restored your data from the copy you opened. What was there before is in Application Support ▸ Backups. Receipts and photos are only brought back when you restore from Settings ▸ Data & Backup ▸ Backup Copy."
         } catch {
             return "The copy couldn't be restored: \(error.localizedDescription) Your data was not changed."
         }
@@ -520,7 +575,58 @@ final class ShadowCopyManager {
         return nil
     }
 
-    /// For the rescue screen and Settings: what is in the shadow copy, newest first, without keeping access open.
+    /// Asks for a portable .pig file of the backup copy to be put in place of this Mac's data at the next start, then
+    /// restarts. The swap happens before the data is opened (see `preparePortableRestore`).
+    func requestRestore(portable file: PortableVersion, countdown: Bool = true) -> Bool {
+        if countdown {
+            guard ClosingCountdown.run(.restart, reason: "It restarts to restore your data from the backup copy's portable file. Finish anything you are doing now.") else { return false }
+        }
+        UserDefaults.standard.set(file.url.path, forKey: Self.portableRestoreKey)
+        UserDefaults.standard.synchronize()
+        AppStore.relaunch()
+        return true
+    }
+
+    /// Runs before the data is opened: if a portable restore was asked for, reads the file, makes a safety copy of this
+    /// Mac's data and clears it away. The caller opens a fresh data file and imports the returned file into it.
+    @MainActor
+    static func preparePortableRestore(localStore: URL) -> (file: BackupFile?, note: String?) {
+        let defaults = UserDefaults.standard
+        guard let path = defaults.string(forKey: portableRestoreKey) else { return (nil, nil) }
+        defaults.removeObject(forKey: portableRestoreKey)
+        guard !SharedDataSession.isEnabled else { return (nil, "A portable file restores this Mac's own data, so nothing was restored while sharing is on.") }
+        guard let data = defaults.data(forKey: bookmarkKey) else { return (nil, "The backup copy folder wasn't set up, so nothing was restored.") }
+        var stale = false
+        guard let parent = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &stale) else {
+            return (nil, "The backup copy folder couldn't be opened, so nothing was restored.")
+        }
+        let accessing = parent.startAccessingSecurityScopedResource()
+        defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
+        let folder = ShadowFolder(inside: parent)
+        guard let portable = folder.portableVersions().first(where: { $0.url.path == path }), folder.isGood(portable) else {
+            return (nil, "That portable file couldn't be found or didn't pass its check, so nothing was restored.")
+        }
+        do {
+            let file = try DataBackup.decode(try Data(contentsOf: portable.url))
+            let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
+                .appendingPathComponent("Before restoring a backup copy (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
+            if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
+            StoreFiles.remove(store: localStore)
+            return (file, "Restored your data from the backup copy's portable file made \(portable.info.savedAt.formatted(date: .abbreviated, time: .shortened)). What was there before is in Application Support ▸ Backups.")
+        } catch {
+            return (nil, "The portable file couldn't be restored: \(error.localizedDescription) Your data was not changed.")
+        }
+    }
+
+    /// The portable files in the backup copy, newest first.
+    func portableVersions() async -> [PortableVersion] {
+        guard let parent = resolveParent() else { return [] }
+        let accessing = parent.startAccessingSecurityScopedResource()
+        defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
+        return await Task.detached { ShadowFolder(inside: parent).portableVersions() }.value
+    }
+
+    /// For the rescue screen and Settings: what is in the backup copy, newest first, without keeping access open.
     func versions() async -> [ShadowVersion] {
         guard let parent = resolveParent() else { return [] }
         let accessing = parent.startAccessingSecurityScopedResource()
@@ -545,7 +651,7 @@ enum CopyOpener {
             return
         }
         guard !SharedDataSession.isEnabled else {
-            show(title: "Sharing is on", text: "A copy restores this Mac's own data. Stop sharing first, or restore from the shadow copy in Settings.")
+            show(title: "Sharing is on", text: "A copy restores this Mac's own data. Stop sharing first, or restore from the backup copy in Settings.")
             return
         }
         guard SealedFile.isIntact(url) else {
@@ -555,7 +661,7 @@ enum CopyOpener {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = "Restore from this copy?"
-        alert.informativeText = "\(url.lastPathComponent) was made \(info.savedAt.formatted(date: .abbreviated, time: .shortened)) and holds \(info.accounts) accounts and \(info.transactions.formatted()) transactions. Everything currently in Oinkly Budget is replaced with it. A copy of what is there now is kept first. Receipts and photos aren't in a single file; restore from Settings ▸ Data & Backup ▸ Shadow Copy to bring those back too."
+        alert.informativeText = "\(url.lastPathComponent) was made \(info.savedAt.formatted(date: .abbreviated, time: .shortened)) and holds \(info.accounts) accounts and \(info.transactions.formatted()) transactions. Everything currently in Oinkly Budget is replaced with it. A copy of what is there now is kept first. Receipts and photos aren't in a single file; restore from Settings ▸ Data & Backup ▸ Backup Copy to bring those back too."
         alert.addButton(withTitle: "Restore")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return }

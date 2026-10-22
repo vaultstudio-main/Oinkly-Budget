@@ -382,11 +382,22 @@ enum DataBackup {
         return file
     }
 
-    /// The backup as it is saved: sealed in Oinkly Budget's own file format, so only Oinkly Budget can open it.
-    static func encode(_ file: BackupFile) throws -> Data {
+    /// The backup as plain JSON, before it is sealed. Building it needs the main thread; sealing it does not.
+    static func plainJSON(_ file: BackupFile) throws -> Data {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .secondsSince1970
-        return try SealedFile.sealData(try encoder.encode(file), kind: "backup", info: Data(file.summary.utf8), appVersion: AppVersion.display)
+        return try encoder.encode(file)
+    }
+
+    /// What a sealed .pig file says about itself in its header, so it can be listed without opening it.
+    static func portableInfo(_ file: BackupFile, source: String = "This Mac", now: Date = .now) -> PortableInfo {
+        PortableInfo(savedAt: now, appVersion: AppVersion.display, source: source, accounts: file.accounts.count,
+                     transactions: file.transactions.count, summary: file.summary)
+    }
+
+    /// The backup as it is saved: sealed in Oinkly Budget's own file format, so only Oinkly Budget can open it.
+    static func encode(_ file: BackupFile) throws -> Data {
+        try SealedFile.sealData(try plainJSON(file), kind: "backup", info: try SealedFile.encodeInfo(portableInfo(file)), appVersion: AppVersion.display)
     }
 
     /// Reads a backup: a sealed one, or a plain JSON one saved by an earlier build.

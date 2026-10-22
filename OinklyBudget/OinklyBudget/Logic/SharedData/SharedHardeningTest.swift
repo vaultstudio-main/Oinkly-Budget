@@ -526,7 +526,7 @@ enum SharedHardeningTest {
             let gone = SharedDataFolder(url: root.appendingPathComponent("never-made", isDirectory: true))
             check("S24 a folder that is already gone is fine", SharedDataSession.leaveSharedFolder(as: mine, remove: true, folder: gone, useTrash: false) == nil)
 
-            // S25: the shadow copy: writing, older copies, damage, and the checks against the data
+            // S25: the backup copy: writing, older copies, damage, and the checks against the data
             let shadowRoot = root.appendingPathComponent("shadow-parent", isDirectory: true)
             try manager.createDirectory(at: shadowRoot, withIntermediateDirectories: true)
             let shadow = ShadowFolder(inside: shadowRoot)
@@ -558,26 +558,26 @@ enum SharedHardeningTest {
                     return (try? shadow.restore(bad, to: root.appendingPathComponent("refused/OinklyBudget.store"))) == nil
                 }())
             }
-            // A shadow copy that can't be written changes nothing
+            // A backup copy that can't be written changes nothing
             let shadowBefore = shadow.readInfo()
             check("S25 a copy from a missing file fails and leaves the shadow alone", (try? shadow.write(from: root.appendingPathComponent("nothing.store"), dataID: "data-1", source: "This Mac", appVersion: "1.0")) == nil && shadow.readInfo() == shadowBefore)
             // The checks against the data
             let shadow2 = ShadowFolder(inside: root.appendingPathComponent("shadow-2", isDirectory: true))
             try shadow2.write(from: source, dataID: "data-2", source: "This Mac", appVersion: "1.0")
             check("S25 matching data has nothing to say", ShadowCheck.lookAtOwnData(store: source, shadow: shadow2, dataID: "data-2") == nil || (counts["ZTRANSACTION"] ?? 0) == 0)
-            check("S25 a shadow copy of other data is noticed", ShadowCheck.lookAtOwnData(store: source, shadow: shadow2, dataID: "someone-else") == .otherData)
-            check("S25 no shadow copy means nothing to say", ShadowCheck.lookAtOwnData(store: source, shadow: ShadowFolder(inside: root.appendingPathComponent("none")), dataID: "data-2") == nil)
+            check("S25 a backup copy of other data is noticed", ShadowCheck.lookAtOwnData(store: source, shadow: shadow2, dataID: "someone-else") == .otherData)
+            check("S25 no backup copy means nothing to say", ShadowCheck.lookAtOwnData(store: source, shadow: ShadowFolder(inside: root.appendingPathComponent("none")), dataID: "data-2") == nil)
             let emptyStore = root.appendingPathComponent("empty/OinklyBudget.store")
             try manager.createDirectory(at: emptyStore.deletingLastPathComponent(), withIntermediateDirectories: true)
             do { _ = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: emptyStore, cloudKitDatabase: .none)) }
-            // The shadow copy says it holds a lot: put the same data back in its wrapper with a bigger note
+            // The backup copy says it holds a lot: put the same data back in its wrapper with a bigger note
             var bigInfo = try unwrap(shadow2.readInfo())
             bigInfo.accounts = 5
             bigInfo.transactions = 200
             let bigPlain = root.appendingPathComponent("big-plain.store")
             try SealedFile.unseal(shadow2.storeURL, to: bigPlain)
             try SealedFile.seal(bigPlain, to: shadow2.storeURL, kind: "data", info: try SealedFile.encodeInfo(bigInfo), appVersion: "1.0")
-            check("S25 empty data against a full shadow copy is noticed", {
+            check("S25 empty data against a full backup copy is noticed", {
                 if case .dataLooksEmpty = ShadowCheck.lookAtOwnData(store: emptyStore, shadow: shadow2, dataID: "data-2") { return true }
                 return false
             }())
@@ -596,15 +596,15 @@ enum SharedHardeningTest {
             let sharedInfo = try sharedA.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             let shadow3 = ShadowFolder(inside: root.appendingPathComponent("shadow-3", isDirectory: true))
             try shadow3.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: sharedInfo.revision, sharedFileID: sharedInfo.fileID, appVersion: "1.0")
-            check("S25 shared data that matches the shadow copy has nothing to say", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow3, dataID: "data-3") == nil)
+            check("S25 shared data that matches the backup copy has nothing to say", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow3, dataID: "data-3") == nil)
             let shadow4 = ShadowFolder(inside: root.appendingPathComponent("shadow-4", isDirectory: true))
             try shadow4.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: sharedInfo.revision + 4, sharedFileID: sharedInfo.fileID, appVersion: "1.0")
-            check("S25 shared data older than the shadow copy is noticed", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow4, dataID: "data-3") == .sharedOlder(sharedRevision: sharedInfo.revision, shadowRevision: sharedInfo.revision + 4))
+            check("S25 shared data older than the backup copy is noticed", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow4, dataID: "data-3") == .sharedOlder(sharedRevision: sharedInfo.revision, shadowRevision: sharedInfo.revision + 4))
             let shadow5 = ShadowFolder(inside: root.appendingPathComponent("shadow-5", isDirectory: true))
             try shadow5.write(from: source, dataID: "data-3", source: "Shared data", sharedRevision: 1, sharedFileID: "another-shared-data", appVersion: "1.0")
             check("S25 shared data that isn't the data the shadow came from is noticed", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow5, dataID: "data-3") == .sharedIsDifferent)
             let sharedGone = SharedDataFolder(url: root.appendingPathComponent("s25-gone", isDirectory: true))
-            check("S25 shared data that is missing is noticed when there is a shadow copy", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == .sharedMissing)
+            check("S25 shared data that is missing is noticed when there is a backup copy", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == .sharedMissing)
             check("S25 and not when there is none", ShadowCheck.lookAtSharedData(sharedGone, shadow: ShadowFolder(inside: root.appendingPathComponent("no-shadow")), dataID: "data-3") == nil)
             let sharedBad = try fresh("s25-bad")
             try Data("damaged".utf8).write(to: sharedBad.storeURL)
@@ -613,7 +613,7 @@ enum SharedHardeningTest {
                 return false
             }())
 
-            // S26: putting the shared data back from the shadow copy or from an earlier save
+            // S26: putting the shared data back from the backup copy or from an earlier save
             let staging26 = root.appendingPathComponent("rescue-staging", isDirectory: true)
             var me26 = lock("me")
             me26.fullName = "Me Myself"
@@ -621,18 +621,18 @@ enum SharedHardeningTest {
             // The folder is gone
             try SharedRescue.rebuild(sharedGone, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
             let gotBack = sharedGone.readInfo()?.counts ?? [:]
-            check("S26 a missing shared folder is made again from the shadow copy", sharedGone.hasStore && SealedFile.isIntact(sharedGone.storeURL) && gotBack["ZACCOUNT"] == version3.info.accounts && gotBack["ZTRANSACTION"] == version3.info.transactions)
-            check("S26 it carries on the shadow copy's data ID and numbering", sharedGone.readInfo()?.fileID == version3.info.sharedFileID && (sharedGone.readInfo()?.revision ?? 0) >= (version3.info.sharedRevision ?? 0))
+            check("S26 a missing shared folder is made again from the backup copy", sharedGone.hasStore && SealedFile.isIntact(sharedGone.storeURL) && gotBack["ZACCOUNT"] == version3.info.accounts && gotBack["ZTRANSACTION"] == version3.info.transactions)
+            check("S26 it carries on the backup copy's data ID and numbering", sharedGone.readInfo()?.fileID == version3.info.sharedFileID && (sharedGone.readInfo()?.revision ?? 0) >= (version3.info.sharedRevision ?? 0))
             check("S26 and the two agree afterwards", ShadowCheck.lookAtSharedData(sharedGone, shadow: shadow3, dataID: "data-3") == nil)
             check("S26 the lock is let go afterwards", sharedGone.holder() == nil)
-            // Shared data older than the shadow copy
+            // Shared data older than the backup copy
             try SharedRescue.rebuild(sharedA, from: version4, in: shadow4, me: me26, appVersion: "1.0", staging: staging26)
             check("S26 shared data that went backwards is put right", ShadowCheck.lookAtSharedData(sharedA, shadow: shadow4, dataID: "data-3") == nil && (sharedA.readInfo()?.revision ?? 0) >= (version4.info.sharedRevision ?? 99))
             check("S26 what was there is kept as an earlier save", !sharedA.versions().isEmpty)
             // Different shared data
             let sharedOther = try tester("s26-other", saver: "Pat Else")
             try SharedRescue.rebuild(sharedOther, from: version5, in: shadow5, me: me26, appVersion: "1.0", staging: staging26)
-            check("S26 different shared data can be replaced by the shadow copy's", ShadowCheck.lookAtSharedData(sharedOther, shadow: shadow5, dataID: "data-3") == nil && sharedOther.readInfo()?.fileID == "another-shared-data")
+            check("S26 different shared data can be replaced by the backup copy's", ShadowCheck.lookAtSharedData(sharedOther, shadow: shadow5, dataID: "data-3") == nil && sharedOther.readInfo()?.fileID == "another-shared-data")
             // Damaged shared data
             try SharedRescue.rebuild(sharedBad, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)
             check("S26 damaged shared data is replaced and the damaged file kept", SealedFile.isIntact(sharedBad.storeURL) && sharedBad.readInfo() != nil
@@ -643,7 +643,7 @@ enum SharedHardeningTest {
             let busyBefore = busy26.readInfo()
             check("S26 nothing is put back while someone has the shared data open", (try? SharedRescue.rebuild(busy26, from: version3, in: shadow3, me: me26, appVersion: "1.0", staging: staging26)) == nil && busy26.readInfo() == busyBefore)
             // A damaged copy is refused
-            check("S26 a damaged shadow copy is refused", { () -> Bool in
+            check("S26 a damaged backup copy is refused", { () -> Bool in
                 guard let latest = shadow.allVersions().first(where: { $0.isLatest }) else { return false }
                 return (try? SharedRescue.rebuild(try! fresh("s26-refused"), from: latest, in: shadow, me: me26, appVersion: "1.0", staging: staging26)) == nil
             }())
@@ -656,21 +656,21 @@ enum SharedHardeningTest {
             let none = try fresh("s26-none")
             check("S26 with no earlier save nothing is changed", (try? SharedRescue.restoreNewestGoodEarlierSave(none, me: me26, appVersion: "1.0", staging: staging26)) == false)
 
-            // S27: the one status for the database and the shadow copy
+            // S27: the one status for the database and the backup copy
             let upToDate27 = ShadowCopyManager.Status.upToDate(.now.addingTimeInterval(-300))
             func words(_ database: DatabaseStatus.State, _ shadow: ShadowCopyManager.Status, sharing: Bool = false) -> String {
                 MainActor.assumeIsolated { ShadowDatabaseStatusLabel.look(database: database, shadow: shadow, sharing: sharing).text }
             }
-            check("S27 all well says copied", words(.saved, upToDate27).hasPrefix("Shadow Copy Database · Copied"))
-            check("S27 no shadow copy set up shows the shadow status", words(.saved, .notSetUp) == "Shadow Copy Database · Not set up")
+            check("S27 all well says copied", words(.saved, upToDate27).hasPrefix("Backup Copy Database · Copied"))
+            check("S27 no backup copy set up shows the shadow status", words(.saved, .notSetUp) == "Backup Copy Database · Not set up")
             check("S27 a database problem comes first", words(.problem("x"), .notSetUp) == "Database · Problem" && words(.problem("x"), .failed("y")) == "Database · Problem")
-            check("S27 a failing shadow copy is next", words(.saved, .failed("y")) == "Shadow Copy · Problem")
-            check("S27 a shadow copy that needs attention beats saving", words(.unsaved, .behind(nil)) == "Shadow Copy Database · Out of date" && words(.unsaved, .folderMissing) == "Shadow Copy Database · Folder not found")
-            check("S27 saving or copying shows as work in progress", words(.unsaved, upToDate27) == "Shadow Copy Database · Saving…" && words(.saved, .copying) == "Shadow Copy Database · Copying…")
-            check("S27 while sharing, unsaved changes are the Shared dot's to report", words(.unsaved, upToDate27, sharing: true).hasPrefix("Shadow Copy Database · Copied"))
+            check("S27 a failing backup copy is next", words(.saved, .failed("y")) == "Backup Copy · Problem")
+            check("S27 a backup copy that needs attention beats saving", words(.unsaved, .behind(nil)) == "Backup Copy Database · Out of date" && words(.unsaved, .folderMissing) == "Backup Copy Database · Folder not found")
+            check("S27 saving or copying shows as work in progress", words(.unsaved, upToDate27) == "Backup Copy Database · Saving…" && words(.saved, .copying) == "Backup Copy Database · Copying…")
+            check("S27 while sharing, unsaved changes are the Shared dot's to report", words(.unsaved, upToDate27, sharing: true).hasPrefix("Backup Copy Database · Copied"))
             check("S27 while sharing, a database problem still shows", words(.problem("x"), upToDate27, sharing: true) == "Database · Problem")
 
-            // S28: the sealed file format, and the shadow copy's receipts
+            // S28: the sealed file format, and the backup copy's receipts
             let sealedPlain = root.appendingPathComponent("sealed/plain.store")
             try manager.createDirectory(at: sealedPlain.deletingLastPathComponent(), withIntermediateDirectories: true)
             try manager.copyItem(at: source, to: sealedPlain)
@@ -712,7 +712,7 @@ enum SharedHardeningTest {
             try SealedFile.seal(bigURL, to: bigSealed, kind: "receipt", appVersion: "1.0")
             try SealedFile.unseal(bigSealed, to: bigBack)
             check("S28 a large file survives the round trip", try Data(contentsOf: bigBack) == bigBytes, "\(bigBytes.count) bytes")
-            // Receipts in the shadow copy
+            // Receipts in the backup copy
             let receiptSource = root.appendingPathComponent("receipt-source/OinklyBudget.store")
             try manager.createDirectory(at: receiptSource.deletingLastPathComponent(), withIntermediateDirectories: true)
             try manager.copyItem(at: source, to: receiptSource)
@@ -723,8 +723,8 @@ enum SharedHardeningTest {
             let shadow6 = ShadowFolder(inside: root.appendingPathComponent("shadow-6", isDirectory: true))
             try shadow6.write(from: receiptSource, dataID: "data-6", source: "This Mac", appVersion: "1.0")
             let sealedReceipt = shadow6.receiptsURL.appendingPathComponent("_EXTERNAL_DATA/A1B2C3D4.pigdata")
-            check("S28 a receipt is kept sealed in the shadow copy", manager.fileExists(atPath: sealedReceipt.path) && (try? Data(contentsOf: sealedReceipt)) != receiptBytes)
-            check("S28 and every file in the shadow copy is sealed", { () -> Bool in
+            check("S28 a receipt is kept sealed in the backup copy", manager.fileExists(atPath: sealedReceipt.path) && (try? Data(contentsOf: sealedReceipt)) != receiptBytes)
+            check("S28 and every file in the backup copy is sealed", { () -> Bool in
                 guard let walker = manager.enumerator(at: shadow6.url, includingPropertiesForKeys: [.isDirectoryKey]) else { return false }
                 for case let item as URL in walker where (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true {
                     if item.pathExtension != SealedFile.fileExtension { return false }
@@ -829,6 +829,54 @@ enum SharedHardeningTest {
                 try? sealedBackup.write(to: file)
                 return (try? SealedFile.readHeader(file))?.kind == "backup"
             }())
+
+            // S31: the portable .pig file beside each snapshot in the backup copy
+            let shadow7 = ShadowFolder(inside: root.appendingPathComponent("shadow-7", isDirectory: true))
+            let snapshot7 = try shadow7.write(from: source, dataID: "data-7", source: "This Mac", appVersion: "1.0")
+            let file31 = try DataBackup.make(from: uc)
+            let json31 = try DataBackup.plainJSON(file31)
+            var portableInfo31 = DataBackup.portableInfo(file31)
+            portableInfo31.accounts = snapshot7.accounts
+            portableInfo31.transactions = snapshot7.transactions
+            let base31 = Date.now
+            check("S31 a portable file is written when it matches the snapshot", try shadow7.writePortable(json: json31, info: portableInfo31, matching: snapshot7, appVersion: "1.0", now: base31))
+            let listed31 = shadow7.portableVersions()
+            check("S31 it is listed, sealed, and says what it is without opening it", listed31.count == 1 && SealedFile.isIntact(listed31[0].url)
+                  && (try? SealedFile.readHeader(listed31[0].url))?.kind == "backup" && listed31[0].info.summary == file31.summary)
+            check("S31 it is not readable as JSON", (try? JSONSerialization.jsonObject(with: Data(contentsOf: listed31[0].url))) == nil)
+            check("S31 and it reads back as the same backup", (try? DataBackup.decode(Data(contentsOf: listed31[0].url)).summary) == file31.summary)
+            var other31 = portableInfo31
+            other31.transactions += 1
+            check("S31 one that doesn't match the snapshot is skipped", try shadow7.writePortable(json: json31, info: other31, matching: snapshot7, appVersion: "1.0", now: base31.addingTimeInterval(1)) == false && shadow7.portableVersions().count == 1)
+            for step in 2...8 { try shadow7.writePortable(json: json31, info: portableInfo31, matching: snapshot7, appVersion: "1.0", now: base31.addingTimeInterval(Double(step) * 60)) }
+            let kept31 = shadow7.portableVersions()
+            check("S31 only the newest five are kept, newest first", kept31.count == ShadowFolder.keepPortable && kept31 == kept31.sorted { $0.info.savedAt > $1.info.savedAt }, "\(kept31.count)")
+            check("S31 the snapshot and the older snapshots are not touched by it", shadow7.readInfo() == snapshot7)
+            var broken31 = try Data(contentsOf: kept31[0].url)
+            broken31[broken31.count / 2] ^= 0xFF
+            try broken31.write(to: kept31[0].url)
+            check("S31 a damaged portable file is noticed and the next one is offered", !shadow7.isGood(kept31[0]) && shadow7.newestGoodPortable()?.url == kept31[1].url)
+            check("S31 every file in the backup copy is in Oinkly Budget's formats", { () -> Bool in
+                guard let walker = manager.enumerator(at: shadow7.url, includingPropertiesForKeys: [.isDirectoryKey]) else { return false }
+                for case let item as URL in walker where (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true {
+                    if !["pigdata", "pig"].contains(item.pathExtension) { return false }
+                }
+                return true
+            }())
+            // Restoring from the portable file
+            let freshContainer = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
+            if let good31 = shadow7.newestGoodPortable() {
+                let decoded31 = try DataBackup.decode(Data(contentsOf: good31.url))
+                try DataBackup.restore(decoded31, into: freshContainer.mainContext)
+                check("S31 restoring from it brings the accounts back", ((try? freshContainer.mainContext.fetch(FetchDescriptor<Account>())) ?? []).filter { $0.isLive && !$0.isDefault }.count == file31.accounts.filter { $0.isDefault != true }.count)
+            }
+            // A folder made under the old name is moved to the new one
+            let oldParent = root.appendingPathComponent("old-name-parent", isDirectory: true)
+            let oldFolder = oldParent.appendingPathComponent("Oinkly Budget Shadow Copy", isDirectory: true)
+            try manager.createDirectory(at: oldFolder, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: oldFolder.appendingPathComponent("marker.pigdata"))
+            let migrated = ShadowFolder(inside: oldParent)
+            check("S31 a folder from the shadow copy days is moved to the new name", migrated.exists && !manager.fileExists(atPath: oldFolder.path) && manager.fileExists(atPath: migrated.url.appendingPathComponent("marker.pigdata").path))
         } catch {
             check("no error", false, error.localizedDescription)
         }

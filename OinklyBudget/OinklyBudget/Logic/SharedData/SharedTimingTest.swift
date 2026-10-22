@@ -1,6 +1,7 @@
 #if DEBUG
 import Foundation
 import SQLite3
+import SwiftData
 
 /// `-sharedTimingTest <transactions>` makes a large copy of this Mac's own data (by repeating its transactions) in a
 /// throwaway folder and times the steps of sharing on it, then quits. Never touches the real data. Debug only.
@@ -24,6 +25,21 @@ enum SharedTimingTest {
             let counts = try SQLiteStore.counts(of: big)
             let size = (try? manager.attributesOfItem(atPath: big.path)[.size] as? Int) ?? 0
             NSLog("TIMING: test data has \(counts["ZTRANSACTION"] ?? 0) transactions, \(counts.values.reduce(0, +)) rows, \(size / 1_000_000) MB")
+
+            // The backup copy: the snapshot and the portable .pig file
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+            let bigCopy = root.appendingPathComponent("big-open/OinklyBudget.store")
+            try manager.createDirectory(at: bigCopy.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try manager.copyItem(at: big, to: bigCopy)
+            let container = try ModelContainer(for: schema, migrationPlan: OinklyBudgetMigrationPlan.self, configurations: ModelConfiguration(schema: schema, url: bigCopy, cloudKitDatabase: .none))
+            let backupFile = try time("portable file: read everything into a backup (main thread)") { try DataBackup.make(from: container.mainContext) }
+            let backupJSON = try time("portable file: turn it into JSON (main thread)") { try DataBackup.plainJSON(backupFile) }
+            NSLog("TIMING: the JSON is \(backupJSON.count / 1_000_000) MB")
+            let backupCopy = ShadowFolder(inside: root.appendingPathComponent("backup-copy", isDirectory: true))
+            let snapshotInfo = try time("backup copy: snapshot and seal (background)") { try backupCopy.write(from: big, dataID: "timing", source: "This Mac", appVersion: "1.0") }
+            try time("backup copy: seal and write the portable file (background)") { try backupCopy.writePortable(json: backupJSON, info: DataBackup.portableInfo(backupFile), matching: snapshotInfo, appVersion: "1.0") }
+            func kilobytes(_ url: URL?) -> Int { url.flatMap { try? manager.attributesOfItem(atPath: $0.path)[.size] as? Int }.map { $0 / 1_000 } ?? 0 }
+            NSLog("TIMING: sealed snapshot \(kilobytes(backupCopy.storeURL)) KB, sealed portable file \(kilobytes(backupCopy.portableVersions().first?.url)) KB")
 
             let folder = SharedDataFolder(url: root.appendingPathComponent("shared", isDirectory: true))
             try folder.ensureFolder()

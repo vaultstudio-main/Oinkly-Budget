@@ -6,12 +6,12 @@ import AppKit
 enum StartupState {
     static var hasRun = false
     static var databaseError: Error?
-    /// Set when the app starts on a stand-in database to ask the person something first: whether to restore the shadow copy.
+    /// Set when the app starts on a stand-in database to ask the person something first: whether to restore the backup copy.
     static var shadowFinding: ShadowFinding?
 
     /// True while the app is on a stand-in database (waiting for shared data, a data file that can't open, or a question
-    /// about the shadow copy). Nothing that reads the data may act then: it would see nothing and clear reminders, the
-    /// widget and the shadow copy.
+    /// about the backup copy). Nothing that reads the data may act then: it would see nothing and clear reminders, the
+    /// widget and the backup copy.
     @MainActor
     static var isHoldingPlace: Bool { databaseError != nil || shadowFinding != nil || SharedDataSession.shared.decision != nil }
 }

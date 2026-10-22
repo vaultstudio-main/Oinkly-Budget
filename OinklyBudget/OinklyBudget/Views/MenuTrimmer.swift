@@ -143,7 +143,7 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
             }
         }
         ShadowCopyManager.shared.start()
-        // Say what happened after restoring from the shadow copy.
+        // Say what happened after restoring from the backup copy.
         Task { @MainActor in
             guard let note = UserDefaults.standard.string(forKey: "shadowRestoreNote") else { return }
             UserDefaults.standard.removeObject(forKey: "shadowRestoreNote")
@@ -154,7 +154,7 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
             }
             guard let window else { return }
             let alert = NSAlert()
-            alert.messageText = "Shadow copy"
+            alert.messageText = "Backup copy"
             alert.informativeText = note
             _ = await alert.beginSheetModal(for: window)
         }
@@ -216,7 +216,7 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
         Task { @MainActor in
             // Saving the shared data lets go of the lock, so the next user can open it.
             await shared.finishForQuit()
-            // The last changes go into the shadow copy too.
+            // The last changes go into the backup copy too.
             await shadow.copyForQuit()
             NSApp.reply(toApplicationShouldTerminate: true)
         }
@@ -260,14 +260,14 @@ enum BackupOpener {
         do {
             file = try DataBackup.decode(try Data(contentsOf: url))
         } catch {
-            show(title: "Couldn't open that backup", text: error.localizedDescription)
+            show(title: "Couldn't open that file", text: error.localizedDescription)
             return
         }
 
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Replace everything with this backup?"
+        alert.messageText = "Replace everything with this file?"
         alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Oinkly Budget is erased first, and this can't be undone."
         alert.addButton(withTitle: "Replace Everything")
         alert.addButton(withTitle: "Cancel")
@@ -276,10 +276,10 @@ enum BackupOpener {
         DataDeletion.afterLeavingAccountPages {
             do {
                 try DataBackup.restore(file, into: container.mainContext)
-                show(title: "Backup restored", text: "Restored \(file.summary).")
+                show(title: "Data imported", text: "Imported \(file.summary).")
             } catch {
                 container.mainContext.rollback()
-                show(title: "Couldn't restore the backup", text: error.localizedDescription)
+                show(title: "Couldn't import the file", text: error.localizedDescription)
             }
         }
     }

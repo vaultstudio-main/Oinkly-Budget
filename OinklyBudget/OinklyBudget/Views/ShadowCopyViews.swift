@@ -4,15 +4,15 @@ import AppKit
 
 // MARK: Status bar
 
-/// The one status in the bottom bar for the data's safety: this Mac's database and the shadow copy together, in words and a
-/// dot. Green when everything is saved and the shadow copy is up to date, yellow while something is being written,
-/// orange when the shadow copy needs attention (including when it isn't set up), red when saving or copying keeps failing.
+/// The one status in the bottom bar for the data's safety: this Mac's database and the backup copy together, in words and a
+/// dot. Green when everything is saved and the backup copy is up to date, yellow while something is being written,
+/// orange when the backup copy needs attention (including when it isn't set up), red when saving or copying keeps failing.
 struct ShadowDatabaseStatusLabel: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     private var database: DatabaseStatus { DatabaseStatus.shared }
     @Environment(\.openSettings) private var openSettings
 
-    static let name = "Shadow Copy Database"
+    static let name = "Backup Copy Database"
 
     var body: some View {
         if !ScreenshotMode.isOn {
@@ -35,7 +35,7 @@ struct ShadowDatabaseStatusLabel: View {
         }
     }
 
-    /// Opens Settings on Data & Backup and scrolls down to the Shadow Copy part.
+    /// Opens Settings on Data & Backup and scrolls down to the Backup Copy part.
     private func showShadowCopySettings() {
         UserDefaults.standard.set("data", forKey: MacSettingsView.tabKey)
         manager.revealRequested = true
@@ -49,8 +49,8 @@ struct ShadowDatabaseStatusLabel: View {
         var detail: String
     }
 
-    /// What to show for this Mac's database and the shadow copy together. The worst of the two wins: a database problem,
-    /// then a shadow copy that keeps failing, then a shadow copy that needs attention (not set up counts), then work in
+    /// What to show for this Mac's database and the backup copy together. The worst of the two wins: a database problem,
+    /// then a backup copy that keeps failing, then a backup copy that needs attention (not set up counts), then work in
     /// progress, then all well. While sharing, the sharing dot says whether the data is saved, so only a database problem
     /// counts here.
     static func look(database: DatabaseStatus.State, lastSaved: Date? = nil, shadow: ShadowCopyManager.Status, sharing: Bool, now: Date = .now) -> Look {
@@ -60,21 +60,21 @@ struct ShadowDatabaseStatusLabel: View {
         }
         switch shadow {
         case .failed(let why):
-            return Look(color: Theme.red, text: "Shadow Copy · Problem", detail: "Copying keeps failing: \(why) Your data is not affected.")
+            return Look(color: Theme.red, text: "Backup Copy · Problem", detail: "Copying keeps failing: \(why) Your data is not affected.")
         case .notSetUp:
             return Look(color: .orange, text: "\(name) · Not set up",
-                        detail: "A shadow copy keeps a second copy of your data in a folder you choose. Click to set it up.")
+                        detail: "A backup copy keeps a second copy of your data in a folder you choose. Click to set it up.")
         case .folderMissing:
             return Look(color: .orange, text: "\(name) · Folder not found",
-                        detail: "The folder for your shadow copy can't be found. It may be on a drive that isn't connected. Click to choose another.")
+                        detail: "The folder for your backup copy can't be found. It may be on a drive that isn't connected. Click to choose another.")
         case .otherData:
             return Look(color: .orange, text: "\(name) · Other data",
-                        detail: "The shadow copy in that folder is of other data, so it was left alone. Click to start a new one.")
+                        detail: "The backup copy in that folder is of other data, so it was left alone. Click to start a new one.")
         case .behind(let when):
-            let detail = when.map { "The last shadow copy was \($0.formatted(date: .abbreviated, time: .shortened)). Click to copy now." } ?? "No shadow copy has been made yet. Click to copy now."
+            let detail = when.map { "The last backup copy was \($0.formatted(date: .abbreviated, time: .shortened)). Click to copy now." } ?? "No backup copy has been made yet. Click to copy now."
             return Look(color: .orange, text: "\(name) · Out of date", detail: detail)
         case .copying:
-            return Look(color: .yellow, text: "\(name) · Copying…", detail: "Your shadow copy is being updated.")
+            return Look(color: .yellow, text: "\(name) · Copying…", detail: "Your backup copy is being updated.")
         case .upToDate(let when):
             if !sharing, case .unsaved = database {
                 return Look(color: .yellow, text: "\(name) · Saving…", detail: "Your changes are being saved.")
@@ -82,7 +82,7 @@ struct ShadowDatabaseStatusLabel: View {
             let ago = RelativeDateTimeFormatter.shadow.localizedString(for: when, relativeTo: now)
             let saved = lastSaved.map { " Last saved on this Mac \($0.formatted(date: .omitted, time: .shortened))." } ?? ""
             return Look(color: Theme.green, text: "\(name) · Copied \(ago)",
-                        detail: "Everything is saved on this Mac and your shadow copy is up to date, copied \(when.formatted(date: .abbreviated, time: .shortened)).\(saved)")
+                        detail: "Everything is saved on this Mac and your backup copy is up to date, copied \(when.formatted(date: .abbreviated, time: .shortened)).\(saved)")
         }
     }
 }
@@ -98,15 +98,15 @@ extension RelativeDateTimeFormatter {
 
 // MARK: First time
 
-/// Offered once the person has put some data in: what a shadow copy is, and that it is not encrypted.
+/// Offered once the person has put some data in: what a backup copy is, and that it is not encrypted.
 struct ShadowSetupSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Protect your data with a shadow copy", systemImage: "shield.lefthalf.filled")
+            Label("Protect your data with a backup copy", systemImage: "shield.lefthalf.filled")
                 .font(.title3.weight(.semibold))
-            Text("A shadow copy is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
+            Text("A backup copy is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
             Text("It is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -128,7 +128,7 @@ struct ShadowSetupSheet: View {
 
 // MARK: Settings
 
-/// Settings ▸ Data & Backup ▸ Shadow Copy.
+/// Settings ▸ Data & Backup ▸ Backup Copy.
 struct ShadowCopySection: View {
     /// What Settings scrolls to when the status in the bottom bar is clicked.
     static let scrollID = "shadowCopySection"
@@ -144,7 +144,7 @@ struct ShadowCopySection: View {
             } else {
                 HStack(alignment: .center, spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Keep a Shadow Copy").font(.body.weight(.medium))
+                        Text("Keep a Backup Copy").font(.body.weight(.medium))
                         Text("A second copy of your data in a folder you choose, kept up to date on its own.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
@@ -153,14 +153,14 @@ struct ShadowCopySection: View {
                 }
             }
         } header: {
-            Text("Shadow Copy")
+            Text("Backup Copy")
         } footer: {
-            Text("The shadow copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
+            Text("The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
         .sheet(isPresented: $restoring) { ShadowRestoreSheet() }
-        .confirmationDialog("Turn off the shadow copy?", isPresented: $confirmingOff, titleVisibility: .visible) {
+        .confirmationDialog("Turn off the backup copy?", isPresented: $confirmingOff, titleVisibility: .visible) {
             Button("Turn Off", role: .destructive) { manager.turnOff() }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -176,15 +176,18 @@ struct ShadowCopySection: View {
         if manager.versionCount > 0 {
             LabeledContent("Kept", value: "\(manager.versionCount) cop\(manager.versionCount == 1 ? "y" : "ies"), \(ByteCountFormatter.string(fromByteCount: manager.size, countStyle: .file))")
         }
+        if let portable = manager.lastPortable {
+            LabeledContent("Portable file", value: "\(portable.formatted(date: .abbreviated, time: .shortened)), \(manager.portableCount) kept")
+        }
         if case .otherData = manager.status {
-            Button("Start a New Shadow Copy Here", role: .destructive) { Task { await manager.replaceExisting() } }
+            Button("Start a New Backup Copy Here", role: .destructive) { Task { await manager.replaceExisting() } }
         }
         if SharedDataSession.isEnabled {
-            Text("While sharing, the shadow copy is made from the shared data each time it is saved.")
+            Text("While sharing, the backup copy is made from the shared data each time it is saved.")
                 .font(.footnote).foregroundStyle(.secondary)
         }
         HStack {
-            Button("Copy Now") { Task { await manager.copyNow(onlyIfChanged: false) } }
+            Button("Copy Now") { Task { await manager.copyNow(onlyIfChanged: false, portable: .always) } }
             Button("Show in Finder") { manager.revealInFinder() }
             Button("Restore…") { restoring = true }.disabled(SharedDataSession.isEnabled)
             Button("Change Folder…") { manager.chooseFolder() }
@@ -200,7 +203,7 @@ struct ShadowCopySection: View {
         case .upToDate: "Up to date"
         case .behind: "Out of date: changes are waiting to be copied"
         case .folderMissing: "The folder can't be found"
-        case .otherData: "The shadow copy in that folder is of other data"
+        case .otherData: "The backup copy in that folder is of other data"
         case .failed(let why): "Copying keeps failing: \(why)"
         }
     }
@@ -224,21 +227,23 @@ struct ShadowCopySection: View {
     }
 }
 
-/// The copies in the shadow folder, newest first, each with a button to restore it.
+/// The copies in the backup copy folder, newest first, each with a button to restore it.
 struct ShadowRestoreSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var versions: [ShadowVersion]?
+    @State private var portables: [PortableVersion] = []
     @State private var good: Set<URL> = []
     @State private var choice: ShadowVersion?
+    @State private var portableChoice: PortableVersion?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Restore from the shadow copy").font(.title3.weight(.semibold))
+            Text("Restore from the backup copy").font(.title3.weight(.semibold))
             Text("This replaces the data on this Mac with the copy you choose. What is there now is kept first in Application Support ▸ Backups.")
                 .font(.callout).foregroundStyle(.secondary)
             if let versions {
                 if versions.isEmpty {
-                    Text("There are no copies in the shadow folder yet.")
+                    Text("There are no copies in the backup copy folder yet.")
                 } else {
                     List(versions) { version in
                         HStack {
@@ -256,7 +261,27 @@ struct ShadowRestoreSheet: View {
                             }
                         }
                     }
-                    .frame(height: 260)
+                    .frame(height: portables.isEmpty ? 260 : 190)
+                }
+                if !portables.isEmpty {
+                    Text("Portable files").font(.headline).padding(.top, 4)
+                    Text("Used when no snapshot above is usable, or to go back across a version change. Includes your settings.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    List(portables) { file in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(file.info.savedAt.formatted(date: .abbreviated, time: .shortened)).font(.body.weight(.medium))
+                                Text("\(file.info.summary) · \(file.info.source)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            Spacer()
+                            if good.contains(file.url) {
+                                Button("Restore…") { portableChoice = file }
+                            } else {
+                                Text("Checking…").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .frame(height: 130)
                 }
             } else {
                 ProgressView("Looking…")
@@ -269,6 +294,16 @@ struct ShadowRestoreSheet: View {
         .padding(20)
         .frame(width: 520)
         .task { await load() }
+        .confirmationDialog("Restore this portable file?", isPresented: Binding(get: { portableChoice != nil }, set: { if !$0 { portableChoice = nil } }), titleVisibility: .visible) {
+            Button("Restore and Restart", role: .destructive) {
+                if let portableChoice, ShadowCopyManager.shared.requestRestore(portable: portableChoice) { dismiss() }
+            }
+            Button("Cancel", role: .cancel) { portableChoice = nil }
+        } message: {
+            if let portableChoice {
+                Text("Your data becomes the file from \(portableChoice.info.savedAt.formatted(date: .abbreviated, time: .shortened)), \(portableChoice.info.summary). Anything you did after that is not in it. A copy of the current data is kept first.")
+            }
+        }
         .confirmationDialog("Restore this copy?", isPresented: Binding(get: { choice != nil }, set: { if !$0 { choice = nil } }), titleVisibility: .visible) {
             Button("Restore and Restart", role: .destructive) {
                 if let choice, ShadowCopyManager.shared.requestRestore(choice) { dismiss() }
@@ -287,23 +322,31 @@ struct ShadowRestoreSheet: View {
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         let folder = ShadowFolder(inside: parent)
         let all = await Task.detached { folder.allVersions() }.value
+        let files = await Task.detached { folder.portableVersions() }.value
         versions = all
+        portables = files
         for version in all {
             let ok = await Task.detached { folder.isGood(version) }.value
             if ok { good.insert(version.url) }
+        }
+        for file in files {
+            let ok = await Task.detached { folder.isGood(file) }.value
+            if ok { good.insert(file.url) }
         }
     }
 }
 
 // MARK: When something looks wrong at start-up
 
-/// Shown instead of the app when the shadow copy and the data disagree in a way that needs a decision: the data looks
-/// empty or much smaller than the shadow copy, or can't be read. Nothing is opened or changed until the person chooses.
+/// Shown instead of the app when the backup copy and the data disagree in a way that needs a decision: the data looks
+/// empty or much smaller than the backup copy, or can't be read. Nothing is opened or changed until the person chooses.
 struct ShadowRescueView: View {
     let finding: ShadowFinding
 
     @State private var best: ShadowVersion?
     @State private var versions: [ShadowVersion] = []
+    @State private var bestPortable: PortableVersion?
+    @State private var portables: [PortableVersion] = []
     @State private var loaded = false
 
     var body: some View {
@@ -315,10 +358,13 @@ struct ShadowRescueView: View {
                 Text(finding.title).font(.headline).foregroundStyle(.white).multilineTextAlignment(.center)
                 Text(explanation).font(.callout).foregroundStyle(.white.opacity(0.9)).multilineTextAlignment(.center).frame(maxWidth: 400)
                 if let best {
-                    Text("Newest good shadow copy: \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.accounts) accounts and \(best.info.transactions.formatted()) transactions.")
+                    Text("Newest good backup copy: \(best.info.savedAt.formatted(date: .abbreviated, time: .shortened)), with \(best.info.accounts) accounts and \(best.info.transactions.formatted()) transactions.")
+                        .font(.callout.weight(.medium)).foregroundStyle(.white).multilineTextAlignment(.center).frame(maxWidth: 400)
+                } else if let bestPortable {
+                    Text("No good snapshot was found, but the portable file from \(bestPortable.info.savedAt.formatted(date: .abbreviated, time: .shortened)) is good: \(bestPortable.info.summary).")
                         .font(.callout.weight(.medium)).foregroundStyle(.white).multilineTextAlignment(.center).frame(maxWidth: 400)
                 } else if loaded {
-                    Text("No good copy was found in the shadow folder.").font(.callout.weight(.medium)).foregroundStyle(.white)
+                    Text("No good copy was found in the backup copy folder.").font(.callout.weight(.medium)).foregroundStyle(.white)
                 } else {
                     ProgressView().tint(.white)
                 }
@@ -333,13 +379,13 @@ struct ShadowRescueView: View {
     private var explanation: String {
         switch finding {
         case .dataLooksEmpty(let accounts, let transactions):
-            "There is nothing in your data, but the shadow copy has \(accounts) accounts and \(transactions.formatted()) transactions. The data may have been erased or lost."
+            "There is nothing in your data, but the backup copy has \(accounts) accounts and \(transactions.formatted()) transactions. The data may have been erased or lost."
         case .dataMuchSmaller(let have, let shadow):
-            "Your data has \(have.formatted()) transactions and the shadow copy has \(shadow.formatted()). Something may have gone missing."
+            "Your data has \(have.formatted()) transactions and the backup copy has \(shadow.formatted()). Something may have gone missing."
         case .dataUnreadable(let why):
             "Oinkly Budget couldn't read your data (\(why)). Nothing has been changed."
         case .otherData:
-            "The shadow copy in your folder is of other data."
+            "The backup copy in your folder is of other data."
         default:
             ""
         }
@@ -355,12 +401,22 @@ struct ShadowRescueView: View {
         HStack(spacing: 10) {
             if let best {
                 Button("Restore It") { _ = ShadowCopyManager.shared.requestRestore(best, countdown: false) }.keyboardShortcut(.defaultAction)
+            } else if let bestPortable {
+                Button("Restore It") { _ = ShadowCopyManager.shared.requestRestore(portable: bestPortable, countdown: false) }.keyboardShortcut(.defaultAction)
             }
-            if versions.count > 1 {
-                Menu("Choose an Older Copy") {
+            if versions.count > 1 || !portables.isEmpty {
+                Menu("Choose Another Copy") {
                     ForEach(versions) { version in
                         Button("\(version.info.savedAt.formatted(date: .abbreviated, time: .shortened)) · \(version.info.transactions.formatted()) transactions") {
                             _ = ShadowCopyManager.shared.requestRestore(version, countdown: false)
+                        }
+                    }
+                    if !portables.isEmpty {
+                        Divider()
+                        ForEach(portables) { file in
+                            Button("Portable file · \(file.info.savedAt.formatted(date: .abbreviated, time: .shortened)) · \(file.info.transactions.formatted()) transactions") {
+                                _ = ShadowCopyManager.shared.requestRestore(portable: file, countdown: false)
+                            }
                         }
                     }
                 }
@@ -379,11 +435,13 @@ struct ShadowRescueView: View {
     private func load() async {
         let all = await ShadowCopyManager.shared.versions()
         versions = all
+        portables = await ShadowCopyManager.shared.portableVersions()
         guard let parent = ShadowCopyManager.shared.resolveParent() else { loaded = true; return }
         let accessing = parent.startAccessingSecurityScopedResource()
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         let folder = ShadowFolder(inside: parent)
         best = await Task.detached { folder.newestGoodVersion() }.value
+        if best == nil { bestPortable = await Task.detached { folder.newestGoodPortable() }.value }
         loaded = true
     }
 }

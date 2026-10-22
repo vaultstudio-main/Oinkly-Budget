@@ -9,6 +9,8 @@ struct OinklyBudgetApp: App {
 
     init() {
         let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+        // A restore from a portable file waits here until the fresh data file is open.
+        var portableRestore: (file: BackupFile?, note: String?) = (nil, nil)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is
         // added to the app, so turn sync on here, deliberately, when the time comes.
         // The first time this version opens the data file, keep a copy of it as it was.
@@ -26,10 +28,11 @@ struct OinklyBudgetApp: App {
             // Taking screenshots: a throwaway data file, so no real data is shown or changed.
             configuration = ModelConfiguration(schema: schema, url: ScreenshotMode.storeURL, cloudKitDatabase: .none)
         } else {
-        // A restore from the shadow copy that was asked for before the restart happens now, before the data is opened.
+        // A restore from the backup copy that was asked for before the restart happens now, before the data is opened.
         if let note = ShadowCopyManager.performPendingRestore(localStore: AppStore.localStoreURL(for: schema)) {
             UserDefaults.standard.set(note, forKey: "shadowRestoreNote")
         }
+        portableRestore = ShadowCopyManager.preparePortableRestore(localStore: AppStore.localStoreURL(for: schema))
         StoreSafetyCopy.makeIfNeeded(localStore: AppStore.localStoreURL(for: schema))
         #if DEBUG
         SharedDataSession.enableFromLaunchArgumentIfRequested(localStore: AppStore.localStoreURL(for: schema))
@@ -42,7 +45,7 @@ struct OinklyBudgetApp: App {
         case .waiting:
             configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         case .local:
-            // The shadow copy gets a look first: if this Mac's data is empty, much smaller or can't be read while the shadow
+            // The backup copy gets a look first: if this Mac's data is empty, much smaller or can't be read while the shadow
             // copy has plenty, the app asks before opening anything.
             if let finding = ShadowCopyManager.launchFinding(localStore: AppStore.localStoreURL(for: schema)) {
                 StartupState.shadowFinding = finding
@@ -61,13 +64,23 @@ struct OinklyBudgetApp: App {
             // Keep going with throwaway storage so the boot window can explain what went wrong.
             // The main window never opens in this state.
             StartupState.databaseError = error
-            // With a shadow copy set up, the boot screen can offer to restore from it.
+            // With a backup copy set up, the boot screen can offer to restore from it.
             if ShadowCopyManager.isSetUpNow { StartupState.shadowFinding = .dataUnreadable(error.localizedDescription) }
             container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
         }
         // Anything the upgrade or the repeating transactions change at launch has to reach the shared data too.
         let launchSaves = NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: nil) { _ in
             MainActor.assumeIsolated { SharedDataSession.shared.noteSaved() }
+        }
+        if let file = portableRestore.file {
+            var note = portableRestore.note ?? ""
+            do { try DataBackup.restore(file, into: container.mainContext) } catch {
+                note = "The portable file couldn't be restored: \(error.localizedDescription)"
+                container.mainContext.rollback()
+            }
+            UserDefaults.standard.set(note, forKey: "shadowRestoreNote")
+        } else if let note = portableRestore.note {
+            UserDefaults.standard.set(note, forKey: "shadowRestoreNote")
         }
         SchemaUpgrade.run(in: container.mainContext)
         // Repeating transactions that came due while the app was closed.

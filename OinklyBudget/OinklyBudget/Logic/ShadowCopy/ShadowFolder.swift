@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-/// What the shadow copy's latest file is: which save it matches and how much data it holds.
+/// What the backup copy's latest file is: which save it matches and how much data it holds.
 nonisolated struct ShadowInfo: Codable, Equatable, Sendable {
     var formatVersion: Int
     /// The database shape (OinklyBudgetSchemaV4 is 4).
@@ -10,7 +10,7 @@ nonisolated struct ShadowInfo: Codable, Equatable, Sendable {
     var copyNumber: Int
     var savedAt: Date
     var appVersion: String
-    /// Names this data, so a shadow copy of other data is noticed.
+    /// Names this data, so a backup copy of other data is noticed.
     var dataID: String
     /// "This Mac" or "Shared data".
     var source: String
@@ -21,7 +21,26 @@ nonisolated struct ShadowInfo: Codable, Equatable, Sendable {
     var transactions: Int
 }
 
-/// One of the files in a shadow copy, the latest or an older one.
+/// What a sealed .pig file says about itself in its header.
+nonisolated struct PortableInfo: Codable, Equatable, Sendable {
+    var savedAt: Date
+    var appVersion: String
+    /// "This Mac" or "Shared data".
+    var source: String
+    var accounts: Int
+    var transactions: Int
+    /// A short description of what is in it, such as "6 accounts, 1,240 transactions".
+    var summary: String
+}
+
+/// One of the .pig files in a backup copy's Portable files folder.
+nonisolated struct PortableVersion: Identifiable, Equatable, Sendable {
+    var url: URL
+    var info: PortableInfo
+    var id: URL { url }
+}
+
+/// One of the files in a backup copy, the latest or an older one.
 nonisolated struct ShadowVersion: Identifiable, Equatable, Sendable {
     var url: URL
     var info: ShadowInfo
@@ -37,38 +56,48 @@ nonisolated enum ShadowError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unavailable(let why): "The shadow copy folder can't be used: \(why)"
+        case .unavailable(let why): "The backup copy folder can't be used: \(why)"
         case .verifyFailed(let why): "The copy didn't pass its safety check, so nothing was changed: \(why)"
-        case .copyFailed(let why): "The shadow copy couldn't be written: \(why)"
-        case .newerFormat: "That shadow copy was made by a newer version of Oinkly Budget. Update the app and try again."
+        case .copyFailed(let why): "The backup copy couldn't be written: \(why)"
+        case .newerFormat: "That backup copy was made by a newer version of Oinkly Budget. Update the app and try again."
         }
     }
 }
 
-/// A shadow copy on disk: a folder inside the one the person chose, holding the latest copy of the data, the receipts and
+/// A backup copy on disk: a folder inside the one the person chose, holding the latest copy of the data, the receipts and
 /// a few older copies. Every file in it is in Oinkly Budget's own sealed format (see `SealedFile`), so only Oinkly Budget
 /// can read them, a damaged one is told from a good one without opening it, and only the owner can open the folder. What
 /// is in a copy is only ever a complete, checked copy of the data file.
 nonisolated struct ShadowFolder: Sendable {
     let url: URL
 
-    static let folderName = "Oinkly Budget Shadow Copy"
+    static let folderName = "Oinkly Budget Backup Copy"
     static let storeName = "OinklyBudget.pigdata"
     static let olderName = "Older copies"
     static let receiptsName = "Receipts"
+    static let portableName = "Portable files"
+    /// How many of the portable .pig files are kept (they carry the receipts inside them, so they are large).
+    static let keepPortable = 5
     static let formatVersion = 1
     static let schemaVersion = 4
     /// The newest older copies kept, and how many days back one per day is kept as well.
     static let keepNewest = 10
     static let keepDays = 7
 
-    /// The shadow copy that lives inside `parent`, the folder the person chose.
-    init(inside parent: URL) { url = parent.appendingPathComponent(Self.folderName, isDirectory: true) }
+    /// The backup copy that lives inside `parent`, the folder the person chose.
+    init(inside parent: URL) {
+        url = parent.appendingPathComponent(Self.folderName, isDirectory: true)
+        // A folder made when this was still called the shadow copy is moved to the new name.
+        let old = parent.appendingPathComponent("Oinkly Budget Shadow Copy", isDirectory: true)
+        let manager = FileManager.default
+        if !manager.fileExists(atPath: url.path), manager.fileExists(atPath: old.path) { try? manager.moveItem(at: old, to: url) }
+    }
     init(at url: URL) { self.url = url }
 
     var storeURL: URL { url.appendingPathComponent(Self.storeName) }
     var olderURL: URL { url.appendingPathComponent(Self.olderName, isDirectory: true) }
     var receiptsURL: URL { url.appendingPathComponent(Self.receiptsName, isDirectory: true) }
+    var portableURL: URL { url.appendingPathComponent(Self.portableName, isDirectory: true) }
 
     private var manager: FileManager { .default }
     var exists: Bool { manager.fileExists(atPath: url.path) }
@@ -106,7 +135,7 @@ nonisolated struct ShadowFolder: Sendable {
     // MARK: Writing
 
     /// Writes a new latest copy of `live`. The copy is made beside the old one, checked against the original, sealed, and
-    /// only then put in place; the old latest becomes an older copy. If anything fails, the shadow copy is left as it was.
+    /// only then put in place; the old latest becomes an older copy. If anything fails, the backup copy is left as it was.
     @discardableResult
     func write(from live: URL, dataID: String, source: String, sharedRevision: Int? = nil, sharedFileID: String? = nil,
                appVersion: String, now: Date = .now) throws -> ShadowInfo {
@@ -191,9 +220,52 @@ nonisolated struct ShadowFolder: Sendable {
         }
     }
 
+    // MARK: Portable files
+
+    /// The portable .pig files, newest first.
+    func portableVersions() -> [PortableVersion] {
+        guard let files = try? manager.contentsOfDirectory(at: portableURL, includingPropertiesForKeys: nil) else { return [] }
+        return files.filter { $0.pathExtension == "pig" && !$0.lastPathComponent.hasPrefix(".") }.compactMap { file in
+            guard let header = try? SealedFile.readHeader(file), header.kind == "backup", let data = header.info,
+                  let info = try? SealedFile.decodeInfo(PortableInfo.self, from: data) else { return nil }
+            return PortableVersion(url: file, info: info)
+        }.sorted { $0.info.savedAt > $1.info.savedAt }
+    }
+
+    func isGood(_ portable: PortableVersion) -> Bool { SealedFile.isIntact(portable.url) }
+
+    func newestGoodPortable() -> PortableVersion? { portableVersions().first { isGood($0) } }
+
+    /// Writes a portable .pig file from a backup's JSON, sealed like every other file here, and keeps the newest few. It
+    /// is only written when what it holds matches the snapshot made at the same moment (same accounts and transactions);
+    /// if the data changed in between, it is skipped and the next copy makes one. Returns whether it was written.
+    @discardableResult
+    func writePortable(json: Data, info: PortableInfo, matching snapshot: ShadowInfo, appVersion: String, now: Date = .now) throws -> Bool {
+        guard info.accounts == snapshot.accounts, info.transactions == snapshot.transactions else { return false }
+        try manager.createDirectory(at: portableURL, withIntermediateDirectories: true)
+        chmod(portableURL.path, 0o700)
+        let stamp = ISO8601DateFormatter().string(from: now).replacingOccurrences(of: ":", with: "-")
+        let destination = portableURL.appendingPathComponent("Oinkly Budget Backup \(stamp).pig")
+        let plain = portableURL.appendingPathComponent(".portable.\(UUID().uuidString).tmp")
+        defer { try? manager.removeItem(at: plain) }
+        do {
+            try json.write(to: plain)
+            try SealedFile.seal(plain, to: destination, kind: "backup", info: try SealedFile.encodeInfo(info), appVersion: appVersion, now: now)
+        } catch {
+            throw ShadowError.copyFailed(error.localizedDescription)
+        }
+        guard SealedFile.isIntact(destination) else {
+            try? manager.removeItem(at: destination)
+            throw ShadowError.verifyFailed("the portable file didn't read back")
+        }
+        let all = portableVersions()
+        for old in all.dropFirst(Self.keepPortable) { try? manager.removeItem(at: old.url) }
+        return true
+    }
+
     // MARK: Receipts
 
-    /// Seals each receipt and photo of `live` that the shadow copy doesn't have yet. They never change once written (each
+    /// Seals each receipt and photo of `live` that the backup copy doesn't have yet. They never change once written (each
     /// has its own unique name), so only new ones are copied.
     private func addReceipts(from live: URL, appVersion: String) throws {
         let source = StoreFiles.supportURL(for: live)
@@ -212,7 +284,7 @@ nonisolated struct ShadowFolder: Sendable {
         }
     }
 
-    /// Unpacks every receipt of the shadow copy into the folder that goes with `store`.
+    /// Unpacks every receipt of the backup copy into the folder that goes with `store`.
     func restoreReceipts(into store: URL) throws {
         guard manager.fileExists(atPath: receiptsURL.path), let walker = manager.enumerator(at: receiptsURL, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
         let destination = StoreFiles.supportURL(for: store)
@@ -253,10 +325,10 @@ nonisolated struct ShadowFolder: Sendable {
         try restoreReceipts(into: target)
     }
 
-    /// Removes the whole shadow copy.
+    /// Removes the whole backup copy.
     func removeAll() { try? manager.removeItem(at: url) }
 
-    /// How much room the shadow copy takes.
+    /// How much room the backup copy takes.
     func size() -> Int64 {
         guard let walker = manager.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
         var total: Int64 = 0
@@ -265,19 +337,19 @@ nonisolated struct ShadowFolder: Sendable {
     }
 }
 
-/// What a look at the data against its shadow copy found.
+/// What a look at the data against its backup copy found.
 nonisolated enum ShadowFinding: Equatable, Sendable {
-    /// The shadow copy is of other data.
+    /// The backup copy is of other data.
     case otherData
-    /// The data is empty and the shadow copy is not.
+    /// The data is empty and the backup copy is not.
     case dataLooksEmpty(shadowAccounts: Int, shadowTransactions: Int)
-    /// The data holds far fewer transactions than the shadow copy.
+    /// The data holds far fewer transactions than the backup copy.
     case dataMuchSmaller(have: Int, shadowTransactions: Int)
     /// The data file can't be read.
     case dataUnreadable(String)
-    /// The shared data is older than the shadow copy.
+    /// The shared data is older than the backup copy.
     case sharedOlder(sharedRevision: Int, shadowRevision: Int)
-    /// The shared data is not the data the shadow copy came from.
+    /// The shared data is not the data the backup copy came from.
     case sharedIsDifferent
     case sharedMissing
     case sharedUnreadable(String)
@@ -287,12 +359,12 @@ nonisolated enum ShadowFinding: Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .otherData: "This shadow copy is of other data"
+        case .otherData: "This backup copy is of other data"
         case .dataLooksEmpty: "Your data looks empty"
-        case .dataMuchSmaller: "Your data has far fewer transactions than the shadow copy"
+        case .dataMuchSmaller: "Your data has far fewer transactions than the backup copy"
         case .dataUnreadable: "Your data can't be read"
-        case .sharedOlder: "The shared data is older than your shadow copy"
-        case .sharedIsDifferent: "The shared data isn't the data your shadow copy came from"
+        case .sharedOlder: "The shared data is older than your backup copy"
+        case .sharedIsDifferent: "The shared data isn't the data your backup copy came from"
         case .sharedMissing: "The shared data can't be found"
         case .sharedUnreadable: "The shared data can't be read"
         }
@@ -300,7 +372,7 @@ nonisolated enum ShadowFinding: Equatable, Sendable {
 }
 
 nonisolated enum ShadowCheck {
-    /// Is this shadow copy the data we have? In sharing, by which shared data it came from; alone, by the data's own ID.
+    /// Is this backup copy the data we have? In sharing, by which shared data it came from; alone, by the data's own ID.
     static func belongs(_ info: ShadowInfo, dataID: String, sharedFileID: String?) -> Bool {
         if let sharedFileID {
             if let theirs = info.sharedFileID { return theirs == sharedFileID }
@@ -309,12 +381,12 @@ nonisolated enum ShadowCheck {
         return info.dataID == dataID
     }
 
-    /// Looks at this Mac's own data file against its shadow copy before the app opens it. Nil means all is well.
+    /// Looks at this Mac's own data file against its backup copy before the app opens it. Nil means all is well.
     static func lookAtOwnData(store: URL, shadow: ShadowFolder, dataID: String) -> ShadowFinding? {
         guard let info = shadow.readInfo(), shadow.hasStore else { return nil }
         guard belongs(info, dataID: dataID, sharedFileID: nil) else { return .otherData }
         guard FileManager.default.fileExists(atPath: store.path) else {
-            // No data file at all while the shadow copy has data: the data was removed.
+            // No data file at all while the backup copy has data: the data was removed.
             return info.transactions > 0 || info.accounts > 1 ? .dataLooksEmpty(shadowAccounts: info.accounts, shadowTransactions: info.transactions) : nil
         }
         let counts: [String: Int]
@@ -332,7 +404,7 @@ nonisolated enum ShadowCheck {
         return nil
     }
 
-    /// Looks at the shared data against the shadow copy before the app opens it. Nil means all is well.
+    /// Looks at the shared data against the backup copy before the app opens it. Nil means all is well.
     static func lookAtSharedData(_ shared: SharedDataFolder, shadow: ShadowFolder, dataID: String) -> ShadowFinding? {
         guard shared.exists, shared.hasData else {
             return shadow.readInfo() != nil && shadow.hasStore ? .sharedMissing : nil
@@ -358,10 +430,10 @@ nonisolated enum ShadowCheck {
     }
 }
 
-/// Putting the shared data back: from a shadow copy, or from the newest good earlier save in the shared folder.
+/// Putting the shared data back: from a backup copy, or from the newest good earlier save in the shared folder.
 nonisolated enum SharedRescue {
-    /// Replaces the shared data with `version` of the shadow copy. The folder is made again if it is gone; whatever is
-    /// there now is kept as an earlier save. Carries on the shadow copy's numbering and data ID, so the two agree.
+    /// Replaces the shared data with `version` of the backup copy. The folder is made again if it is gone; whatever is
+    /// there now is kept as an earlier save. Carries on the backup copy's numbering and data ID, so the two agree.
     static func rebuild(_ shared: SharedDataFolder, from version: ShadowVersion, in shadow: ShadowFolder, me: SharedLock, appVersion: String,
                         staging: URL) throws {
         guard shadow.isGood(version) else { throw ShadowError.verifyFailed("that copy didn't pass its check") }
@@ -373,7 +445,7 @@ nonisolated enum SharedRescue {
         try shadow.unpack(version, to: staged)
         try shadow.restoreReceipts(into: staged)
         try put(staged, into: shared, me: me, appVersion: appVersion, fileID: version.info.sharedFileID, revisionAtLeast: version.info.sharedRevision,
-                note: "put back from the shadow copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))")
+                note: "put back from the backup copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))")
     }
 
     /// Makes the newest good earlier save in the shared folder the current data again. Returns false when there is none.

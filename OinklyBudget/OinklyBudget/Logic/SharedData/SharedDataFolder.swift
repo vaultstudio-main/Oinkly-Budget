@@ -398,7 +398,7 @@ nonisolated struct SharedDataFolder: Sendable {
         // shared data exactly as it was.
         try addReceipts(from: working, appVersion: appVersion)
 
-        // Putting data back from a shadow copy carries on that copy's numbering, so the two still agree afterwards.
+        // Putting data back from a backup copy carries on that copy's numbering, so the two still agree afterwards.
         let info = SharedInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, revision: max((current?.revision ?? 0) + 1, revisionAtLeast ?? 0),
                               savedAt: now, savedBy: name, appVersion: appVersion, fileID: forcedFileID ?? current?.fileID ?? UUID().uuidString,
                               counts: actual, attachments: attachments)

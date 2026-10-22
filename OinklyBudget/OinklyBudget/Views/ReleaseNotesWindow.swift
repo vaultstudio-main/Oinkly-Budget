@@ -18,7 +18,7 @@ enum ReleaseNotes {
                 "Cash is part of the picture. Cash on Hand fills from ATM withdrawals, so what's in your wallet stays honest.",
                 "Mistakes are hard to make. Dates, categories, methods and amounts are changed in one deliberate place, never by a stray click or scroll.",
                 "Receipts and bills travel with the transaction: attach a photo or the PDF, or mark it as having none.",
-                "Backups are one file. Save everything and restore it whole.",
+                "Everything can be exported to one file and imported whole.",
             ]),
             ("Accounts", [
                 "Checking, savings, cash, credit cards, loans, mortgages, investments and assets, all in one place, in a side panel with colored icons and folders by type.",
@@ -67,11 +67,11 @@ enum ReleaseNotes {
                 "Default paper size and export style in Settings.",
             ]),
             ("Your data", [
-                "Data & Backup is one tab: your counts, Export Backup and Restore from Backup, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules, your reminders, your saved CSV import formats and your preferences.",
+                "Data & Backup is one tab: your counts, Export Data and Import Data, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules, your reminders, your saved CSV import formats and your preferences.",
                 "Restoring a backup first saves a copy of what is there now, so it can always be undone.",
                 "Upgrades are safe: a copy of your data is made before the first open, and a file that can't be opened shows an error instead of an empty app.",
                 "A reminder to save a backup once you have a very large number of transactions.",
-                "A shadow copy: a second copy of your data in a folder you choose, kept up to date on its own with a few older versions. If your data goes missing or can't be opened, the app offers to restore from it. A bottom-bar label shows whether it is up to date.",
+                "A backup copy: a second copy of your data in a folder you choose, kept up to date on its own with a few older versions. If your data goes missing or can't be opened, the app offers to restore from it. A bottom-bar label shows whether it is up to date.",
             ]),
             ("Menu bar, reminders and widget", [
                 "The menu bar pop-up lists this month's bills and repeating transactions together, each marked, with the date and days to go. Tick a bill to mark it paid. The number beside the pig counts what is due within three days. Closing the window keeps the app running so the item stays.",

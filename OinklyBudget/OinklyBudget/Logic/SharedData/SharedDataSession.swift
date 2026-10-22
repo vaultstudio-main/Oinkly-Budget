@@ -22,7 +22,7 @@ final class SharedDataSession {
         case heldBy(SharedLock, isStale: Bool)
         case folderProblem(String)
         case failed(String)
-        /// The shared data and the shadow copy disagree; the person decides before anything opens.
+        /// The shared data and the backup copy disagree; the person decides before anything opens.
         case shadowFound(ShadowFinding)
     }
 
@@ -45,7 +45,7 @@ final class SharedDataSession {
     private var baseRevision: Int?
     private var fileID: String?
 
-    /// Which save of which shared data this copy was opened from, for the shadow copy.
+    /// Which save of which shared data this copy was opened from, for the backup copy.
     var shadowSource: (revision: Int, fileID: String)? {
         guard isActive, let baseRevision, let fileID else { return nil }
         return (baseRevision, fileID)
@@ -101,7 +101,7 @@ final class SharedDataSession {
         let folder = SharedDataFolder.standard
         self.folder = folder
         let openAnyway = Self.takeNextLaunchChoice()
-        // The shadow copy gets a look first: missing, damaged, older or different shared data is put to the person.
+        // The backup copy gets a look first: missing, damaged, older or different shared data is put to the person.
         if let finding = ShadowCopyManager.sharedFinding(folder, localStore: AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV4.self))) {
             decision = .shadowFound(finding)
             return .waiting
@@ -204,7 +204,7 @@ final class SharedDataSession {
     /// The other copy has let go: start again, which takes the lock and opens the data.
     func tryAgain() { Self.relaunch() }
 
-    /// Opens the shared data as it is, without asking about the shadow copy this time.
+    /// Opens the shared data as it is, without asking about the backup copy this time.
     func openSharedAsItIs() {
         UserDefaults.standard.set(true, forKey: ShadowCopyManager.skipSharedCheckKey)
         Self.relaunch()
@@ -484,7 +484,7 @@ final class SharedDataSession {
             baseRevision = info.revision
             fileID = info.fileID
             errorMessage = nil
-            // The shadow copy follows each save of the shared data.
+            // The backup copy follows each save of the shared data.
             await ShadowCopyManager.shared.afterSharedSave(revision: info.revision, fileID: info.fileID)
             if release {
                 stopTimers()

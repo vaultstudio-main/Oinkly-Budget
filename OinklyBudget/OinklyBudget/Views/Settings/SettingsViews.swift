@@ -445,20 +445,20 @@ struct DataSettingsView: View {
                 LabeledContent("Memorized payees", value: "\(payees.count)")
             }
 
+            if !ScreenshotMode.isOn { ShadowCopySection() }
+
             Section {
-                backupRow("Export Backup", detail: "Everything in Oinkly Budget in one .pig file: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, and your preferences.", button: "Save") { exportBackup() }
-                backupRow("Restore from Backup", detail: "Restore from a .pig backup file. This replaces everything currently in Oinkly Budget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
+                backupRow("Export Data", detail: "Everything in Oinkly Budget in one .pig file you can keep or move anywhere: accounts, transactions, bills, goals, holdings, budgets, your custom categories and payment methods, your reminders, and your preferences.", button: "Save") { exportBackup() }
+                backupRow("Import Data", detail: "Bring in everything from a .pig file. This replaces everything currently in Oinkly Budget, including custom categories, payment methods and preferences.", button: "Choose") { chooseBackup() }
                 if let message {
                     Label(message, systemImage: messageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
                         .foregroundStyle(messageIsError ? Color.orange : Theme.green)
                 }
             } header: {
-                Text("Backup")
+                Text("Export & Import")
             }
 
             if !ScreenshotMode.isOn { SharedDataSection() }
-
-            if !ScreenshotMode.isOn { ShadowCopySection() }
 
 
             Section {
@@ -481,7 +481,7 @@ struct DataSettingsView: View {
         }
         .formStyle(.grouped)
         .confirmationDialog(
-            "Replace everything with this backup?",
+            "Replace everything with this file?",
             isPresented: Binding(get: { pendingBackup != nil }, set: { if !$0 { pendingBackup = nil } }),
             titleVisibility: .visible
         ) {
@@ -493,16 +493,16 @@ struct DataSettingsView: View {
         .confirmationDialog("Erase everything and quit?", isPresented: $confirmingErase, titleVisibility: .visible) {
             Button("Erase Everything and Quit", role: .destructive, action: erase)
             if ShadowCopyManager.shared.isSetUp {
-                Button("Erase Everything and Delete the Shadow Copy", role: .destructive) {
+                Button("Erase Everything and Delete the Backup Copy", role: .destructive) {
                     ShadowCopyManager.shared.deleteCopies()
                     erase()
                 }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone." + (ShadowCopyManager.shared.isSetUp ? " Your shadow copy stays unless you choose to delete it too, so the erase can still be undone from it." : ""))
+            Text("Every account, transaction, bill, goal, custom category and payment method is deleted, and the app quits. This can't be undone." + (ShadowCopyManager.shared.isSetUp ? " Your backup copy stays unless you choose to delete it too, so the erase can still be undone from it." : ""))
         }
-        // Clicking the status in the bottom bar comes here: scroll to the Shadow Copy part.
+        // Clicking the status in the bottom bar comes here: scroll to the Backup Copy part.
         .onAppear { scrollToShadowCopy(proxy) }
         .onChange(of: ShadowCopyManager.shared.revealRequested) { _, _ in scrollToShadowCopy(proxy) }
         }
@@ -536,18 +536,18 @@ struct DataSettingsView: View {
 
     private func exportBackup() {
         switch BackupExporter.exportWithPanel(from: modelContext) {
-        case .saved(let summary, let name): report("Saved a backup with \(summary) to \(name).")
-        case .failed(let reason): report("Couldn't save the backup: \(reason)", error: true)
+        case .saved(let summary, let name): report("Saved a .pig file with \(summary) to \(name).")
+        case .failed(let reason): report("Couldn't save the file: \(reason)", error: true)
         case nil: break
         }
     }
 
     private func chooseBackup() {
         let panel = NSOpenPanel()
-        // .pig is the backup format. Older backups saved as plain .json still open.
+        // .pig is the export format. Older exports saved as plain .json still open.
         panel.allowedContentTypes = [DataBackup.fileType, .json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Oinkly Budget backup file (.pig)."
+        panel.message = "Choose a Oinkly Budget .pig file."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)
@@ -569,7 +569,7 @@ struct DataSettingsView: View {
                 report("Restored \(file.summary).")
             } catch {
                 modelContext.rollback()
-                report("Couldn't restore the backup: \(error.localizedDescription)", error: true)
+                report("Couldn't import the file: \(error.localizedDescription)", error: true)
             }
         }
     }

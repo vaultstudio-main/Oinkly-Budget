@@ -183,7 +183,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 ## F. Your data
 
 ### F2. Data & Backup settings (Built)
-- One Data & Backup tab: counts, Export Backup and Restore from Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.0 fields.
+- One Data & Backup tab: counts, Export Data and Import Data (`.pig`), Erase All Data, version. The backup now also carries the new 1.0 fields.
 - A reminder to back up once there is a very large number of transactions (a gentle one from 50,000, a firmer one from 100,000).
 - Shots: S-F2.
 

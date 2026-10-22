@@ -113,27 +113,18 @@ struct AccountSetupView: View {
                     Divider().padding(.vertical, 4)
 
                     Button {
-                        restoreFromBackup()
+                        restoreAnything()
                     } label: {
-                        Label("Restore from a Backup", systemImage: "square.and.arrow.down")
+                        Label("Restore…", systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                     .controlSize(.large)
-                    .help("Open a Oinkly Budget backup (.pig) to bring back everything you saved")
+                    .help("Bring back your data from a .pig file, a .pigdata copy, or the folder that holds your backup copy")
 
-                    Text("Already have a .pig backup? Restore it instead of adding accounts by hand.")
+                    Text("Already have your data saved? Restore it from a .pig file, a copy, or your backup copy folder instead of adding accounts by hand.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-
-                    Button {
-                        if let problem = ShadowCopyManager.shared.restoreFromChosenFolder() { shadowProblem = problem }
-                    } label: {
-                        Label("Restore from a Shadow Copy", systemImage: "shield.lefthalf.filled")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
-                    .help("Bring back your data from a shadow copy folder, such as one in iCloud Drive")
 
                     if let shadowProblem {
                         Text(shadowProblem).font(.caption).foregroundStyle(.orange).multilineTextAlignment(.center)
@@ -148,13 +139,28 @@ struct AccountSetupView: View {
         .sheet(item: $newAccountType) { AccountEditView(account: nil, initialType: $0) }
     }
 
-    /// Brings everything back from a .pig backup, then goes straight into the app.
-    private func restoreFromBackup() {
+    /// One way in for everything: a .pig file, a .pigdata copy, or the folder that holds a backup copy.
+    private func restoreAnything() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [DataBackup.fileType, .json]
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Oinkly Budget backup file (.pig)."
+        panel.allowedContentTypes = [.data, .folder]
+        panel.message = "Choose a .pig file, a .pigdata copy, or the folder that contains “\(ShadowFolder.folderName)”."
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        var isFolder: ObjCBool = false
+        FileManager.default.fileExists(atPath: url.path, isDirectory: &isFolder)
+        if isFolder.boolValue {
+            if let problem = ShadowCopyManager.shared.restoreFromFolder(url) { shadowProblem = problem }
+        } else if url.pathExtension.lowercased() == SealedFile.fileExtension {
+            Task { await CopyOpener.offerRestore(of: url) }
+        } else {
+            restoreFromFile(url)
+        }
+    }
+
+    /// Brings everything back from a .pig file, then goes straight into the app.
+    private func restoreFromFile(_ url: URL) {
 
         func show(_ title: String, _ text: String) {
             let alert = NSAlert()
@@ -170,7 +176,7 @@ struct AccountSetupView: View {
             onFinish()
         } catch {
             modelContext.rollback()
-            show("Couldn't restore that backup", error.localizedDescription)
+            show("Couldn't import that file", error.localizedDescription)
         }
     }
 
