@@ -15,6 +15,7 @@ struct PiggybankApp: App {
         #if DEBUG
         SharedFolderSelfTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         ClosingCountdown.runTestIfRequested()
+        WidgetSnapshotWriter.runCheckIfRequested()
         SharedHardeningTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         SharedTimingTest.runIfRequested(localStore: AppStore.localStoreURL(for: schema))
         #endif

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import WidgetKit
+import SwiftUI
 
 /// Keeps the widgets' snapshot up to date. Called when the app opens, when anything is saved, when reminders change
 /// and now and then while it runs. Changes are gathered for a moment so a burst of saves writes the file once.
@@ -38,7 +39,7 @@ enum WidgetSnapshotWriter {
             .sorted { $0.next < $1.next }
 
         let rules = ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live
-        let repeating: [WidgetSnapshot.Repeating] = Recurring.upcoming(rules, days: 30, now: now)
+        let repeating: [WidgetSnapshot.Repeating] = Recurring.upcoming(rules, days: 31, now: now)
             .map { WidgetSnapshot.Repeating(id: $0.id, name: $0.rule.payee, due: $0.date, isOverdue: $0.isOverdue) }
             .sorted { $0.due < $1.due }
 
@@ -65,3 +66,53 @@ extension CustomReminder {
         return calendar.nextDate(after: date, matching: parts, matchingPolicy: .nextTime)
     }
 }
+
+#if DEBUG
+extension WidgetSnapshotWriter {
+    /// `-widgetSnapshotCheck` writes the widget file now, reads it back the way the widget does, logs what is in it, and
+    /// quits. Shows whether the shared App Group folder works and what the widgets are being given. Debug only.
+    @MainActor
+    static func runCheckIfRequested() {
+        guard CommandLine.arguments.contains("-widgetSnapshotCheck") else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2))
+            refresh()
+            if let snapshot = WidgetSnapshot.load() {
+                NSLog("WIDGETCHECK: file read OK. bills \(snapshot.bills.count), repeating \(snapshot.repeating.count), reminders \(snapshot.reminders.count), updated \(snapshot.updated)")
+                NSLog("WIDGETCHECK: lines the widget lists this month: \(WidgetLines.make(snapshot, now: .now).map { "\($0.kind.title): \($0.name)" })")
+            } else {
+                NSLog("WIDGETCHECK: the widget file could not be written or read")
+            }
+            if let flag = CommandLine.arguments.firstIndex(of: "-widgetRender"), flag + 1 < CommandLine.arguments.count {
+                render(to: URL(fileURLWithPath: CommandLine.arguments[flag + 1], isDirectory: true), snapshot: WidgetSnapshot.load())
+            }
+            exit(0)
+        }
+    }
+
+    /// Draws the widget's three sizes with the real snapshot into PNG files, so what the widget shows can be looked at.
+    @MainActor
+    private static func render(to folder: URL, snapshot: WidgetSnapshot?) {
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let sizes: [(String, WidgetFamily, CGSize)] = [("small", .systemSmall, CGSize(width: 170, height: 170)),
+                                                      ("medium", .systemMedium, CGSize(width: 364, height: 170)),
+                                                      ("large", .systemLarge, CGSize(width: 364, height: 382))]
+        for (name, family, size) in sizes {
+            let entry = SnapshotEntry(date: .now, snapshot: snapshot)
+            let view = UpcomingView(entry: entry, forcedFamily: family)
+                .padding(16)
+                .frame(width: size.width, height: size.height, alignment: .topLeading)
+                .background(Color(white: 0.93))
+                .environment(\.colorScheme, .light)
+            let renderer = ImageRenderer(content: view)
+            renderer.scale = 2
+            guard let image = renderer.nsImage, let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else {
+                NSLog("WIDGETCHECK: could not draw \(name)")
+                continue
+            }
+            try? png.write(to: folder.appendingPathComponent("widget-\(name).png"))
+            NSLog("WIDGETCHECK: drew \(name) \(Int(size.width))x\(Int(size.height))")
+        }
+    }
+}
+#endif
