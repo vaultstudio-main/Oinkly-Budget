@@ -912,6 +912,11 @@ enum SharedHardeningTest {
             check("S33 not when a backup copy is set up", !ShadowCopyManager.shouldAsk(isSetUp: true, hasData: true, reminderOn: true))
             check("S33 not with no data yet", !ShadowCopyManager.shouldAsk(isSetUp: false, hasData: false, reminderOn: true))
             check("S33 not when the reminder is switched off", !ShadowCopyManager.shouldAsk(isSetUp: false, hasData: true, reminderOn: false))
+
+            // S34: a quiet start at login
+            check("S34 at login with the menu bar item on, it starts quietly", StartupState.shouldStartHidden(launchedAtLogin: true, menuBarItemOn: true))
+            check("S34 at login with the menu bar item off, the window opens", !StartupState.shouldStartHidden(launchedAtLogin: true, menuBarItemOn: false))
+            check("S34 opened by the person, the window opens", !StartupState.shouldStartHidden(launchedAtLogin: false, menuBarItemOn: true))
         } catch {
             check("no error", false, error.localizedDescription)
         }

@@ -127,6 +127,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### C2. Menu bar (Built)
 - The menu bar pop-up has one list for the current month: bills and repeating transactions together, soonest first, each marked "Bill" or "Repeating", with the date and how many days away it is. Tick a bill to mark it paid. The number beside the icon counts bills and repeating transactions due within three days. Settings: show in menu bar, open at login.
+- **Quiet start at login.** When the app is started by macOS as a login item and the menu bar item is on, it starts with no window (the start-up checks still run); if they find something, the window opens by itself. The pop-up has an **Open Oinkly Budget** button; clicking a reminder or the widget with no window open opens one and goes to that page. With the menu bar item off, the window opens at login as usual. Caveat: the whole app is running, so with shared data it holds the shared data's lock for the session.
 - Shots: S-C2.
 
 ### C3. Widgets (Built)

@@ -1,10 +1,28 @@
 import Foundation
 import SwiftData
+import AppKit
 import UserNotifications
 
 extension Notification.Name {
     /// Posted when a reminder is clicked. `userInfo["page"]` is a `ReminderPage` raw value.
     static let piggybankOpenPage = Notification.Name("piggybank.openPage")
+    /// Posted when a page should open but no main window is open (after a quiet start at login, or once it was closed).
+    static let piggybankNeedsMainWindow = Notification.Name("piggybank.needsMainWindow")
+}
+
+/// Goes to a page of the app, opening the main window first if there isn't one.
+@MainActor
+enum PageOpener {
+    static func open(_ page: String) {
+        let hasWindow = NSApp.windows.contains { $0.title == "Oinkly Budget" && $0.isVisible }
+        if hasWindow {
+            NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+        } else {
+            // The window opens, and it goes to this page as it appears.
+            StartupState.pendingPage = page
+            NotificationCenter.default.post(name: .piggybankNeedsMainWindow, object: nil)
+        }
+    }
 }
 
 /// Where a reminder takes you when you click it.

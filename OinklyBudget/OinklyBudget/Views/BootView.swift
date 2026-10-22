@@ -14,11 +14,33 @@ enum StartupState {
     /// widget and the backup copy.
     @MainActor
     static var isHoldingPlace: Bool { databaseError != nil || shadowFinding != nil || SharedDataSession.shared.decision != nil }
+
+    /// True when macOS started the app as a login item (the person didn't open it).
+    static var launchedAtLogin = false
+
+    /// A page to go to as soon as the main window opens (a reminder or widget was clicked while there was no window).
+    static var pendingPage: String?
+
+    /// Set while the app is starting quietly at login: no windows until the person asks for one or something needs them.
+    static var startsHidden = false
+
+    /// When the app starts quietly: at login, with the menu bar item on (without it there would be nothing to click).
+    nonisolated static func shouldStartHidden(launchedAtLogin: Bool, menuBarItemOn: Bool) -> Bool { launchedAtLogin && menuBarItemOn }
 }
 
 /// Remembers the boot window so it can be closed explicitly once the main window is up.
 private final class BootWindowBox {
     weak var window: NSWindow?
+
+    /// Shows the boot window if it was being kept out of sight for a quiet start at login. Something needs the person's attention.
+    @MainActor
+    func revealIfHidden() {
+        guard StartupState.startsHidden else { return }
+        StartupState.startsHidden = false
+        window?.alphaValue = 1
+        window?.ignoresMouseEvents = false
+        NSApp.activate(ignoringOtherApps: true)
+    }
 }
 
 /// Strips the boot window down to just the content: no title bar, no close, minimize or zoom buttons.
@@ -46,6 +68,11 @@ private struct BootWindowStyle: NSViewRepresentable {
             window.standardWindowButton(button)?.isHidden = true
         }
         window.isMovableByWindowBackground = true
+        // A quiet start at login keeps the window out of sight (and clicks passing through) until something needs it.
+        if StartupState.startsHidden {
+            window.alphaValue = 0
+            window.ignoresMouseEvents = true
+        }
     }
 }
 
@@ -69,10 +96,12 @@ struct BootView: View {
             ShadowRescueView(finding: finding)
                 .frame(width: 500, height: 480)
                 .background(BootWindowStyle(box: windowBox))
+                .onAppear { windowBox.revealIfHidden() }
         } else if let decision = SharedDataSession.shared.decision {
             SharedWaitingView(decision: decision)
                 .frame(width: 500, height: 420)
                 .background(BootWindowStyle(box: windowBox))
+                .onAppear { windowBox.revealIfHidden() }
         } else {
             regularBody
         }
@@ -207,6 +236,18 @@ struct BootView: View {
 
         await checker.run(in: modelContext, databaseError: StartupState.databaseError)
         isFinished = true
+
+        // A quiet start at login: if the checks found something, show the window; if all is well, stay in the menu bar.
+        if StartupState.startsHidden {
+            if checker.hasFailure || checker.hasWarning {
+                windowBox.revealIfHidden()
+            } else {
+                StartupState.startsHidden = false
+                dismissWindow(id: "boot")
+                windowBox.window?.close()
+                return
+            }
+        }
 
         // Taking screenshots: carry on whatever the checks say about the throwaway data.
         if (checker.hasFailure || checker.hasWarning) && !ScreenshotMode.isOn { return }

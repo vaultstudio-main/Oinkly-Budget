@@ -74,6 +74,7 @@ Welcome to Oinkly Budget 1.0. Accounts of every kind, a bills calendar with remi
 
 ### Menu bar, reminders and widget
 - The menu bar pop-up lists this month's bills and repeating transactions together, each marked, with the date and days to go. Tick a bill to mark it paid. The number beside the pig counts what is due within three days. Closing the window keeps the app running so the item stays.
+- With opening at login on, the app starts quietly in the menu bar with no window; the pop-up has an Open Oinkly Budget button, and the window opens by itself if something at start-up needs you.
 - One widget, Upcoming Transactions, in small, medium and large: bills, repeating transactions and your reminders in one list, marked and in date order. Edit the widget to choose all or important bills, how far ahead (this month by default), and whether repeating transactions and reminders show. Names and dates only; no amounts.
 
 ### Around the app

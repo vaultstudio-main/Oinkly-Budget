@@ -123,6 +123,15 @@ struct MacRootView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankWillDeleteAccounts)) { _ in selection = .summary }
+        .onAppear {
+            // A reminder or widget was clicked while there was no window: go where it pointed.
+            if let page = StartupState.pendingPage {
+                StartupState.pendingPage = nil
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+                }
+            }
+        }
         // Coming back to the app after a day or more adds anything that has come due.
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Recurring.run(in: modelContext)

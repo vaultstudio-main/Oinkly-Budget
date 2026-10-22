@@ -117,10 +117,21 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
         Task { @MainActor in
             NSApp.activate(ignoringOtherApps: true)
             if let page, page != ReminderPage.none.rawValue {
-                NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+                PageOpener.open(page)
+            } else if !NSApp.windows.contains(where: { $0.title == "Oinkly Budget" && $0.isVisible }) {
+                NotificationCenter.default.post(name: .piggybankNeedsMainWindow, object: nil)
             }
             completionHandler()
         }
+    }
+
+    /// Was the app started by macOS as a login item? Decided before any window opens, so a quiet start can keep them closed.
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        let property = NSAppleEventManager.shared().currentAppleEvent?.paramDescriptor(forKeyword: 0x70726474) // 'prdt', keyAEPropData
+        let atLogin = property?.enumCodeValue == 0x6C676974 // 'lgit', keyAELaunchedAsLogInItem
+        StartupState.launchedAtLogin = atLogin
+        let menuBarOn = UserDefaults.standard.object(forKey: BackgroundSettingsSection.showMenuBarKey) as? Bool ?? true
+        StartupState.startsHidden = StartupState.shouldStartHidden(launchedAtLogin: atLogin, menuBarItemOn: menuBarOn)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -235,7 +246,7 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
     func application(_ application: NSApplication, open urls: [URL]) {
         if let link = urls.first(where: { $0.scheme == WidgetSnapshot.scheme }), let page = link.host {
             NSApp.activate(ignoringOtherApps: true)
-            NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
+            PageOpener.open(page)
             return
         }
         if let copy = urls.first(where: { $0.pathExtension.lowercased() == SealedFile.fileExtension }) {
