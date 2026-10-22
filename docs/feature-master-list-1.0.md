@@ -160,7 +160,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 ### D3. Budgets page (Built)
 - Overview ▸ Budgets lists every category with a budget: budgeted, spent and left, with a progress bar. Categories with a zero budget are hidden; the count reflects what is shown.
 - Click any budget card to change its amount (the same editor as in Settings; your own budgets can be renamed or deleted there).
-- A button, Set Hidden and Custom Budgets, opens Settings ▸ Categories, where any category can be given a budget, shown or hidden on this page, and budgets of your own can be added.
+- A button in the page's top bar, Set Budgets, opens Settings ▸ Categories, where any category can be given a budget, shown or hidden on this page, and budgets of your own can be added.
 - Shots: S-D3.
 
 ### C2. Bills that make pending entries (Built)

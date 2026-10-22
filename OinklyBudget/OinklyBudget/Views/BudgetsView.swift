@@ -82,6 +82,7 @@ struct BudgetsView: View {
                         WeekSelector(week: $week, range: weekRange)
                     }
                     Spacer()
+                    setBudgetsButton
                 }
             }
             ScrollView {
@@ -118,15 +119,15 @@ struct BudgetsView: View {
         let budgeted = shown.reduce(Decimal(0)) { $0 + $1.limit }
         let spent = shown.reduce(Decimal(0)) { $0 + $1.spent }
 
+        helpLine("Click a budget to change its amount. Budgets set as a weekly amount are on the Weekly tab.")
         HStack(spacing: 12) {
             total("Budgeted", budgeted, note: "\(shown.count) budget\(shown.count == 1 ? "" : "s")")
             total("Spent", spent, note: "this month")
             total(budgeted - spent < 0 ? "Over" : "Left", abs(budgeted - spent), note: "across all budgets",
                   color: budgeted - spent < 0 ? Theme.red : Theme.green)
         }
-        helpLine("Click a budget to change its amount. Budgets set as a weekly amount are on the Weekly tab.")
         if shown.isEmpty {
-            Text("No monthly budgets are set. Choose Set Hidden and Custom Budgets above, or add some in Settings ▸ Categories.")
+            Text("No monthly budgets are set. Choose Set Budgets above, or add some in Settings ▸ Categories.")
                 .foregroundStyle(.secondary)
                 .padding(.top, 30)
         } else {
@@ -149,6 +150,7 @@ struct BudgetsView: View {
         let monthlyMaximum = shown.reduce(Decimal(0)) { $0 + ($1.monthlyMaximum ?? 0) }
 
         if shown.isEmpty {
+            helpLine("Click a budget to change its amount. Spending from every account in the category counts.")
             VStack(spacing: 10) {
                 Image(systemName: "calendar.badge.clock").font(.system(size: 34)).foregroundStyle(.secondary)
                 Text("No weekly budgets yet").font(.headline)
@@ -157,6 +159,7 @@ struct BudgetsView: View {
             }
             .padding(.top, 50)
         } else {
+            helpLine("Click a budget to change its amount. Spending from every account in the category counts.")
             HStack(spacing: 12) {
                 total("Weekly budget", budgeted, note: "\(shown.count) budget\(shown.count == 1 ? "" : "s")")
                 total("Spent", spent, note: "this week")
@@ -164,7 +167,6 @@ struct BudgetsView: View {
                       color: budgeted - spent < 0 ? Theme.red : Theme.green)
                 total("Monthly maximum", monthlyMaximum, note: "all weekly budgets, about 4.33 weeks a month")
             }
-            helpLine("Click a budget to change its amount. Spending from every account in the category counts.")
             grid(shown)
         }
     }
@@ -177,21 +179,26 @@ struct BudgetsView: View {
             .accessibilityAddTraits(.isHeader)
     }
 
+    /// The line of instructions at the top of each tab.
     private func helpLine(_ text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "hand.tap").foregroundStyle(.secondary)
             Text(text)
             Spacer()
-            Button {
-                UserDefaults.standard.set("categories", forKey: MacSettingsView.tabKey)
-                openSettings()
-            } label: {
-                Label("Set Hidden and Custom Budgets…", systemImage: "slider.horizontal.3")
-            }
-            .help("Opens Settings ▸ Categories, where you can set a budget on any category, show or hide it here, and add budgets of your own")
         }
         .font(.callout)
         .foregroundStyle(.secondary)
+    }
+
+    /// In the page's top bar: opens Settings ▸ Categories, where budgets are set, shown or hidden, and made.
+    private var setBudgetsButton: some View {
+        Button {
+            UserDefaults.standard.set("categories", forKey: MacSettingsView.tabKey)
+            openSettings()
+        } label: {
+            Label("Set Budgets…", systemImage: "slider.horizontal.3")
+        }
+        .help("Opens Settings ▸ Categories, where you can set a budget on any category, show or hide it here, and add budgets of your own")
     }
 
     private func grid(_ items: [Shown]) -> some View {
