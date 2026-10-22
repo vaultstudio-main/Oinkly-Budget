@@ -185,3 +185,78 @@ enum SettingsRecords {
         }
     }
 }
+
+/// What the Month Outlook said when a month closed, kept so a past month still shows what it showed then, even after a bill
+/// or a budget is edited. Its own record, found by the month's key ("2026-10"), so no other model changes.
+@Model
+final class OutlookSnapshot {
+    var monthKey: String = ""
+    var incomeTotal: Decimal = 0
+    var billsTotal: Decimal = 0
+    var budgetsTotal: Decimal = 0
+    var otherSpending: Decimal = 0
+    var leftToSave: Decimal = 0
+    /// How much more (positive) or less the bills with a linked payment came to than expected.
+    var billDifference: Decimal = 0
+    var budgetOverspend: Decimal = 0
+    var savedAt: Date = Date.now
+
+    init(monthKey: String, outlook: MonthOutlook) {
+        self.monthKey = monthKey
+        incomeTotal = outlook.incomeTotal
+        billsTotal = outlook.billsTotal
+        budgetsTotal = outlook.budgetsTotal
+        otherSpending = outlook.otherSpending
+        leftToSave = outlook.leftToSave
+        billDifference = outlook.billDifference
+        budgetOverspend = outlook.budgetOverspend
+    }
+
+    init(monthKey: String, incomeTotal: Decimal, billsTotal: Decimal, budgetsTotal: Decimal, otherSpending: Decimal,
+         leftToSave: Decimal, billDifference: Decimal, budgetOverspend: Decimal, savedAt: Date) {
+        self.monthKey = monthKey
+        self.incomeTotal = incomeTotal
+        self.billsTotal = billsTotal
+        self.budgetsTotal = budgetsTotal
+        self.otherSpending = otherSpending
+        self.leftToSave = leftToSave
+        self.billDifference = billDifference
+        self.budgetOverspend = budgetOverspend
+        self.savedAt = savedAt
+    }
+}
+
+enum OutlookSnapshots {
+    static func key(for month: Date, calendar: Calendar = .current) -> String {
+        let parts = calendar.dateComponents([.year, .month], from: month)
+        return String(format: "%04d-%02d", parts.year ?? 0, parts.month ?? 0)
+    }
+
+    static func snapshot(for month: Date, in context: ModelContext) -> OutlookSnapshot? {
+        let wanted = key(for: month)
+        return ((try? context.fetch(FetchDescriptor<OutlookSnapshot>())) ?? []).live.first { $0.monthKey == wanted }
+    }
+
+    /// Builds the outlook for the month containing `month` from what is in the database now.
+    static func outlook(for month: Date, in context: ModelContext) -> MonthOutlook {
+        let calendar = Calendar.current
+        let start = calendar.dateInterval(of: .month, for: month)?.start ?? month
+        let end = calendar.date(byAdding: .month, value: 1, to: start) ?? start
+        let transactions = (try? context.fetch(FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { $0.date >= start && $0.date < end }))) ?? []
+        return MonthOutlook.build(month: start, bills: ((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live,
+                                  rules: ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live,
+                                  categories: ((try? context.fetch(FetchDescriptor<Category>())) ?? []).live, monthTransactions: transactions)
+    }
+
+    /// Keeps the figures of last month, if they haven't been kept yet. Does nothing before there is any data.
+    static func closeLastMonth(in context: ModelContext, now: Date = .now) {
+        let calendar = Calendar.current
+        guard let thisMonth = calendar.dateInterval(of: .month, for: now)?.start,
+              let last = calendar.date(byAdding: .month, value: -1, to: thisMonth),
+              snapshot(for: last, in: context) == nil else { return }
+        let built = outlook(for: last, in: context)
+        guard built.incomeTotal != 0 || built.outTotal != 0 else { return }
+        context.insert(OutlookSnapshot(monthKey: key(for: last), outlook: built))
+        context.saveNow()
+    }
+}

@@ -38,7 +38,7 @@ struct FileNewCommands: Commands {
 
     private static let pages: [(title: String, key: String)] = [
         ("Summary", "summary"), ("Transactions", "transactions"), ("Reports", "reports"), ("Liabilities", "liabilities"),
-        ("Investments", "investments"), ("Bills & Recurring", "bills"), ("Planning", "planning"), ("Budgets", "budgets"),
+        ("Investments", "investments"), ("Bills & Recurring", "bills"), ("Planning", "planning"), ("Budgets", "budgets"), ("Month Outlook", "outlook"),
     ]
 
     var body: some Commands {

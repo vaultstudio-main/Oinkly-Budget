@@ -26,8 +26,22 @@ struct BackupFile: Codable {
     /// Your own reminders and saved CSV import layouts. Added in 1.0; absent in older files.
     var reminders: [CustomReminder]?
     var importLayouts: [SavedImportLayout]?
+    /// What the Month Outlook said when each past month closed. Added in 1.0; absent in older files.
+    var outlooks: [OutlookRecord]?
     /// Your preferences, so a restore brings back the whole setup. Absent in older files.
     var settings: SettingsRecord?
+
+    struct OutlookRecord: Codable {
+        var monthKey: String
+        var incomeTotal: Decimal
+        var billsTotal: Decimal
+        var budgetsTotal: Decimal
+        var otherSpending: Decimal
+        var leftToSave: Decimal
+        var billDifference: Decimal
+        var budgetOverspend: Decimal
+        var savedAt: Date
+    }
 
     init() {}
 
@@ -48,6 +62,7 @@ struct BackupFile: Codable {
         recurring = try c.decodeIfPresent([RuleRecord].self, forKey: .recurring)
         reminders = try c.decodeIfPresent([CustomReminder].self, forKey: .reminders)
         importLayouts = try c.decodeIfPresent([SavedImportLayout].self, forKey: .importLayouts)
+        outlooks = try c.decodeIfPresent([OutlookRecord].self, forKey: .outlooks)
     }
 
     struct SettingsRecord: Codable {
@@ -361,6 +376,11 @@ enum DataBackup {
         }
         file.reminders = SettingsRecords.reminders(in: context)
         file.importLayouts = SettingsRecords.importLayouts(in: context)
+        file.outlooks = ((try? context.fetch(FetchDescriptor<OutlookSnapshot>())) ?? []).live.map {
+            BackupFile.OutlookRecord(monthKey: $0.monthKey, incomeTotal: $0.incomeTotal, billsTotal: $0.billsTotal, budgetsTotal: $0.budgetsTotal,
+                                     otherSpending: $0.otherSpending, leftToSave: $0.leftToSave, billDifference: $0.billDifference,
+                                     budgetOverspend: $0.budgetOverspend, savedAt: $0.savedAt)
+        }
         file.settings = .init(
             currencyCode: AppSettings.shared.currencyCode,
             appearance: AppSettings.shared.appearance.rawValue,
@@ -477,6 +497,12 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<Goal>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<ArtworkChoice>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<OutlookSnapshot>()) { context.delete(item) }
+        for record in file.outlooks ?? [] {
+            context.insert(OutlookSnapshot(monthKey: record.monthKey, incomeTotal: record.incomeTotal, billsTotal: record.billsTotal,
+                                           budgetsTotal: record.budgetsTotal, otherSpending: record.otherSpending, leftToSave: record.leftToSave,
+                                           billDifference: record.billDifference, budgetOverspend: record.budgetOverspend, savedAt: record.savedAt))
+        }
         // A backup from before these were kept in the data has none: leave the current ones alone then.
         if let reminders = file.reminders { SettingsRecords.setReminders(reminders, in: context) }
         if let layouts = file.importLayouts { SettingsRecords.setImportLayouts(layouts, in: context) }

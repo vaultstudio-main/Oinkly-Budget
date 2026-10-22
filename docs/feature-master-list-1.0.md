@@ -162,6 +162,12 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - A button, Set Hidden and Custom Budgets, opens Settings ▸ Categories, where any category can be given a budget, shown or hidden on this page, and budgets of your own can be added.
 - Shots: S-D3.
 
+### D3a. Month Outlook (Built)
+- Overview ▸ Month Outlook (⌘9): for the chosen month, money in (recurring income plus other income), bills and repeating expenses, each budget at the larger of its limit and what was spent, and everything else spent; the result is Left to Save. Past months show the figures kept when they closed (a new standalone record, OutlookSnapshot, in database shape 5; also in Manual Backup). Future months show what is expected.
+- Bills in a budgeted category are counted inside that budget; a paid bill counts at the linked payment's amount; transfers and investment accounts are left out.
+- Linking a bill to a payment: Link button beside a bill with a likely transaction nearby, Link a Payment… and Unlink Payment on a bill's menu, Pay a Bill links automatically. The bill line shows more or less than expected.
+- Tests: S35.
+
 ---
 
 ## E. Reports, Summary and the money pages
@@ -207,7 +213,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Open at 1100×780 and 860×780. Shots: S-G1 (Help window).
 
 ### G2. Keyboard shortcuts and accessibility (Built in part)
-- New Go menu: ⌘1 to ⌘8 for Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets.
+- New Go menu: ⌘1 to ⌘9 for Summary, Transactions, Reports, Liabilities, Investments, Bills & Recurring, Planning, Budgets, Month Outlook.
 - New Transaction menu for the selected transaction: ⌘E Edit Transaction, ⌘I View Details, ⇧⌘R Make Recurring. These do what right-click does, so the keyboard and VoiceOver can reach them.
 - Importing, exporting and printing stay on each page's own buttons (Import CSV, Export CSV, Print PDF). The File menu only has the commands that add things.
 - Existing shortcuts stay: ⌘N, ⌥⌘N, ⇧⌘A, ⇧⌘T, ⇧⌘B, ⌥⌘U, ⇧⌘/, ⌘, and ⌘Q.

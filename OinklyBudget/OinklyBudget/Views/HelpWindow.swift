@@ -53,7 +53,8 @@ enum HelpContent {
                 "• Bills & Recurring: the calendar, what is due this month, and your repeating transactions.",
                 "• Planning: your goals, and your loans with estimated payoff dates.",
                 "• Budgets: what you set aside for each category, what you spent and what is left.",
-                "Go to any of them with ⌘1 to ⌘8, or use the Go menu.",
+                "• Month Outlook: what you will have left to save this month, after income, bills and budgets.",
+                "Go to any of them with ⌘1 to ⌘9, or use the Go menu.",
                 "## Accounts",
                 "Cash on Hand sits at the top by itself, with your Primary Checking account under it if you chose one. The rest are grouped in folders by type: Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets. Click an account to open its register. The side panel shows each account's name and type, never its balance, so nothing private is on show until you open it.",
                 "Manage Accounts is pinned at the bottom of the panel.",
@@ -267,8 +268,19 @@ enum HelpContent {
                 "• Notes: anything else you want to remember.",
                 "## Ticking bills off",
                 "The month's list shows every bill due this month. Click the circle beside a bill to mark that date paid, and again to undo. Click a day on the calendar to see only that day. To record the actual payment, use Pay a Bill instead.",
+                "## Linking a payment",
+                "A bill that costs a little different each time, such as electricity, counts at what really came out once you link the payment that paid it. When a transaction that looks like the bill is found near its due date, a Link button with the amount appears beside it; click it. Or right-click a bill and choose Link a Payment… to pick the transaction yourself, and Unlink Payment to undo it. A payment made with Pay a Bill is linked for you. The bill's line then says how much more or less than expected it came to.",
                 "## All Bills",
                 "The All Bills card lists every bill you have set up, with the day it comes out (such as The 5th of every month) and the amount. Click one to edit it.",
+            ]),
+
+            Topic(title: "Month Outlook", symbol: "calendar.badge.checkmark", lines: [
+                "Overview ▸ Month Outlook shows, for one calendar month, how much you will have left to save. Step through months with the arrows at the top.",
+                "• Money in: your recurring income, the paycheques you set up in Recurring with a positive amount, plus anything else that came in.",
+                "• Bills and repeating expenses: each one for the month, as expected until it is paid. A bill with a linked payment counts at what really came out, and the page says how much more or less that was.",
+                "• Budgets: each budget counts at its limit, or at what you have spent if that is more, so money you set aside stays set aside and overspending lowers what is left. Bills and repeating expenses in a budget's category are counted inside that budget, not twice.",
+                "• Everything else: spending that belongs to no bill and no budget, as it happens.",
+                "• Left to save is money in, less all of that. For a month that has ended, the figures from when it closed are kept, so changing a bill or budget later doesn't rewrite it. Transfers and investment accounts are left out.",
             ]),
 
             Topic(title: "Recurring Transactions", symbol: "arrow.triangle.2.circlepath", lines: [
@@ -492,6 +504,7 @@ enum HelpContent {
                 "• ⌘6  Bills & Recurring",
                 "• ⌘7  Planning",
                 "• ⌘8  Budgets",
+                "• ⌘9  Month Outlook",
                 "## Everywhere",
                 "• ⌘,  Settings",
                 "• ⇧⌘/  This help",

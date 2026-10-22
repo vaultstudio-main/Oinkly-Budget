@@ -48,11 +48,22 @@ enum OinklyBudgetSchemaV4: VersionedSchema {
     }
 }
 
+/// Adds one model and nothing else: what the Month Outlook said when a month closed. Every existing model is unchanged,
+/// so the move from V4 is automatic.
+enum OinklyBudgetSchemaV5: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(5, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        OinklyBudgetSchemaV4.models + [OutlookSnapshot.self]
+    }
+}
+
 enum OinklyBudgetMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self] }
+    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self] }
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: OinklyBudgetSchemaV1.self, toVersion: OinklyBudgetSchemaV2.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self),
-         .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self)]
+         .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self),
+         .lightweight(fromVersion: OinklyBudgetSchemaV4.self, toVersion: OinklyBudgetSchemaV5.self)]
     }
 }

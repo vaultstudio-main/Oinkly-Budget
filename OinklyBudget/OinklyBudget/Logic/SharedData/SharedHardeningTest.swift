@@ -105,13 +105,13 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 5
-            try rewriteNote(s5) { $0.schemaVersion = 5 }
+            newer.schemaVersion = 6
+            try rewriteNote(s5) { $0.schemaVersion = 6 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 5 && s5.readInfo()?.counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 6 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -247,7 +247,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV5.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -917,6 +917,60 @@ enum SharedHardeningTest {
             check("S34 at login with the menu bar item on, it starts quietly", StartupState.shouldStartHidden(launchedAtLogin: true, menuBarItemOn: true))
             check("S34 at login with the menu bar item off, the window opens", !StartupState.shouldStartHidden(launchedAtLogin: true, menuBarItemOn: false))
             check("S34 opened by the person, the window opens", !StartupState.shouldStartHidden(launchedAtLogin: false, menuBarItemOn: true))
+
+            // S35: the Month Outlook, and linking a bill to the payment that really came out
+            do {
+                let calendar = Calendar.current
+                func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2030, month: 1, day: d))! }
+                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV5.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bank = Account(name: "Outlook bank", type: .checking, openingBalance: 0)
+                let groceries = Category(name: "Outlook groceries", colorHex: "34C759", symbol: "cart", monthlyLimit: 400)
+                let electric = Bill(name: "Electric", amount: 90, frequency: .monthly, dueDate: day(10))
+                let paycheque = RecurringTransaction(payee: "Outlook pay", account: bank, category: nil, amount: 3000, frequency: .monthly, startDate: day(20))
+                oc.insert(bank); oc.insert(groceries); oc.insert(electric); oc.insert(paycheque)
+                let shop = Transaction(account: bank, date: day(3), payee: "Market", category: groceries, amount: -150)
+                let fuel = Transaction(account: bank, date: day(4), payee: "Fuel", category: nil, amount: -40)
+                let draft = Transaction(account: bank, date: day(11), payee: "City Electric Co", category: nil, amount: -118)
+                oc.insert(shop); oc.insert(fuel); oc.insert(draft)
+                try oc.save()
+                func outlook() throws -> MonthOutlook {
+                    MonthOutlook.build(month: day(1), bills: [electric], rules: [paycheque], categories: [groceries],
+                                       monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()), now: day(15), calendar: calendar)
+                }
+                let before = try outlook()
+                check("S35 nothing linked: the bill counts at what is expected", before.bills.first?.counted == 90 && before.bills.first?.status == .overdue, "\(before.bills.map(\.counted))")
+                check("S35 a payee that looks like the bill is suggested", BillLink.suggestion(for: electric, due: day(10), in: [draft, shop, fuel]) === draft)
+                BillLink.link(draft, to: electric, due: day(10), calendar: calendar)
+                try oc.save()
+                let linked = try outlook()
+                check("S35 linked: the bill counts at what came out", linked.bills.first?.counted == 118 && linked.bills.first?.status == .over && linked.billDifference == 28)
+                check("S35 a linked payment is not counted twice as other spending", linked.otherSpending == 40, "\(linked.otherSpending)")
+                check("S35 a budget counts at its limit when under it", linked.budgets.first?.counted == 400 && linked.budgets.first?.spent == 150)
+                check("S35 left to save is income less bills, budgets and other spending", linked.incomeTotal == 3000 && linked.leftToSave == 3000 - 118 - 400 - 40, "\(linked.leftToSave)")
+                oc.insert(Transaction(account: bank, date: day(6), payee: "Market again", category: groceries, amount: -300))
+                try oc.save()
+                let over = try outlook()
+                check("S35 a budget that ran over counts at what was spent", over.budgets.first?.counted == 450 && over.budgetOverspend == 50 && over.leftToSave == 3000 - 118 - 450 - 40)
+                BillLink.unlink(draft, calendar: calendar)
+                try oc.save()
+                let unlinked = try outlook()
+                check("S35 unlinking puts the bill back to expected and unpaid", unlinked.bills.first?.counted == 90 && !electric.isPaid(on: day(10)) && unlinked.billDifference == 0)
+                // A bill inside a budget is counted once
+                let inBudget = Bill(name: "Cart club", amount: 25, frequency: .monthly, dueDate: day(20))
+                inBudget.category = groceries
+                oc.insert(inBudget)
+                let both = MonthOutlook.build(month: day(1), bills: [inBudget], rules: [], categories: [groceries],
+                                              monthTransactions: try oc.fetch(FetchDescriptor<Transaction>()), now: day(15), calendar: calendar)
+                check("S35 a bill in a budgeted category sits inside the budget, not beside it", both.bills.isEmpty && both.budgets.first?.inside.count == 1 && both.budgets.first?.planned == 25)
+                check("S35 and the budget still counts at spent plus planned when that is more", both.budgets.first?.counted == 475, "\(both.budgets.first?.counted ?? 0)")
+                // The saved figures of a closed month survive a backup and restore
+                oc.insert(OutlookSnapshot(monthKey: OutlookSnapshots.key(for: day(1)), outlook: linked))
+                try oc.save()
+                let copy = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: oc)))
+                check("S35 a backup holds the saved month", copy.outlooks?.first?.leftToSave == linked.leftToSave)
+                try DataBackup.restore(copy, into: oc)
+                check("S35 a restore brings it back", OutlookSnapshots.snapshot(for: day(1), in: oc)?.leftToSave == linked.leftToSave)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

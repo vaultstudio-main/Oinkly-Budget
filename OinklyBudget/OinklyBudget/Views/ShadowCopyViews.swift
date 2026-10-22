@@ -472,7 +472,7 @@ enum ShadowViewsCheck {
         }.padding(16).frame(width: 340, alignment: .leading).background(Color(white: 0.96))
         save(bar, "labels")
         // Settings ▸ Data & Backup, as it looks with and without a backup copy
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV5.self)
         if let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) {
             let manager = ShadowCopyManager.shared
             /// Draws the Settings page in a real window (a form doesn't draw any other way) and saves a picture of it.

@@ -119,7 +119,7 @@ final class ShadowCopyManager {
     /// The time of the last copy, when it is newer than anything changed in this Mac's data since.
     private func shadowIsNewerThanData() async -> Date? {
         guard let parent = resolveParent() else { return nil }
-        let store = AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV4.self))
+        let store = AppStore.localStoreURL(for: Schema(versionedSchema: OinklyBudgetSchemaV5.self))
         let accessing = parent.startAccessingSecurityScopedResource()
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         return await Task.detached {
@@ -192,7 +192,7 @@ final class ShadowCopyManager {
             status = .folderMissing
             return
         }
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV4.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV5.self)
         let live: URL
         let sourceName: String
         var revision: Int?

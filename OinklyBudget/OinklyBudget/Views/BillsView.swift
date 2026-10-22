@@ -19,6 +19,14 @@ private enum BillSheet: Identifiable {
 struct BillsView: View {
     @Query private var allBills: [Bill]
     private var bills: [Bill] { allBills.live }
+    /// Money that went out in the last year and a bit and isn't tied to a bill yet: what a due date could be linked to.
+    @Query private var unlinkedSpending: [Transaction]
+    @State private var linking: LinkRequest?
+
+    init() {
+        let since = Calendar.current.date(byAdding: .day, value: -400, to: .now) ?? .now
+        _unlinkedSpending = Query(filter: #Predicate<Transaction> { $0.date >= since && $0.amount < 0 && $0.paidBill == nil })
+    }
 
     @Environment(\.modelContext) private var modelContext
     @State private var month = Calendar.current.startOfDay(for: .now)
@@ -92,6 +100,7 @@ struct BillsView: View {
             tab = (note.userInfo?["tab"] as? String) == "recurring" ? .recurring : .bills
         }
         #endif
+        .sheet(item: $linking, onDismiss: { modelContext.saveNow() }) { LinkPaymentSheet(bill: $0.bill, due: $0.due) }
         .sheet(item: $sheet) { item in
             switch item {
             case .add(let date): BillEditView(bill: nil, defaultDate: date)
@@ -189,7 +198,8 @@ struct BillsView: View {
                         .font(.callout).foregroundStyle(.secondary)
                 } else {
                     ForEach(shown) { item in
-                        BillRow(item: item, showsYear: false, onEdit: { sheet = .edit(item.bill) }, onDelete: delete)
+                        BillRow(item: item, showsYear: false, pool: unlinkedSpending, onEdit: { sheet = .edit(item.bill) }, onDelete: delete,
+                                onLink: { linking = LinkRequest(bill: item.bill, due: item.date) })
                         if item.id != shown.last?.id { Divider() }
                     }
                 }
@@ -248,11 +258,20 @@ private struct BillSetupRow: View {
     }
 }
 
+/// A due date waiting to be linked to a payment.
+private struct LinkRequest: Identifiable {
+    let bill: Bill
+    let due: Date
+    var id: String { Bills.key(bill, due) }
+}
+
 private struct BillRow: View {
     let item: Bills.Occurrence
     let showsYear: Bool
+    let pool: [Transaction]
     let onEdit: () -> Void
     let onDelete: (Bill) -> Void
+    let onLink: () -> Void
 
     @Environment(\.modelContext) private var modelContext
 
@@ -286,25 +305,61 @@ private struct BillRow: View {
                             Text(subtitle).font(.caption).foregroundStyle(item.isOverdue ? Theme.red : (item.isPaid ? Theme.green : Color.secondary))
                         }
                         Spacer()
-                        Text(item.bill.amount, format: .appCurrency)
+                        Text(actual ?? item.bill.amount, format: .appCurrency)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(item.isPaid ? Color.secondary : Color.primary)
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+
+                if let suggested {
+                    Button {
+                        BillLink.link(suggested, to: item.bill, due: item.date)
+                        modelContext.saveNow()
+                        Task { await BillNotifier.refresh(in: modelContext) }
+                    } label: {
+                        Label("Link \(abs(suggested.amount).formatted(.appCurrency))", systemImage: "link")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("\(suggested.payee) on \(suggested.date.formatted(.dateTime.month(.abbreviated).day())) looks like this bill. Link it so the real amount is used.")
+                }
             }
             .padding(.vertical, 8)
             .contextMenu {
                 Button("Edit", systemImage: "pencil", action: onEdit)
+                Button("Link a Payment…", systemImage: "link", action: onLink)
+                if !linked.isEmpty {
+                    Button("Unlink Payment", systemImage: "link.badge.plus") {
+                        for payment in linked { BillLink.unlink(payment) }
+                        modelContext.saveNow()
+                        Task { await BillNotifier.refresh(in: modelContext) }
+                    }
+                }
                 Button("Delete Bill", systemImage: "trash", role: .destructive) { onDelete(item.bill) }
             }
         }
     }
 
+    private var linked: [Transaction] { BillLink.payments(of: item.bill, on: item.date) }
+    private var actual: Decimal? { BillLink.actual(of: item.bill, on: item.date) }
+
+    /// A likely payment for a due date nobody has linked yet.
+    private var suggested: Transaction? {
+        guard !item.isPaid, actual == nil else { return nil }
+        return BillLink.suggestion(for: item.bill, due: item.date, in: pool)
+    }
+
     private var subtitle: String {
         let day = item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        let tail = item.isPaid ? "Paid" : (item.isOverdue ? "Overdue" : item.bill.frequency.title)
+        var tail = item.isPaid ? "Paid" : (item.isOverdue ? "Overdue" : item.bill.frequency.title)
+        if let actual {
+            let difference = actual - item.bill.amount
+            if difference > 0 { tail += " · \(difference.formatted(.appCurrency)) more than expected" }
+            else if difference < 0 { tail += " · \((-difference).formatted(.appCurrency)) less than expected" }
+        }
         return "\(day) · \(tail)"
     }
 }
@@ -687,5 +742,74 @@ struct PriorityBillsCard: View {
                 }
             }
         }
+    }
+}
+
+/// Pick the transaction that paid a due date. The bill then counts at what really came out of the account.
+private struct LinkPaymentSheet: View {
+    let bill: Bill
+    let due: Date
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query private var nearby: [Transaction]
+
+    init(bill: Bill, due: Date) {
+        self.bill = bill
+        self.due = due
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: due)
+        let from = calendar.date(byAdding: .day, value: -BillLink.windowDays, to: day) ?? day
+        let through = calendar.date(byAdding: .day, value: BillLink.windowDays + 1, to: day) ?? day
+        _nearby = Query(filter: #Predicate<Transaction> { $0.date >= from && $0.date < through && $0.amount < 0 && $0.paidBill == nil },
+                        sort: [SortDescriptor(\Transaction.date)])
+    }
+
+    var body: some View {
+        let found = BillLink.candidates(for: bill, due: due, in: nearby)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Link a Payment").font(.title2.bold())
+            Text("Choose what paid \(bill.name) due \(due.formatted(.dateTime.month(.abbreviated).day())). The bill then counts at the amount that really came out, so the Month Outlook can show when it ran over or under.")
+                .font(.callout).foregroundStyle(.secondary)
+            if found.isEmpty {
+                ContentUnavailableView("Nothing to Link", systemImage: "link",
+                                       description: Text("No money going out within \(BillLink.windowDays) days of the due date that isn't already linked to a bill."))
+                    .frame(maxWidth: .infinity, minHeight: 160)
+            } else {
+                List(found) { candidate in
+                    let payment = candidate.transaction
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack(spacing: 6) {
+                                Text(payment.payee.isEmpty ? "No payee" : payment.payee)
+                                if candidate.isLikely {
+                                    Text("Likely").font(.caption2.weight(.semibold))
+                                        .padding(.horizontal, 6).padding(.vertical, 1)
+                                        .background(Theme.green.opacity(0.18), in: Capsule())
+                                        .foregroundStyle(Theme.green)
+                                }
+                            }
+                            Text("\(payment.date.formatted(.dateTime.month(.abbreviated).day().year())) · \(payment.account?.name ?? "")")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(abs(payment.amount), format: .appCurrency).font(.body.weight(.semibold))
+                        Button("Link") {
+                            BillLink.link(payment, to: bill, due: due)
+                            modelContext.saveNow()
+                            Task { await BillNotifier.refresh(in: modelContext) }
+                            dismiss()
+                        }
+                    }
+                }
+                .frame(minHeight: 220)
+            }
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 520)
     }
 }

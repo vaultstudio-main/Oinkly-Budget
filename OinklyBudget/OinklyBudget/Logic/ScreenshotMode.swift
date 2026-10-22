@@ -276,6 +276,7 @@ private struct ScreenshotRun {
         await sheetShot(open: "goalDetail", as: "sheet-goal-detail")
         await sheetShot(open: "addGoal", as: "sheet-add-goal")
         await pageShot("budgets", as: "page-budgets")
+        await pageShot("outlook", as: "page-month-outlook")
         await pageShot("manageAccounts", as: "page-manage-accounts")
 
         // Bills & Recurring

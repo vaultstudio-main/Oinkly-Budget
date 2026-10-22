@@ -9,6 +9,7 @@ private enum SidebarItem: Hashable {
     case bills
     case planning
     case budgets
+    case monthOutlook
     case manageAccounts
     case transactions
     case account(Account.ID)
@@ -50,6 +51,8 @@ struct MacRootView: View {
                         .tag(SidebarItem.planning)
                     SidebarLabel(title: "Budgets", symbol: "chart.pie", color: .pink)
                         .tag(SidebarItem.budgets)
+                    SidebarLabel(title: "Month Outlook", symbol: "calendar.badge.checkmark", color: .mint)
+                        .tag(SidebarItem.monthOutlook)
                 }
                 Section("Accounts") {
                     // Cash on hand sits at the top by itself, not inside a folder, and the primary checking account
@@ -121,6 +124,7 @@ struct MacRootView: View {
             case "bills": selection = .bills
             case "planning": selection = .planning
             case "budgets": selection = .budgets
+            case "outlook": selection = .monthOutlook
             case "liabilities": selection = .liabilities
             case "investments": selection = .investments
             case "manageAccounts": selection = .manageAccounts
@@ -148,6 +152,8 @@ struct MacRootView: View {
         .task {
             // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up.
             try? await Task.sleep(for: .seconds(8))
+            // Keep what the Month Outlook said for last month, before bills and budgets get edited.
+            if !StartupState.isHoldingPlace { OutlookSnapshots.closeLastMonth(in: modelContext) }
             if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
                 ShadowCopyManager.shared.markAsked()
                 askingForShadowCopy = true
@@ -176,6 +182,8 @@ struct MacRootView: View {
             PlanningView()
         case .budgets:
             BudgetsView()
+        case .monthOutlook:
+            MonthOutlookView()
         case .manageAccounts:
             VStack(alignment: .leading, spacing: 0) {
                 PinnedHeader("Manage Accounts")
@@ -231,6 +239,7 @@ struct MacRootView: View {
         case .bills: "Bills & Recurring"
         case .planning: "Planning"
         case .budgets: "Budgets"
+        case .monthOutlook: "Month Outlook"
         case .manageAccounts: "Manage Accounts"
         case .transactions: "Transactions"
         case .summary, nil: "Summary"
