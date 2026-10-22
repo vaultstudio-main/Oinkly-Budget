@@ -14,6 +14,7 @@ enum StoreReset {
     /// on the built-in categories are carried over to the fresh database.
     @MainActor
     static func requestAndQuit(keepingBudgets context: ModelContext? = nil) {
+        guard ClosingCountdown.run(.quit, reason: "It closes to erase all data. Open it again afterwards for a fresh start. Cancel if you are not ready.") else { return }
         if let context, let categories = try? context.fetch(FetchDescriptor<Category>()) {
             var kept: [String: String] = [:]
             for category in categories where category.isLive && !category.isCustom && category.monthlyLimit != 0 {

@@ -103,6 +103,7 @@ struct SharedDataSection: View {
     }
 
     private func turnOn() {
+        guard ClosingCountdown.run(.restart, reason: "It restarts to start sharing your data. Finish anything you are doing now.") else { return }
         working = true
         do {
             try session.enable(localStore: localStore, context: modelContext)
@@ -113,6 +114,7 @@ struct SharedDataSection: View {
     }
 
     private func turnOff() {
+        guard ClosingCountdown.run(.restart, reason: "It restarts to stop sharing. Finish anything you are doing now.") else { return }
         working = true
         Task {
             do { try await session.stopSharing(localStore: localStore) }
@@ -133,6 +135,7 @@ struct SharedDataSection: View {
     }
 
     private func closeForOthers() {
+        guard ClosingCountdown.run(.quit, reason: "Your data is saved first, then Oinkly Budget closes so another user can open it.") else { return }
         working = true
         Task { await session.closeForOthers() }
     }
@@ -202,6 +205,7 @@ private struct PreviousSavesSheet: View {
 
     private func restore() {
         guard let version = chosen else { return }
+        guard ClosingCountdown.run(.restart, reason: "What is open now is saved first, then Oinkly Budget restarts on the save you chose.") else { return }
         restoring = true
         errorMessage = nil
         Task {
@@ -330,8 +334,11 @@ struct SharedWaitingView: View {
             try? await Task.sleep(for: .seconds(2))
             switch SharedDataSession.shared.lookAgain() {
             case .free:
-                SharedDataSession.shared.tryAgain()
-                return
+                // The other copy has closed. Say so and count down, rather than restarting out of the blue.
+                if ClosingCountdown.run(.restart, reason: "The other copy of Oinkly Budget has closed, so your data can open now.", seconds: 3) {
+                    SharedDataSession.shared.tryAgain()
+                    return
+                }
             case .heldBy(let lock, let stale):
                 decision = .heldBy(lock, isStale: stale)
             case .problem(let text):
