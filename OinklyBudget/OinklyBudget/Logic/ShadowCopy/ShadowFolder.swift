@@ -363,6 +363,11 @@ nonisolated struct ShadowFolder: Sendable {
     /// Removes the whole backup copy.
     func removeAll() { try? manager.removeItem(at: url) }
 
+    /// Moves the whole backup copy to the Trash, so it can still be put back. If the Trash can't be used, it is removed.
+    func removeToTrash() {
+        do { try manager.trashItem(at: url, resultingItemURL: nil) } catch { try? manager.removeItem(at: url) }
+    }
+
     /// How much room the backup copy takes.
     func size() -> Int64 {
         guard let walker = manager.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }

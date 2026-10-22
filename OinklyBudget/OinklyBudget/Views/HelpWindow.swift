@@ -386,7 +386,7 @@ enum HelpContent {
             Topic(title: "Backup Copy", symbol: "shield.lefthalf.filled", lines: [
                 "A backup copy is a second copy of your data in a folder you choose, such as Documents or iCloud Drive. Oinkly Budget keeps it up to date on its own, so there is always a spare if something goes wrong.",
                 "## Setting it up",
-                "• After you have added some data, Oinkly Budget offers to set one up. Or go to Settings ▸ Data & Backup ▸ Backup Copy and choose Choose Folder.",
+                "• After you have added some data, Oinkly Budget offers to set one up. Or go to Settings ▸ Data & Backup ▸ Backup Copy and turn on Keep a Backup Copy, then choose a folder.",
                 "• A folder called Oinkly Budget Backup Copy is made inside the folder you chose. Please don't edit or move the files in it.",
                 "• The files are in Oinkly Budget's own format (.pigdata), so only Oinkly Budget can read them. Double-click one to restore from it. A single file brings back your data, and receipts and photos come back when you restore from Settings.",
                 "• When you turn on sharing, you are asked to choose a backup copy folder too. It keeps the peace between your edits and the other person's, and is kept up to date each time the shared data is saved.",
@@ -410,7 +410,7 @@ enum HelpContent {
                 "• The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.",
                 "• Erase All Data keeps the backup copy unless you choose to delete it too, so an erase can still be undone.",
                 "• Receipts and photos nothing uses any more are removed from the backup copy after 30 days. A receipt that the latest copy or any older copy uses is always kept.",
-                "• Turn Off stops the copying. What is in the folder stays there.",
+                "• To stop, turn the Keep a Backup Copy switch off in Settings ▸ Data & Backup. You are asked whether to delete the backup copy folder too; deleting moves it to the Trash.",
             ]),
 
             Topic(title: "The Safety Copy", symbol: "shield.lefthalf.filled", lines: [

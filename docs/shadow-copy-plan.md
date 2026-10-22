@@ -65,6 +65,10 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 - **Settings layout** checked from a picture of the page (with and without a backup copy): Copy Now, Restore… and Show in Finder stay on the row, Change Folder… and Turn Off… moved into a More menu, the footer says what is made and when, and the row says "Snapshots kept".
 - Hardening test S32 (6 checks): 203 in all.
 
+## Changed after stage 6
+
+- **Settings ▸ Backup Copy is a switch.** Keep a Backup Copy on or off; when on it shows Status (Up to date, Saving a copy…, Changes are waiting to be copied, folder problems), Folder and Last copied, with Copy Now, Restore…, Show in Finder and Change Folder…. The long footer, the version counts and the More menu were removed. Turning it off asks whether to delete the Oinkly Budget Backup Copy folder too (to the Trash) or keep it.
+
 ## Not done yet
 
 - Older builds can't open a converted folder (they look for the old file names): update both logins' test builds together.

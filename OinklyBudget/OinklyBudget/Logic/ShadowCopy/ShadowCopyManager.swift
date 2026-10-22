@@ -22,6 +22,8 @@ final class ShadowCopyManager {
     }
 
     private(set) var status: Status = .notSetUp
+    /// Whether the backup copy is on, for the switch in Settings (which needs something it can watch).
+    private(set) var isOn = UserDefaults.standard.data(forKey: "shadowCopyFolderBookmark") != nil
     private(set) var lastCopy: Date?
     private(set) var versionCount = 0
     private(set) var size: Int64 = 0
@@ -69,6 +71,7 @@ final class ShadowCopyManager {
 
     func showPreview(isSetUp: Bool, status: Status, path: String?, copies: Int, bytes: Int64, lastCopy: Date?, lastPortable: Date?, portables: Int) {
         preview = (isSetUp, status)
+        isOn = isSetUp
         self.status = status
         folderPath = path
         versionCount = copies
@@ -332,6 +335,7 @@ final class ShadowCopyManager {
               let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
         UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
         UserDefaults.standard.removeObject(forKey: Self.declinedKey)
+        isOn = true
         folderPath = url.path
         failures = 0
         status = .behind(nil)
@@ -344,11 +348,22 @@ final class ShadowCopyManager {
         pending?.cancel()
         pending = nil
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
+        isOn = false
         folderPath = nil
         lastCopy = nil
         versionCount = 0
         size = 0
         status = .notSetUp
+    }
+
+    /// Turns the backup copy off and moves its folder to the Trash (or removes it if the Trash can't be used).
+    func turnOffAndDeleteFolder() {
+        if let parent = resolveParent() {
+            let accessing = parent.startAccessingSecurityScopedResource()
+            ShadowFolder(inside: parent).removeToTrash()
+            if accessing { parent.stopAccessingSecurityScopedResource() }
+        }
+        turnOff()
     }
 
     /// Starts a new backup copy in the same folder, for when the one there is of other data.

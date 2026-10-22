@@ -128,7 +128,8 @@ struct ShadowSetupSheet: View {
 
 // MARK: Settings
 
-/// Settings ▸ Data & Backup ▸ Backup Copy.
+/// Settings ▸ Data & Backup ▸ Backup Copy: a switch, and when it is on, whether it is up to date, where it is kept and
+/// when it was last copied. Turning it off asks whether to delete its folder too.
 struct ShadowCopySection: View {
     /// What Settings scrolls to when the status in the bottom bar is clicked.
     static let scrollID = "shadowCopySection"
@@ -139,46 +140,36 @@ struct ShadowCopySection: View {
 
     var body: some View {
         Section {
-            if manager.isSetUp {
-                setUp
-            } else {
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Keep a Backup Copy").font(.body.weight(.medium))
-                        Text("A second copy of your data in a folder you choose, kept up to date on its own, with older versions and a portable .pig file.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Button("Choose Folder…") { manager.chooseFolder() }
-                }
-            }
+            Toggle("Keep a Backup Copy", isOn: Binding(
+                get: { manager.isOn },
+                set: { wantsOn in
+                    if wantsOn { manager.chooseFolder() } else { confirmingOff = true }
+                }))
+            if manager.isOn { details }
         } header: {
             Text("Backup Copy")
         } footer: {
-            Text("A snapshot is made a few minutes after changes, when you hide the app and when you quit. A portable .pig file is made about once a day and when you quit. Both are in Oinkly Budget's own file format, so other apps can't read them, but they are not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers.")
+            Text("A second copy of your data in a folder you choose, kept up to date on its own. It is in Oinkly Budget's own file format and is not encrypted.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
         .sheet(isPresented: $restoring) { ShadowRestoreSheet() }
         .confirmationDialog("Turn off the backup copy?", isPresented: $confirmingOff, titleVisibility: .visible) {
-            Button("Turn Off", role: .destructive) { manager.turnOff() }
+            Button("Turn Off and Delete the Folder", role: .destructive) { manager.turnOffAndDeleteFolder() }
+            Button("Turn Off and Keep the Folder") { manager.turnOff() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Oinkly Budget stops updating it. What is already in the folder stays there.")
+            Text("Do you also want to delete the “\(ShadowFolder.folderName)” folder? It holds your latest copy and its older versions. Deleting moves it to the Trash.")
         }
     }
 
     @ViewBuilder
-    private var setUp: some View {
-        Label(statusText, systemImage: statusSymbol).foregroundStyle(statusColor)
-        if let path = manager.folderPath { LabeledContent("Folder", value: path) }
-        if let last = manager.lastCopy { LabeledContent("Last copied", value: last.formatted(date: .abbreviated, time: .shortened)) }
-        if manager.versionCount > 0 {
-            LabeledContent("Snapshots kept", value: "\(manager.versionCount) cop\(manager.versionCount == 1 ? "y" : "ies"), \(ByteCountFormatter.string(fromByteCount: manager.size, countStyle: .file))")
+    private var details: some View {
+        LabeledContent("Status") {
+            Label(statusText, systemImage: statusSymbol).foregroundStyle(statusColor)
         }
-        if let portable = manager.lastPortable {
-            LabeledContent("Portable file", value: "\(portable.formatted(date: .abbreviated, time: .shortened)), \(manager.portableCount) kept")
-        }
+        LabeledContent("Folder", value: manager.folderPath ?? "Can't be found")
+        LabeledContent("Last copied", value: manager.lastCopy.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Not yet")
         if case .otherData = manager.status {
             Button("Start a New Backup Copy Here", role: .destructive) { Task { await manager.replaceExisting() } }
         }
@@ -190,24 +181,18 @@ struct ShadowCopySection: View {
             Button("Copy Now") { Task { await manager.copyNow(onlyIfChanged: false, portable: .always) } }
             Button("Restore…") { restoring = true }.disabled(SharedDataSession.isEnabled)
             Button("Show in Finder") { manager.revealInFinder() }
-            Spacer()
-            Menu("More") {
-                Button("Change Folder…") { manager.chooseFolder() }
-                Divider()
-                Button("Turn Off…", role: .destructive) { confirmingOff = true }
-            }
-            .fixedSize()
+            Button("Change Folder…") { manager.chooseFolder() }
         }
     }
 
     private var statusText: String {
         switch manager.status {
-        case .notSetUp: "Not set up"
-        case .copying: "Copying…"
+        case .notSetUp: "Starting…"
+        case .copying: "Saving a copy…"
         case .upToDate: "Up to date"
-        case .behind: "Out of date: changes are waiting to be copied"
+        case .behind: "Changes are waiting to be copied"
         case .folderMissing: "The folder can't be found"
-        case .otherData: "The backup copy in that folder is of other data"
+        case .otherData: "That folder holds a backup copy of other data"
         case .failed(let why): "Copying keeps failing: \(why)"
         }
     }
