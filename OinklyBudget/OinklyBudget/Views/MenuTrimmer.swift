@@ -2,124 +2,6 @@ import AppKit
 import SwiftData
 import UserNotifications
 
-/// Keeps the Mac menu bar to the Apple menu, Oinkly Budget, File and Help. SwiftUI adds Edit, View and Window on its own
-/// and rebuilds them from time to time, so this removes them again whenever they come back.
-enum MenuTrimmer {
-    private static let removed: Set<String> = ["Edit", "View", "Window"]
-    private static var isInstalled = false
-    /// A menu is open. Changing a menu while someone is looking at it makes its rows jump or vanish, so nothing is
-    /// touched until it closes.
-    private static var isTracking = false
-    private static var wantsTrim = false
-
-    static func install() {
-        guard !isInstalled else { return }
-        isInstalled = true
-        trim()
-        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { _ in
-            isTracking = true
-        }
-        NotificationCenter.default.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { _ in
-            isTracking = false
-            // Whatever came back while the menu was open goes now that it has closed.
-            if wantsTrim { DispatchQueue.main.async { trim() } }
-        }
-        NotificationCenter.default.addObserver(forName: NSMenu.didAddItemNotification, object: nil, queue: .main) { _ in
-            DispatchQueue.main.async { trim() }
-        }
-        NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            trim()
-        }
-        // Copy, paste and the rest normally live in the Edit menu. Without it they would stop working in text
-        // fields, so they are handled here directly.
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            if event.modifierFlags.intersection([.command, .shift, .option, .control]) == .command,
-               event.charactersIgnoringModifiers == "w", let window = NSApp.keyWindow {
-                window.performClose(nil)
-                return nil
-            }
-            return handleEditingShortcut(event) ? nil : event
-        }
-    }
-
-    private static func trim() {
-        guard let menu = NSApp.mainMenu else { return }
-        // Also covers a menu the system opened without telling us: the run loop is in its tracking mode while one is open.
-        if isTracking || RunLoop.current.currentMode == .eventTracking {
-            wantsTrim = true
-            // Dragging a window also puts the run loop in this mode, with no end-of-menu signal to follow, so look again soon.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { if wantsTrim { trim() } }
-            return
-        }
-        wantsTrim = false
-        for item in menu.items where removed.contains(item.submenu?.title ?? item.title) {
-            menu.removeItem(item)
-        }
-        trimAppMenu(menu)
-        trimFileMenu(menu)
-    }
-
-    /// File keeps only the ways to add things. Close and Close All come back with every window, so they are removed
-    /// again here. ⌘W still closes the front window (see the key monitor).
-    private static func trimFileMenu(_ mainMenu: NSMenu) {
-        guard let file = mainMenu.items.first(where: { $0.submenu?.title == "File" })?.submenu else { return }
-        for item in file.items where item.title == "Close" || item.title == "Close All" {
-            file.removeItem(item)
-        }
-        // Don't leave a divider hanging at the bottom or two in a row.
-        while let last = file.items.last, last.isSeparatorItem { file.removeItem(last) }
-        var index = 1
-        while index < file.items.count {
-            if file.items[index].isSeparatorItem && file.items[index - 1].isSeparatorItem {
-                file.removeItem(at: index)
-            } else {
-                index += 1
-            }
-        }
-    }
-
-    /// The app's own menu keeps only About, Settings and Quit. No Services or Hide rows.
-    private static func trimAppMenu(_ mainMenu: NSMenu) {
-        guard let appMenu = mainMenu.items.first?.submenu else { return }
-        let keep: (NSMenuItem) -> Bool = { item in
-            let title = item.title
-            let isQuit = title.hasPrefix("Quit") && !title.contains("Keep")
-            return title.hasPrefix("About") || title.hasPrefix("Testing") || title.hasPrefix("Settings")
-                || title.hasPrefix("Preferences") || isQuit
-        }
-        let wanted = appMenu.items.filter(keep)
-        // Already trimmed: nothing to do, and no churn that would re-trigger the menu observer.
-        if appMenu.items.count == wanted.count + max(wanted.count - 1, 0) { return }
-
-        appMenu.removeAllItems()
-        for (index, item) in wanted.enumerated() {
-            if index > 0 { appMenu.addItem(.separator()) }
-            // The system words these with the short product name.
-            if item.title.hasPrefix("Quit") { item.title = "Quit Oinkly Budget" }
-            appMenu.addItem(item)
-        }
-    }
-
-    private static func handleEditingShortcut(_ event: NSEvent) -> Bool {
-        let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
-        guard flags.contains(.command), !flags.contains(.option), !flags.contains(.control),
-              NSApp.keyWindow?.firstResponder is NSTextView,
-              let key = event.charactersIgnoringModifiers?.lowercased() else { return false }
-        let selector: Selector?
-        switch (key, flags.contains(.shift)) {
-        case ("c", false): selector = #selector(NSText.copy(_:))
-        case ("x", false): selector = #selector(NSText.cut(_:))
-        case ("v", false): selector = #selector(NSText.paste(_:))
-        case ("a", false): selector = #selector(NSText.selectAll(_:))
-        case ("z", false): selector = Selector(("undo:"))
-        case ("z", true): selector = Selector(("redo:"))
-        default: selector = nil
-        }
-        guard let selector else { return false }
-        return NSApp.sendAction(selector, to: nil, from: nil)
-    }
-}
-
 final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Set by the app at launch so a backup opened from Finder can reach the data.
     nonisolated(unsafe) static var container: ModelContainer?
@@ -156,7 +38,6 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
-        MenuTrimmer.install()
         Task { @MainActor in await Self.refreshReminders() }
         // The widgets read a small snapshot of bill names and reminder times. Keep it current as data changes.
         Task { @MainActor in WidgetSnapshotWriter.refreshSoon() }
