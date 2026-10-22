@@ -176,7 +176,7 @@ struct AccountSetupView: View {
             onFinish()
         } catch {
             modelContext.rollback()
-            show("Couldn't import that file", error.localizedDescription)
+            show("Couldn't restore that backup", error.localizedDescription)
         }
     }
 

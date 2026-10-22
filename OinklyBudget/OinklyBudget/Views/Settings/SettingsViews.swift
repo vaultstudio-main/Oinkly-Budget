@@ -463,8 +463,8 @@ struct DataSettingsView: View {
 
             Section {
                 HStack {
-                    Button("Export Data…") { exportBackup() }
-                    Button("Import Data…") { chooseBackup() }
+                    Button("Save Backup…") { exportBackup() }
+                    Button("Restore Backup…") { chooseBackup() }
                     Spacer()
                 }
                 if let message {
@@ -472,9 +472,9 @@ struct DataSettingsView: View {
                         .foregroundStyle(messageIsError ? Color.orange : Theme.green)
                 }
             } header: {
-                Text("Export & Import")
+                Text("Manual Backup")
             } footer: {
-                Text("Save everything in Oinkly Budget to one .pig file, or bring one in. Importing replaces everything currently in Oinkly Budget.")
+                Text("Save everything in Oinkly Budget to one .pig file you can keep anywhere, or restore from one. Restoring replaces everything currently in Oinkly Budget.")
             }
 
             Section {
@@ -497,7 +497,7 @@ struct DataSettingsView: View {
         }
         .formStyle(.grouped)
         .confirmationDialog(
-            "Replace everything with this file?",
+            "Replace everything with this backup?",
             isPresented: Binding(get: { pendingBackup != nil }, set: { if !$0 { pendingBackup = nil } }),
             titleVisibility: .visible
         ) {
@@ -541,18 +541,18 @@ struct DataSettingsView: View {
 
     private func exportBackup() {
         switch BackupExporter.exportWithPanel(from: modelContext) {
-        case .saved(let summary, let name): report("Saved a .pig file with \(summary) to \(name).")
-        case .failed(let reason): report("Couldn't save the file: \(reason)", error: true)
+        case .saved(let summary, let name): report("Saved a backup with \(summary) to \(name).")
+        case .failed(let reason): report("Couldn't save the backup: \(reason)", error: true)
         case nil: break
         }
     }
 
     private func chooseBackup() {
         let panel = NSOpenPanel()
-        // .pig is the export format. Older exports saved as plain .json still open.
+        // .pig is the manual backup format. Older backups saved as plain .json still open.
         panel.allowedContentTypes = [DataBackup.fileType, .json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a Oinkly Budget .pig file."
+        panel.message = "Choose a Oinkly Budget backup file (.pig)."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let data = try Data(contentsOf: url)
@@ -574,7 +574,7 @@ struct DataSettingsView: View {
                 report("Restored \(file.summary).")
             } catch {
                 modelContext.rollback()
-                report("Couldn't import the file: \(error.localizedDescription)", error: true)
+                report("Couldn't restore the backup: \(error.localizedDescription)", error: true)
             }
         }
     }

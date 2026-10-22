@@ -2,7 +2,7 @@ import AppKit
 import SwiftData
 import SwiftUI
 
-/// Exporting everything to a .pig file, and remembering when it last happened.
+/// Saving a manual backup to a .pig file, and remembering when it last happened.
 @MainActor
 enum BackupExporter {
     static let lastBackupKey = "piggybank.lastBackupDate"
@@ -29,8 +29,8 @@ enum BackupExporter {
     static func exportWithPanel(from context: ModelContext) -> Outcome? {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [DataBackup.fileType]
-        panel.nameFieldStringValue = "Oinkly Budget Export \(stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save everything in Oinkly Budget to a .pig file."
+        panel.nameFieldStringValue = "Oinkly Budget Backup \(stamp()).\(DataBackup.fileExtension)"
+        panel.message = "Save a backup of everything in Oinkly Budget."
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         do {
             let file = try DataBackup.make(from: context)
@@ -98,7 +98,7 @@ struct BackupReminderBanner: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("You have \(prompt.count.formatted()) transactions")
                         .font(.headline)
-                    Text("That's a lot of history. Set up a backup copy so there is always a spare, or export your data to a file.")
+                    Text("That's a lot of history. Set up a backup copy so there is always a spare, or save a manual backup.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -112,7 +112,7 @@ struct BackupReminderBanner: View {
                     snoozedInterval = until.timeIntervalSinceReferenceDate
                 }
                 .buttonStyle(.borderless)
-                Button("Export Data") { export() }
+                Button("Save Backup") { export() }
                 Button("Set Up Backup Copy") { ShadowCopyManager.shared.chooseFolder() }
                     .buttonStyle(.borderedProminent)
                     .tint(tint)
@@ -128,7 +128,7 @@ struct BackupReminderBanner: View {
             lastBackupInterval = Date.now.timeIntervalSinceReferenceDate
             message = "Saved \(name)."
         case .failed(let reason):
-            message = "Couldn't save the file: \(reason)"
+            message = "Couldn't save the backup: \(reason)"
         case nil:
             break
         }

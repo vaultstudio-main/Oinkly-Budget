@@ -67,7 +67,7 @@ enum ReleaseNotes {
                 "Default paper size and export style in Settings.",
             ]),
             ("Your data", [
-                "Data & Backup is one tab: your counts, Export Data and Import Data, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules, your reminders, your saved CSV import formats and your preferences.",
+                "Data & Backup is one tab: your counts, Save Backup and Restore Backup, Erase All Data and the version. A backup carries everything, including splits, tags, recurring rules, your reminders, your saved CSV import formats and your preferences.",
                 "Restoring a backup first saves a copy of what is there now, so it can always be undone.",
                 "Upgrades are safe: a copy of your data is made before the first open, and a file that can't be opened shows an error instead of an empty app.",
                 "A reminder to save a backup once you have a very large number of transactions.",

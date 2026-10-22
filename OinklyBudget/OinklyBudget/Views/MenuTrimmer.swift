@@ -260,14 +260,14 @@ enum BackupOpener {
         do {
             file = try DataBackup.decode(try Data(contentsOf: url))
         } catch {
-            show(title: "Couldn't open that file", text: error.localizedDescription)
+            show(title: "Couldn't open that backup", text: error.localizedDescription)
             return
         }
 
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Replace everything with this file?"
+        alert.messageText = "Replace everything with this backup?"
         alert.informativeText = "\(url.lastPathComponent) holds \(file.summary). Everything currently in Oinkly Budget is erased first, and this can't be undone."
         alert.addButton(withTitle: "Replace Everything")
         alert.addButton(withTitle: "Cancel")
@@ -276,10 +276,10 @@ enum BackupOpener {
         DataDeletion.afterLeavingAccountPages {
             do {
                 try DataBackup.restore(file, into: container.mainContext)
-                show(title: "Data imported", text: "Imported \(file.summary).")
+                show(title: "Backup restored", text: "Restored \(file.summary).")
             } catch {
                 container.mainContext.rollback()
-                show(title: "Couldn't import the file", text: error.localizedDescription)
+                show(title: "Couldn't restore the backup", text: error.localizedDescription)
             }
         }
     }

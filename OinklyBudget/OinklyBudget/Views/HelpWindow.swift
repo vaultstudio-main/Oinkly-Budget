@@ -371,18 +371,18 @@ enum HelpContent {
         ]),
 
         Group(title: "Data & Settings", topics: [
-            Topic(title: "Export & Import Data", symbol: "square.and.arrow.up.on.square", lines: [
-                "Settings ▸ Data & Backup ▸ Export Data saves everything to one .pig file, and Import Data brings it back. Use it to move your data to another Mac, to keep an extra copy somewhere of your own choosing, or to move forward across versions. Your Backup Copy also keeps a .pig file like this up to date for you.",
+            Topic(title: "Manual Backup", symbol: "square.and.arrow.up.on.square", lines: [
+                "Settings ▸ Data & Backup ▸ Manual Backup saves everything to one .pig file, and Restore Backup brings it back. Use it to move your data to another Mac, to keep an extra copy somewhere of your own choosing, or to move forward across versions. Your Backup Copy also keeps a .pig file like this up to date for you.",
                 "## What's in the file",
                 "Accounts, transactions with their splits, tags and receipts, bills, recurring rules, goals, holdings, budgets, your custom categories and payment methods, your own reminders, your saved CSV import formats, and your preferences.",
-                "## Exporting",
-                "Choose Export Data and pick where to put the file. The file is in Oinkly Budget's own format, so only Oinkly Budget can open it. Keep it somewhere safe. Once you have a very large number of transactions and no backup copy, a reminder on this page and on the Summary suggests setting one up.",
-                "## Importing",
-                "• Choose Import Data, or double-click a .pig file, or use Restore… on the setup screen.",
-                "• Importing replaces everything currently in the app. First, a copy of what is there now is saved to Application Support ▸ Backups ▸ Before restoring a backup, so it can always be undone. If that copy can't be made, nothing is imported.",
+                "## Saving one",
+                "Choose Save Backup and pick where to put the file. The file is in Oinkly Budget's own format, so only Oinkly Budget can open it. Keep it somewhere safe. Once you have a very large number of transactions and no backup copy, a reminder on this page and on the Summary suggests setting one up.",
+                "## Restoring",
+                "• Choose Restore Backup, or double-click a .pig file, or use Restore… on the setup screen.",
+                "• Restoring replaces everything currently in the app. First, a copy of what is there now is saved to Application Support ▸ Backups ▸ Before restoring a backup, so it can always be undone. If that copy can't be made, nothing is restored.",
                 "## Erase All Data",
                 "Settings ▸ Data & Backup ▸ Erase All Data deletes your accounts, transactions, bills, goals, custom categories and payment methods, then closes the app after a short countdown so you can cancel. Open it again to start fresh. Built-in categories and their budgets stay.",
-                "Make sure your backup copy is up to date, or export your data, before anything you can't undo.",
+                "Make sure your backup copy is up to date, or save a manual backup, before anything you can't undo.",
             ]),
 
             Topic(title: "Backup Copy", symbol: "shield.lefthalf.filled", lines: [
@@ -595,7 +595,7 @@ enum HelpContent {
         "Investments": [Shot(asset: "Help-investments", caption: "The Investments page."),
                         Shot(asset: "Help-brokerage", caption: "An investment account with its holdings."),
                         Shot(asset: "Help-update-price", caption: "Update Investment Price.")],
-        "Export & Import Data": [Shot(asset: "Help-backup", caption: "Settings ▸ Data & Backup.")],
+        "Manual Backup": [Shot(asset: "Help-backup", caption: "Settings ▸ Data & Backup.")],
         "The Menu Bar Item": [Shot(asset: "Help-menu-bar", caption: "The menu bar pop-up.")],
         "Reminders": [Shot(asset: "Help-reminders-settings", caption: "Settings ▸ Reminders.")],
         "The Widget": [Shot(asset: "Help-widget-large", caption: "Large."),
