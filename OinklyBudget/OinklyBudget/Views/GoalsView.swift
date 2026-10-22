@@ -190,7 +190,7 @@ private struct GoalCardBackground<Content: View>: View {
         content
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+            .panelBackground(cornerRadius: 8)
     }
 }
 

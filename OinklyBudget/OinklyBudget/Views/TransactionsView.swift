@@ -94,7 +94,7 @@ struct TransactionsView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .frame(width: 240)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 6))
+        .panelBackground(cornerRadius: 6)
     }
 }
 

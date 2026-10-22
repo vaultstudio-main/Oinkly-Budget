@@ -19,7 +19,7 @@ struct StatusBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Divider()
+            EdgeLine()
             HStack(spacing: 14) {
                 Text(text)
                     .lineLimit(1)

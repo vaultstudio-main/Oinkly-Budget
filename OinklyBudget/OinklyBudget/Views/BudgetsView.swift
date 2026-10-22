@@ -92,7 +92,7 @@ struct BudgetsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+        .panelBackground(cornerRadius: 8)
     }
 
     private func card(_ category: Category, spent: Decimal) -> some View {
@@ -116,7 +116,7 @@ struct BudgetsView: View {
             }
         }
         .padding(12)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+        .panelBackground(cornerRadius: 8)
         .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 }

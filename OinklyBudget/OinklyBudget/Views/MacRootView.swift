@@ -71,10 +71,12 @@ struct MacRootView: View {
                 }
             }
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background(Theme.sidebar)
             // Always visible at the bottom of the side panel, however long the account list gets.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 0) {
-                    Divider()
+                    EdgeLine()
                     Button {
                         selection = .manageAccounts
                     } label: {
@@ -90,11 +92,11 @@ struct MacRootView: View {
                     .buttonStyle(.plain)
                     .padding(8)
                 }
-                .background(.bar)
+                .background(Theme.sidebar)
             }
             .frame(width: 300)
 
-            Divider()
+            EdgeLine(vertical: true)
 
             StatusBarHost(fallback: pageName, page: detailPage)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

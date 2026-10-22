@@ -47,7 +47,7 @@ struct ReportPanel<Content: View>: View {
         .accessibilityLabel(title)
         .padding(16)
         .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .panelBackground(cornerRadius: 12, continuous: true)
     }
 }
 

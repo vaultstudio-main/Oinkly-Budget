@@ -41,7 +41,7 @@ struct ReportPlaceholderCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .panelBackground(cornerRadius: 12, continuous: true)
     }
 
     private func legend(color: Color, text: String, dashed: Bool = false) -> some View {

@@ -74,7 +74,7 @@ struct TransactionDetailWindow: View {
                         if !transaction.memo.isEmpty { row("Memo", transaction.memo) }
                         if !transaction.tagNames.isEmpty { row("Tags", transaction.tagNames.joined(separator: ", ")) }
                     }
-                    .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+                    .panelBackground(cornerRadius: 8)
 
                     if let data = transaction.receiptData {
                         VStack(alignment: .leading, spacing: 8) {

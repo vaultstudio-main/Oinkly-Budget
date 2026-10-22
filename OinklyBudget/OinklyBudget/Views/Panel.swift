@@ -17,7 +17,7 @@ struct Panel<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: fillsHeight ? .infinity : nil, alignment: .topLeading)
-        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
+        .panelBackground(cornerRadius: 8)
     }
 }
 
@@ -67,6 +67,6 @@ extension View {
     /// The look of the fixed box at the top of a page: solid, with a line under it, so what scrolls below never shows through.
     func pinnedHeaderStyle() -> some View {
         background(Theme.background)
-            .overlay(alignment: .bottom) { Divider() }
+            .overlay(alignment: .bottom) { EdgeLine() }
     }
 }
