@@ -121,6 +121,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 ## C. Bills, reminders and the menu bar
 
 ### C1. Priority Bills on the Summary (Built)
+- Overdue bills are listed first under a red Overdue heading, then what is due in the next 20 days under Coming up (the heading shows only when something is late), so a bill that is late and due again soon isn't repeated in one list. The alert on the Bills page does the same. Test: S38.
 - **Your own reminders and saved CSV import formats are kept in the database,** not in the Mac's preferences. They are included in backups and restored with them. Reminders from earlier builds are moved in once, on the first launch. The notifications themselves are still scheduled on each Mac.
 - A card under the three top cards listing up to five important unpaid bills that are overdue or due in the next 20 days, soonest first, with amount and "Due in N days". Replaces the orange alert at the top of the Summary. The Bills page keeps its alert.
 - Make a bill important in its edit form.

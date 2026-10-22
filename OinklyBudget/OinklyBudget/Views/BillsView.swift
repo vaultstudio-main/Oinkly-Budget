@@ -666,22 +666,25 @@ struct BillAlertBanner: View {
 
     var body: some View {
         let items = Bills.alerts(allBills.live)
+        let overdue = items.filter(\.isOverdue)
+        let upcoming = items.filter { !$0.isOverdue }
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Label("Priority bills", systemImage: "exclamationmark.triangle.fill")
                     .font(.headline)
                     .foregroundStyle(.orange)
-                ForEach(items) { item in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(item.bill.name).font(.body.weight(.semibold))
-                            Text(when(item))
-                                .font(.caption)
-                                .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
-                        }
-                        Spacer()
-                        Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
+                // Late ones are kept apart from what is coming, so one bill that is both doesn't read as a repeat.
+                if !overdue.isEmpty {
+                    Text("OVERDUE").font(.caption.weight(.semibold)).foregroundStyle(Theme.red).accessibilityAddTraits(.isHeader)
+                    ForEach(overdue) { row($0) }
+                }
+                if !upcoming.isEmpty {
+                    if !overdue.isEmpty {
+                        Text("COMING UP").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            .padding(.top, 4)
+                            .accessibilityAddTraits(.isHeader)
                     }
+                    ForEach(upcoming) { row($0) }
                 }
             }
             .padding(14)
@@ -689,6 +692,20 @@ struct BillAlertBanner: View {
             .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.5), lineWidth: 1))
         }
+    }
+
+    private func row(_ item: Bills.Occurrence) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.bill.name).font(.body.weight(.semibold))
+                Text(when(item))
+                    .font(.caption)
+                    .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
+            }
+            Spacer()
+            Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func when(_ item: Bills.Occurrence) -> String { item.dueText }
@@ -707,39 +724,72 @@ extension Bills.Occurrence {
     }
 }
 
-/// The Summary page's list of the next few important bills: overdue ones and those due in the next 20 days.
+extension Bills {
+    /// The important bills for the Summary and the Bills page, with what is late kept apart from what is coming up, so a bill
+    /// that is overdue and also due again soon isn't listed twice in one run. Each part is at most `limit` long.
+    static func prioritySplit(_ bills: [Bill], limit: Int = 5, now: Date = .now, calendar: Calendar = .current) -> (overdue: [Occurrence], upcoming: [Occurrence]) {
+        let all = priority(bills, limit: Int.max, now: now, calendar: calendar)
+        return (Array(all.filter(\.isOverdue).prefix(limit)), Array(all.filter { !$0.isOverdue }.prefix(limit)))
+    }
+}
+
+/// The Summary page's list of important bills: what is overdue under a red heading, and what is due in the next 20 days below it.
 struct PriorityBillsCard: View {
     @Query private var allBills: [Bill]
 
     var body: some View {
-        let items = Bills.priority(allBills.live)
+        let split = Bills.prioritySplit(allBills.live)
+        let count = split.overdue.count + split.upcoming.count
         ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
-                    headline: items.isEmpty ? nil : "\(items.count) bill\(items.count == 1 ? "" : "s")") {
-            if items.isEmpty {
+                    headline: count == 0 ? nil : (split.overdue.isEmpty ? "\(count) bill\(count == 1 ? "" : "s")" : "\(split.overdue.count) overdue"),
+                    headlineNote: split.overdue.isEmpty || split.upcoming.isEmpty ? nil : "\(split.upcoming.count) coming up") {
+            if count == 0 {
                 Label("No priority bills due soon. Mark a bill Important on the Bills page to see it here.", systemImage: "checkmark.circle")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider() }
-                        HStack {
-                            Image(systemName: item.isOverdue ? "exclamationmark.circle.fill" : "calendar")
-                                .foregroundStyle(item.isOverdue ? Theme.red : Color.orange)
-                                .frame(width: 22)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(item.bill.name).font(.body.weight(.semibold))
-                                Text(item.dueText)
-                                    .font(.caption)
-                                    .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
-                            }
-                            Spacer()
-                            Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
-                        }
-                        .padding(.vertical, 8)
-                        .accessibilityElement(children: .combine)
+                VStack(alignment: .leading, spacing: 0) {
+                    if !split.overdue.isEmpty {
+                        sectionTitle("Overdue", color: Theme.red)
+                        rows(split.overdue)
+                    }
+                    if !split.upcoming.isEmpty {
+                        // The heading only helps when something late is listed above it.
+                        if !split.overdue.isEmpty { sectionTitle("Coming up", color: .secondary).padding(.top, 10) }
+                        rows(split.upcoming)
                     }
                 }
+            }
+        }
+    }
+
+    private func sectionTitle(_ text: String, color: Color) -> some View {
+        Text(text.uppercased())
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    private func rows(_ items: [Bills.Occurrence]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 { Divider() }
+                HStack {
+                    Image(systemName: item.isOverdue ? "exclamationmark.circle.fill" : "calendar")
+                        .foregroundStyle(item.isOverdue ? Theme.red : Color.orange)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(item.bill.name).font(.body.weight(.semibold))
+                        Text(item.dueText)
+                            .font(.caption)
+                            .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
+                    }
+                    Spacer()
+                    Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
+                }
+                .padding(.vertical, 8)
+                .accessibilityElement(children: .combine)
             }
         }
     }

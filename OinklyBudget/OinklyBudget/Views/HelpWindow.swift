@@ -339,7 +339,7 @@ enum HelpContent {
             Topic(title: "Summary", symbol: "square.grid.2x2", lines: [
                 "The Summary is your whole picture on one page.",
                 "• Three cards at the top: Income & Spending, Liabilities and Investments.",
-                "• Priority Bills: your next five important bills that are overdue or due in the next 20 days, soonest first, with the amount and how many days away. Make a bill important when you add or edit it.",
+                "• Priority Bills: your important bills. Anything overdue is listed first under a red Overdue heading, then what is due in the next 20 days under Coming up, each with the amount and how many days away, so a bill that is late and also due again soon isn't listed twice in a row. Make a bill important when you add or edit it.",
                 "• Net Worth Over Time: the last 12 months and the next six.",
                 "• The Summary card: your assets and liabilities, account by account.",
                 "• Loan progress, savings goals, your last 15 transactions, where your income and spending flow, and top spending categories.",

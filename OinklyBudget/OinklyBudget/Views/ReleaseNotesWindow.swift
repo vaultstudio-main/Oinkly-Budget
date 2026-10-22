@@ -60,7 +60,7 @@ enum ReleaseNotes {
                 "A Month Outlook page: for any month, what you will have left to save after income, bills and budgets. Link a bill to the payment that paid it, and the outlook uses what really came out, so a bill that ran over or under shows as it happened. Closed months keep their figures.",
                 "A Budgets page: budgeted, spent and left for every category that has a budget. Set budgets and your own custom categories in Settings ▸ Categories. Mark any category as tax-related for the tax report.",
                 "Reports with one period button, line charts and six-month projections on net worth, cash flow, debt and loans, goals, budgets, spending, income, bills and investments. Cards without enough data keep their size and say what is needed.",
-                "A Summary with Income & Spending, Liabilities and Investments cards, your Priority Bills (the next five important bills that are overdue or due within 20 days), net worth over time with the next six months, loans progress, savings goals, your last 15 transactions, income and spending flow, and top spending categories.",
+                "A Summary with Income & Spending, Liabilities and Investments cards, your Priority Bills (important bills that are overdue, shown first under their own heading, and the next ones due within 20 days), net worth over time with the next six months, loans progress, savings goals, your last 15 transactions, income and spending flow, and top spending categories.",
                 "Liabilities with a Paid Down card for 3 months, 6 months and a year, and Investments with growth cards and a projection of growth.",
             ]),
             ("Export and import", [

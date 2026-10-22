@@ -1040,6 +1040,23 @@ enum SharedHardeningTest {
             check("S37 a comma decimal separator works where the Mac uses one", BudgetAmountText.parse("12,5", decimalSeparator: ",") == Decimal(string: "12.5"))
             check("S37 zero shows as an empty box", BudgetAmountText.shown(0, editing: true) == "" && BudgetAmountText.shown(0, editing: false) == "")
             check("S37 editing shows the plain number", BudgetAmountText.shown(1500, editing: true) == "1500")
+
+            // S38: an overdue bill and its next date are shown apart, not as a repeat in one list
+            do {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV6.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let loan = Bill(name: "Auto Loan", amount: 400, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -12, to: today)!, isImportant: true)
+                let insurance = Bill(name: "Insurance", amount: 100, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 4, to: today)!, isImportant: true)
+                let notImportant = Bill(name: "Gym", amount: 30, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -3, to: today)!)
+                pc.insert(loan); pc.insert(insurance); pc.insert(notImportant)
+                try pc.save()
+                let split = Bills.prioritySplit([loan, insurance, notImportant])
+                check("S38 a late bill is in the overdue part only", split.overdue.map(\.bill.name) == ["Auto Loan"] && split.overdue.allSatisfy(\.isOverdue), "\(split.overdue.map(\.bill.name))")
+                check("S38 what is coming is in its own part, with the same bill's next date", split.upcoming.contains { $0.bill === loan } && split.upcoming.contains { $0.bill === insurance } && split.upcoming.allSatisfy { !$0.isOverdue }, "\(split.upcoming.map(\.bill.name))")
+                check("S38 a bill that isn't important is left out", !split.overdue.contains { $0.bill === notImportant } && !split.upcoming.contains { $0.bill === notImportant })
+                check("S38 paying the late date clears it from overdue", { loan.setPaid(true, on: split.overdue[0].date); return Bills.prioritySplit([loan, insurance]).overdue.isEmpty }())
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
