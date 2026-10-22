@@ -37,7 +37,12 @@ enum WidgetSnapshotWriter {
             }
             .sorted { $0.next < $1.next }
 
-        let snapshot = WidgetSnapshot(updated: now, bills: items, reminders: Array(reminders.prefix(12)))
+        let rules = ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live
+        let repeating: [WidgetSnapshot.Repeating] = Recurring.upcoming(rules, days: 30, now: now)
+            .map { WidgetSnapshot.Repeating(id: $0.id, name: $0.rule.payee, due: $0.date, isOverdue: $0.isOverdue) }
+            .sorted { $0.due < $1.due }
+
+        let snapshot = WidgetSnapshot(updated: now, bills: items, reminders: Array(reminders.prefix(12)), repeating: Array(repeating.prefix(30)))
         if snapshot.write() { WidgetCenter.shared.reloadAllTimelines() }
     }
 }

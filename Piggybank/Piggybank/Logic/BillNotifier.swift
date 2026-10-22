@@ -8,6 +8,7 @@ enum BillNotifier {
     /// UserDefaults key for the Settings switch. On unless turned off.
     static let enabledKey = "billRemindersOn"
     private static let idPrefix = "piggybank.bill."
+    private static let recurringPrefix = "piggybank.recurring."
     /// The system keeps at most 64 pending notifications per app, so stay under that.
     private static let limit = 60
 
@@ -60,19 +61,35 @@ enum BillNotifier {
 
         // Clear out only our own notifications.
         let pending = await center.pendingNotificationRequests()
-        let ours = pending.map(\.identifier).filter { $0.hasPrefix(idPrefix) }
+        let ours = pending.map(\.identifier).filter { $0.hasPrefix(idPrefix) || $0.hasPrefix(recurringPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: ours)
 
         guard isEnabled, let bills = try? context.fetch(FetchDescriptor<Bill>()) else { return }
 
-        let reminders = Bills.reminders(bills, horizonDays: 45)
-            .sorted { $0.fireDate < $1.fireDate }
-            .prefix(limit)
+        // Repeating transactions get a reminder on each date too, with no amount in it. Bills and repeating ones share
+        // the system's limit, so the soonest of both are kept.
+        let rules = ((try? context.fetch(FetchDescriptor<RecurringTransaction>())) ?? []).live
+        let repeating = Recurring.reminders(rules)
+        let billReminders = Bills.reminders(bills, horizonDays: 45)
+        let soonest = (billReminders.map(\.fireDate) + repeating.map(\.fireDate)).sorted().prefix(limit)
+        let lastFire = soonest.last ?? .distantFuture
+        let reminders = billReminders.sorted { $0.fireDate < $1.fireDate }.filter { $0.fireDate <= lastFire }
+        let repeatingKept = repeating.sorted { $0.fireDate < $1.fireDate }.filter { $0.fireDate <= lastFire }
 
         // Only ask for permission once there is actually something to remind about, not on a first launch with no bills.
-        guard !reminders.isEmpty, await requestAccess() else { return }
+        guard !(reminders.isEmpty && repeatingKept.isEmpty), await requestAccess() else { return }
 
         let calendar = Calendar.current
+        for reminder in repeatingKept {
+            let content = UNMutableNotificationContent()
+            content.title = reminder.title
+            content.body = reminder.body
+            content.sound = .default
+            content.userInfo = ["page": ReminderPage.bills.rawValue]
+            let parts = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: reminder.fireDate)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: parts, repeats: false)
+            try? await center.add(UNNotificationRequest(identifier: recurringPrefix + reminder.id, content: content, trigger: trigger))
+        }
         for reminder in reminders {
             let content = UNMutableNotificationContent()
             let due = reminder.dueDate.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())

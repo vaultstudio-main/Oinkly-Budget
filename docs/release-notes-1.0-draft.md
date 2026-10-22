@@ -43,7 +43,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Clean Up (Settings ▸ Clean Up): find and replace in payee names, merge look-alike payees, and move a category's transactions to another category (with the option to delete the old custom categories). Undo the last change.
 - Split transactions: one payment across several categories, with parts that must add up to the total.
 - Tags: label transactions, show tags in the register.
-- Recurring transactions: rules for paycheques, rent and more that add pending transactions for you to confirm, and feed the cash flow forecast.
+- Recurring transactions: rules for paycheques, rent and more that add pending transactions for you to confirm, and feed the cash flow forecast. The Recurring tab looks like the Bills tab, with a calendar, and repeating transactions show in the menu bar, in reminders (no amounts) and in the widget.
 
 ### Export and import
 - Print PDF and Export CSV on every account and on the Transactions page, with an Export sheet for account, period (month, year or from a date) and paper size. A single transaction can be saved as a PDF from its detail window. To print, open the PDF in Preview.
@@ -55,7 +55,7 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Updates are safer: a copy of your data is made before the first open in 1.0, and a file that can't be opened shows an error instead of an empty app.
 
 ### Widgets and the menu bar
-- Two widgets in small, medium and large: Upcoming Bills and Reminders. Edit a widget to choose which bills (all or important only) and how far ahead, or which reminders. They show names and dates only, never amounts or account details.
+- Two widgets in small, medium and large: Upcoming Bills (bills and repeating transactions) and Reminders. Edit a widget to choose which bills (all or important only), how far ahead and whether repeating transactions show, or which reminders. They show names and dates only, never amounts or account details.
 - The menu bar pop-up shows this month's bills, with important bills for the next 30 days first.
 
 ### Around the app

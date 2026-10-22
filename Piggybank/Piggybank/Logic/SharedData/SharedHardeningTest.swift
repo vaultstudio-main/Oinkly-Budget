@@ -272,6 +272,44 @@ enum SharedHardeningTest {
             check("S16 the restore still works", restored.count == 1)
             let stray = ((try? manager.contentsOfDirectory(at: copies, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasPrefix("Before restoring a backup") }
             for copy in stray { try? manager.removeItem(at: copy) }
+
+            // S17: repeating transactions in lists, reminders and widgets
+            let rContainer = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
+            let rc = rContainer.mainContext
+            let rAccount = Account(name: "Repeat checking", type: .checking, openingBalance: 0)
+            rc.insert(rAccount)
+            let rToday = calendar.startOfDay(for: .now)
+            let weeksAgo = calendar.date(byAdding: .day, value: -21, to: rToday) ?? rToday
+            let auto = RecurringTransaction(payee: "Paycheque", account: rAccount, category: nil, amount: 1234.56, frequency: .weekly, startDate: weeksAgo)
+            let manual = RecurringTransaction(payee: "Rent", account: rAccount, category: nil, amount: -987.65, frequency: .monthly,
+                                              startDate: calendar.date(byAdding: .day, value: -2, to: rToday) ?? rToday)
+            manual.autoEnter = false
+            rc.insert(auto); rc.insert(manual)
+            _ = Recurring.run(in: rc)
+            let rules17 = [auto, manual]
+            let monthStart = calendar.dateInterval(of: .month, for: .now)?.start ?? rToday
+            let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? rToday
+            let inMonth = Recurring.occurrences(rules17, from: monthStart, through: monthEnd)
+            check("S17 the month lists entries already added", inMonth.contains { $0.kind == .added && $0.rule === auto } || monthStart > weeksAgo)
+            let ahead = Recurring.upcoming(rules17, days: 30)
+            check("S17 upcoming never lists an entry already made", ahead.allSatisfy { $0.kind != .added })
+            check("S17 upcoming lists dates still to come", ahead.contains { $0.kind == .coming && $0.rule === auto })
+            check("S17 a reminder-only rule shows as waiting", ahead.contains { $0.kind == .due && $0.isOverdue && $0.rule === manual })
+            check("S17 soonest first", ahead.map(\.date) == ahead.map(\.date).sorted())
+            let reminders17 = Recurring.reminders(rules17)
+            check("S17 reminders are for the future only", !reminders17.isEmpty && reminders17.allSatisfy { $0.fireDate > .now })
+            check("S17 reminders never contain an amount", reminders17.allSatisfy { r in
+                !(r.title + r.body).contains("1234") && !(r.title + r.body).contains("987") && !(r.title + r.body).contains("$") && !(r.title + r.body).contains(".56")
+            })
+            let snapshot17 = WidgetSnapshot(updated: .now, bills: [], reminders: [], repeating: ahead.map { WidgetSnapshot.Repeating(id: $0.id, name: $0.rule.payee, due: $0.date, isOverdue: $0.isOverdue) })
+            let encoder17 = JSONEncoder(); encoder17.dateEncodingStrategy = .iso8601
+            let decoder17 = JSONDecoder(); decoder17.dateDecodingStrategy = .iso8601
+            let round = try decoder17.decode(WidgetSnapshot.self, from: encoder17.encode(snapshot17))
+            check("S17 the widget file carries repeating transactions", round.repeating.count == ahead.count && round.repeating.first?.name == ahead.first?.rule.payee)
+            let json17 = String(data: try encoder17.encode(snapshot17), encoding: .utf8) ?? ""
+            check("S17 and no amounts", !json17.contains("1234") && !json17.contains("987"))
+            let oldFile = Data("{\"updated\":\"2026-10-01T10:00:00Z\",\"bills\":[],\"reminders\":[]}".utf8)
+            check("S17 an older widget file still reads", (try? decoder17.decode(WidgetSnapshot.self, from: oldFile))?.repeating.isEmpty == true)
         } catch {
             check("no error", false, error.localizedDescription)
         }

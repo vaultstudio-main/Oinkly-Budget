@@ -3,12 +3,14 @@ import SwiftData
 import AppKit
 import ServiceManagement
 
-/// What the menu bar item shows beside the icon: how many bills are due within three days or overdue.
+/// What the menu bar item shows beside the icon: how many bills and repeating transactions are due within three days or
+/// overdue.
 struct MenuBarLabel: View {
     @Query private var allBills: [Bill]
+    @Query private var allRules: [RecurringTransaction]
 
     var body: some View {
-        let soon = Bills.upcoming(allBills.live, days: 3).count
+        let soon = Bills.upcoming(allBills.live, days: 3).count + Recurring.upcoming(allRules.live, days: 3).count
         // The pig from the app icon as a one-color silhouette, so it matches light and dark menu bars.
         if soon > 0 {
             Label {
@@ -27,6 +29,7 @@ struct MenuBarLabel: View {
 struct MenuBarBills: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var allBills: [Bill]
+    @Query private var allRules: [RecurringTransaction]
     @State private var contentHeight: CGFloat = 400
 
     private static let windowDays = 30
@@ -48,6 +51,7 @@ struct MenuBarBills: View {
         let dueTotal = open.reduce(Decimal(0)) { $0 + $1.bill.amount }
         let overdue = open.filter(\.isOverdue).count
         let next = open.first { !$0.isOverdue } ?? open.first
+        let repeating = Recurring.upcoming(allRules.live, days: Self.windowDays)
 
         // Fixed point sizes, so the pop-up looks the same however the system sizes menu bar windows.
         ScrollView {
@@ -64,8 +68,8 @@ struct MenuBarBills: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     Text(open.isEmpty
-                         ? "Nothing due in \(monthName)"
-                         : "\(open.count) bill\(open.count == 1 ? "" : "s") to pay")
+                         ? (repeating.isEmpty ? "Nothing due in \(monthName)" : "\(repeating.count) repeating coming up")
+                         : "\(open.count) bill\(open.count == 1 ? "" : "s") to pay" + (repeating.isEmpty ? "" : " · \(repeating.count) repeating"))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 }
@@ -105,6 +109,15 @@ struct MenuBarBills: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(others) { row($0, highlight: false) }
+                }
+            }
+
+            if !repeating.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("REPEATING · NEXT \(Self.windowDays) DAYS")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    ForEach(repeating) { repeatingRow($0) }
                 }
             }
         }
@@ -157,6 +170,53 @@ struct MenuBarBills: View {
                 Spacer()
                 Text(item.bill.amount, format: .appCurrency).font(.system(size: 15, weight: .semibold))
             }
+        }
+    }
+
+    /// One date of a repeating transaction. One that waits for you ("Reminder only") has a button to add it now.
+    @ViewBuilder
+    private func repeatingRow(_ item: Recurring.Occurrence) -> some View {
+        if item.rule.isLive {
+            HStack(spacing: 10) {
+                if item.kind == .due {
+                    Button {
+                        Recurring.makeEntry(for: item.rule, on: item.date, in: modelContext)
+                        Recurring.advance(item.rule)
+                        modelContext.saveNow()
+                        Task { await BillNotifier.refresh(in: modelContext) }
+                    } label: {
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 18))
+                            .foregroundStyle(item.isOverdue ? Theme.red : Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Add it now")
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 18)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.rule.payee).font(.system(size: 15))
+                    Text(repeatingWhen(item))
+                        .font(.system(size: 12))
+                        .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
+                }
+                Spacer()
+                Text(item.rule.amount, format: .appCurrency).font(.system(size: 15, weight: .semibold))
+            }
+        }
+    }
+
+    private func repeatingWhen(_ item: Recurring.Occurrence) -> String {
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: .now), to: item.date).day ?? 0
+        switch days {
+        case ..<0: return "Waiting since \(item.date.formatted(.dateTime.month(.abbreviated).day()))"
+        case 0: return item.kind == .due ? "Waiting for you today" : "Today"
+        case 1: return "Tomorrow"
+        default: return "\(item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) · in \(days) days"
         }
     }
 

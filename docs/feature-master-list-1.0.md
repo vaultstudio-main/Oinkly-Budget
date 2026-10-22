@@ -105,6 +105,8 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### B10. Recurring transactions (Built)
 - Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
+- The Recurring tab is laid out like the Bills tab: tiles (in and out this month, next up, rules), the month's list, a calendar with a dot on each date, an Add Recurring button, and a Next 30 Days card. A list of all rules keeps pause, resume and delete.
+- Repeating transactions also show in the menu bar pop-up (a "Repeating" section, counted in the number beside the icon), in reminders (a notification on the morning of each date, with no amount) and in the Upcoming Bills widget (names and dates only, switch off in Edit Widget).
 - Shots: S-B10a (rules screen), S-B10b (rule editor), S-B10c (a pending entry made by a rule).
 
 ---
@@ -117,12 +119,12 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Shots: S-C1.
 
 ### C2. Menu bar (Built)
-- The menu bar pop-up shows this month's bills, with important ones for the next 30 days first. Settings: show in menu bar, open at login.
+- The menu bar pop-up shows this month's bills, with important ones for the next 30 days first, then a Repeating section for repeating transactions in the next 30 days. The number beside the icon counts bills and repeating transactions due within three days. Settings: show in menu bar, open at login.
 - Shots: S-C2.
 
 ### C3. Widgets (Built)
-- Two widgets in three sizes (small, medium, large): Upcoming Bills (the next bills due, names and dates only) and Reminders (your own reminders and when they are next).
-- **Choices.** Right-click a widget and choose Edit Widget. Upcoming Bills: Show (all bills or important bills only) and Look ahead (7, 14 or 30 days). Reminders: pick which reminders show, or leave empty for all of them. The large size lists about 9 bills or 8 reminders.
+- Two widgets in three sizes (small, medium, large): Upcoming Bills (the next bills and repeating transactions due, names and dates only) and Reminders (your own reminders and when they are next).
+- **Choices.** Right-click a widget and choose Edit Widget. Upcoming Bills: Show (all bills or important bills only), Look ahead (7, 14 or 30 days) and Include repeating transactions. Reminders: pick which reminders show, or leave empty for all of them. The large size lists about 9 bills or 8 reminders.
 - No amounts, balances or account details ever appear. They read a small file the app writes on your Mac and update after the app saves. If the app has never run: "Open Oinkly Budget to show your bills here."
 - Add them from the widget gallery (edit widgets on the desktop or in Notification Center).
 - Shots: S-C3a (both widgets on the desktop), S-C3b (widget gallery), S-C3c (Edit Widget choices).

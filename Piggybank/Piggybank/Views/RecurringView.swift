@@ -1,14 +1,20 @@
 import SwiftUI
 import SwiftData
 
-/// The Recurring tab on the Bills page: every repeating transaction, what is due next and a quick look ahead.
+/// The Recurring tab on the Bills page, laid out like the Bills side: tiles and the month's list on the left, the calendar,
+/// the add button and what is coming up in the sidebar.
 struct RecurringView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecurringTransaction.createdAt) private var allRules: [RecurringTransaction]
     @State private var editing: RuleSheet?
     @State private var deleting: RecurringTransaction?
+    @State private var month = Calendar.current.startOfDay(for: .now)
+    @State private var selectedDay: Date?
 
     private var rules: [RecurringTransaction] { allRules.live }
+    private var calendar: Calendar { .current }
+    private var monthStart: Date { calendar.dateInterval(of: .month, for: month)?.start ?? month }
+    private var monthEnd: Date { calendar.date(byAdding: .day, value: -1, to: calendar.date(byAdding: .month, value: 1, to: monthStart)!)! }
 
     private enum RuleSheet: Identifiable {
         case add
@@ -22,37 +28,27 @@ struct RecurringView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 14) {
-                lookAhead
-                HStack {
-                    Text("Repeating transactions add a pending entry on each due date. You confirm or change it in the register.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Button { editing = .add } label: {
-                        Label("Add Recurring", systemImage: "plus.circle.fill").font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
+        let monthItems = Recurring.occurrences(rules, from: monthStart, through: monthEnd)
+        let coming = Recurring.upcoming(rules)
+        HStack(alignment: .top, spacing: 0) {
+            ScrollView {
+                VStack(spacing: 14) {
+                    tiles(monthItems, coming: coming)
+                    monthCard(monthItems)
+                    rulesCard
                 }
-                if rules.isEmpty {
-                    ContentUnavailableView("No Recurring Transactions", systemImage: "arrow.triangle.2.circlepath",
-                                           description: Text("Add one for a paycheque, rent or anything else that repeats. You can also right-click a transaction in a register and choose Make Recurring."))
-                        .frame(height: 260)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(rules.enumerated()), id: \.element.persistentModelID) { index, rule in
-                            if index > 0 { Divider() }
-                            RuleRow(rule: rule, onEdit: { editing = .edit(rule) }, onDelete: { deleting = rule })
-                                .padding(.vertical, 10)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                    .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
-                }
+                .padding(16)
             }
-            .padding(16)
+            Divider()
+            ScrollView {
+                VStack(spacing: 14) {
+                    MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
+                    addButton
+                    comingCard(coming)
+                }
+                .padding(16)
+            }
+            .frame(width: 360)
         }
         .sheet(item: $editing) { sheet in
             switch sheet {
@@ -67,7 +63,7 @@ struct RecurringView: View {
                     // The entries it already made stay. Only the rule goes.
                     for entry in rule.transactions where entry.isLive { entry.recurring = nil }
                     modelContext.delete(rule)
-                    modelContext.saveNow()
+                    changed()
                 }
                 deleting = nil
             }
@@ -77,22 +73,196 @@ struct RecurringView: View {
         }
     }
 
-    private var lookAhead: some View {
-        let ahead = Recurring.forecast(rules)
+    /// Saves, and brings the reminders and widgets up to date.
+    private func changed() {
+        modelContext.saveNow()
+        Task { await BillNotifier.refresh(in: modelContext) }
+    }
+
+    private func dotColor(_ item: Recurring.Occurrence) -> Color {
+        switch item.kind {
+        case .added: Theme.green
+        case .due: item.isOverdue ? Theme.red : .orange
+        case .coming: item.rule.amount > 0 ? Color.blue : .orange
+        }
+    }
+
+    // MARK: Tiles
+
+    private func tiles(_ items: [Recurring.Occurrence], coming: [Recurring.Occurrence]) -> some View {
+        func amount(_ item: Recurring.Occurrence) -> Decimal { item.entry?.amount ?? item.rule.amount }
+        let moneyIn = items.map(amount).filter { $0 > 0 }.reduce(Decimal(0), +)
+        let moneyOut = -items.map(amount).filter { $0 < 0 }.reduce(Decimal(0), +)
+        let next = coming.first { $0.kind == .coming }
         return StatGrid {
-            StatTile(title: "Next 30 Days: In") {
-                Text(ahead.income, format: .appCurrency).foregroundStyle(Theme.green)
-            } note: { Text("from your repeating deposits") }
-            StatTile(title: "Next 30 Days: Out") {
-                Text(ahead.spending, format: .appCurrency).foregroundStyle(Theme.red)
-            } note: { Text("from your repeating payments") }
-            StatTile(title: "Coming Up") {
-                Text("\(ahead.count)")
-            } note: { Text("entr\(ahead.count == 1 ? "y" : "ies") in the next 30 days") }
+            StatTile(title: "In This Month") {
+                Text(moneyIn, format: .appCurrency).foregroundStyle(Theme.green)
+            } note: { Text("from repeating deposits") }
+            StatTile(title: "Out This Month") {
+                Text(moneyOut, format: .appCurrency).foregroundStyle(Theme.red)
+            } note: { Text("from repeating payments") }
+            StatTile(title: "Next Up") {
+                if let next { Text(next.date, format: .dateTime.month(.abbreviated).day()) } else { Text("None") }
+            } note: {
+                Text(next?.rule.payee ?? "Nothing coming up")
+            }
             StatTile(title: "Rules") {
                 Text("\(rules.filter(\.isActive).count)")
             } note: { Text("\(rules.filter { !$0.isActive }.count) paused or finished") }
         }
+    }
+
+    /// Right under the calendar, so a new rule is always one click away.
+    private var addButton: some View {
+        Button { editing = .add } label: {
+            Label("Add Recurring", systemImage: "plus.circle.fill")
+                .font(.body.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+    }
+
+    // MARK: Lists
+
+    private func monthCard(_ items: [Recurring.Occurrence]) -> some View {
+        let shown = selectedDay.map { day in items.filter { calendar.isDate($0.date, inSameDayAs: day) } } ?? items
+        let title = selectedDay.map { $0.formatted(.dateTime.weekday(.wide).month(.wide).day()) }
+            ?? monthStart.formatted(.dateTime.month(.wide).year())
+        return ReportCard(title: title, fillsHeight: false) {
+            VStack(alignment: .leading, spacing: 8) {
+                if selectedDay != nil {
+                    HStack {
+                        Button("Show whole month") { selectedDay = nil }
+                        Spacer()
+                    }
+                    .font(.callout)
+                    .buttonStyle(.borderless)
+                }
+                if shown.isEmpty {
+                    Text(selectedDay == nil ? "Nothing repeats this month." : "Nothing repeats on this day.")
+                        .font(.callout).foregroundStyle(.secondary)
+                } else {
+                    ForEach(shown) { item in
+                        OccurrenceRow(item: item, onEdit: { editing = .edit(item.rule) }, onDelete: { deleting = item.rule }, onChange: changed)
+                        if item.id != shown.last?.id { Divider() }
+                    }
+                }
+            }
+        }
+    }
+
+    private func comingCard(_ items: [Recurring.Occurrence]) -> some View {
+        ReportCard(title: "Next 30 Days") {
+            if items.isEmpty {
+                Text(rules.isEmpty ? "No repeating transactions yet. Use Add Recurring above." : "Nothing repeats in the next 30 days.")
+                    .font(.callout).foregroundStyle(.secondary)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(items) { item in
+                        OccurrenceRow(item: item, onEdit: { editing = .edit(item.rule) }, onDelete: { deleting = item.rule }, onChange: changed)
+                        if item.id != items.last?.id { Divider() }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Every rule, with its status, for pausing, resuming and deleting. Paused and finished ones only show here.
+    private var rulesCard: some View {
+        ReportCard(title: "All Rules", fillsHeight: false) {
+            if rules.isEmpty {
+                ContentUnavailableView("No Recurring Transactions", systemImage: "arrow.triangle.2.circlepath",
+                                       description: Text("Add one for a paycheque, rent or anything else that repeats. You can also right-click a transaction in a register and choose Make Recurring."))
+                    .frame(height: 200)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(rules.enumerated()), id: \.element.persistentModelID) { index, rule in
+                        if index > 0 { Divider() }
+                        RuleRow(rule: rule, onEdit: { editing = .edit(rule) }, onDelete: { deleting = rule })
+                            .padding(.vertical, 10)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// One date of one rule, drawn like a bill: a status mark, the payee, the day and how often, and the amount.
+private struct OccurrenceRow: View {
+    let item: Recurring.Occurrence
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let onChange: () -> Void
+
+    @Environment(\.modelContext) private var modelContext
+
+    private var amount: Decimal { item.entry?.amount ?? item.rule.amount }
+
+    var body: some View {
+        if item.rule.isLive {
+            HStack(spacing: 12) {
+                Image(systemName: item.kind == .added ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(item.kind == .added ? Theme.green : (item.isOverdue ? Theme.red : Color.secondary))
+                Button(action: onEdit) {
+                    HStack {
+                        CategoryBadge(category: item.rule.category, size: 36)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.rule.payee).font(.body)
+                            Text(subtitle).font(.caption).foregroundStyle(item.isOverdue ? Theme.red : (item.kind == .added ? Theme.green : Color.secondary))
+                        }
+                        Spacer()
+                        Text(amount, format: .appCurrency)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(item.kind == .added ? Color.secondary : Color.primary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                if item.kind == .due {
+                    Button("Add") {
+                        Recurring.makeEntry(for: item.rule, on: item.date, in: modelContext)
+                        Recurring.advance(item.rule)
+                        onChange()
+                    }
+                    Button("Skip") {
+                        Recurring.advance(item.rule)
+                        onChange()
+                    }
+                }
+            }
+            .padding(.vertical, 8)
+            .contextMenu {
+                Button("Edit", systemImage: "pencil", action: onEdit)
+                if item.kind == .coming, Calendar.current.isDate(item.rule.nextDate, inSameDayAs: item.date) {
+                    Button("Skip This One", systemImage: "forward.end") {
+                        Recurring.advance(item.rule)
+                        onChange()
+                    }
+                }
+                if item.rule.isActive {
+                    Button("Pause", systemImage: "pause.circle") {
+                        item.rule.isActive = false
+                        onChange()
+                    }
+                }
+                Divider()
+                Button("Delete Rule", systemImage: "trash", role: .destructive, action: onDelete)
+            }
+        }
+    }
+
+    private var subtitle: String {
+        let day = item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        let tail: String
+        switch item.kind {
+        case .added: tail = "Added"
+        case .due: tail = item.isOverdue ? "Overdue" : "Due"
+        case .coming: tail = item.rule.frequency.title
+        }
+        return "\(day) · \(tail)"
     }
 }
 
@@ -101,6 +271,12 @@ private struct RuleRow: View {
     let rule: RecurringTransaction
     let onEdit: () -> Void
     let onDelete: () -> Void
+
+    /// Saves, and brings the reminders and widgets up to date.
+    private func changed() {
+        modelContext.saveNow()
+        Task { await BillNotifier.refresh(in: modelContext) }
+    }
 
     private var isDue: Bool { rule.isActive && rule.nextDate <= Calendar.current.startOfDay(for: .now) }
 
@@ -141,11 +317,11 @@ private struct RuleRow: View {
                 Button("Add Now") {
                     Recurring.makeEntry(for: rule, on: rule.nextDate, in: modelContext)
                     Recurring.advance(rule)
-                    modelContext.saveNow()
+                    changed()
                 }
                 Button("Skip") {
                     Recurring.advance(rule)
-                    modelContext.saveNow()
+                    changed()
                 }
             }
             Menu {
@@ -153,18 +329,18 @@ private struct RuleRow: View {
                 if rule.isActive {
                     Button("Skip Next", systemImage: "forward.end") {
                         Recurring.advance(rule)
-                        modelContext.saveNow()
+                        changed()
                     }
                     Button("Pause", systemImage: "pause.circle") {
                         rule.isActive = false
-                        modelContext.saveNow()
+                        changed()
                     }
                 } else if Recurring.date(after: rule.nextDate, for: rule) != nil || rule.frequency == .once && rule.nextDate >= Calendar.current.startOfDay(for: .now) {
                     Button("Resume", systemImage: "play.circle") {
                         // Pick up from today, not from the days that passed while it was paused.
                         if let next = Recurring.firstDue(onOrAfter: .now, for: rule) { rule.nextDate = next }
                         rule.isActive = true
-                        modelContext.saveNow()
+                        changed()
                     }
                 }
                 Divider()
@@ -344,6 +520,7 @@ struct RecurringRuleEditor: View {
         }
         modelContext.saveNow()
         Recurring.run(in: modelContext)
+        Task { await BillNotifier.refresh(in: modelContext) }
         dismiss()
     }
 

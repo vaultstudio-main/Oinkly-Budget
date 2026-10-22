@@ -65,7 +65,7 @@ struct BillsView: View {
                 Divider()
                 ScrollView {
                     VStack(spacing: 14) {
-                        BillCalendar(month: $month, selectedDay: $selectedDay, items: monthItems)
+                        MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
                         addBillButton
                         upcomingCard(upcoming)
                     }
@@ -177,6 +177,11 @@ struct BillsView: View {
         }
     }
 
+    private func dotColor(_ item: Bills.Occurrence) -> Color {
+        if item.isPaid { return Theme.green }
+        return item.isOverdue ? Theme.red : .orange
+    }
+
     private func delete(_ bill: Bill) {
         modelContext.delete(bill)
         modelContext.saveNow()
@@ -249,10 +254,17 @@ private struct BillRow: View {
 
 // MARK: Calendar
 
-private struct BillCalendar: View {
+/// A coloured dot on a day of the calendar.
+struct CalendarMark {
+    let date: Date
+    let color: Color
+}
+
+/// A month with a dot on every day something is due. Pick a day to see just that day. Used by Bills and by Recurring.
+struct MonthCalendar: View {
     @Binding var month: Date
     @Binding var selectedDay: Date?
-    let items: [Bills.Occurrence]
+    let marks: [CalendarMark]
 
     private var calendar: Calendar { .current }
 
@@ -327,7 +339,7 @@ private struct BillCalendar: View {
     }
 
     private func dayCell(_ day: Date) -> some View {
-        let due = items.filter { calendar.isDate($0.date, inSameDayAs: day) }
+        let due = marks.filter { calendar.isDate($0.date, inSameDayAs: day) }
         let isToday = calendar.isDateInToday(day)
         let isSelected = selectedDay.map { calendar.isDate($0, inSameDayAs: day) } ?? false
         return Button {
@@ -338,8 +350,8 @@ private struct BillCalendar: View {
                     .font(.callout.weight(isToday ? .bold : .regular))
                     .foregroundStyle(isSelected ? Color.white : (isToday ? Color.accentColor : Color.primary))
                 HStack(spacing: 2) {
-                    ForEach(Array(due.prefix(3).enumerated()), id: \.offset) { _, item in
-                        Circle().fill(dot(item)).frame(width: 5, height: 5)
+                    ForEach(Array(due.prefix(3).enumerated()), id: \.offset) { _, mark in
+                        Circle().fill(mark.color).frame(width: 5, height: 5)
                     }
                 }
                 .frame(height: 5)
@@ -352,11 +364,6 @@ private struct BillCalendar: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    private func dot(_ item: Bills.Occurrence) -> Color {
-        if item.isPaid { return Theme.green }
-        return item.isOverdue ? Theme.red : .orange
     }
 }
 

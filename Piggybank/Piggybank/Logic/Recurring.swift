@@ -129,6 +129,84 @@ enum Recurring {
         return result
     }
 
+    // MARK: Lists, the calendar, reminders and widgets
+
+    /// One date of one repeating transaction, as the Recurring page, the menu bar item, the reminders and the widgets show it.
+    struct Occurrence: Identifiable {
+        enum Kind {
+            /// A date still to come.
+            case coming
+            /// Today or past, for a rule that waits for you ("Reminder only"): add it or skip it.
+            case due
+            /// The pending entry the rule already made for this date.
+            case added
+        }
+
+        let rule: RecurringTransaction
+        let date: Date
+        let kind: Kind
+        /// For `.added`, the entry itself.
+        var entry: Transaction?
+        var isOverdue = false
+
+        var id: String { "\(rule.persistentModelID.hashValue)-\(date.timeIntervalSince1970)-\(kind)" }
+    }
+
+    /// Every date of the active rules from `start` through `end`: entries already made, dates still to come, and dates a
+    /// "reminder only" rule is waiting on. Soonest first.
+    static func occurrences(_ rules: [RecurringTransaction], from start: Date, through end: Date, now: Date = .now, calendar: Calendar = .current) -> [Occurrence] {
+        let today = calendar.startOfDay(for: now)
+        let first = calendar.startOfDay(for: start)
+        let last = calendar.startOfDay(for: end)
+        var result: [Occurrence] = []
+        for rule in rules.live where rule.account?.isLive == true {
+            for entry in rule.transactions where entry.isLive {
+                let day = calendar.startOfDay(for: entry.date)
+                if day >= first && day <= last { result.append(Occurrence(rule: rule, date: day, kind: .added, entry: entry)) }
+            }
+            guard rule.isActive else { continue }
+            for day in dates(of: rule, through: last, calendar: calendar) where day >= first {
+                if hasEntry(rule, on: day, calendar: calendar) { continue }
+                if day > today {
+                    result.append(Occurrence(rule: rule, date: day, kind: .coming))
+                } else if !rule.autoEnter {
+                    result.append(Occurrence(rule: rule, date: day, kind: .due, isOverdue: day < today))
+                }
+            }
+        }
+        return result.sorted { $0.date != $1.date ? $0.date < $1.date : $0.rule.payee < $1.rule.payee }
+    }
+
+    /// What is still ahead: dates in the next `days` days, plus anything a "reminder only" rule is waiting on. No entries
+    /// that were already made.
+    static func upcoming(_ rules: [RecurringTransaction], days: Int = 30, now: Date = .now, calendar: Calendar = .current) -> [Occurrence] {
+        let today = calendar.startOfDay(for: now)
+        let end = calendar.date(byAdding: .day, value: days, to: today) ?? today
+        let back = calendar.date(byAdding: .day, value: -90, to: today) ?? today
+        return occurrences(rules, from: back, through: end, now: now, calendar: calendar).filter { $0.kind != .added }
+    }
+
+    /// A reminder for the system's notifications. It never has an amount in it.
+    struct Reminder: Identifiable {
+        let id: String
+        let title: String
+        let body: String
+        let fireDate: Date
+    }
+
+    /// One reminder on the morning of each date in the next `horizonDays` days.
+    static func reminders(_ rules: [RecurringTransaction], horizonDays: Int = 45, hour: Int = 9, now: Date = .now, calendar: Calendar = .current) -> [Reminder] {
+        upcoming(rules, days: horizonDays, now: now, calendar: calendar).compactMap { item in
+            guard item.kind != .due || !item.isOverdue, let fire = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: item.date), fire > now else { return nil }
+            let rule = item.rule
+            let account = rule.account?.name ?? "your account"
+            let body = rule.autoEnter
+                ? "A pending entry is added to \(account) today. Open Oinkly Budget to confirm it."
+                : "Open Oinkly Budget ▸ Bills & Recurring to add it to \(account)."
+            return Reminder(id: "\(rule.persistentModelID.hashValue)-\(item.date.timeIntervalSince1970)", title: "\(rule.payee) repeats today", body: body, fireDate: fire)
+        }
+    }
+
     // MARK: Looking ahead
 
     /// What the active rules would add over the next `days` days, as money in and money out.
