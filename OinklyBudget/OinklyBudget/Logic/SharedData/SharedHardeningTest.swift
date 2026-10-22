@@ -105,13 +105,13 @@ enum SharedHardeningTest {
             let s5 = try fresh("s5")
             try s5.checkIn(from: source, baseRevision: nil, by: "A", appVersion: "1.0")
             guard var newer = s5.readInfo() else { throw StoreError.failed("no note") }
-            newer.schemaVersion = 8
-            try rewriteNote(s5) { $0.schemaVersion = 8 }
+            newer.schemaVersion = 9
+            try rewriteNote(s5) { $0.schemaVersion = 9 }
             var refusedOpen = false, refusedSave = false
             do { try s5.checkOut(to: root.appendingPathComponent("w5/OinklyBudget.store")) } catch SharedDataError.newerFormat { refusedOpen = true } catch {}
             do { try s5.checkIn(from: source, baseRevision: newer.revision, by: "A", appVersion: "1.0") } catch SharedDataError.newerFormat { refusedSave = true } catch {}
             check("S5 newer data isn't opened", refusedOpen)
-            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 8 && s5.readInfo()?.counts == counts)
+            check("S5 newer data isn't written over", refusedSave && s5.readInfo()?.schemaVersion == 9 && s5.readInfo()?.counts == counts)
 
             // S6: many copies start at the same instant
             let s6 = try fresh("s6")
@@ -247,7 +247,7 @@ enum SharedHardeningTest {
             check("S14 two decimal points are refused", StatementImporter.parseAmount("1.234.567.89", commaDecimal: false) == nil && StatementImporter.parseAmount("1.234.567", commaDecimal: false) == nil)
 
             // S15: a repeating transaction missed for ten years makes recent entries, not old ones
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV8.self)
             let memory = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true))
             let context = memory.mainContext
             let account = Account(name: "Test checking", type: .checking, openingBalance: 0)
@@ -922,7 +922,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 func day(_ d: Int) -> Date { calendar.date(from: DateComponents(year: 2030, month: 1, day: d))! }
-                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let oc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Outlook bank", type: .checking, openingBalance: 0)
                 let groceries = Category(name: "Outlook groceries", colorHex: "34C759", symbol: "cart", monthlyLimit: 400)
                 let electric = Bill(name: "Electric", amount: 90, frequency: .monthly, dueDate: day(10))
@@ -1045,7 +1045,7 @@ enum SharedHardeningTest {
             do {
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: .now)
-                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let pc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let loan = Bill(name: "Auto Loan", amount: 400, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -12, to: today)!, isImportant: true)
                 let insurance = Bill(name: "Insurance", amount: 100, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 4, to: today)!, isImportant: true)
                 let notImportant = Bill(name: "Gym", amount: 30, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: -3, to: today)!)
@@ -1060,7 +1060,7 @@ enum SharedHardeningTest {
 
             // S39: ticking an entry a repeating rule made
             do {
-                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let rc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let income = Transaction(account: nil, date: .now, payee: "Pay", amount: 2_000)
                 rc.insert(income)
                 income.state = .pending
@@ -1082,7 +1082,7 @@ enum SharedHardeningTest {
                 let calendar = Calendar.current
                 let today = calendar.startOfDay(for: .now)
                 func ago(_ days: Int) -> Date { calendar.date(byAdding: .day, value: -days, to: today)! }
-                let bc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV7.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
                 let bank = Account(name: "Bills bank", type: .checking, openingBalance: 0)
                 bc.insert(bank)
                 let power = Bill(name: "Power", amount: 90, frequency: .monthly, dueDate: ago(5))
@@ -1133,6 +1133,47 @@ enum SharedHardeningTest {
                 BillPaySources.removeOrphans(in: bc)
                 try bc.save()
                 check("S40 deleting the account leaves no stray record", ((try? bc.fetch(FetchDescriptor<BillPaySource>())) ?? []).isEmpty)
+            }
+
+            // S41: weekly budgets
+            do {
+                let calendar = Calendar.current
+                let wc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV8.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                check("S41 a weekly amount is read as about a month: 100 a week is 433.33", BudgetPeriods.monthly(fromWeekly: 100) == Decimal(string: "433.33"))
+                check("S41 and 15 a week is 65", BudgetPeriods.monthly(fromWeekly: 15) == 65)
+                let food = Category(name: "Weekly food", colorHex: "34C759", symbol: "cart", monthlyLimit: 0, isIncome: false, systemKey: Category.customKeyPrefix + "weekly-food")
+                wc.insert(food)
+                BudgetPeriods.set(amount: 100, weekly: true, for: food, in: wc)
+                try wc.save()
+                check("S41 a weekly budget keeps its weekly amount and a monthly equivalent", BudgetPeriods.weeklyAmount(for: food) == 100 && food.monthlyLimit == Decimal(string: "433.33"))
+                BudgetPeriods.set(amount: 120, weekly: true, for: food, in: wc)
+                try wc.save()
+                check("S41 changing it keeps one record", ((try? wc.fetch(FetchDescriptor<BudgetPeriod>())) ?? []).count == 1 && BudgetPeriods.weeklyAmount(for: food) == 120)
+                let bank = Account(name: "Weekly bank", type: .checking, openingBalance: 0)
+                wc.insert(bank)
+                func day(_ offset: Int) -> Date { calendar.date(byAdding: .day, value: offset, to: calendar.startOfDay(for: .now))! }
+                let week = calendar.dateInterval(of: .weekOfYear, for: .now)!
+                let inside = Transaction(account: bank, date: week.start.addingTimeInterval(3_600), payee: "Shop", category: food, amount: -40)
+                let before = Transaction(account: bank, date: week.start.addingTimeInterval(-86_400), payee: "Shop", category: food, amount: -25)
+                wc.insert(inside); wc.insert(before)
+                try wc.save()
+                let weekSpend = Budget.spentTable(try wc.fetch(FetchDescriptor<Transaction>()), interval: week)
+                check("S41 spending is counted for just the week asked about", weekSpend[food] == 40)
+                let backup = try DataBackup.decode(try DataBackup.encode(try DataBackup.make(from: wc)))
+                try DataBackup.restore(backup, into: wc)
+                let restored = try wc.fetch(FetchDescriptor<Category>()).first { $0.systemKey == Category.customKeyPrefix + "weekly-food" }
+                check("S41 a backup brings back the weekly amount", restored.flatMap { BudgetPeriods.weeklyAmount(for: $0) } == 120 && restored?.monthlyLimit == BudgetPeriods.monthly(fromWeekly: 120))
+                if let restored {
+                    BudgetPeriods.set(amount: 300, weekly: false, for: restored, in: wc)
+                    try wc.save()
+                    check("S41 making it monthly again clears the weekly record", BudgetPeriods.weeklyAmount(for: restored) == nil && restored.monthlyLimit == 300)
+                    BudgetPeriods.set(amount: 50, weekly: true, for: restored, in: wc)
+                    wc.delete(restored)
+                    try wc.save()
+                    BudgetPeriods.removeOrphans(in: wc)
+                    try wc.save()
+                    check("S41 deleting the budget leaves no stray record", ((try? wc.fetch(FetchDescriptor<BudgetPeriod>())) ?? []).isEmpty)
+                }
             }
         } catch {
             check("no error", false, error.localizedDescription)

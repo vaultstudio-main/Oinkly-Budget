@@ -14,7 +14,7 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 
 | Protection | Where | Tested |
 |---|---|---|
-| Frozen V1 shape and lightweight V1 to V2 through V6 to V7 migrations | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real database from the original build (1.0 build 1, tag `app-review-original-1.0`) opened by the current build, test data set |
+| Frozen V1 shape and lightweight V1 to V2 through V7 to V8 migrations | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real database from the original build (1.0 build 1, tag `app-review-original-1.0`) opened by the current build, test data set |
 | One-time step after migration (routing numbers, opening-deposit flag, tax flags, primary checking) | `Logic/SchemaUpgrade.swift` | Same test |
 | Safety copy before first V2 open (data file, side files, receipts folder) | `Logic/StoreSafetyCopy.swift` | Same test |
 | Data file pinned to the app's own folder, so the App Group can't move it | `OinklyBudgetApp.swift`, `AppStore.localStoreURL` | Found and fixed by comparing the original build and the new one |
@@ -72,14 +72,14 @@ Run these on every release candidate. Record the date, the build and pass or fai
 | # | Check |
 |---|---|
 | F1 | Version and build number are higher than anything already uploaded |
-| F2 | Schema version matches what is in the shipped build; V7 is not edited after anyone outside this Mac has used it, or a V8 and migration are added |
+| F2 | Schema version matches what is in the shipped build; V8 is not edited after anyone outside this Mac has used it, or a V9 and migration are added |
 | F3 | The release notes tell people to make a backup, and where the safety copy is |
 | F4 | A fresh install works (no old data) |
 | F5 | The release build, not the debug build, is the one tested |
 
 ## Rules while building
 
-- A change to a stored model is a schema change. Once V7 has left this Mac (TestFlight or the store), changing it needs V8 and a tested migration. A change to a model that other models link to also needs frozen copies of the old shapes (see SchemaV1Models.swift), which is why the colour choice is its own record. V4 added the picture colour choice, V5 the Month Outlook's closed-month figures, V6 the cash budget marks, and V7 which account a bill comes out of, each as its own record. V3 added reminders and saved CSV import formats (hardening test S22 opens a 2.0 data file in 3.0).
+- A change to a stored model is a schema change. Once V8 has left this Mac (TestFlight or the store), changing it needs V9 and a tested migration. A change to a model that other models link to also needs frozen copies of the old shapes (see SchemaV1Models.swift), which is why the colour choice is its own record. V4 added the picture colour choice, V5 the Month Outlook's closed-month figures, V6 the cash budget marks, V7 which account a bill comes out of, and V8 weekly budgets, each as its own record. V3 added reminders and saved CSV import formats (hardening test S22 opens a 2.0 data file in 3.0).
 - Every new stored field has a default, so the migration stays lightweight.
 - A step that changes data must be safe to run twice.
 - Never delete the old data until the new data has been checked. Check by reading it back, not by trusting the write.

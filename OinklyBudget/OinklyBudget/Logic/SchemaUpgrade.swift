@@ -29,6 +29,7 @@ enum SchemaUpgrade {
         ArtworkChoices.removeOrphans(in: context)
         CashBudgets.removeOrphans(in: context)
         BillPaySources.removeOrphans(in: context)
+        BudgetPeriods.removeOrphans(in: context)
 
         seedTaxFlags(in: context)
         context.saveNow()

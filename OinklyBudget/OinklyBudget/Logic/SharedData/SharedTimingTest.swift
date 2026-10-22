@@ -27,7 +27,7 @@ enum SharedTimingTest {
             NSLog("TIMING: test data has \(counts["ZTRANSACTION"] ?? 0) transactions, \(counts.values.reduce(0, +)) rows, \(size / 1_000_000) MB")
 
             // The backup copy: the snapshot and the portable .pig file
-            let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
+            let schema = Schema(versionedSchema: OinklyBudgetSchemaV8.self)
             let bigCopy = root.appendingPathComponent("big-open/OinklyBudget.store")
             try manager.createDirectory(at: bigCopy.deletingLastPathComponent(), withIntermediateDirectories: true)
             try manager.copyItem(at: big, to: bigCopy)

@@ -283,6 +283,11 @@ private struct ScreenshotRun {
         await sheetShot(open: "goalDetail", as: "sheet-goal-detail")
         await sheetShot(open: "addGoal", as: "sheet-add-goal")
         await pageShot("budgets", as: "page-budgets")
+        post("budgetsTab:cash")
+        await wait(1.5)
+        await bringForward(window)
+        capture(window, as: "page-budgets-cash")
+        post("budgetsTab:monthly")
         await pageShot("outlook", as: "page-month-outlook")
         await pageShot("manageAccounts", as: "page-manage-accounts")
 

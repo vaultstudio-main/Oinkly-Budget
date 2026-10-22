@@ -19,6 +19,19 @@ enum Budget {
         return total
     }
 
+    /// Spending for every category in `interval` (a week, say), in one pass over the transactions.
+    static func spentTable(_ transactions: [Transaction], interval: DateInterval) -> SpentTable {
+        var sums: [PersistentIdentifier: Decimal] = [:]
+        for transaction in transactions {
+            guard transaction.amount < 0, interval.contains(transaction.date) else { continue }
+            for part in transaction.categoryParts {
+                guard let category = part.category else { continue }
+                sums[category.persistentModelID, default: 0] -= part.amount
+            }
+        }
+        return SpentTable(sums: sums)
+    }
+
     /// Spending for every category in one pass over the transactions. Looking each category up one at a time
     /// meant scanning every transaction once per category, hundreds of times per screen refresh.
     static func spentTable(_ transactions: [Transaction], month: Date = .now, calendar: Calendar = .current) -> SpentTable {

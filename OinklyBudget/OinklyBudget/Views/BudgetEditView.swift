@@ -7,12 +7,15 @@ struct BudgetEditView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var limit: Decimal
+    @State private var isWeekly: Bool
     @State private var isTaxRelated: Bool
     @State private var isCashBudget: Bool
 
     init(category: Category) {
         self.category = category
-        _limit = State(initialValue: category.monthlyLimit)
+        let weekly = BudgetPeriods.weeklyAmount(for: category)
+        _isWeekly = State(initialValue: weekly != nil)
+        _limit = State(initialValue: weekly ?? category.monthlyLimit)
         _isTaxRelated = State(initialValue: category.isTaxRelated)
         _isCashBudget = State(initialValue: CashBudgets.isCash(category))
     }
@@ -24,12 +27,23 @@ struct BudgetEditView: View {
                     CategoryBadge(category: category)
                     Text(category.name).font(.headline)
                 }
+                if !category.isIncome {
+                    Picker("Budget is", selection: $isWeekly) {
+                        Text("Monthly").tag(false)
+                        Text("Weekly").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
                 HStack {
-                    Text("Monthly budget")
+                    Text(isWeekly ? "Weekly budget" : "Monthly budget")
                     Spacer()
-                    CurrencyField("Monthly budget", amount: $limit)
+                    CurrencyField(isWeekly ? "Weekly budget" : "Monthly budget", amount: $limit)
                         .labelsHidden()
                         .multilineTextAlignment(.trailing)
+                }
+                if isWeekly && limit > 0 {
+                    Text("Reports and the Summary read this as about \(BudgetPeriods.monthly(fromWeekly: limit).formatted(.appCurrency)) a month.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
                 if !category.isIncome {
                     Toggle("Counts as tax-related", isOn: $isTaxRelated)
@@ -38,7 +52,7 @@ struct BudgetEditView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section {
-                    Text("Categories are built in and the same on every device. Only the budget amount, the tax flag and the cash budget flag can be changed.")
+                    Text("Categories are built in and the same on every device. Only the budget amount (monthly or weekly), the tax flag and the cash budget flag can be changed.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -51,9 +65,13 @@ struct BudgetEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        category.monthlyLimit = max(limit, 0)
                         category.isTaxRelated = isTaxRelated
-                        if let context = category.modelContext { CashBudgets.set(isCashBudget && !category.isIncome, for: category, in: context) }
+                        if let context = category.modelContext {
+                            BudgetPeriods.set(amount: limit, weekly: isWeekly && !category.isIncome, for: category, in: context)
+                            CashBudgets.set(isCashBudget && !category.isIncome, for: category, in: context)
+                        } else {
+                            category.monthlyLimit = max(limit, 0)
+                        }
                         dismiss()
                     }
                 }
@@ -72,6 +90,7 @@ struct CustomBudgetEditView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name: String
     @State private var limit: Decimal?
+    @State private var isWeekly: Bool
     @State private var isIncome: Bool
     @State private var isTaxRelated: Bool
     @State private var isCashBudget: Bool
@@ -80,7 +99,9 @@ struct CustomBudgetEditView: View {
     init(category: Category?) {
         self.category = category
         _name = State(initialValue: category?.name ?? "")
-        _limit = State(initialValue: category.map(\.monthlyLimit))
+        let weekly = category.flatMap { BudgetPeriods.weeklyAmount(for: $0) }
+        _isWeekly = State(initialValue: weekly != nil)
+        _limit = State(initialValue: weekly ?? category.map(\.monthlyLimit))
         _isIncome = State(initialValue: category?.isIncome ?? false)
         _isTaxRelated = State(initialValue: category?.isTaxRelated ?? false)
         _isCashBudget = State(initialValue: category.map { CashBudgets.isCash($0) } ?? false)
@@ -102,7 +123,12 @@ struct CustomBudgetEditView: View {
                             if new.count > Account.maxNameLength { name = String(new.prefix(Account.maxNameLength)) }
                         }
                     if !isIncome {
-                        CurrencyField("Monthly budget", value: $limit)
+                        Picker("Budget is", selection: $isWeekly) {
+                            Text("Monthly").tag(false)
+                            Text("Weekly").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        CurrencyField(isWeekly ? "Weekly budget" : "Monthly budget", value: $limit)
                         Toggle("Counts as tax-related", isOn: $isTaxRelated)
                         Toggle("Counts as a cash budget", isOn: $isCashBudget)
                     }
@@ -145,6 +171,7 @@ struct CustomBudgetEditView: View {
             let kindChanged = category.isIncome != isIncome
             category.name = clean
             category.monthlyLimit = amount
+            BudgetPeriods.set(amount: amount, weekly: isWeekly && !isIncome, for: category, in: modelContext)
             category.isTaxRelated = isIncome ? false : isTaxRelated
             category.isIncome = isIncome
             CashBudgets.set(isCashBudget && !isIncome, for: category, in: modelContext)
@@ -157,6 +184,7 @@ struct CustomBudgetEditView: View {
                                 systemKey: Category.customKeyPrefix + UUID().uuidString)
             made.isTaxRelated = isIncome ? false : isTaxRelated
             modelContext.insert(made)
+            BudgetPeriods.set(amount: amount, weekly: isWeekly && !isIncome, for: made, in: modelContext)
             CashBudgets.set(isCashBudget && !isIncome, for: made, in: modelContext)
         }
         modelContext.saveNow()

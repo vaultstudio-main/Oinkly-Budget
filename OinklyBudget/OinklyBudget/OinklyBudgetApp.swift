@@ -8,7 +8,7 @@ struct OinklyBudgetApp: App {
     @AppStorage(BackgroundSettingsSection.showMenuBarKey) private var showInMenuBar = true
 
     init() {
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV8.self)
         // A restore from a portable file waits here until the fresh data file is open.
         var portableRestore: (file: BackupFile?, note: String?) = (nil, nil)
         // Kept on this device on purpose. The default would start syncing to iCloud as soon as a container is

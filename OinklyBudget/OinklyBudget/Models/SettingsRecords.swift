@@ -372,3 +372,65 @@ enum BillPaySources {
         for source in all(in: context) where !bills.contains(source.billKey) || !accounts.contains(source.accountKey) { context.delete(source) }
     }
 }
+
+/// A budget that is set as a weekly amount. Its own record, found by the category's key, so the category model stays as it was.
+/// The category's monthly amount is always kept as the monthly equivalent (the weekly amount times 52 over 12), so reports, the
+/// Summary and the Month Outlook read every budget as a monthly figure. A budget with no record is a monthly budget.
+@Model
+final class BudgetPeriod {
+    var key: String = ""
+    var weeklyAmount: Decimal = 0
+    var createdAt: Date = Date.now
+
+    init(key: String, weeklyAmount: Decimal) {
+        self.key = key
+        self.weeklyAmount = weeklyAmount
+    }
+}
+
+enum BudgetPeriods {
+    /// The monthly equivalent of a weekly amount: an average month is 52 weeks over 12, to the cent.
+    static func monthly(fromWeekly weekly: Decimal) -> Decimal {
+        var value = weekly * 52 / 12
+        var rounded = Decimal()
+        NSDecimalRound(&rounded, &value, 2, .plain)
+        return rounded
+    }
+
+    static func key(for category: Category) -> String { CashBudgets.key(for: category) }
+
+    private static func all(in context: ModelContext) -> [BudgetPeriod] {
+        ((try? context.fetch(FetchDescriptor<BudgetPeriod>())) ?? []).live
+    }
+
+    /// Every weekly amount, by category key, for a page that shows many budgets.
+    static func weeklyAmounts(in context: ModelContext) -> [String: Decimal] {
+        Dictionary(all(in: context).map { ($0.key, $0.weeklyAmount) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    static func weeklyAmount(for category: Category) -> Decimal? {
+        guard category.isLive, let context = category.modelContext else { return nil }
+        return weeklyAmounts(in: context)[key(for: category)]
+    }
+
+    /// Sets a category's budget. `weekly` true means `amount` is per week (and the monthly amount becomes its equivalent);
+    /// false means it is per month. Does not save.
+    static func set(amount: Decimal, weekly: Bool, for category: Category, in context: ModelContext) {
+        let wanted = key(for: category)
+        let mine = all(in: context).filter { $0.key == wanted }
+        for extra in mine.dropFirst() { context.delete(extra) }
+        if weekly && amount > 0 {
+            if let existing = mine.first { existing.weeklyAmount = amount } else { context.insert(BudgetPeriod(key: wanted, weeklyAmount: amount)) }
+            category.monthlyLimit = monthly(fromWeekly: amount)
+        } else {
+            for record in mine { context.delete(record) }
+            category.monthlyLimit = max(amount, 0)
+        }
+    }
+
+    /// Records for categories that are gone.
+    static func removeOrphans(in context: ModelContext) {
+        let present = Set(((try? context.fetch(FetchDescriptor<Category>())) ?? []).live.map { key(for: $0) })
+        for record in all(in: context) where !present.contains(record.key) { context.delete(record) }
+    }
+}

@@ -85,6 +85,11 @@ enum TestData {
                               isIncome: true, systemKey: Category.customKeyPrefix + "house-sitting")
         context.insert(coffee)
         context.insert(sitter)
+        // A few weekly and cash budgets, so those parts of the Budgets page have something to show.
+        BudgetPeriods.set(amount: 60, weekly: true, for: cat("dining-out") ?? coffee, in: context)
+        BudgetPeriods.set(amount: 15, weekly: true, for: coffee, in: context)
+        CashBudgets.set(true, for: coffee, in: context)
+        if let barber = cat("salon-barber") { CashBudgets.set(true, for: barber, in: context) }
         context.insert(CustomPaymentMethod(name: "Company Card", symbol: "creditcard"))
         context.insert(CustomPaymentMethod(name: "Tap to Pay", symbol: "wave.3.right"))
 

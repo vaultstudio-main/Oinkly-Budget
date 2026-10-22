@@ -169,6 +169,11 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 ### D3b. Budgets in first-run setup (Built)
 - After the accounts, a second setup step lists every expense category with a budget box (zero means none), plus Suggested Amounts, Clear All and Add Your Own, and a running total. Continue opens the app. Skip for now on the accounts step goes straight in. Debug check: `-categorySetupCheck <folder>`.
 
+### D3c. Weekly and cash budgets (Built)
+- A budget is set as a monthly or weekly amount (Budget is: Monthly or Weekly in both budget forms). A weekly amount is kept in its own record (BudgetPeriod, database shape 8, in Manual Backup); the category's monthly amount holds its monthly equivalent (weekly x 52 / 12, to the cent), so reports, the Summary and the Month Outlook need no change.
+- The Budgets page has two tabs. Monthly: non-cash budgets for a month; a weekly budget shows its monthly equivalent, a "$N a week" note and a "This week" bar while the current month is showing. Cash: cash budgets (Counts as a cash budget) with a week selector (previous, next, This Week); weekly cash budgets show the week's spending, monthly ones show their month; all spending in the category counts, from every account.
+- Settings > Categories lists a weekly budget as "$N a week". Tests: S41. Debug: `-screenshotOnly page-budgets` takes both tabs.
+
 ### D3a. Month Outlook (Built)
 - Overview ▸ Month Outlook (⌘9): for the chosen month, money in (recurring income plus other income), bills and repeating expenses, each budget at the larger of its limit and what was spent, and everything else spent; the result is Left to Save. Past months show the figures kept when they closed (a new standalone record, OutlookSnapshot, in database shape 5; also in Manual Backup). Future months show what is expected.
 - Bills in a budgeted category are counted inside that budget; a paid bill counts at the linked payment's amount; transfers and investment accounts are left out.

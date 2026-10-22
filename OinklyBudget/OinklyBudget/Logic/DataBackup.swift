@@ -120,6 +120,8 @@ struct BackupFile: Codable {
         var isTaxRelated: Bool?
         /// A cash budget, left out of the Month Outlook. Added in 1.0; absent in older files.
         var isCashBudget: Bool?
+        /// Set when the budget is a weekly amount; the monthly amount above is then its monthly equivalent. Added in 1.0.
+        var weeklyAmount: String?
     }
 
     struct AccountRecord: Codable {
@@ -303,10 +305,12 @@ enum DataBackup {
         let ids = Dictionary(uniqueKeysWithValues: accounts.enumerated().map { ($1.persistentModelID, $0) })
 
         let cashKeys = CashBudgets.keys(in: context)
+        let weeklyAmounts = BudgetPeriods.weeklyAmounts(in: context)
         file.categories = try context.fetch(FetchDescriptor<Category>()).live.map {
             .init(key: $0.systemKey, name: $0.name, colorHex: $0.colorHex, symbol: $0.symbol,
                   monthlyLimit: text($0.monthlyLimit), isIncome: $0.isIncome, showOnBudgets: $0.showOnBudgets,
-                  isTaxRelated: $0.isTaxRelated, isCashBudget: cashKeys.contains(CashBudgets.key(for: $0)))
+                  isTaxRelated: $0.isTaxRelated, isCashBudget: cashKeys.contains(CashBudgets.key(for: $0)),
+                  weeklyAmount: weeklyAmounts[BudgetPeriods.key(for: $0)].map { text($0) })
         }
 
         let liveTags = try context.fetch(FetchDescriptor<Tag>()).live
@@ -518,6 +522,7 @@ enum DataBackup {
         for item in try context.fetch(FetchDescriptor<OutlookSnapshot>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<CashBudgetMark>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<BillPaySource>()) { context.delete(item) }
+        for item in try context.fetch(FetchDescriptor<BudgetPeriod>()) { context.delete(item) }
         for record in file.outlooks ?? [] {
             context.insert(OutlookSnapshot(monthKey: record.monthKey, incomeTotal: record.incomeTotal, billsTotal: record.billsTotal,
                                            budgetsTotal: record.budgetsTotal, otherSpending: record.otherSpending, leftToSave: record.leftToSave,
@@ -541,6 +546,7 @@ enum DataBackup {
                 existing.showOnBudgets = record.showOnBudgets
                 existing.isTaxRelated = record.isTaxRelated ?? false
                 if record.isCashBudget == true { CashBudgets.set(true, for: existing, in: context) }
+                if let weekly = record.weeklyAmount { context.insert(BudgetPeriod(key: BudgetPeriods.key(for: existing), weeklyAmount: decimal(weekly))) }
             } else if let key = record.key, key.hasPrefix(Category.customKeyPrefix) {
                 let made = Category(name: record.name, colorHex: record.colorHex, symbol: record.symbol,
                                     monthlyLimit: decimal(record.monthlyLimit), isIncome: record.isIncome, systemKey: key)
@@ -548,6 +554,7 @@ enum DataBackup {
                 made.isTaxRelated = record.isTaxRelated ?? false
                 context.insert(made)
                 if record.isCashBudget == true { CashBudgets.set(true, for: made, in: context) }
+                if let weekly = record.weeklyAmount { context.insert(BudgetPeriod(key: BudgetPeriods.key(for: made), weeklyAmount: decimal(weekly))) }
                 byKey[key] = made
             }
         }

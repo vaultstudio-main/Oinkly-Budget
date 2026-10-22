@@ -186,6 +186,7 @@ struct CategoriesSettingsView: View {
     private var categories: [Category] { allCategories.live }
     @State private var editing: Category?
     @State private var isAddingCustom = false
+    @Query private var periods: [BudgetPeriod]
 
     /// Spending categories, with the ones you made yourself first.
     private var expenses: [Category] {
@@ -210,7 +211,11 @@ struct CategoriesSettingsView: View {
                     }
                     Spacer()
                     if category.monthlyLimit > 0 {
-                        Text(category.monthlyLimit, format: .appCurrency).foregroundStyle(.secondary)
+                        if let weekly = periods.live.first(where: { $0.key == BudgetPeriods.key(for: category) })?.weeklyAmount {
+                            Text("\(weekly.formatted(.appCurrency)) a week").foregroundStyle(.secondary)
+                        } else {
+                            Text(category.monthlyLimit, format: .appCurrency).foregroundStyle(.secondary)
+                        }
                     } else {
                         Text("Not set").foregroundStyle(.tertiary)
                     }

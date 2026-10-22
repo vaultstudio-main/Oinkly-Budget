@@ -118,13 +118,13 @@ struct CategorySetupView: View {
     private func useSuggested() {
         let suggested = Dictionary(Category.definitions.map { ($0.key, $0.budget) }, uniquingKeysWith: { first, _ in first })
         for category in allCategories.live where !category.isIncome && !category.isCustom {
-            if let key = category.systemKey, let amount = suggested[key] { category.monthlyLimit = amount }
+            if let key = category.systemKey, let amount = suggested[key] { BudgetPeriods.set(amount: amount, weekly: false, for: category, in: modelContext) }
         }
         modelContext.saveNow()
     }
 
     private func clearAll() {
-        for category in allCategories.live where !category.isIncome { category.monthlyLimit = 0 }
+        for category in allCategories.live where !category.isIncome { BudgetPeriods.set(amount: 0, weekly: false, for: category, in: modelContext) }
         modelContext.saveNow()
     }
 }
@@ -190,7 +190,7 @@ extension CategorySetupView {
         guard let flag = arguments.firstIndex(of: "-categorySetupCheck"), flag + 1 < arguments.count else { return }
         let folder = URL(fileURLWithPath: arguments[flag + 1], isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let schema = Schema(versionedSchema: OinklyBudgetSchemaV7.self)
+        let schema = Schema(versionedSchema: OinklyBudgetSchemaV8.self)
         guard let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) else { exit(1) }
         Category.ensureSystemCategories(in: container.mainContext)
         NSApplication.shared.setActivationPolicy(.accessory)

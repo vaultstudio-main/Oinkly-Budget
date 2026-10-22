@@ -78,14 +78,25 @@ enum OinklyBudgetSchemaV7: VersionedSchema {
     }
 }
 
+/// Adds one model and nothing else: budgets that are set as a weekly amount. Every existing model is unchanged, so the move from
+/// V7 is automatic.
+enum OinklyBudgetSchemaV8: VersionedSchema {
+    static var versionIdentifier: Schema.Version { Schema.Version(8, 0, 0) }
+
+    static var models: [any PersistentModel.Type] {
+        OinklyBudgetSchemaV7.models + [BudgetPeriod.self]
+    }
+}
+
 enum OinklyBudgetMigrationPlan: SchemaMigrationPlan {
-    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self, OinklyBudgetSchemaV6.self, OinklyBudgetSchemaV7.self] }
+    static var schemas: [any VersionedSchema.Type] { [OinklyBudgetSchemaV1.self, OinklyBudgetSchemaV2.self, OinklyBudgetSchemaV3.self, OinklyBudgetSchemaV4.self, OinklyBudgetSchemaV5.self, OinklyBudgetSchemaV6.self, OinklyBudgetSchemaV7.self, OinklyBudgetSchemaV8.self] }
     static var stages: [MigrationStage] {
         [.lightweight(fromVersion: OinklyBudgetSchemaV1.self, toVersion: OinklyBudgetSchemaV2.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV2.self, toVersion: OinklyBudgetSchemaV3.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV3.self, toVersion: OinklyBudgetSchemaV4.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV4.self, toVersion: OinklyBudgetSchemaV5.self),
          .lightweight(fromVersion: OinklyBudgetSchemaV5.self, toVersion: OinklyBudgetSchemaV6.self),
-         .lightweight(fromVersion: OinklyBudgetSchemaV6.self, toVersion: OinklyBudgetSchemaV7.self)]
+         .lightweight(fromVersion: OinklyBudgetSchemaV6.self, toVersion: OinklyBudgetSchemaV7.self),
+         .lightweight(fromVersion: OinklyBudgetSchemaV7.self, toVersion: OinklyBudgetSchemaV8.self)]
     }
 }
