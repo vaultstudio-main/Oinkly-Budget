@@ -1,13 +1,13 @@
 # Data integrity plan for 1.0
 
-Drafted 2026-10-18. The rule behind everything here: **no client loses information**, not in the upgrade from the original build, not with encryption, not with the shared data file, not in a backup restore. Nothing is submitted until every check below has passed on the release candidate.
+Drafted 2026-10-18. The rule behind everything here: **no client loses information**, not in the upgrade from the original build, not in a backup restore. Nothing is submitted until every check below has passed on the release candidate.
 
 ## Promises
 
 1. An update never opens an empty or blank database over someone's data.
 2. Before the first open of the new database shape, a copy of everything exists and is kept until the person deletes it.
 3. If the database can't be opened, the app says so and stops. It never creates a fresh database in its place.
-4. Encryption, sharing and migration never replace a good file with a file that has not been checked.
+4. Migration never replaces a good file with a file that has not been checked.
 5. A backup made by any earlier build restores into the current build.
 
 ## What is already in place (built and tested by hand)
@@ -16,9 +16,8 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 |---|---|---|
 | Frozen V1 shape and a lightweight V1 to V2 migration | `Models/SchemaV1Models.swift`, `SchemaVersions.swift` | Real database from the original build (1.0 build 1, tag `app-review-original-1.0`) opened by the current build, test data set |
 | One-time step after migration (routing numbers, opening-deposit flag, tax flags, primary checking) | `Logic/SchemaUpgrade.swift` | Same test |
-| Safety copy before first V2 open (data file, side files, receipts folder, vault) | `Logic/StoreSafetyCopy.swift` | Same test |
-| Data file pinned to the app's own folder, so the App Group can't move it | `PiggybankApp.swift`, `VaultSession.localStoreURL` | Found and fixed by comparing the original build and the new one |
-| Encrypted vault upgrades and unlocks | `Logic/Vault/` | Build from just before V2 with encryption on, opened by the new build |
+| Safety copy before first V2 open (data file, side files, receipts folder) | `Logic/StoreSafetyCopy.swift` | Same test |
+| Data file pinned to the app's own folder, so the App Group can't move it | `PiggybankApp.swift`, `AppStore.localStoreURL` | Found and fixed by comparing the original build and the new one |
 | Open failure shows an error screen, not an empty database | `PiggybankApp.swift`, `StartupState` | By design, not forced yet |
 
 ## Gaps to close (each becomes a test below)
@@ -27,7 +26,6 @@ Drafted 2026-10-18. The rule behind everything here: **no client loses informati
 - No automated tests for the migration.
 - Restore of a backup from the original build into the current build is untested.
 - Interrupted upgrade (kill during the first open) is untested.
-- Shared file on V2 with the vault is not built yet.
 - Splits, tags and recurring rules are not stored in real data yet.
 
 ## Test plan
@@ -60,24 +58,14 @@ Run these on every release candidate. Record the date, the build and pass or fai
 | # | Test | Pass when |
 |---|---|---|
 
-### D. Shared data file (after it is rebuilt)
+### D. New data (splits, tags, recurring)
 
 | # | Test | Pass when |
 |---|---|---|
-| D1 | Two real Mac logins take turns on one file | No lost edits; each save visible to the other |
-| D2 | Second login opens while the first has it | Told who has it; no change to the file |
-| D3 | Crash while holding the lock, then take over | Unsaved work recovered or saved as a separate file; the shared file is never half-written |
-| D5 | Shared file larger than usual | Save time acceptable |
-| D6 | Permissions: file made by one login, opened by the other | Opens, or says clearly why not |
-
-### E. New data (splits, tags, recurring)
-
-| # | Test | Pass when |
-|---|---|---|
-| E1 | Splits add up to the total; editing and deleting keeps them consistent | Reports count each part once |
-| E2 | Deleting a category, tag or account that splits and rules use | No orphan rows; a clear message |
-| E3 | Backup and restore with splits, tags and rules | Identical afterwards |
-| E4 | A recurring rule run twice for the same date | One pending entry, not two |
+| D1 | Splits add up to the total; editing and deleting keeps them consistent | Reports count each part once |
+| D2 | Deleting a category, tag or account that splits and rules use | No orphan rows; a clear message |
+| D3 | Backup and restore with splits, tags and rules | Identical afterwards |
+| D4 | A recurring rule run twice for the same date | One pending entry, not two |
 
 ### F. Every release candidate
 

@@ -1,12 +1,12 @@
 # Release notes: 1.0 (draft)
 
-Drafted 2026-10-18 for the first public release, version 1.0, build 5. It lists every feature of the app, so the same text can be used as the launch notes. The source is `feature-master-list-1.0.md`; if a feature is added or dropped there, change it here too. Items marked *(if built)* are planned but not built yet; delete the line if the feature is dropped. Final wording is polished in step 6 after everything ships.
+Drafted 2026-10-18 for the first public release, version 1.0, build 5. It lists every feature of the app, so the same text can be used as the launch notes. The source is `feature-master-list-1.0.md`; if a feature is added or dropped there, change it here too. Items marked are planned but not built yet; delete the line if the feature is dropped. Final wording is polished in step 6 after everything ships.
 
 This text goes in four places: `Views/ReleaseNotesWindow.swift` (the release at the top of `releases`, with the same sections), the App Store description (the short version below), the website, and the support page.
 
 ## App Store "What's New" (short version)
 
-Goals that follow your accounts, six-month projections on every report, a reworked Summary with your priority bills, export to PDF and CSV, importing bank statements with a preview, an encrypted data file, widgets, and many smaller improvements. Your data stays on your Mac.
+Goals that follow your accounts, six-month projections on every report, a reworked Summary with your priority bills, export to PDF and CSV, importing bank statements with a preview, widgets, and many smaller improvements. Your data stays on your Mac.
 
 ## In-app release notes (full version)
 
@@ -41,19 +41,18 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - Edit Transaction now has everything New Transaction has, including adding, replacing or removing a receipt.
 - Autofill: type a payee you have used before and the category, amount, memo and payment method fill in.
 - Clean Up (Settings ▸ Clean Up): find and replace in payee names, merge look-alike payees, and move a category's transactions to another category (with the option to delete the old custom categories). Undo the last change.
-- Split transactions *(if built)*: one payment across several categories, with parts that must add up to the total.
-- Tags *(if built)*: label transactions, show tags in the register.
-- Recurring transactions *(if built)*: rules for paycheques, rent and more that add pending transactions for you to confirm, and feed the cash flow forecast.
+- Split transactions: one payment across several categories, with parts that must add up to the total.
+- Tags: label transactions, show tags in the register.
+- Recurring transactions: rules for paycheques, rent and more that add pending transactions for you to confirm, and feed the cash flow forecast.
 
 ### Export and import
 - Print PDF and Export CSV on every account and on the Transactions page, with an Export sheet for account, period (month, year or from a date) and paper size. A single transaction can be saved as a PDF from its detail window. To print, open the PDF in Preview.
 - Import Statement on every account: preview the rows with counts of new, already-there and unreadable ones; set the columns, date format, separator and amount style if the file isn't recognised; save the format under a name and have it detected next time; skip transactions already in Oinkly Budget; tidy bank text in payee names; and Undo removes everything an import added. CSV only.
-- Default paper size and export style in Settings *(if built)*.
+- Default paper size and export style in Settings.
 
 ### Your data
 - Data & Backup is one tab: your counts, Export Backup and Import Backup, Erase All Data and the version. Backups carry all the new 1.0 information.
 - Updates are safer: a copy of your data is made before the first open in 1.0, and a file that can't be opened shows an error instead of an empty app.
-- Share one data file between two Mac logins on one Mac, one at a time *(if built)*: choose a folder, see who has the file and since when, close it for the next person, take over a stale lock, and recover after a crash.
 
 ### Widgets and the menu bar
 - Two widgets in small, medium and large: Upcoming Bills and Reminders. Edit a widget to choose which bills (all or important only) and how far ahead, or which reminders. They show names and dates only, never amounts or account details.
@@ -64,13 +63,13 @@ Goals that follow your accounts, six-month projections on every report, a rework
 - A status bar along the bottom of every page, with a Help link.
 - The window title reads "Oinkly Budget".
 - Help and Release Notes open in bigger windows.
-- Keyboard shortcut and accessibility improvements (VoiceOver, larger text) *(if built)*.
+- Keyboard shortcut and accessibility improvements (VoiceOver, larger text).
 - Works on macOS 15 and later.
 
 ## Checks before this is final
 
 1. Every line is true of the shipped build (read each one against the app).
-2. Every *(if built)* item is either built or deleted.
+2. Every item is either built or deleted.
 3. The feature list matches `feature-master-list-1.0.md`.
 4. The macOS minimum, version and build number are right.
 5. The short App Store text fits the character limit in App Store Connect.

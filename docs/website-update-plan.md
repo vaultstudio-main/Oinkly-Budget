@@ -11,9 +11,8 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 ## Rules for the text
 
 - **Keep it honest.** Every claim must be true of the shipped build. Check each sentence against the app before publishing.
-- **Say the limits plainly:** encryption protects the data file at rest, a forgotten passphrase with no recovery key cannot be recovered, the shared data file is one person at a time and on one Mac, and there is still no sync between devices.
+- **Say the limits plainly:** there is no sync between devices, no bank linking, and a backup file is how data moves between computers.
 - Plain words, short sentences, no sales language, no comparison with other apps.
-- Do not call the shared file "sync" or "cloud". It is one file shared between Mac logins on the same Mac.
 - Privacy statements here, the App Privacy answers in App Store Connect and `PrivacyInfo.xcprivacy` must always agree.
 
 ## Page by page
@@ -27,7 +26,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 | Old school on purpose | Keep. Update the CSV sentence: Import Statement with preview, column mapping, saved mappings, duplicate skipping and undo. Still no bank linking. |
 | Private by design | Add the local-only widgets. Keep "no accounts, no servers, no tracking". |
 | A closer look | All screenshots retaken (see below), plus new ones. |
-| Good to know | Update: still no sync between devices; backup file moves data between computers; a shared data file lets two Mac logins on one Mac take turns. |
+| Good to know | Update: still no sync between devices; backup file moves data between computers. |
 | Requirements | Check the macOS minimum against the project setting before writing it. |
 
 **Feature blocks to write.** The complete, detailed feature list is `feature-master-list-1.0.md`; every feature in it that is built appears on this page, with its screenshot from the table below. (a short heading, two or three sentences and a screenshot each):
@@ -36,21 +35,19 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 2. **Reports and projections.** One period button, line charts, six-month projections on reports, Liabilities and Investments, and a reworked Summary with net worth over time.
 3. **Priority bills on the Summary.** The next five important bills due within 20 days.
 4. **Budgets page** for every category with a budget.
-5. **Split transactions** *(if built).* One payment across categories.
-6. **Tags** *(if built).* Label transactions.
-7. **Recurring transactions** *(if built).* Rules that make pending entries for you to confirm, and a cash flow forecast.
+5. **Split transactions**.* One payment across categories.
+6. **Tags**.* Label transactions.
+7. **Recurring transactions**.* Rules that make pending entries for you to confirm, and a cash flow forecast.
 8. **Export to PDF and CSV.** Every account and the Transactions page. Print by opening the PDF.
 9. **Import a statement.** Preview, map the columns, skip duplicates, undo.
 10. **Clean Up and autofill.** Find and replace payees and categories, merge duplicates, memory for payee, category, memo and payment method.
-12. **Widgets.** Upcoming bills and reminders, no amounts or account details.
-13. **Share one data file** *(if built).* Two Mac logins, one at a time, with who has it and when.
-14. **Safe updates.** An automatic safety copy of your data before the first open in the new version.
-15. **The basics** stay in the base list: accounts, bills, receipts, reminders, backups, menu bar item.
+11. **Widgets.** Upcoming bills and reminders, no amounts or account details.
+12. **Safe updates.** An automatic safety copy of your data before the first open in the new version.
+13. **The basics** stay in the base list: accounts, bills, receipts, reminders, backups, menu bar item.
 
 ### `privacy.html`: must be updated
 
 - New "Last updated" date.
-- **Shared data file:** the file lives where you choose, on your Mac. Nothing is uploaded. Where you place it is your decision, and a cloud-synced folder is governed by that service's policy.
 - **Widgets:** the widgets read a small file on your Mac with bill names, reminder titles and dates only. No amounts, no account details, nothing leaves the Mac.
 - **Safety copy:** the app keeps a copy of your data in its own folder when you update, until you delete it.
 - **Files:** the app keeps receipt photos and PDF bills on transactions and nothing else. Say so where the privacy page describes photos and files.
@@ -59,14 +56,13 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 
 ### `support.html`: add questions
 
-- How do I share one data file between two Mac logins? Step by step, with the take-over and "close file" instructions. *(if built)*
 - What is the "Before this update" copy in Application Support ▸ Backups, and can I delete it? (yes, once you are happy)
 - How do I import a statement and map the columns?
 - How do I export a PDF, and how do I print it? (open it in Preview)
 - How do I set up a goal that follows an account?
 - How do I add widgets?
-- How do I split a transaction, add a tag or make a recurring rule? *(if built)*
-- Update: "Can I import transactions from my bank?" (CSV only, now with preview and mapping); "Does it sync?" (no; the shared file is one person at a time on one Mac).
+- How do I split a transaction, add a tag or make a recurring rule?
+- Update: "Can I import transactions from my bank?" (CSV only, now with preview and mapping); "Does it sync?" (no; a backup file moves data between computers).
 - Add a "Before you update" note: save a `.pig` backup first.
 
 ### `index.html` (home)
@@ -83,12 +79,11 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 | Page | Why | Content |
 |---|---|---|
 | `whats-new.html` (optional) | A first-release page is not needed. Later releases add it, and the App Store "What's New" points to it | Release notes for each version in plain language, copied from the in-app notes (see `release-notes-1.0-draft.md`) |
-| `security.html` (or a section of `privacy.html`) | People will ask how the encryption works | What is protected and what is not, in plain words: protects the file at rest and in sharing, the working copy is unencrypted while the file is open, FileVault still matters, recovery key explained |
 | `help.html` (optional) | The in-app Help on the web, searchable | Generated from the same text as `help-file-plan.md`. Only if time allows. |
 
 Add any new page to the nav in the header and footer of every page, to `sitemap.xml`, and to the README table.
 
-### Shared files
+### Files that go with the pages
 
 - `sitemap.xml`: add new pages, update `lastmod` dates.
 - `style.css`: only if the new pages need layout the current styles lack (feature rows, comparison tables).
@@ -130,8 +125,6 @@ Every new feature gets at least one picture on the product page, and the key one
 | S-E2b | Summary, lower | `web-summary-lower.png` | gallery |
 | S-E3a | Liabilities | `web-liabilities.png` | gallery |
 | S-E3b | Investments | `web-investments.png` | gallery |
-| S-F1a | Unlock screen | `web-unlock.png` | features |
-| S-F4a | Shared file settings | `web-shared-file.png` | features |
 
 Also retake the existing gallery pictures that stay (Transactions, Bills, Register, Card, Mortgage, Reports, Liabilities, Investments, Planning, Summary), because the app's layout changed. Add `og:image` and favicon sizes while there.
 
@@ -151,8 +144,8 @@ Shots the owner must take (Claude cannot drive them): the widgets on the desktop
 ## Checks before publishing
 
 - Every feature named on the site exists in the shipped build.
-- Every limit is stated (encryption, shared file, no sync).
-- No page promises something marked "(if built)" that was dropped.
+- Every limit is stated (no sync, no bank linking).
+- No page promises a feature that is not in the app.
 - Price, macOS version, app version and dates are right.
 - Images load, have alt text and are the right size.
 - Privacy policy, App Privacy answers and `PrivacyInfo.xcprivacy` agree.

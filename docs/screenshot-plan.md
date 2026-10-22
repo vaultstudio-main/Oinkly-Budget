@@ -67,15 +67,10 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-E3b | `Help-investments` | Investments | Investments |
 | S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
 | S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before this update | Finder (owner takes this) |
-| S-F4a | `Help-shared-file` | Shared file settings | Settings ▸ Data & Backup |
-| S-F4b | `Help-shared-busy` | "Someone else has this file" | Second login (owner takes this) |
-| S-F4c | `Help-shared-takeover` | Take over warning | Stale lock |
-| S-F4d | `Help-shared-second` | Second login's window | Second login (owner takes this) |
 | S-G1 | `Help-window` | The Help window | Help ▸ Oinkly Budget Help |
 | S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
 | S-G3 | `Help-export-defaults` | Export defaults | Settings |
 
-Shots for planned features (splits, tags, recurring, shared file, export defaults) are taken only if the feature ships.
 
 The earlier shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 
@@ -87,7 +82,7 @@ Most useful: Help-welcome, Help-register, Help-pay-bill, Help-bills, Help-summar
 - Up to 10. The earlier set was 10 shots: summary, transactions, reports, liabilities, investments, bills, planning, checking, card, mortgage. Retake all 10 and replace any that no longer represent the app.
 - Order that sells the app: Summary, Reports, Account with a goal, Bills, Planning, Investments, Liabilities, a Register, Export or Import, Widgets.
 - Optional captions on each: one short line (for example "Know where your money goes" or "Your data stays on your Mac").
-- The App Store takes at most 10, so choose 10 from the shots marked "yes" in the register (candidates: S-A4a, S-A4b, S-A4c, S-A6, S-B1, S-B4a, S-B5a, S-B8a, S-B10a, S-C1, S-C3a, S-D1c, S-E1a, S-E2a, S-E3a, S-E3b, S-F1b, S-F4a). Pick the ones that show the biggest new features: Summary, a Goal section, Reports, Import, Encryption, Widgets, Export, Recurring or Splits if built, Liabilities, Investments.
+- The App Store takes at most 10, so choose 10 from the shots marked "yes" in the register (candidates: S-A4a, S-A4b, S-A4c, S-A6, S-B1, S-B4a, S-B5a, S-B8a, S-B10a, S-C1, S-C3a, S-D1c, S-E1a, S-E2a, S-E3a, S-E3b). Pick the ones that show the biggest new features: Summary, a Goal section, Reports, Import, Widgets, Export, Recurring or Splits if built, Liabilities, Investments.
 - Keep the window title and the sidebar the same in every shot so the set looks uniform.
 
 ## Order of work

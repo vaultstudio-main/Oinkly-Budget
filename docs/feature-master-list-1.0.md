@@ -1,10 +1,8 @@
 # 1.0 feature master list (every feature in the first release)
 
-> **Release naming (2026-10-18).** The first public release is **version 1.0, build 5**. The original `main` (version 1.0, build 1, the build submitted for App Review) is deprecated and kept as the tag `app-review-original-1.0` and the branch `legacy-1.0-original`. Everything in these documents was first planned as 1.0 and is now part of 1.0.
-
 Drafted 2026-10-18 from the git history of `main` and the current app. This is the single source for four documents: the Help file, the screenshots, the website and the release notes. If a feature is not here, it is not documented anywhere, so add it here first.
 
-- **Status:** Built = in the app now. Planned = in the final plan, not built yet. If a planned feature is dropped, delete its rows here and in the four documents.
+- **Status:** Built = in the app now. If a feature is dropped, delete its rows here and in the four documents.
 - **How it works:** written for Help and the website. Check each line against the running app before publishing (button names, menu paths).
 - **Shots:** screenshot IDs. The full list, with setup and where each is used, is at the end of this file.
 
@@ -72,7 +70,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - The Export sheet asks for: account (or all accounts), period (a month, a year, or from a date), and paper size. Then a save panel.
 - The PDF has a running balance and repeating headers. To print, open the PDF in Preview.
 - The CSV uses the layout Import Statement reads, so it round-trips.
-- Planned: default paper size and style in Settings.
+- Settings has a default paper size and export style; the Export sheet starts from them.
 - Shots: S-B4a (Export sheet), S-B4b (a page of the PDF in Preview), S-B4c (account page buttons).
 
 ### B5. Import Statement (Built)
@@ -97,15 +95,15 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - The tax report follows the flag instead of category names.
 - Shots: S-B7.
 
-### B8. Split transactions (Planned)
+### B8. Split transactions (Built)
 - One payment across several categories; parts must add up to the total; shown once in the register as "Split (n)"; counted once per category in reports and budgets.
 - Shots: S-B8a (split editor), S-B8b (register row), S-B8c (detail window).
 
-### B9. Tags (Planned)
+### B9. Tags (Built)
 - Labels with colours; many per transaction; shown as chips in the register; Settings screen to rename, recolour, merge, delete. Tags stay in the transaction area only: no overview page (Summary, Reports) has a tag selector (decided 2026-10-21).
 - Shots: S-B9a (tag picker), S-B9b (register with chips), S-B9d (Tags settings).
 
-### B10. Recurring transactions (Planned)
+### B10. Recurring transactions (Built)
 - Rules (payee, account, category, amount, method, frequency, start and end) that create pending transactions on each due date for you to confirm. Pause, edit, delete. Feeds the cash flow forecast.
 - Shots: S-B10a (rules screen), S-B10b (rule editor), S-B10c (a pending entry made by a rule).
 
@@ -169,32 +167,22 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Investments: a Growth card for 3 months, 6 months and a year, and a Projection of Growth. No sample data; placeholders keep their size.
 - Shots: S-E3a (Liabilities), S-E3b (Investments).
 
-### E4. Reports and Summary PDF (Removed)
-- Decided 2026-10-21: the overview pages (Summary and Reports) have no Print PDF button. PDFs are for accounts and single transactions only.
-
 ---
 
 ## F. Your data
-
-### F1. Encrypted data file (Removed)
-- Built and then taken out before release, because it failed in use. Nothing to document or photograph.
 
 ### F2. Data & Backup settings (Built)
 - One Data & Backup tab: counts, Export Backup and Import Backup (`.pig`), Erase All Data, version. The backup now also carries the new 1.0 fields.
 - A reminder to back up after two and three years of history.
 - Shots: S-F2.
 
-### F3. Safe update (Built)
+### F3. Safety copy (Built)
 - The first time 1.0 opens, it copies your data (data file and receipts) to Application Support ▸ Backups ▸ "Before this update (date)". It stays until you delete it.
 - Your data stays in the app's own folder; the widgets don't move it.
 - Everything migrates automatically; opening a damaged file shows an error screen and never starts a blank database.
 - Shots: S-F3 (Finder showing the Backups folder).
 
-### F4. Shared data file (Planned)
-- Two Mac logins on one Mac share one data file, one at a time. Open Recent, Choose Folder, Move This File, Create a New File, Save Now, Close File So Someone Else Can Use It, Take Over a stale lock, Stop Sharing; the app tells you who has the file and since when.
-- Shots: S-F4a (settings), S-F4b (someone else has the file), S-F4c (take over warning), S-F4d (second login's view).
-
-### F5. Only receipts are stored (decided)
+### F4. Only receipts are stored (decided)
 - The app stores receipt photos and PDF bills on transactions, and nothing else. PDF statements are not kept with accounts, and there are no other attachments. (Decided 2026-10-18.)
 
 ---
@@ -280,10 +268,6 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-E3b | Investments | Investments | Help-investments | gallery | yes |
 | S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
 | S-F3 | Finder: Backups ▸ Before this update | Finder (owner takes this) | Help-safety-copy | – | – |
-| S-F4a | Shared file settings | Settings ▸ Data & Backup | Help-shared-file | features | yes |
-| S-F4b | "Someone else has this file" | Second login (owner takes this) | Help-shared-busy | – | – |
-| S-F4c | Take over warning | Stale lock | Help-shared-takeover | – | – |
-| S-F4d | Second login's window | Second login (owner takes this) | Help-shared-second | – | – |
 | S-G1 | The Help window | Help ▸ Oinkly Budget Help | Help-window | – | – |
 | S-G2 | Keyboard shortcuts topic | Help | Help-shortcuts | – | – |
 | S-G3 | Export defaults | Settings | Help-export-defaults | – | – |
