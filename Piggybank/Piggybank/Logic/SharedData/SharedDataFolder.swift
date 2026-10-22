@@ -282,6 +282,9 @@ nonisolated struct SharedDataFolder: Sendable {
         guard exists else { throw SharedDataError.folderUnavailable("it can't be found") }
         let current = readInfo()
         if let baseRevision, let current, current.revision != baseRevision { throw SharedDataError.changedMeanwhile }
+        // Never write over data that a newer version of the app saved: this version could lose what it doesn't know about.
+        if let current, current.formatVersion > Self.formatVersion || current.schemaVersion > Self.schemaVersion { throw SharedDataError.newerFormat }
+        removeLeftovers(now: now)
         let temporary = url.appendingPathComponent(".\(Self.storeName).\(UUID().uuidString).tmp")
         defer { try? manager.removeItem(at: temporary) }
         do {
@@ -309,6 +312,15 @@ nonisolated struct SharedDataFolder: Sendable {
         try writeInfo(info)
         appendLog("saved by \(name) as save number \(info.revision) (Oinkly Budget \(appVersion))", now: now)
         return info
+    }
+
+    /// Temporary files left by a save that was cut short (a crash, a power cut). Anything this old can't be in use.
+    func removeLeftovers(now: Date = .now) {
+        guard let files = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        for file in files where file.lastPathComponent.hasPrefix(".") && file.pathExtension == "tmp" {
+            let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now
+            if now.timeIntervalSince(modified) > 600 { try? manager.removeItem(at: file) }
+        }
     }
 
     // MARK: Previous saves and the save log

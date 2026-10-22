@@ -332,3 +332,24 @@ Plain sharing passed the owner's two-login test again after encryption was remov
 | 100,000 | 15 MB | 0.14 s | under 0.01 s |
 
 Saves are fast enough that nothing needs tuning: the two-minute save interval, the full integrity check on every save and the 5 + 7 previous saves all stay as they are. At 100,000 transactions the previous-saves folder holds about 12 copies, roughly 180 MB. Not measured: a data file with many receipt photos (attachments are copied only when new, and are not part of the database file), and a slow disk.
+
+## 24. Phase 4: hardening tests (run 2026-10-21)
+
+`-sharedHardeningTest` (debug) tries failures on throwaway folders with a copy of the owner's data. 25 of 25 pass.
+
+| Test | What is tried | Result |
+|---|---|---|
+| S1 | A save that can't be written (folder not writable, standing in for disk full) | Refused; shared data byte-for-byte unchanged; no half-written files |
+| S2 | A save cut short leaves temporary files; the note and the file out of step after a crash | Old leftovers removed at the next save, a file being written right now is left alone; out-of-step data still opens |
+| S3 | A login asleep holding the lock, another takes over | Told "gone quiet", can't take it without asking, takes over on Open Anyway; the sleeper finds out and keeps nothing of the lock |
+| S4 | Folder gone | Save fails cleanly |
+| S5 | Data from a newer version of the app | Not opened and not written over (**fixed**: saving did not check this before) |
+| S6 | 24 copies start at the same instant | Exactly one gets the lock |
+| S7 | A previous save | Listed and opens with the right counts |
+| S8 | A damaged working copy | Refused; shared data unchanged |
+| S9 | Lock or note unreadable | Fresh unreadable lock counts as in use; an old one is stale and can be taken over; a damaged note doesn't stop opening |
+| S10 | A receipt file | Reaches the shared folder and the next copy; any login can replace it |
+
+**Changed because of these tests:** a save now refuses to write over data saved by a newer version of the app; and leftover temporary files older than ten minutes are removed at each save.
+
+**Not covered by a script (needs the owner):** a real sleep and wake of a login holding the lock, a real force-quit and Open Anyway between two logins, a real full disk, and receipts made in the app (the test uses a stand-in file).
