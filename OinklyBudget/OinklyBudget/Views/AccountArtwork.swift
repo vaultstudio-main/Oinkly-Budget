@@ -238,26 +238,17 @@ struct AccountArtwork: View {
             context.fill(s.round(0.08, 0.84, 0.84, 0.03, 0.015), with: .color(white))
 
         case .retirement:
-            // A nest with a golden egg: savings left to grow.
-            let gold = Color(red: 1.0, green: 0.84, blue: 0.36)
-            context.fill(Path(ellipseIn: s.rect(0.36, 0.16, 0.28, 0.40)), with: .color(gold))
-            context.fill(Path(ellipseIn: s.rect(0.42, 0.23, 0.07, 0.11)), with: .color(white.opacity(0.75)))
-            // The bowl of the nest hides the bottom of the egg, so the egg sits in it.
-            var nest = context
-            nest.clip(to: Path(s.rect(0, 0.46, 1, 0.5)))
-            nest.fill(Path(ellipseIn: s.rect(0.10, 0.36, 0.80, 0.50)), with: .color(white))
-            // Twigs woven across the bowl.
-            for (y, lift) in [(0.58, 0.10), (0.68, 0.10), (0.77, 0.08)] as [(CGFloat, CGFloat)] {
-                var twig = Path()
-                twig.move(to: s.point(0.12, y))
-                twig.addQuadCurve(to: s.point(0.88, y), control: s.point(0.5, y + lift))
-                nest.stroke(twig, with: .color(deep.opacity(0.5)), lineWidth: 0.022 * s.side)
-            }
-            for (x, y) in [(0.30, 0.52), (0.52, 0.50), (0.72, 0.53)] as [(CGFloat, CGFloat)] {
-                var twig = Path()
-                twig.move(to: s.point(x, y))
-                twig.addLine(to: s.point(x + 0.07, y + 0.24))
-                nest.stroke(twig, with: .color(deep.opacity(0.4)), lineWidth: 0.02 * s.side)
+            // The savings pig with a coin, grown old: a little grey beard. Retirement money is savings that can't be touched yet.
+            draw(.savings, in: context, scene: s, deep: deep)
+            // A goatee hanging from under the snout.
+            let beard = s.polygon([(0.66, 0.65), (0.90, 0.65), (0.88, 0.75), (0.79, 0.93), (0.70, 0.76)])
+            context.fill(beard, with: .color(Color(white: 0.88)))
+            context.stroke(beard, with: .color(deep.opacity(0.6)), style: StrokeStyle(lineWidth: 0.016 * s.side, lineJoin: .round))
+            for x in [0.74, 0.79, 0.84] as [CGFloat] {
+                var strand = Path()
+                strand.move(to: s.point(x, 0.70))
+                strand.addLine(to: s.point(x + 0.01, 0.82))
+                context.stroke(strand, with: .color(deep.opacity(0.4)), lineWidth: 0.013 * s.side)
             }
 
         case .crypto:

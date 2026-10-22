@@ -42,7 +42,7 @@ Start from the 17 kinds and split where the account types differ in feel. Propos
 | Open line of credit (a ribbon or loop) | Line of credit |
 | Briefcase | Business loan, business asset |
 | Rising chart | Brokerage, other investment |
-| Nest with a golden egg | 401(k), IRAs, pensions, annuities |
+| The savings pig with a coin, and a grey beard | 401(k), IRAs, pensions, annuities |
 | Nest egg | Pension, annuity |
 | Abstract coin | Cryptocurrency (no brand logos) |
 | Gem | Collectibles and valuables |
