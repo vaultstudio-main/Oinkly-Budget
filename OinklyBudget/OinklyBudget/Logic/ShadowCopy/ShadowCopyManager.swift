@@ -24,6 +24,8 @@ final class ShadowCopyManager {
     private(set) var status: Status = .notSetUp
     /// Whether the backup copy is on, for the switch in Settings (which needs something it can watch).
     private(set) var isOn = UserDefaults.standard.data(forKey: "shadowCopyFolderBookmark") != nil
+    /// Whether the app reminds the person to set up a backup copy. The switch in Settings ▸ General.
+    private(set) var remindsToSetUp = !UserDefaults.standard.bool(forKey: "shadowCopyDontAsk")
     private(set) var lastCopy: Date?
     private(set) var versionCount = 0
     private(set) var size: Int64 = 0
@@ -334,7 +336,6 @@ final class ShadowCopyManager {
         guard panel.runModal() == .OK, let url = panel.url,
               let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
         UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
-        UserDefaults.standard.removeObject(forKey: Self.declinedKey)
         isOn = true
         folderPath = url.path
         failures = 0
@@ -349,6 +350,8 @@ final class ShadowCopyManager {
         pending = nil
         UserDefaults.standard.removeObject(forKey: Self.bookmarkKey)
         isOn = false
+        // With no backup copy, the reminder starts again, whatever was said before.
+        setReminder(true)
         folderPath = nil
         lastCopy = nil
         versionCount = 0
@@ -402,14 +405,27 @@ final class ShadowCopyManager {
     /// True when it is time to offer a backup copy: nothing set up, the person has put some data in, and they haven't
     /// said no. "Not now" waits a week.
     func shouldAsk(hasData: Bool) -> Bool {
-        guard !isSetUp, hasData, !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return false }
-        if UserDefaults.standard.bool(forKey: Self.declinedKey) { return false }
-        if let after = UserDefaults.standard.object(forKey: Self.snoozeKey) as? Date, after > .now { return false }
+        guard !ScreenshotMode.isOn, !StartupState.isHoldingPlace else { return false }
+        return Self.shouldAsk(isSetUp: isSetUp, hasData: hasData, reminderOn: remindsToSetUp,
+                              snoozedUntil: UserDefaults.standard.object(forKey: Self.snoozeKey) as? Date, now: .now)
+    }
+
+    /// The rule: ask when nothing is set up, there is some data, the reminder is on, and a "Not now" has run out.
+    nonisolated static func shouldAsk(isSetUp: Bool, hasData: Bool, reminderOn: Bool, snoozedUntil: Date?, now: Date) -> Bool {
+        guard !isSetUp, hasData, reminderOn else { return false }
+        if let snoozedUntil, snoozedUntil > now { return false }
         return true
     }
 
     func snoozeAsking() { UserDefaults.standard.set(Date.now.addingTimeInterval(7 * 86_400), forKey: Self.snoozeKey) }
-    func stopAsking() { UserDefaults.standard.set(true, forKey: Self.declinedKey) }
+    func stopAsking() { setReminder(false) }
+
+    /// Turns the reminder on or off. Turning it on also cancels a "Not now", so it can ask at the next opportunity.
+    func setReminder(_ on: Bool) {
+        UserDefaults.standard.set(!on, forKey: Self.declinedKey)
+        if on { UserDefaults.standard.removeObject(forKey: Self.snoozeKey) }
+        remindsToSetUp = on
+    }
 
     /// True when quitting should wait for one more copy.
     var needsCopyAtQuit: Bool { isSetUp && dirty && !SharedDataSession.shared.isActive && !StartupState.isHoldingPlace && !ScreenshotMode.isOn }

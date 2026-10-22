@@ -906,6 +906,18 @@ enum SharedHardeningTest {
             try manager.setAttributes([.modificationDate: Date.now.addingTimeInterval(-90 * 86_400)], ofItemAtPath: pool32.appendingPathComponent(unusedNew32 + ".pigdata").path)
             if let older32 = shadow8.olderVersions().first { try Data(repeating: 0, count: 4_096).write(to: older32.url) }
             check("S32 nothing is removed when a copy's note can't be read", shadow8.removeUnusedReceipts() == 0 && there32(unusedNew32) && there32(usedNow32))
+
+            // S33: when the backup copy reminder asks
+            let now33 = Date.now
+            func asks(setUp: Bool = false, data: Bool = true, on: Bool = true, snoozed: Date? = nil) -> Bool {
+                ShadowCopyManager.shouldAsk(isSetUp: setUp, hasData: data, reminderOn: on, snoozedUntil: snoozed, now: now33)
+            }
+            check("S33 it asks when nothing is set up and there is data", asks())
+            check("S33 not when a backup copy is set up", !asks(setUp: true))
+            check("S33 not with no data yet", !asks(data: false))
+            check("S33 not when the reminder is switched off", !asks(on: false))
+            check("S33 not during a Not now", !asks(snoozed: now33.addingTimeInterval(86_400)))
+            check("S33 and again once the Not now has run out", asks(snoozed: now33.addingTimeInterval(-60)))
         } catch {
             check("no error", false, error.localizedDescription)
         }

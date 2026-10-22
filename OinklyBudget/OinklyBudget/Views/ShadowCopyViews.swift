@@ -106,7 +106,7 @@ struct ShadowSetupSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             Label("Protect your data with a backup copy", systemImage: "shield.lefthalf.filled")
                 .font(.title3.weight(.semibold))
-            Text("A backup copy is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
+            Text("A backup copy is the best thing you can do to make sure your data is safe. It is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
             Text("It is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with.")
                 .font(.callout)
                 .foregroundStyle(.secondary)

@@ -52,6 +52,18 @@ struct GeneralSettingsView: View {
                 Text("Used for statements, reports and the Summary. You can still change the paper in the Export sheet. Plain prints well on any printer; color accents use blue headings.")
             }
 
+            if !ScreenshotMode.isOn {
+                Section {
+                    Toggle("Remind me to set up a Backup Copy", isOn: Binding(
+                        get: { ShadowCopyManager.shared.remindsToSetUp },
+                        set: { ShadowCopyManager.shared.setReminder($0) }))
+                } header: {
+                    Text("Backup Copy")
+                } footer: {
+                    Text("A backup copy is the best way to make sure your data is safe. This asks you to set one up until you have one. Turning the backup copy off turns this reminder back on.")
+                }
+            }
+
             Section("Currency") {
                 Picker("Currency", selection: currencyBinding) {
                     Text("Device default (\(AppSettings.deviceCurrencyCode))").tag("")

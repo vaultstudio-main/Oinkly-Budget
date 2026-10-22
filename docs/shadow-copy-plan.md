@@ -71,6 +71,8 @@ A second, separate copy of the data in a folder the person chooses (Documents, i
 
 - **Settings order:** Backup Copy (switch), Sharing (now a switch too, with Save Now, Save and Quit, Previous Saves… and Check Sharing… under it when on; turning it on or off asks first as before), then **Export & Import** as two plain buttons, Export Data… and Import Data…, then Erase All Data and About.
 
+- **A reminder switch in Settings ▸ General ▸ Backup Copy:** "Remind me to set up a Backup Copy". Choosing Don't Ask Again in the first-time prompt turns it off, and it can be turned back on there. Turning the backup copy off turns the reminder back on (and cancels a "Not now"), so the app starts asking again at the next start. The prompt now says a backup copy is the best thing to do to keep your data safe. Hardening test S33 covers when it asks.
+
 ## Not done yet
 
 - Older builds can't open a converted folder (they look for the old file names): update both logins' test builds together.
