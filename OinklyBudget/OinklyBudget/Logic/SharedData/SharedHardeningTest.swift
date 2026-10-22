@@ -21,6 +21,10 @@ enum SharedHardeningTest {
             }
             try? manager.removeItem(at: root)
         }
+        func unwrap<T>(_ value: T?) throws -> T {
+            guard let value else { throw CocoaError(.fileNoSuchFile) }
+            return value
+        }
         func lock(_ name: String, heartbeat: Date = .now) -> SharedLock {
             SharedLock(token: UUID().uuidString, userName: name, fullName: name, since: heartbeat, heartbeat: heartbeat, pid: nil, host: nil)
         }
@@ -558,10 +562,13 @@ enum SharedHardeningTest {
             let emptyStore = root.appendingPathComponent("empty/OinklyBudget.store")
             try manager.createDirectory(at: emptyStore.deletingLastPathComponent(), withIntermediateDirectories: true)
             do { _ = try ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, url: emptyStore, cloudKitDatabase: .none)) }
-            var bigInfo = try JSONDecoder.shadowTest.decode(ShadowInfo.self, from: Data(contentsOf: shadow2.infoURL))
+            // The shadow copy says it holds a lot: put the same data back in its wrapper with a bigger note
+            var bigInfo = try unwrap(shadow2.readInfo())
             bigInfo.accounts = 5
             bigInfo.transactions = 200
-            try JSONEncoder.shadowTest.encode(bigInfo).write(to: shadow2.infoURL)
+            let bigPlain = root.appendingPathComponent("big-plain.store")
+            try SealedFile.unseal(shadow2.storeURL, to: bigPlain)
+            try SealedFile.seal(bigPlain, to: shadow2.storeURL, kind: "data", info: try SealedFile.encodeInfo(bigInfo), appVersion: "1.0")
             check("S25 empty data against a full shadow copy is noticed", {
                 if case .dataLooksEmpty = ShadowCheck.lookAtOwnData(store: emptyStore, shadow: shadow2, dataID: "data-2") { return true }
                 return false
@@ -653,6 +660,80 @@ enum SharedHardeningTest {
             check("S27 saving or copying shows as work in progress", words(.unsaved, upToDate27) == "Shadow Copy Database · Saving…" && words(.saved, .copying) == "Shadow Copy Database · Copying…")
             check("S27 while sharing, unsaved changes are the Shared dot's to report", words(.unsaved, upToDate27, sharing: true).hasPrefix("Shadow Copy Database · Copied"))
             check("S27 while sharing, a database problem still shows", words(.problem("x"), upToDate27, sharing: true) == "Database · Problem")
+
+            // S28: the sealed file format, and the shadow copy's receipts
+            let sealedPlain = root.appendingPathComponent("sealed/plain.store")
+            try manager.createDirectory(at: sealedPlain.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try manager.copyItem(at: source, to: sealedPlain)
+            let sealedURL = root.appendingPathComponent("sealed/data.pigdata")
+            let header28 = try SealedFile.seal(sealedPlain, to: sealedURL, kind: "data", info: Data("note".utf8), appVersion: "1.0")
+            check("S28 a sealed file's header can be read without opening it", (try? SealedFile.readHeader(sealedURL)) == header28 && header28.kind == "data" && header28.info == Data("note".utf8))
+            let sealedHead = try Data(contentsOf: sealedURL).prefix(65_536)
+            check("S28 it doesn't look like a database or text", !sealedHead.starts(with: Data("SQLite format 3".utf8)) && String(data: sealedHead, encoding: .utf8) == nil)
+            check("S28 a database tool can't open it", (try? SQLiteStore.integrityIsOK(sealedURL)) != true)
+            check("S28 it passes its own check", SealedFile.isIntact(sealedURL))
+            let unsealed = root.appendingPathComponent("sealed/unsealed.store")
+            try SealedFile.unseal(sealedURL, to: unsealed)
+            check("S28 unpacking gives back exactly the same bytes", try Data(contentsOf: unsealed) == Data(contentsOf: sealedPlain))
+            check("S28 and the same records", try SQLiteStore.counts(of: unsealed) == SQLiteStore.counts(of: sealedPlain) && SQLiteStore.integrityIsOK(unsealed))
+            // Damage
+            var damaged = try Data(contentsOf: sealedURL)
+            damaged[damaged.count / 2] ^= 0xFF
+            let damagedURL = root.appendingPathComponent("sealed/damaged.pigdata")
+            try damaged.write(to: damagedURL)
+            check("S28 one changed byte is noticed", !SealedFile.isIntact(damagedURL))
+            let refusedOut = root.appendingPathComponent("sealed/refused.store")
+            check("S28 a damaged file is refused and leaves nothing behind", (try? SealedFile.unseal(damagedURL, to: refusedOut)) == nil && !manager.fileExists(atPath: refusedOut.path)
+                  && ((try? manager.contentsOfDirectory(atPath: refusedOut.deletingLastPathComponent().path)) ?? []).filter { $0.hasSuffix(".tmp") }.isEmpty)
+            let cutURL = root.appendingPathComponent("sealed/cut.pigdata")
+            try Data(damaged.prefix(damaged.count - 5_000)).write(to: cutURL)
+            check("S28 a file cut short is noticed", !SealedFile.isIntact(cutURL) && (try? SealedFile.unseal(cutURL, to: refusedOut)) == nil)
+            let textURL = root.appendingPathComponent("sealed/text.pigdata")
+            try Data("just some text, not an Oinkly Budget file at all".utf8).write(to: textURL)
+            check("S28 other files are not mistaken for sealed ones", (try? SealedFile.readHeader(textURL)) == nil && !SealedFile.isIntact(textURL))
+            // A file bigger than one chunk
+            let bigURL = root.appendingPathComponent("sealed/big.bin")
+            var bigBytes = Data()
+            var seed: UInt64 = 42
+            for _ in 0..<(3 * SealedFile.chunkSize / 8 + 777) { seed = seed &* 6364136223846793005 &+ 1442695040888963407; withUnsafeBytes(of: seed) { bigBytes.append(contentsOf: $0) } }
+            bigBytes.append(Data(repeating: 7, count: 2_000_000))
+            try bigBytes.write(to: bigURL)
+            let bigSealed = root.appendingPathComponent("sealed/big.pigdata")
+            let bigBack = root.appendingPathComponent("sealed/big-back.bin")
+            try SealedFile.seal(bigURL, to: bigSealed, kind: "receipt", appVersion: "1.0")
+            try SealedFile.unseal(bigSealed, to: bigBack)
+            check("S28 a large file survives the round trip", try Data(contentsOf: bigBack) == bigBytes, "\(bigBytes.count) bytes")
+            // Receipts in the shadow copy
+            let receiptSource = root.appendingPathComponent("receipt-source/OinklyBudget.store")
+            try manager.createDirectory(at: receiptSource.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try manager.copyItem(at: source, to: receiptSource)
+            let externalDir = StoreFiles.supportURL(for: receiptSource).appendingPathComponent("_EXTERNAL_DATA", isDirectory: true)
+            try manager.createDirectory(at: externalDir, withIntermediateDirectories: true)
+            let receiptBytes = Data((0..<50_000).map { UInt8(truncatingIfNeeded: $0 &* 31 &+ ($0 >> 8)) })
+            try receiptBytes.write(to: externalDir.appendingPathComponent("A1B2C3D4"))
+            let shadow6 = ShadowFolder(inside: root.appendingPathComponent("shadow-6", isDirectory: true))
+            try shadow6.write(from: receiptSource, dataID: "data-6", source: "This Mac", appVersion: "1.0")
+            let sealedReceipt = shadow6.receiptsURL.appendingPathComponent("_EXTERNAL_DATA/A1B2C3D4.pigdata")
+            check("S28 a receipt is kept sealed in the shadow copy", manager.fileExists(atPath: sealedReceipt.path) && (try? Data(contentsOf: sealedReceipt)) != receiptBytes)
+            check("S28 and every file in the shadow copy is sealed", { () -> Bool in
+                guard let walker = manager.enumerator(at: shadow6.url, includingPropertiesForKeys: [.isDirectoryKey]) else { return false }
+                for case let item as URL in walker where (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true {
+                    if item.pathExtension != SealedFile.fileExtension { return false }
+                }
+                return true
+            }())
+            let restoredStore = root.appendingPathComponent("receipt-restored/OinklyBudget.store")
+            if let latest6 = shadow6.allVersions().first {
+                try shadow6.restore(latest6, to: restoredStore)
+                let restoredReceipt = StoreFiles.supportURL(for: restoredStore).appendingPathComponent("_EXTERNAL_DATA/A1B2C3D4")
+                check("S28 restoring brings the receipt back exactly", (try? Data(contentsOf: restoredReceipt)) == receiptBytes)
+            }
+            check("S28 a second copy doesn't seal the same receipt again", { () -> Bool in
+                let before = (try? manager.attributesOfItem(atPath: sealedReceipt.path)[.modificationDate] as? Date) ?? nil
+                _ = try? shadow6.write(from: receiptSource, dataID: "data-6", source: "This Mac", appVersion: "1.0")
+                let after = (try? manager.attributesOfItem(atPath: sealedReceipt.path)[.modificationDate] as? Date) ?? nil
+                return before != nil && before == after
+            }())
         } catch {
             check("no error", false, error.localizedDescription)
         }
@@ -670,11 +751,4 @@ private final class Locked<T>: @unchecked Sendable {
     func append<E>(_ element: E) where T == [E] { lock.lock(); stored.append(element); lock.unlock() }
 }
 
-private extension JSONDecoder {
-    static var shadowTest: JSONDecoder { let d = JSONDecoder(); d.dateDecodingStrategy = .iso8601; return d }
-}
-
-private extension JSONEncoder {
-    static var shadowTest: JSONEncoder { let e = JSONEncoder(); e.dateEncodingStrategy = .iso8601; return e }
-}
 #endif

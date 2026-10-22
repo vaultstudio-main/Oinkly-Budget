@@ -388,6 +388,8 @@ enum HelpContent {
                 "## Setting it up",
                 "• After you have added some data, Oinkly Budget offers to set one up. Or go to Settings ▸ Data & Backup ▸ Shadow Copy and choose Choose Folder.",
                 "• A folder called Oinkly Budget Shadow Copy is made inside the folder you chose. Please don't edit or move the files in it.",
+                "• The files are in Oinkly Budget's own format (.pigdata), so only Oinkly Budget can read them. Double-click one to restore from it. A single file brings back your data, and receipts and photos come back when you restore from Settings.",
+                "• When you turn on sharing, you are asked to choose a shadow copy folder too. It keeps the peace between your edits and the other person's, and is kept up to date each time the shared data is saved.",
                 "## When it is copied",
                 "• A few minutes after you change something, when you hide the app, and when you quit.",
                 "• While you share your data, each time the shared data is saved.",

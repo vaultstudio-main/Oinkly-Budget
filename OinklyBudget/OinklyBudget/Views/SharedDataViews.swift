@@ -36,12 +36,7 @@ struct SharedDataSection: View {
                  ? "Other users of this Mac use the same data, one at a time."
                  : "Lets other users of this Mac use your data, one at a time.")
         }
-        .alert("Share your data?", isPresented: $warning) {
-            Button("Share") { turnOn() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Your data is copied to /Users/Shared/OinklyBudget. Anyone with an account on this Mac can read it. Your own copy is not changed.")
-        }
+        .sheet(isPresented: $warning) { ShareSetupSheet(onShare: turnOn) }
         .sheet(isPresented: $confirmingStop) {
             StopSharingSheet { removeFolder in turnOff(removeFolder: removeFolder) }
         }
@@ -517,5 +512,60 @@ private struct SharedShadowRescue: View {
             SharedDataFolder.standard.versions().contains { (try? SQLiteStore.integrityIsOK($0.url)) == true }
         }.value
         loaded = true
+    }
+}
+
+
+/// Asked before sharing starts: what sharing does, and the choice of a shadow copy in a folder of the person's own, to
+/// keep the peace between their edits and the other person's.
+struct ShareSetupSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let onShare: () -> Void
+
+    private var shadow: ShadowCopyManager { ShadowCopyManager.shared }
+
+    /// True once a shadow copy folder has been chosen. Reading the path makes the sheet update when it is chosen.
+    private var hasShadowCopy: Bool { _ = shadow.folderPath; return shadow.isSetUp }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Share your data?", systemImage: "person.2.fill").font(.title3.weight(.semibold))
+            Text("Your data is copied to \(SharedDataFolder.defaultURL.path). Anyone with an account on this Mac can read it. Your own copy is not changed.")
+
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Keep a shadow copy for yourself", systemImage: "shield.lefthalf.filled").font(.headline)
+                Text("A shadow copy is a second copy of the data in a folder of your own, such as Documents. It keeps the peace between your edits and the other person's: if the shared data ever goes wrong, you can restore from your shadow copy. It is kept up to date each time the shared data is saved.")
+                    .font(.callout)
+                if hasShadowCopy {
+                    HStack {
+                        Label("On: \(shadow.folderPath ?? "")", systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green).lineLimit(1).truncationMode(.middle)
+                        Spacer()
+                        Button("Change Folder…") { shadow.chooseFolder() }
+                    }
+                } else {
+                    HStack {
+                        Button("Choose Folder…") { shadow.chooseFolder() }
+                        Text("Recommended").font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+                Text("It is kept in Oinkly Budget's own file format, so only Oinkly Budget can read it.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            .padding(12)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+
+            HStack {
+                Button("Cancel", role: .cancel) { dismiss() }
+                Spacer()
+                if !hasShadowCopy {
+                    Button("Share Without a Shadow Copy") { dismiss(); onShare() }
+                }
+                Button("Share") { dismiss(); onShare() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!hasShadowCopy)
+            }
+        }
+        .padding(22)
+        .frame(width: 540)
     }
 }

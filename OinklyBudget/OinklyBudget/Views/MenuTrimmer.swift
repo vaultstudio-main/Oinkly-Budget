@@ -238,6 +238,10 @@ final class OinklyBudgetAppDelegate: NSObject, NSApplicationDelegate, UNUserNoti
             NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": page])
             return
         }
+        if let copy = urls.first(where: { $0.pathExtension.lowercased() == SealedFile.fileExtension }) {
+            Task { @MainActor in await CopyOpener.offerRestore(of: copy) }
+            return
+        }
         guard let url = urls.first(where: { $0.pathExtension.lowercased() == DataBackup.fileExtension }) else { return }
         Task { @MainActor in await BackupOpener.offerRestore(of: url) }
     }

@@ -425,6 +425,7 @@ enum ShadowViewsCheck {
         }.padding(16).frame(width: 340, alignment: .leading).background(Color(white: 0.96))
         save(bar, "labels")
         save(ShadowSetupSheet().background(Color(white: 0.96)), "setup")
+        save(ShareSetupSheet(onShare: {}).background(Color(white: 0.96)), "share")
         save(ShadowRescueView(finding: .dataLooksEmpty(shadowAccounts: 6, shadowTransactions: 1_240)).frame(width: 500, height: 480), "rescue")
         exit(0)
     }

@@ -443,6 +443,7 @@ final class ShadowCopyManager {
     /// Returns a note to show afterwards.
     nonisolated static func performPendingRestore(localStore: URL) -> String? {
         let defaults = UserDefaults.standard
+        if defaults.bool(forKey: stagedRestoreKey) { return performStagedRestore(localStore: localStore) }
         guard let path = defaults.string(forKey: restoreKey) else { return nil }
         defaults.removeObject(forKey: restoreKey)
         guard let data = defaults.data(forKey: bookmarkKey) else { return "The shadow copy folder wasn't set up, so nothing was restored." }
@@ -468,11 +469,108 @@ final class ShadowCopyManager {
         }
     }
 
+    nonisolated static let stagedRestoreKey = "shadowCopyStagedRestore"
+    nonisolated private static let stagedRestoreIDKey = "shadowCopyStagedRestoreDataID"
+    nonisolated private static var stagedFolder: URL { URL.applicationSupportDirectory.appendingPathComponent("PendingRestore", isDirectory: true) }
+
+    /// A copy that was opened from Finder was unpacked into the app's own folder before the restart; this puts it in
+    /// place, after a safety copy of what is there. Runs before the data is opened.
+    nonisolated private static func performStagedRestore(localStore: URL) -> String? {
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: stagedRestoreKey)
+        let staged = stagedFolder.appendingPathComponent("OinklyBudget.store")
+        defer { try? FileManager.default.removeItem(at: stagedFolder) }
+        guard FileManager.default.fileExists(atPath: staged.path) else { return "The copy to restore couldn't be found, so nothing was restored." }
+        do {
+            let backups = URL.applicationSupportDirectory.appendingPathComponent("Backups", isDirectory: true)
+                .appendingPathComponent("Before restoring a copy (\(Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash))))", isDirectory: true)
+            if FileManager.default.fileExists(atPath: localStore.path) { _ = try StoreFiles.snapshot(of: localStore, into: backups) }
+            StoreFiles.remove(store: localStore)
+            try FileManager.default.createDirectory(at: localStore.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try FileManager.default.moveItem(at: staged, to: localStore)
+            if let id = defaults.string(forKey: stagedRestoreIDKey), !id.isEmpty {
+                try? id.write(to: localStore.deletingLastPathComponent().appendingPathComponent("shadow-data-id.txt"), atomically: true, encoding: .utf8)
+            }
+            defaults.removeObject(forKey: stagedRestoreIDKey)
+            return "Restored your data from the copy you opened. What was there before is in Application Support ▸ Backups. Receipts and photos are only brought back when you restore from Settings ▸ Data & Backup ▸ Shadow Copy."
+        } catch {
+            return "The copy couldn't be restored: \(error.localizedDescription) Your data was not changed."
+        }
+    }
+
+    /// Unpacks a copy opened from Finder into the app's own folder and restarts to restore it. Returns a problem to show, or nil.
+    func stageRestore(from url: URL, info: ShadowInfo) -> String? {
+        let staged = Self.stagedFolder.appendingPathComponent("OinklyBudget.store")
+        try? FileManager.default.removeItem(at: Self.stagedFolder)
+        do {
+            try FileManager.default.createDirectory(at: Self.stagedFolder, withIntermediateDirectories: true)
+            try SealedFile.unseal(url, to: staged)
+            guard (try? SQLiteStore.integrityIsOK(staged)) == true, let counts = try? SQLiteStore.counts(of: staged),
+                  counts["ZACCOUNT"] == info.accounts, counts["ZTRANSACTION"] == info.transactions else {
+                try? FileManager.default.removeItem(at: Self.stagedFolder)
+                return "What came out of that copy isn't the data it should be, so nothing was changed."
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: Self.stagedFolder)
+            return error.localizedDescription
+        }
+        UserDefaults.standard.set(true, forKey: Self.stagedRestoreKey)
+        UserDefaults.standard.set(info.dataID, forKey: Self.stagedRestoreIDKey)
+        UserDefaults.standard.synchronize()
+        return nil
+    }
+
     /// For the rescue screen and Settings: what is in the shadow copy, newest first, without keeping access open.
     func versions() async -> [ShadowVersion] {
         guard let parent = resolveParent() else { return [] }
         let accessing = parent.startAccessingSecurityScopedResource()
         defer { if accessing { parent.stopAccessingSecurityScopedResource() } }
         return await Task.detached { ShadowFolder(inside: parent).allVersions() }.value
+    }
+}
+
+
+/// Opening a copy from Finder (a `.pigdata` file): say what is in it, ask first, then restore it.
+@MainActor
+enum CopyOpener {
+    static func offerRestore(of url: URL) async {
+        // A launch by double-click arrives before the app is ready. Wait for the main window.
+        for _ in 0..<40 where !NSApp.windows.contains(where: { $0.title == "Oinkly Budget" && $0.isVisible }) {
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        guard let header = try? SealedFile.readHeader(url), header.kind == "data", let data = header.info,
+              let info = try? SealedFile.decodeInfo(ShadowInfo.self, from: data) else {
+            show(title: "Couldn't open that file", text: "It isn't a copy of Oinkly Budget data, or it is damaged or from a newer version.")
+            return
+        }
+        guard !SharedDataSession.isEnabled else {
+            show(title: "Sharing is on", text: "A copy restores this Mac's own data. Stop sharing first, or restore from the shadow copy in Settings.")
+            return
+        }
+        guard SealedFile.isIntact(url) else {
+            show(title: "That copy is damaged", text: "It didn't pass its check, so nothing was changed.")
+            return
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Restore from this copy?"
+        alert.informativeText = "\(url.lastPathComponent) was made \(info.savedAt.formatted(date: .abbreviated, time: .shortened)) and holds \(info.accounts) accounts and \(info.transactions.formatted()) transactions. Everything currently in Oinkly Budget is replaced with it. A copy of what is there now is kept first. Receipts and photos aren't in a single file; restore from Settings ▸ Data & Backup ▸ Shadow Copy to bring those back too."
+        alert.addButton(withTitle: "Restore")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        if let problem = ShadowCopyManager.shared.stageRestore(from: url, info: info) {
+            show(title: "Couldn't restore that copy", text: problem)
+            return
+        }
+        guard ClosingCountdown.run(.restart, reason: "It restarts to restore your data from the copy you opened. Finish anything you are doing now.") else { return }
+        AppStore.relaunch()
+    }
+
+    private static func show(title: String, text: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = text
+        alert.runModal()
     }
 }

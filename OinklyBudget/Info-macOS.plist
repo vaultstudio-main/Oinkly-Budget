@@ -23,6 +23,20 @@
 			<key>CFBundleTypeIconFile</key>
 			<string>PigDocument</string>
 			<key>CFBundleTypeName</key>
+			<string>Oinkly Budget Copy</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>dev.vaultstudio.oinklybudget.copy</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>PigDocument</string>
+			<key>CFBundleTypeName</key>
 			<string>Oinkly Budget Backup</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
@@ -36,6 +50,25 @@
 	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Oinkly Budget Copy</string>
+			<key>UTTypeIconFile</key>
+			<string>PigDocument</string>
+			<key>UTTypeIdentifier</key>
+			<string>dev.vaultstudio.oinklybudget.copy</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pigdata</string>
+				</array>
+			</dict>
+		</dict>
 		<dict>
 			<key>UTTypeConformsTo</key>
 			<array>

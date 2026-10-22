@@ -45,17 +45,17 @@ nonisolated enum ShadowError: LocalizedError {
     }
 }
 
-/// A shadow copy on disk: a folder inside the one the person chose, holding the latest copy of the data file, the
-/// receipts, a note about which save it matches, and a few older copies. Plain files and the system's own SQLite, like the
-/// shared folder, and only the owner can open it. The data file in it is only ever a complete, checked copy.
+/// A shadow copy on disk: a folder inside the one the person chose, holding the latest copy of the data, the receipts and
+/// a few older copies. Every file in it is in Oinkly Budget's own sealed format (see `SealedFile`), so only Oinkly Budget
+/// can read them, a damaged one is told from a good one without opening it, and only the owner can open the folder. What
+/// is in a copy is only ever a complete, checked copy of the data file.
 nonisolated struct ShadowFolder: Sendable {
     let url: URL
 
     static let folderName = "Oinkly Budget Shadow Copy"
-    static let storeName = "OinklyBudget.store"
-    static let infoName = "shadow.json"
+    static let storeName = "OinklyBudget.pigdata"
     static let olderName = "Older copies"
-    static let readmeName = "Read Me.txt"
+    static let receiptsName = "Receipts"
     static let formatVersion = 1
     static let schemaVersion = 4
     /// The newest older copies kept, and how many days back one per day is kept as well.
@@ -67,63 +67,46 @@ nonisolated struct ShadowFolder: Sendable {
     init(at url: URL) { self.url = url }
 
     var storeURL: URL { url.appendingPathComponent(Self.storeName) }
-    var infoURL: URL { url.appendingPathComponent(Self.infoName) }
     var olderURL: URL { url.appendingPathComponent(Self.olderName, isDirectory: true) }
-    var readmeURL: URL { url.appendingPathComponent(Self.readmeName) }
+    var receiptsURL: URL { url.appendingPathComponent(Self.receiptsName, isDirectory: true) }
 
     private var manager: FileManager { .default }
     var exists: Bool { manager.fileExists(atPath: url.path) }
     var hasStore: Bool { manager.fileExists(atPath: storeURL.path) }
 
-    private static var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return encoder
+    /// What a sealed copy says about itself, read from its header without opening it.
+    private static func info(of file: URL) -> ShadowInfo? {
+        guard let header = try? SealedFile.readHeader(file), header.kind == "data", let data = header.info else { return nil }
+        return try? SealedFile.decodeInfo(ShadowInfo.self, from: data)
     }
 
-    private static var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
-    }
-
-    func readInfo() -> ShadowInfo? {
-        guard let data = try? Data(contentsOf: infoURL) else { return nil }
-        return try? Self.decoder.decode(ShadowInfo.self, from: data)
-    }
+    func readInfo() -> ShadowInfo? { Self.info(of: storeURL) }
 
     /// The older copies, newest first.
     func olderVersions() -> [ShadowVersion] {
         guard let files = try? manager.contentsOfDirectory(at: olderURL, includingPropertiesForKeys: nil) else { return [] }
-        return files.filter { $0.pathExtension == "store" }.compactMap { store in
-            guard let data = try? Data(contentsOf: store.deletingPathExtension().appendingPathExtension("json")),
-                  let info = try? Self.decoder.decode(ShadowInfo.self, from: data) else { return nil }
-            return ShadowVersion(url: store, info: info, isLatest: false)
+        return files.filter { $0.pathExtension == SealedFile.fileExtension && !$0.lastPathComponent.hasPrefix(".") }.compactMap { file in
+            Self.info(of: file).map { ShadowVersion(url: file, info: $0, isLatest: false) }
         }.sorted { ($0.info.savedAt, $0.info.copyNumber) > ($1.info.savedAt, $1.info.copyNumber) }
     }
 
     /// The latest copy and the older ones, newest first.
     func allVersions() -> [ShadowVersion] {
         var result: [ShadowVersion] = []
-        if let info = readInfo(), hasStore { result.append(ShadowVersion(url: storeURL, info: info, isLatest: true)) }
+        if let info = readInfo() { result.append(ShadowVersion(url: storeURL, info: info, isLatest: true)) }
         return result + olderVersions()
     }
 
-    /// Whether a copy opens and passes SQLite's own check, and holds the number of records its note says.
-    func isGood(_ version: ShadowVersion) -> Bool {
-        guard (try? SQLiteStore.integrityIsOK(version.url)) == true,
-              let counts = try? SQLiteStore.counts(of: version.url) else { return false }
-        return counts["ZACCOUNT"] == version.info.accounts && counts["ZTRANSACTION"] == version.info.transactions
-    }
+    /// Whether a copy is whole: its fingerprint matches, so nothing in it has been cut short or changed.
+    func isGood(_ version: ShadowVersion) -> Bool { SealedFile.isIntact(version.url) }
 
     /// The newest copy that is good, or nil when none is.
     func newestGoodVersion() -> ShadowVersion? { allVersions().first { isGood($0) } }
 
     // MARK: Writing
 
-    /// Writes a new latest copy of `live`. The copy is made beside the old one, checked against the original, and only
-    /// then put in place; the old latest becomes an older copy. If anything fails, the shadow copy is left as it was.
+    /// Writes a new latest copy of `live`. The copy is made beside the old one, checked against the original, sealed, and
+    /// only then put in place; the old latest becomes an older copy. If anything fails, the shadow copy is left as it was.
     @discardableResult
     func write(from live: URL, dataID: String, source: String, sharedRevision: Int? = nil, sharedFileID: String? = nil,
                appVersion: String, now: Date = .now) throws -> ShadowInfo {
@@ -134,8 +117,12 @@ nonisolated struct ShadowFolder: Sendable {
         } catch {
             throw ShadowError.unavailable(error.localizedDescription)
         }
-        let staging = url.appendingPathComponent(".\(Self.storeName).\(UUID().uuidString).tmp")
-        defer { try? manager.removeItem(at: staging) }
+        let staging = url.appendingPathComponent(".staging.\(UUID().uuidString).tmp")
+        let stagingSealed = url.appendingPathComponent(".staging.\(UUID().uuidString).\(SealedFile.fileExtension)")
+        defer {
+            try? manager.removeItem(at: staging)
+            try? manager.removeItem(at: stagingSealed)
+        }
         let counts: [String: Int]
         do {
             try SQLiteStore.vacuum(source: live, into: staging)
@@ -148,66 +135,39 @@ nonisolated struct ShadowFolder: Sendable {
         } catch {
             throw ShadowError.verifyFailed(error.localizedDescription)
         }
-        // Receipts go first. Until the data file is replaced, nothing refers to the new ones.
-        do { try StoreFiles.copyAttachments(from: live, to: storeURL) } catch { throw ShadowError.copyFailed(error.localizedDescription) }
+        // Receipts go first. Until the data is replaced, nothing refers to the new ones.
+        try addReceipts(from: live, appVersion: appVersion)
 
         let current = readInfo()
-        if hasStore { archive(current: current, now: now) }
-        if rename(staging.path, storeURL.path) != 0 {
-            throw ShadowError.copyFailed("the new copy couldn't replace the old one (\(String(cString: strerror(errno))))")
-        }
         let info = ShadowInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, copyNumber: (current?.copyNumber ?? 0) + 1,
                               savedAt: now, appVersion: appVersion, dataID: dataID, source: source,
                               sharedRevision: sharedRevision, sharedFileID: sharedFileID,
                               accounts: counts["ZACCOUNT"] ?? 0, transactions: counts["ZTRANSACTION"] ?? 0)
-        try writeInfo(info)
-        writeReadMe()
+        do {
+            try SealedFile.seal(staging, to: stagingSealed, kind: "data", info: try SealedFile.encodeInfo(info), appVersion: appVersion, now: now)
+        } catch {
+            throw ShadowError.copyFailed(error.localizedDescription)
+        }
+        guard SealedFile.isIntact(stagingSealed) else { throw ShadowError.verifyFailed("the sealed copy didn't read back") }
+        if hasStore { archive(current: current, now: now) }
+        if rename(stagingSealed.path, storeURL.path) != 0 {
+            throw ShadowError.copyFailed("the new copy couldn't replace the old one (\(String(cString: strerror(errno))))")
+        }
         prune(now: now)
         return info
     }
 
-    private func writeInfo(_ info: ShadowInfo) throws {
-        let temporary = url.appendingPathComponent(".\(Self.infoName).\(UUID().uuidString).tmp")
-        do {
-            try Self.encoder.encode(info).write(to: temporary)
-            if rename(temporary.path, infoURL.path) != 0 {
-                throw CocoaError(.fileWriteUnknown, userInfo: [NSLocalizedDescriptionKey: String(cString: strerror(errno))])
-            }
-        } catch {
-            try? manager.removeItem(at: temporary)
-            throw ShadowError.copyFailed(error.localizedDescription)
-        }
-    }
-
-    private func writeReadMe() {
-        guard !manager.fileExists(atPath: readmeURL.path) else { return }
-        let text = """
-        This folder is a shadow copy of your Oinkly Budget data, kept up to date by the app.
-
-        "\(Self.storeName)" is the latest copy. "\(Self.olderName)" holds a few earlier ones. The hidden folder beside it holds your receipts.
-
-        It is an ordinary copy of your data, not encrypted. Anyone who can open this folder can read it, and if the folder is in iCloud Drive it is also on Apple's servers.
-
-        To use it, open Oinkly Budget, go to Settings, Data & Backup, Shadow Copy and choose Restore. Please don't edit or move the files in here.
-        """
-        try? text.write(to: readmeURL, atomically: true, encoding: .utf8)
-    }
-
-    /// Keeps the file that is about to be replaced as an older copy, with its note.
+    /// Keeps the file that is about to be replaced as an older copy. It is already sealed, so it is simply copied.
     private func archive(current: ShadowInfo?, now: Date) {
         do {
             try manager.createDirectory(at: olderURL, withIntermediateDirectories: true)
             chmod(olderURL.path, 0o700)
-            let modified = (try? manager.attributesOfItem(atPath: storeURL.path)[.modificationDate] as? Date) ?? now
-            let info = current ?? ShadowInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, copyNumber: 0, savedAt: modified,
-                                             appVersion: "", dataID: "", source: "unknown", sharedRevision: nil, sharedFileID: nil,
-                                             accounts: (try? SQLiteStore.counts(of: storeURL)["ZACCOUNT"]) ?? 0, transactions: (try? SQLiteStore.counts(of: storeURL)["ZTRANSACTION"]) ?? 0)
+            let info = current ?? ShadowInfo(formatVersion: Self.formatVersion, schemaVersion: Self.schemaVersion, copyNumber: 0, savedAt: now,
+                                             appVersion: "", dataID: "", source: "unknown", sharedRevision: nil, sharedFileID: nil, accounts: 0, transactions: 0)
             let stamp = ISO8601DateFormatter().string(from: info.savedAt).replacingOccurrences(of: ":", with: "-")
-            let base = olderURL.appendingPathComponent("copy \(info.copyNumber) \(stamp)")
-            let copy = base.appendingPathExtension("store")
+            let copy = olderURL.appendingPathComponent("copy \(info.copyNumber) \(stamp).\(SealedFile.fileExtension)")
             try? manager.removeItem(at: copy)
             try manager.copyItem(at: storeURL, to: copy)
-            try Self.encoder.encode(info).write(to: base.appendingPathExtension("json"))
         } catch {
             // Keeping an older copy never stops the new one.
         }
@@ -221,28 +181,76 @@ nonisolated struct ShadowFolder: Sendable {
             guard let day = calendar.date(byAdding: .day, value: -dayOffset, to: now) else { continue }
             if let newestThatDay = all.first(where: { calendar.isDate($0.info.savedAt, inSameDayAs: day) }) { keep.insert(newestThatDay.url) }
         }
-        for version in all where !keep.contains(version.url) {
-            try? manager.removeItem(at: version.url)
-            try? manager.removeItem(at: version.url.deletingPathExtension().appendingPathExtension("json"))
+        for version in all where !keep.contains(version.url) { try? manager.removeItem(at: version.url) }
+        // Anything cut short by a crash a while ago can't be in use.
+        if let leftovers = try? manager.contentsOfDirectory(at: url, includingPropertiesForKeys: [.contentModificationDateKey]) {
+            for file in leftovers where file.lastPathComponent.hasPrefix(".staging.") {
+                let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? now
+                if now.timeIntervalSince(modified) > 600 { try? manager.removeItem(at: file) }
+            }
+        }
+    }
+
+    // MARK: Receipts
+
+    /// Seals each receipt and photo of `live` that the shadow copy doesn't have yet. They never change once written (each
+    /// has its own unique name), so only new ones are copied.
+    private func addReceipts(from live: URL, appVersion: String) throws {
+        let source = StoreFiles.supportURL(for: live)
+        guard manager.fileExists(atPath: source.path), let walker = manager.enumerator(at: source, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+        for case let item as URL in walker {
+            guard (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true else { continue }
+            let relative = String(item.path.dropFirst(source.path.count + 1))
+            let target = receiptsURL.appendingPathComponent(relative + "." + SealedFile.fileExtension)
+            guard !manager.fileExists(atPath: target.path) else { continue }
+            do {
+                try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try SealedFile.seal(item, to: target, kind: "receipt", appVersion: appVersion)
+            } catch {
+                throw ShadowError.copyFailed(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Unpacks every receipt of the shadow copy into the folder that goes with `store`.
+    func restoreReceipts(into store: URL) throws {
+        guard manager.fileExists(atPath: receiptsURL.path), let walker = manager.enumerator(at: receiptsURL, includingPropertiesForKeys: [.isDirectoryKey]) else { return }
+        let destination = StoreFiles.supportURL(for: store)
+        for case let item as URL in walker {
+            guard item.pathExtension == SealedFile.fileExtension, (try? item.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true else { continue }
+            let relative = String(item.deletingPathExtension().path.dropFirst(receiptsURL.path.count + 1))
+            let target = destination.appendingPathComponent(relative)
+            guard !manager.fileExists(atPath: target.path) else { continue }
+            do { try SealedFile.unseal(item, to: target) } catch { throw ShadowError.copyFailed(error.localizedDescription) }
         }
     }
 
     // MARK: Using a copy
 
-    /// Puts a copy in place of `target`: the data file and the receipts it needs. The caller keeps a safety copy of what
-    /// was there first.
-    func restore(_ version: ShadowVersion, to target: URL) throws {
-        guard isGood(version) else { throw ShadowError.verifyFailed("that copy didn't pass its check") }
+    /// Unpacks a copy into `plain` and checks that what came out is the data it says it is.
+    func unpack(_ version: ShadowVersion, to plain: URL) throws {
         if version.info.formatVersion > Self.formatVersion || version.info.schemaVersion > Self.schemaVersion { throw ShadowError.newerFormat }
+        do { try SealedFile.unseal(version.url, to: plain) } catch { throw ShadowError.verifyFailed(error.localizedDescription) }
+        guard (try? SQLiteStore.integrityIsOK(plain)) == true, let counts = try? SQLiteStore.counts(of: plain),
+              counts["ZACCOUNT"] == version.info.accounts, counts["ZTRANSACTION"] == version.info.transactions else {
+            try? manager.removeItem(at: plain)
+            throw ShadowError.verifyFailed("what came out of that copy isn't the data it should be")
+        }
+    }
+
+    /// Puts a copy in place of `target`: the data file and the receipts. The caller keeps a safety copy of what was there first.
+    func restore(_ version: ShadowVersion, to target: URL) throws {
+        let staged = target.deletingLastPathComponent().appendingPathComponent(".restoring.\(UUID().uuidString).store")
+        defer { try? manager.removeItem(at: staged) }
+        try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try unpack(version, to: staged)
         StoreFiles.remove(store: target)
         do {
-            try manager.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try manager.copyItem(at: version.url, to: target)
-            // The receipts all live beside the latest copy.
-            try StoreFiles.copyAttachments(from: storeURL, to: target)
+            try manager.moveItem(at: staged, to: target)
         } catch {
             throw ShadowError.copyFailed(error.localizedDescription)
         }
+        try restoreReceipts(into: target)
     }
 
     /// Removes the whole shadow copy.
@@ -356,9 +364,8 @@ nonisolated enum SharedRescue {
         try manager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? manager.removeItem(at: staging) }
         let staged = staging.appendingPathComponent(SharedDataFolder.storeName)
-        try manager.copyItem(at: version.url, to: staged)
-        // The receipts all live beside the latest copy.
-        try StoreFiles.copyAttachments(from: shadow.storeURL, to: staged)
+        try shadow.unpack(version, to: staged)
+        try shadow.restoreReceipts(into: staged)
         try put(staged, into: shared, me: me, appVersion: appVersion, fileID: version.info.sharedFileID, revisionAtLeast: version.info.sharedRevision,
                 note: "put back from the shadow copy made \(version.info.savedAt.formatted(date: .abbreviated, time: .shortened))")
     }
