@@ -82,7 +82,6 @@ HELP = [
     ("Help-pay-bill", "win-pay-bill", 1000, None),
     ("Help-update-price", "win-update-price", 1000, None),
     ("Help-cash-transaction", "win-new-cash", 1000, None),
-    ("Help-release-notes", "win-release-notes", 1200, None),
     ("Help-manage-accounts", "set-accounts", 1000, None),
     ("Help-categories", "set-categories", 1000, None),
     ("Help-tags-settings", "set-tags", 1000, None),

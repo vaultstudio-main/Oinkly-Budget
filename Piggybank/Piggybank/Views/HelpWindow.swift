@@ -71,12 +71,11 @@ enum HelpContent {
                 "Hover over the dot to see when everything was last saved.",
             ]),
 
-            Topic(title: "Help & Release Notes", symbol: "questionmark.circle", lines: [
+            Topic(title: "Using Help", symbol: "questionmark.circle", lines: [
                 "Help lives in the Help menu. Choose Oinkly Budget Help, or press ⇧⌘/.",
                 "• Topics are grouped on the left. Click one to read it, with pictures of the screens it talks about.",
                 "• Search Help with the field above the list. It looks through every topic.",
-                "• Release Notes, also in the Help menu, lists everything in this version and shows the version you are running.",
-                "• The Help and Release Notes windows open large, and you can resize them.",
+                "• The Help window opens large, and you can resize it.",
             ]),
         ]),
 
@@ -497,7 +496,6 @@ enum HelpContent {
         "Welcome": [Shot(asset: "Help-welcome", caption: "The Summary page, with the side panel on the left.")],
         "Finding Your Way": [Shot(asset: "Help-sidebar", caption: "The side panel: Overview, Cash on Hand and account folders.")],
         "The Status Bar": [Shot(asset: "Help-status-bar", caption: "The bar at the bottom of every page, with the saved dot on the right.")],
-        "Help & Release Notes": [Shot(asset: "Help-release-notes", caption: "Help ▸ Release Notes.")],
         "Adding & Managing Accounts": [Shot(asset: "Help-manage-accounts", caption: "Settings ▸ Accounts."),
                                        Shot(asset: "Help-manage-accounts-page", caption: "The Manage Accounts page."),
                                        Shot(asset: "Help-edit-account", caption: "Edit Details for a checking account, with its routing numbers.")],
