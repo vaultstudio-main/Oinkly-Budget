@@ -60,7 +60,6 @@ Topics for planned features are written only if the feature ships.
 | E1 Reports | Planning & Reports | Reports (period button, projections, empty cards) | edit |
 | E2 Summary | Planning & Reports | Summary (each card explained) | edit |
 | E3 Liabilities, Investments | Planning & Reports | Liabilities, Investments | edit |
-| E4 Reports and Summary PDF | Exporting & Printing | Export to PDF and CSV (section) | edit, if built |
 | F2 Data & Backup | Data & Settings | Backup & Restore | edit |
 | F3 Safe update | Data & Settings | Updating to 1.0 (the safety copy, where it is, deleting it) | new |
 | F4 Shared file | Data & Settings | Sharing One Data File | new, if built |

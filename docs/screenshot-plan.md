@@ -66,7 +66,6 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-E2b | `Help-summary-lower` | Summary, lower | Scroll down |
 | S-E3a | `Help-liabilities` | Liabilities | Liabilities |
 | S-E3b | `Help-investments` | Investments | Investments |
-| S-E4 | `Help-reports-pdf` | Reports with the Print PDF button | Reports |
 | S-F2 | `Help-backup` | Data & Backup settings | Settings ▸ Data & Backup |
 | S-F3 | `Help-safety-copy` | Finder: Backups ▸ Before this update | Finder (owner takes this) |
 | S-F4a | `Help-shared-file` | Shared file settings | Settings ▸ Data & Backup |
@@ -77,7 +76,7 @@ Every new or changed feature has a Help screenshot, so each topic can show what 
 | S-G2 | `Help-shortcuts` | Keyboard shortcuts topic | Help |
 | S-G3 | `Help-export-defaults` | Export defaults | Settings |
 
-Shots for planned features (splits, tags, recurring, shared file, export defaults, Reports and Summary PDF) are taken only if the feature ships.
+Shots for planned features (splits, tags, recurring, shared file, export defaults) are taken only if the feature ships.
 
 The earlier shots that stay and are retaken: Help-atm-withdrawal, Help-card-charge, Help-receipt, Help-bills, Help-new-bill, Help-pay-bill, Help-categories, Help-manage-accounts, Help-sidebar.
 

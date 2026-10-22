@@ -39,7 +39,7 @@ Drafted 2026-10-18. The site is a small static site in `website-vaultstudio/webs
 5. **Split transactions** *(if built).* One payment across categories.
 6. **Tags** *(if built).* Label transactions and filter reports.
 7. **Recurring transactions** *(if built).* Rules that make pending entries for you to confirm, and a cash flow forecast.
-8. **Export to PDF and CSV.** Every account, the Transactions page, Reports and Summary *(if built)*. Print by opening the PDF.
+8. **Export to PDF and CSV.** Every account and the Transactions page. Print by opening the PDF.
 9. **Import a statement.** Preview, map the columns, skip duplicates, undo.
 10. **Clean Up and autofill.** Find and replace payees and categories, merge duplicates, memory for payee, category, memo and payment method.
 12. **Widgets.** Upcoming bills and reminders, no amounts or account details.

@@ -12,7 +12,6 @@ struct ReportsView: View {
     @Query(sort: \Tag.name) private var allTags: [Tag]
     /// Only transactions with this tag count in the reports, when one is chosen.
     @State private var tagFilter: Tag?
-    @Environment(\.modelContext) private var modelContext
 
     init() {
         let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
@@ -26,11 +25,6 @@ struct ReportsView: View {
                 HStack {
                     PageTitle("Reports")
                     tagMenu
-                    Button("Print PDF", systemImage: "printer") {
-                        let source = PageDocuments.source(in: modelContext, tag: tagFilter)
-                        PDFSaver.save(PageDocuments.report(section, source), suggestedName: "Report - \(section.rawValue)")
-                    }
-                    .help("Save this section of Reports as a PDF to read or print. The charts become tables of the same figures.")
                 }
                 sectionPicker
                 grid(section.reports)

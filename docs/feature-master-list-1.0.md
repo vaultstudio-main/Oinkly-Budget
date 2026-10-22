@@ -67,12 +67,12 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Only on an exact match of the payee; you can change anything afterwards.
 - Shots: S-B3 (New Transaction with an autofilled payee).
 
-### B4. Export and print (Built; Reports and Summary PDF planned)
+### B4. Export and print (Built)
 - Every account page has Print PDF and Export CSV. The Transactions page has them for all accounts. One transaction can be saved as a PDF from its detail window.
 - The Export sheet asks for: account (or all accounts), period (a month, a year, or from a date), and paper size. Then a save panel.
 - The PDF has a running balance and repeating headers. To print, open the PDF in Preview.
 - The CSV uses the layout Import Statement reads, so it round-trips.
-- Planned: Print PDF on Reports and Summary; default paper size and style in Settings.
+- Planned: default paper size and style in Settings.
 - Shots: S-B4a (Export sheet), S-B4b (a page of the PDF in Preview), S-B4c (account page buttons).
 
 ### B5. Import Statement (Built)
@@ -169,12 +169,8 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 - Investments: a Growth card for 3 months, 6 months and a year, and a Projection of Growth. No sample data; placeholders keep their size.
 - Shots: S-E3a (Liabilities), S-E3b (Investments).
 
-### E4. Reports and Summary PDF (Built)
-- A Print PDF button on the Summary page and on the Reports page. On Reports it saves the section you are looking at (Overview, Spending, Income, Cash Flow, Net Worth, Debt & Loans, Savings & Goals, Budgets, Bills, Investments or Books & Records), and respects the tag filter.
-- The charts don't print well in black and white, so the PDF has the figures behind them as tables: net worth and debt by month with the next six months marked Projected, money in and out, spending and income by category, what you owe, goals, budgets, bills, investments and holdings, and tax-related spending.
-- The Summary PDF has the net worth breakdown by account, 12 months of net worth, money in and out, priority bills, what you owe, goals and top spending categories.
-- It uses the same look as account statements and the paper size of your region. To print, open the PDF in Preview.
-- Shots: S-E4.
+### E4. Reports and Summary PDF (Removed)
+- Decided 2026-10-21: the overview pages (Summary and Reports) have no Print PDF button. PDFs are for accounts and single transactions only.
 
 ---
 
@@ -218,7 +214,7 @@ Drafted 2026-10-18 from the git history of `main` and the current app. This is t
 
 ### G3. Default settings for export (Built)
 - Settings ▸ General ▸ PDFs: **Paper size** (Automatic follows your region, US Letter or A4) and **Style** (Plain black and grey, or With color accents using blue headings).
-- Every PDF reads them: account statements, one transaction, Reports and the Summary. The Export sheet starts from the paper chosen here and can still change it for one export.
+- Every PDF reads them: account statements and one transaction. The Export sheet starts from the paper chosen here and can still change it for one export.
 - Saved in the backup file with the other preferences.
 - Shots: S-G3.
 
@@ -283,7 +279,6 @@ Rules: light mode, test data (Oinkly Budget ▸ Testing ▸ Fill with Test Data)
 | S-E2b | Summary, lower | Scroll down | Help-summary-lower | gallery | – |
 | S-E3a | Liabilities | Liabilities | Help-liabilities | gallery | yes |
 | S-E3b | Investments | Investments | Help-investments | gallery | yes |
-| S-E4 | Reports with the Print PDF button | Reports | Help-reports-pdf | – | – |
 | S-F2 | Data & Backup settings | Settings ▸ Data & Backup | Help-backup | – | – |
 | S-F3 | Finder: Backups ▸ Before this update | Finder (owner takes this) | Help-safety-copy | – | – |
 | S-F4a | Shared file settings | Settings ▸ Data & Backup | Help-shared-file | features | yes |

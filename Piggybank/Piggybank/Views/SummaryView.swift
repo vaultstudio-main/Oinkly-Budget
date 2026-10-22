@@ -47,16 +47,10 @@ struct SummaryView: View {
         .background(Theme.background)
     }
 
-    @Environment(\.modelContext) private var modelContext
-
     private var header: some View {
         HStack {
             Text("Summary").font(.largeTitle.bold())
             Spacer()
-            Button("Print PDF", systemImage: "printer") {
-                PDFSaver.save(PageDocuments.summary(PageDocuments.source(in: modelContext)), suggestedName: "Summary")
-            }
-            .help("Save the Summary as a PDF to read or print. The charts become tables of the same figures.")
         }
     }
 }
