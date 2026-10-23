@@ -38,6 +38,9 @@ private struct RegisterContent: View {
     @State private var pendingImport: PendingImport?
     @State private var makingRecurring: Transaction?
     @Environment(\.openWindow) private var openWindow
+    @State private var choosingMonth = false
+    /// How far the page starts from the left edge of the window, so the month can sit in the middle of the whole window.
+    @State private var leftInset: CGFloat = 0
 
     init(account: Account, month: Binding<Date>) {
         self.account = account
@@ -72,23 +75,42 @@ private struct RegisterContent: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(account.name).font(.largeTitle.bold())
-            Spacer()
-            if !account.isLoan {
-                MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
+        ZStack {
+            // The month is only shown here, in the middle of the whole window, under the window's title. It is chosen in Settings.
+            Text(account.isLoan ? "All Activity" : month.formatted(.dateTime.month(.wide).year()))
+                .font(.title3.weight(.semibold))
+                .offset(x: -leftInset / 2)
+                .contentTransition(.numericText())
+            HStack(alignment: .firstTextBaseline) {
+                Text(account.name).font(.largeTitle.bold())
                 Spacer()
+                if !account.isLoan {
+                    Button("Settings", systemImage: "slider.horizontal.3") { choosingMonth = true }
+                        .help("Choose which month this register shows")
+                        .popover(isPresented: $choosingMonth, arrowEdge: .bottom) { monthPopover }
+                }
+                // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
+                Button("Import CSV", systemImage: "square.and.arrow.down") {
+                    if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
+                }
+                .help("Import a bank statement saved as a CSV file into this account. PDF statements can't be imported.")
+                Button("Export CSV", systemImage: "square.and.arrow.up") { savingAs = .csv }
+                    .help("Save this account's transactions as a CSV spreadsheet")
+                Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
+                    .help("Save this account's transactions as a PDF statement to read or print")
             }
-            // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
-            Button("Import CSV", systemImage: "square.and.arrow.down") {
-                if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
-            }
-            .help("Import a bank statement saved as a CSV file into this account. PDF statements can't be imported.")
-            Button("Export CSV", systemImage: "square.and.arrow.up") { savingAs = .csv }
-                .help("Save this account's transactions as a CSV spreadsheet")
-            Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
-                .help("Save this account's transactions as a PDF statement to read or print")
         }
+    }
+
+    /// The bubble that opens from Settings: the month this register shows.
+    private var monthPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Month").font(.headline)
+            MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
+            Text("The month this register is showing.").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .frame(width: 300)
     }
 
     private var dateRange: (first: Date?, last: Date?) { modelContext.transactionDateRange(of: account) }
@@ -255,6 +277,7 @@ private struct RegisterContent: View {
         }
         .padding(16)
         .background(Theme.background)
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: { leftInset = $0 }
         .statusBarText(account.isLoan
             ? "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(account.name)"
             : "\(rows.count.formatted()) transaction\(rows.count == 1 ? "" : "s") · \(month.formatted(.dateTime.month(.wide).year())) · \(account.name)")
