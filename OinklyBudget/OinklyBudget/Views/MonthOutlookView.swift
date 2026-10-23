@@ -143,13 +143,13 @@ private struct OutlookBody: View {
         }
         return VStack(alignment: .leading, spacing: 10) {
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 14) { cards() }.fixedSize(horizontal: false, vertical: true)
+                HStack(alignment: .top, spacing: 14) { cards() }
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 14, alignment: .top), GridItem(.flexible(), spacing: 14, alignment: .top)], spacing: 14) { cards() }
             }
-            if !hasPlan {
-                Label("No plan for this month yet. Add lines on the War Plan tab, or pull them in, and each card will show the plan against the outlook.", systemImage: "info.circle")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
+            Label(hasPlan ? "Each card sets your plan against what the outlook says now. The plan is only a what-if sheet and never changes the outlook."
+                          : "No plan for this month yet. Add lines on the War Plan tab, or pull them in, and each card will show the plan against the outlook.",
+                  systemImage: "info.circle")
+                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
         }
     }
 
@@ -177,6 +177,7 @@ private struct OutlookBody: View {
                 .frame(width: 290, alignment: .leading)
                 BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, buffer: kept)
             }
+            .frame(height: Self.pullOutHeight, alignment: .top)
         }
     }
 
@@ -208,21 +209,21 @@ private struct OutlookBody: View {
 
     // MARK: Plan against outlook, as a chart
 
-    /// Each planned line as a pair of bars: what was planned and what the outlook now says. Shown only when there is a plan.
-    @ViewBuilder
+    /// Each planned line as a pair of bars: what was planned and what the outlook now says. Always shown, with a set height that
+    /// scrolls, and the bars sit at the top of it.
     private func planChart(_ outlook: MonthOutlook) -> some View {
-        if !plan.items.isEmpty {
-            let rows = WarPlanComparison.build(items: plan.items, outlook: outlook).rows
-                .filter { ($0.planned ?? 0) > 0 || ($0.actual ?? 0) > 0 }
-                .sorted { max($0.planned ?? 0, $0.actual ?? 0) > max($1.planned ?? 0, $1.actual ?? 0) }
-            ReportCard(title: "Plan vs. Outlook") {
-                VStack(alignment: .leading, spacing: 8) {
-                    PlanVsOutlookChart(rows: Array(rows.prefix(12)))
-                    if rows.count > 12 {
-                        Text("The 12 biggest of \(rows.count) lines are shown. The full list is above.").font(.caption).foregroundStyle(.secondary)
-                    }
+        let rows = plan.items.isEmpty ? [] : WarPlanComparison.build(items: plan.items, outlook: outlook).rows
+            .filter { ($0.planned ?? 0) > 0 || ($0.actual ?? 0) > 0 }
+            .sorted { max($0.planned ?? 0, $0.actual ?? 0) > max($1.planned ?? 0, $1.actual ?? 0) }
+        return ReportCard(title: "Plan vs. Outlook") {
+            Group {
+                if rows.isEmpty {
+                    placeholder("A pair of bars for each planned line, planned against outlook, appear here once the War Plan has lines.")
+                } else {
+                    ScrollView { PlanVsOutlookChart(rows: rows) }
                 }
             }
+            .frame(height: Self.chartHeight, alignment: .top)
         }
     }
 
@@ -237,7 +238,8 @@ private struct OutlookBody: View {
                                        plannedPull: hasPlan ? planned : nil, actualPull: actual, buffer: kept,
                                        startingSet: !startAccount.isEmpty || OutlookSettings.decimal(startAmount) != nil)
         return ReportCard(title: "What to Improve") {
-            VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+              VStack(alignment: .leading, spacing: 0) {
                 ForEach(items) { item in
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: symbol(item.level)).foregroundStyle(color(item.level)).frame(width: 22).padding(.top, 1)
@@ -250,7 +252,9 @@ private struct OutlookBody: View {
                     .padding(.vertical, 8)
                     if item.id != items.last?.id { Divider() }
                 }
+              }
             }
+            .frame(height: Self.reportHeight, alignment: .top)
         }
     }
 
@@ -272,47 +276,76 @@ private struct OutlookBody: View {
         }
     }
 
-    /// Each planned line next to the outlook line of the same name. Shown only when there is a plan.
-    @ViewBuilder
+    // MARK: Fixed sizes
+
+    /// Every card on the page has a place that is always there, with a set height: when there is more than fits it scrolls inside,
+    /// and when there is less it sits at the top of its place. The page never jumps about as a plan or a month changes.
+    private static let cardHeight: CGFloat = 215
+    private static let pullOutHeight: CGFloat = 255
+    private static let listHeight: CGFloat = 215
+    private static let chartHeight: CGFloat = 255
+    private static let reportHeight: CGFloat = 235
+
+    /// What a card says in its place until there is something to show.
+    private func placeholder(_ text: String) -> some View {
+        Text(text)
+            .font(.callout).foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Each planned line next to the outlook line of the same name. Always shown, with a place for the lines even when there is no plan.
     private func lineByLine(_ outlook: MonthOutlook) -> some View {
-        if !plan.items.isEmpty {
-            let compare = WarPlanComparison.build(items: plan.items, outlook: outlook)
-            ReportCard(title: "Line by Line") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Grid(alignment: .trailing, horizontalSpacing: 24, verticalSpacing: 0) {
-                        GridRow {
-                            Text("").frame(width: 24)
-                            Text("ITEM").frame(maxWidth: .infinity, alignment: .leading).gridColumnAlignment(.leading)
-                            Text("PLANNED").frame(minWidth: 110, alignment: .trailing)
-                            Text("OUTLOOK").frame(minWidth: 110, alignment: .trailing)
-                            Text("DIFFERENCE").frame(minWidth: 130, alignment: .trailing)
-                        }
-                        .font(.caption).foregroundStyle(.secondary)
-                        .padding(.bottom, 6)
-                        Divider().gridCellColumns(5)
-                        ForEach(compare.rows) { row in
-                            GridRow {
-                                Image(systemName: statusSymbol(row)).foregroundStyle(statusColor(row)).frame(width: 24)
-                                HStack(spacing: 6) {
-                                    Text(row.title)
-                                    if row.planned == nil { Text("not in plan").font(.caption2).foregroundStyle(.secondary) }
-                                    if row.actual == nil { Text("not in outlook yet").font(.caption2).foregroundStyle(.secondary) }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .gridColumnAlignment(.leading)
-                                Text(row.planned.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.planned == nil ? .tertiary : .primary)
-                                Text(row.actual.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.actual == nil ? .tertiary : .primary)
-                                differenceText(row.difference, goodWhenMore: row.isIncome)
+        let rows = plan.items.isEmpty ? [] : WarPlanComparison.build(items: plan.items, outlook: outlook).rows
+        return ReportCard(title: "Line by Line") {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 16) {
+                    Text("").frame(width: 24)
+                    Text("ITEM").frame(maxWidth: .infinity, alignment: .leading)
+                    Text("PLANNED").frame(width: 110, alignment: .trailing)
+                    Text("OUTLOOK").frame(width: 110, alignment: .trailing)
+                    Text("DIFFERENCE").frame(width: 130, alignment: .trailing)
+                }
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.bottom, 6)
+                Divider()
+                if rows.isEmpty {
+                    placeholder("Each planned line appears here next to the outlook line of the same name, with the difference. Add lines on the War Plan tab, or pull them in.")
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            ForEach(rows) { row in
+                                lineRow(row)
+                                Divider()
                             }
-                            .padding(.vertical, 7)
-                            Divider().gridCellColumns(5)
+                            Text("Lines are matched by name. The plan is only a what-if sheet and never changes the outlook.")
+                                .font(.caption).foregroundStyle(.secondary).padding(.top, 8)
                         }
                     }
-                    Text("Lines are matched by name. The plan is only a what-if sheet and never changes the outlook.")
-                        .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .frame(height: Self.listHeight, alignment: .top)
         }
+    }
+
+    private func lineRow(_ row: WarPlanComparison.Row) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: statusSymbol(row)).foregroundStyle(statusColor(row)).frame(width: 24)
+            HStack(spacing: 6) {
+                Text(row.title).lineLimit(1)
+                if row.planned == nil { Text("not in plan").font(.caption2).foregroundStyle(.secondary) }
+                if row.actual == nil { Text("not in outlook yet").font(.caption2).foregroundStyle(.secondary) }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(row.planned.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.planned == nil ? .tertiary : .primary)
+                .frame(width: 110, alignment: .trailing)
+            Text(row.actual.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.actual == nil ? .tertiary : .primary)
+                .frame(width: 110, alignment: .trailing)
+            differenceText(row.difference, goodWhenMore: row.isIncome)
+                .frame(width: 130, alignment: .trailing)
+        }
+        .padding(.vertical, 7)
     }
 
     private func statusSymbol(_ row: WarPlanComparison.Row) -> String {
@@ -409,35 +442,46 @@ private struct VersusCard: View {
                     .minimumScaleFactor(0.7).lineLimit(1)
                 Text("in the outlook").font(.caption).foregroundStyle(.secondary)
             }
-            if let planned {
-                HStack {
-                    Text("Planned").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(planned, format: .appCurrency).fontWeight(.semibold)
-                }
-                .font(.callout)
-                if let ratio { bar(ratio) }
-                if let difference { chip(difference) }
+            // The plan's place is always here, so the card is the same size with or without a plan.
+            HStack {
+                Text("Planned").foregroundStyle(.secondary)
+                Spacer()
+                if let planned { Text(planned, format: .appCurrency).fontWeight(.semibold) } else { Text("–").foregroundStyle(.tertiary) }
             }
-            Text(note).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            .font(.callout)
+            bar(ratio)
+            if let difference { chip(difference) } else { noPlanChip }
+            Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+            Spacer(minLength: 0)
         }
         .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(height: 215)
         .panelBackground(cornerRadius: 8)
         .accessibilityElement(children: .combine)
     }
 
     /// The bar fills to the outlook's share of the plan; the tick is the plan itself.
-    private func bar(_ ratio: Double) -> some View {
+    private func bar(_ ratio: Double?) -> some View {
         GeometryReader { geo in
-            let scale = max(1, ratio)
+            let scale = max(1, ratio ?? 1)
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.primary.opacity(0.12))
-                Capsule().fill(barColor).frame(width: geo.size.width * ratio / scale)
-                Rectangle().fill(Color.primary.opacity(0.6)).frame(width: 2, height: 12).offset(x: geo.size.width / scale - 1)
+                if let ratio {
+                    Capsule().fill(barColor).frame(width: geo.size.width * ratio / scale)
+                    Rectangle().fill(Color.primary.opacity(0.6)).frame(width: 2, height: 12).offset(x: geo.size.width / scale - 1)
+                }
             }
         }
         .frame(height: 8)
+    }
+
+    private var noPlanChip: some View {
+        Text("No plan yet")
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Color.secondary.opacity(0.18), in: Capsule())
+            .foregroundStyle(.secondary)
     }
 
     private func chip(_ difference: Decimal) -> some View {
@@ -529,6 +573,6 @@ private struct BalanceChart: View {
         .chartXScale(domain: month...end)
         .chartXAxis { AxisMarks(values: .stride(by: .day, count: 7)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
         .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-        .frame(height: 230)
+        .frame(height: 220)
     }
 }
