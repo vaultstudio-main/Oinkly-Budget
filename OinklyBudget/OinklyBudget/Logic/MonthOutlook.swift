@@ -34,6 +34,9 @@ struct MonthOutlook {
         /// What really came out or came in, when it is known.
         let actual: Decimal?
         let status: Status
+        /// The account it goes through, as `MonthOutlook.accountKey`: the account that paid a bill, or the one a bill is set to come out
+        /// of, or the one a repeating entry belongs to. Nil when none is known.
+        var accountKey: String? = nil
         /// What the line counts as in the totals.
         var counted: Decimal { actual ?? expected }
         var difference: Decimal { counted - expected }
@@ -107,7 +110,7 @@ struct MonthOutlook {
     /// Works out the outlook for the month containing `month`. `monthTransactions` is every transaction dated in it.
     static func build(
         month: Date, bills: [Bill], rules: [RecurringTransaction], categories: [Category], monthTransactions: [Transaction],
-        excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], weeklyAmounts: [String: Decimal] = [:], now: Date = .now, calendar: Calendar = .current
+        excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], weeklyAmounts: [String: Decimal] = [:], billPayerKeys: [String: String] = [:], now: Date = .now, calendar: Calendar = .current
     ) -> MonthOutlook {
         func counts(_ account: Account?) -> Bool { account.map { isEligible($0) && !excludedAccounts.contains(accountKey($0)) } ?? true }
         let interval = calendar.dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 86400 * 30)
@@ -157,7 +160,8 @@ struct MonthOutlook {
             } else {
                 status = item.isPaid ? .paid : (item.isOverdue ? .overdue : .expected)
             }
-            let line = Line(id: "bill-" + item.id, title: bill.name, date: item.date, kind: "Bill", expected: bill.amount, actual: actual, status: status)
+            let payer = linked.compactMap(\.account).first.map(accountKey) ?? billPayerKeys[BillPaySources.key(for: bill)]
+            let line = Line(id: "bill-" + item.id, title: bill.name, date: item.date, kind: "Bill", expected: bill.amount, actual: actual, status: status, accountKey: payer)
             // What a budget still has to count for this bill: nothing if its payment is already in the budget's spending.
             var pending: Decimal = 0
             if actual == nil {
@@ -177,12 +181,14 @@ struct MonthOutlook {
             if rule.amount > 0 {
                 let amount = entered ? (item.entry?.amount ?? rule.amount) : rule.amount
                 incomeLines.append(Line(id: "income-" + item.id, title: rule.payee, date: item.date, kind: "Income", expected: rule.amount,
-                                        actual: entered ? amount : nil, status: entered ? .received : (item.isOverdue ? .overdue : .expected)))
+                                        actual: entered ? amount : nil, status: entered ? .received : (item.isOverdue ? .overdue : .expected),
+                                        accountKey: rule.account.map(accountKey)))
             } else if rule.amount < 0 {
                 let expected = abs(rule.amount)
                 let actual = entered ? item.entry.map { abs($0.amount) } : nil
                 let status: Status = entered ? .received : (item.isOverdue ? .overdue : .expected)
-                let line = Line(id: "repeat-" + item.id, title: rule.payee, date: item.date, kind: "Repeating", expected: expected, actual: actual, status: status)
+                let line = Line(id: "repeat-" + item.id, title: rule.payee, date: item.date, kind: "Repeating", expected: expected, actual: actual, status: status,
+                                accountKey: rule.account.map(accountKey))
                 // An entry that was added is a real transaction, already in the budget's spending.
                 place(line, category: rule.category, plannedAmount: entered ? 0 : expected)
             }

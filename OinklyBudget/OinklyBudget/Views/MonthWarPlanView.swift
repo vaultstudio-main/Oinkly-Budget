@@ -13,7 +13,11 @@ struct MonthWarPlanView: View {
     let kept: Decimal
     let startLabel: String
 
+    @Query(sort: \Account.name) private var allAccounts: [Account]
     @State private var draft: WarPlanItem?
+
+    /// The accounts lines can be pulled in from: checking, savings and cash only.
+    private var accounts: [Account] { allAccounts.live.filter(MonthOutlook.isEligible) }
 
     private var items: [WarPlanItem] {
         get { plan.items }
@@ -54,10 +58,17 @@ struct MonthWarPlanView: View {
                             Menu("Pull In…", systemImage: "square.and.arrow.down") {
                                 Button("Paycheques and Income") { pull(incomeLines) }
                                 Button("Bills and Repeating Expenses") { pull(billLines) }
-                                Button("Budgets") { pull(budgetLines) }
+                                if !accounts.isEmpty {
+                                    Divider()
+                                    Menu("From an Account") {
+                                        ForEach(accounts) { account in
+                                            Button(account.name) { pull(accountLines(account)) }
+                                        }
+                                    }
+                                }
                             }
                             .fixedSize()
-                            .help("Copies lines from the Outlook into the plan, where you can change or remove them")
+                            .help("Copies lines from the Outlook into the plan, where you can change or remove them: all the income, all the bills and repeating expenses, or just those that go through one account. Budgets are never pulled in")
                         }
                     }
                     Text("A blank sheet: add a line for anything you expect, or pull in what the Outlook already knows, then change or remove whatever you like. Starting amount, buffer and accounts are in Settings. It never changes your accounts, transactions, bills or budgets.")
@@ -227,8 +238,14 @@ struct MonthWarPlanView: View {
         (outlook.bills + outlook.budgets.flatMap(\.inside)).map { WarPlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: false, origin: "bill") }
     }
 
-    private var budgetLines: [WarPlanItem] {
-        outlook.budgets.map { WarPlanItem(title: $0.category.name + " budget", date: monthEnd, amount: $0.counted, isIncome: false, origin: "budget") }
+    /// The paycheques, bills and repeating expenses that go through one account: the account a bill was paid from or is set to come
+    /// out of, and the account a repeating entry belongs to. Budgets are never part of it.
+    private func accountLines(_ account: Account) -> [WarPlanItem] {
+        let key = MonthOutlook.accountKey(account)
+        return (outlook.income + outlook.bills + outlook.budgets.flatMap(\.inside)).filter { $0.accountKey == key }.map {
+            let isIncome = $0.kind == "Income"
+            return WarPlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: isIncome, origin: isIncome ? "income" : "bill")
+        }
     }
 
     /// Adds the lines that aren't already in the plan with the same name, date and amount.

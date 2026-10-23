@@ -31,6 +31,8 @@ struct WarPlanComparison {
         let isIncome: Bool
         /// Titles of lines counted inside this one, so they aren't listed again once it is matched.
         var inside: [String] = []
+        /// A budget. It is only matched when the plan has a line of that name; one the plan lacks is not reported as missing.
+        var isBudget = false
     }
 
     private static func normal(_ text: String) -> String { text.trimmingCharacters(in: .whitespaces).lowercased() }
@@ -42,7 +44,7 @@ struct WarPlanComparison {
         for line in outlook.bills { known.append(Known(title: line.title, amount: line.counted, isIncome: false)) }
         for budget in outlook.budgets {
             let name = budget.category.name
-            known.append(Known(title: name + " budget", amount: budget.counted, isIncome: false, inside: budget.inside.map(\.title)))
+            known.append(Known(title: name + " budget", amount: budget.counted, isIncome: false, inside: budget.inside.map(\.title), isBudget: true))
             for line in budget.inside { known.append(Known(title: line.title, amount: line.counted, isIncome: false)) }
         }
         if outlook.otherSpending > 0 { known.append(Known(title: "Everything else", amount: outlook.otherSpending, isIncome: false)) }
@@ -63,7 +65,7 @@ struct WarPlanComparison {
             }
             rows.append(Row(id: item.id.uuidString, title: item.title, isIncome: item.isIncome, planned: item.amount, actual: index.map { known[$0].amount }))
         }
-        for (i, entry) in known.enumerated() where !used.contains(i) && entry.amount > 0 {
+        for (i, entry) in known.enumerated() where !used.contains(i) && entry.amount > 0 && !entry.isBudget {
             rows.append(Row(id: "outlook-\(i)", title: entry.title, isIncome: entry.isIncome, planned: nil, actual: entry.amount))
         }
         return WarPlanComparison(

@@ -1312,6 +1312,24 @@ enum SharedHardeningTest {
                 check("S45 a month on plan and above the buffer is on track", fineAdvice.first?.id == "on-track" && fineAdvice.first?.level == .good)
                 check("S45 the report is never longer than asked", OutlookAdvice.make(outlook: late, compare: nil, plannedPull: nil, actualPull: pull, buffer: 0, startingSet: false, limit: 2).count == 2)
             }
+
+            // S46: lines know which account they go through, for pulling a plan in by account
+            do {
+                let calendar = Calendar.current
+                let month = MonthFilter.start(of: .now)
+                let mc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bank = Account(name: "S46 bank", type: .checking, openingBalance: 0)
+                let saver = Account(name: "S46 saver", type: .savings, openingBalance: 0)
+                mc.insert(bank); mc.insert(saver)
+                let power = Bill(name: "Power", amount: 90, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 3, to: month)!)
+                let water = Bill(name: "Water", amount: 40, frequency: .monthly, dueDate: calendar.date(byAdding: .day, value: 4, to: month)!)
+                mc.insert(power); mc.insert(water)
+                try mc.save()
+                let payers = [BillPaySources.key(for: power): MonthOutlook.accountKey(bank)]
+                let outlook = MonthOutlook.build(month: month, bills: [power, water], rules: [], categories: [], monthTransactions: [], billPayerKeys: payers)
+                check("S46 a bill set to come out of an account carries that account", outlook.bills.first { $0.title == "Power" }?.accountKey == MonthOutlook.accountKey(bank))
+                check("S46 a bill with no account carries none", outlook.bills.first { $0.title == "Water" }?.accountKey == nil)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
