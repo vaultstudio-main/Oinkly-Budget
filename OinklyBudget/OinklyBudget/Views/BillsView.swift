@@ -775,9 +775,14 @@ extension Bills {
     }
 }
 
-/// The Summary page's list of important bills: the overdue ones first, then what is due in the next 20 days, a few in all with a
-/// note of how many more there are. Clicking anywhere on the card opens Bills & Recurring.
+/// The Summary page's lists of important bills, side by side: Priority Bills, what is due in the next 20 days, and Overdue Bills, what
+/// is past due. Both come from the same list, so a bill is on one card or the other. A few are listed on each with a note of how
+/// many more there are. Clicking anywhere on a card opens Bills & Recurring.
 struct PriorityBillsCard: View {
+    enum Kind { case upcoming, overdue }
+
+    var kind = Kind.upcoming
+
     @Query private var allBills: [Bill]
 
     /// How many bills are listed on the card.
@@ -785,16 +790,17 @@ struct PriorityBillsCard: View {
 
     var body: some View {
         let split = Bills.prioritySplit(allBills.live, limit: Int.max)
-        let all = split.overdue + split.upcoming
+        let all = kind == .overdue ? split.overdue : split.upcoming
         let listed = Array(all.prefix(shown))
         let more = all.count - listed.count
-        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
-                    headline: all.isEmpty ? nil : (split.overdue.isEmpty ? "\(all.count) due soon" : "\(split.overdue.count) overdue"),
-                    headlineNote: split.overdue.isEmpty || split.upcoming.isEmpty ? nil : "\(split.upcoming.count) coming up") {
+        ReportPanel(title: kind == .overdue ? "Overdue Bills" : "Priority Bills",
+                    summary: kind == .overdue ? "Your important bills that are past due." : "Your important bills due in the next 20 days.",
+                    headline: all.isEmpty ? nil : (kind == .overdue ? "\(all.count) overdue" : "\(all.count) due soon"),
+                    headlineNote: nil) {
             // A card of one set height: the bills, or a plain note in the same space when there are none.
             if all.isEmpty {
-                ReportEmpty(message: "Nothing is overdue or due soon. Mark a bill Important on the Bills page to watch it here.", height: 150,
-                            title: "No priority bills due", clean: true).frame(height: 150)
+                ReportEmpty(message: kind == .overdue ? "Nothing is past due." : "Nothing is due soon. Mark a bill Important on the Bills page to watch it here.", height: 150,
+                            title: kind == .overdue ? "No overdue bills" : "No priority bills due", clean: true).frame(height: 150)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     rows(listed)

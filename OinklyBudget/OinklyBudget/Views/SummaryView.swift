@@ -26,7 +26,11 @@ struct SummaryView: View {
         ScrollView {
             VStack(spacing: 12) {
                 GlanceCards(accounts: accounts, transactions: transactions)
-                PriorityBillsCard()
+                HStack(alignment: .top, spacing: 12) {
+                    PriorityBillsCard(kind: .upcoming)
+                    PriorityBillsCard(kind: .overdue)
+                }
+                .fixedSize(horizontal: false, vertical: true)
                 HStack(alignment: .top, spacing: 12) {
                     TrendChartCard(kind: .netWorth, height: 240)
                     SummaryBalanceCard(accounts: accounts)
