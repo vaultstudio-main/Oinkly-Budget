@@ -6,12 +6,12 @@ import Charts
 enum SummaryCardSize {
     /// The room for the list inside the Priority Bills card.
     static let list: CGFloat = 150
-    /// The room for the Loans and Goals progress cards: two rows of them to start with, and more scroll.
-    static let progress: CGFloat = 160
+    /// The room for the Loans and Goals progress cards: two whole rows of them, six across a wide page, and more scroll.
+    static let progress: CGFloat = 180
     /// The room for the Last 15 Transactions list.
     static let recent: CGFloat = 360
-    /// The room for Top Spending Categories.
-    static let spending: CGFloat = 330
+    /// The room for Top Spending Categories: the ring, every category listed with its share, and the top category of each month.
+    static let spending: CGFloat = 430
 }
 
 /// Small versions of the three reports, for the top of the Summary and Home screens.
