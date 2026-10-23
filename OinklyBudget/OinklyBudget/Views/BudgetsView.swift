@@ -17,7 +17,15 @@ struct BudgetsView: View {
         var id: Self { self }
     }
 
+    /// A folder under Monthly and Weekly: every budget, or the ones in one group (Housing, Food and so on).
+    private enum GroupTab: Hashable, Identifiable {
+        case all
+        case group(CategoryGroup)
+        var id: Self { self }
+    }
+
     @State private var tab = Tab.monthly
+    @State private var folder = GroupTab.all
     @AppStorage(BudgetsSettings.monthKey) private var monthStamp = 0.0
     @AppStorage(BudgetsSettings.weekKey) private var weekStamp = 0.0
     /// How far the page starts from the left edge of the window, so the month can sit in the middle of the whole window.
@@ -58,6 +66,16 @@ struct BudgetsView: View {
         let weekly = Dictionary(periods.live.map { ($0.key, $0.weeklyAmount) }, uniquingKeysWith: { first, _ in first })
         let all = allCategories.live.filter { !$0.isIncome && $0.showOnBudgets && $0.monthlyLimit > 0 }
         let isCash: (Category) -> Bool = { cashKeys.contains(CashBudgets.key(for: $0)) }
+        // The budgets on this tab, then split into folders by group.
+        let onTab = all.filter { (weekly[CashBudgets.key(for: $0)] != nil) == (tab == .weekly) }
+        let picked = CashBudgets.groups(from: cashMarks.live.map(\.key))
+        let groupOf: (Category) -> CategoryGroup = { CategoryGroup.of($0, picked: picked) }
+        let folders = [GroupTab.all] + CategoryGroup.allCases.filter { group in onTab.contains { groupOf($0) == group } }.map { GroupTab.group($0) }
+        let current = folders.contains(folder) ? folder : .all
+        let inFolder: [Category] = {
+            if case .group(let group) = current { return onTab.filter { groupOf($0) == group } }
+            return onTab
+        }()
 
         VStack(spacing: 0) {
             FolderTabbedHeader(title: "Budgets", tabs: Tab.allCases, selection: $tab, label: { $0.rawValue }) {
@@ -71,12 +89,22 @@ struct BudgetsView: View {
             } trailing: {
                 setBudgetsButton
             }
+            // A folder for each group the budgets fall in, so a long list is read a group at a time.
+            if folders.count > 2 {
+                FolderTabs(tabs: folders, selection: $folder, title: { item in
+                    switch item {
+                    case .all: "All (\(onTab.count))"
+                    case .group(let group): "\(group.title) (\(onTab.filter { groupOf($0) == group }.count))"
+                    }
+                }, leading: 16)
+                .padding(.top, 8)
+            }
             ScrollView {
                 VStack(spacing: 14) {
                     if tab == .monthly {
-                        monthlyContent(all.filter { weekly[CashBudgets.key(for: $0)] == nil }, isCash: isCash)
+                        monthlyContent(inFolder, isCash: isCash)
                     } else {
-                        weeklyContent(all.filter { weekly[CashBudgets.key(for: $0)] != nil }, weekly: weekly, isCash: isCash)
+                        weeklyContent(inFolder, weekly: weekly, isCash: isCash)
                     }
                 }
                 .padding(16)
