@@ -37,7 +37,7 @@ struct CashTransactionView: View {
 
     var body: some View {
         form
-            .frame(width: 460, height: 700)
+            .transactionWindowFrame()
             .background(Theme.background)
     }
 
@@ -81,10 +81,6 @@ struct CashTransactionView: View {
                 }
             }
 
-            Section("Receipt") {
-                ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
-            }
-
             if let confirmation {
                 Section {
                     Label(confirmation, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
@@ -100,8 +96,12 @@ struct CashTransactionView: View {
                                    description: Text("Cash on Hand is created automatically. Restart the app if it's missing."))
         } else {
             VStack(spacing: 0) {
-                Form { fields }
-                    .formStyle(.grouped)
+                HStack(alignment: .top, spacing: 0) {
+                    Form { fields }
+                        .formStyle(.grouped)
+                    Divider()
+                    ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt)
+                }
                 HStack {
                     Spacer()
                     Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)

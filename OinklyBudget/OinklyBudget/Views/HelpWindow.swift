@@ -198,6 +198,7 @@ enum HelpContent {
 
             Topic(title: "Receipts & PDF Bills", symbol: "doc.text.viewfinder", lines: [
                 "Checking accounts, credit card charges and Cash on Hand can keep a receipt or a PDF of the bill with the transaction.",
+                "• The windows for a new transaction, a credit card charge, a cash transaction and Pay a Bill are all the same size, with the form on the left and the receipt in its own column on the right, so the form seldom needs scrolling. In that column Add Receipt Photo and Add PDF Bill sit side by side, with a viewing area under them that shows what is attached.",
                 "• In the register, the Receipt column shows Add Receipt, View Receipt or No Receipt.",
                 "• Add a photo, or attach a PDF bill. PDFs open in a scrollable viewer.",
                 "• Tick No receipt for this transaction when there isn't one, so the register stops asking.",

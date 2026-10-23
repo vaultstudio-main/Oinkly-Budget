@@ -53,7 +53,7 @@ struct BillPayWindow: View {
 
     var body: some View {
         content
-            .frame(width: 480, height: 720)
+            .transactionWindowFrame()
             .background(Theme.background)
             .onAppear(perform: pickDefaultSource)
     }
@@ -126,12 +126,6 @@ struct BillPayWindow: View {
                 }
             }
 
-            if source?.supportsReceipts == true {
-                Section("Receipt or Bill") {
-                    ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
-                }
-            }
-
             Section {
                 Text(summary).font(.callout).foregroundStyle(.secondary)
                 if let confirmation {
@@ -143,8 +137,12 @@ struct BillPayWindow: View {
 
     private var form: some View {
         VStack(spacing: 0) {
-            Form { fields }
-                .formStyle(.grouped)
+            HStack(alignment: .top, spacing: 0) {
+                Form { fields }
+                    .formStyle(.grouped)
+                Divider()
+                ReceiptColumn(supported: source?.supportsReceipts == true, title: "Receipt or Bill", data: $receipt, noReceipt: $noReceipt)
+            }
 
             HStack {
                 Spacer()

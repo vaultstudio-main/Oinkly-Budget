@@ -109,7 +109,7 @@ struct NewTransactionWindow: View {
         } message: {
             Text(limitMessage ?? "")
         }
-        .frame(width: 480, height: isSplitting ? 700 + CGFloat(max(parts.count, 2)) * 70 + 40 : 700)
+        .transactionWindowFrame()
         .background(Theme.background)
         .onAppear {
             if account == nil {
@@ -121,6 +121,7 @@ struct NewTransactionWindow: View {
 
     private var form: some View {
         VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
             Form {
                 Section("Transaction") {
                     Picker("Account", selection: $account) {
@@ -192,13 +193,11 @@ struct NewTransactionWindow: View {
                     }
                 }
 
-                if account?.supportsReceipts == true {
-                    Section("Receipt") {
-                        ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
-                    }
-                }
             }
             .formStyle(.grouped)
+            Divider()
+            ReceiptColumn(supported: account?.supportsReceipts == true, data: $receipt, noReceipt: $noReceipt)
+            }
 
             HStack {
                 Spacer()

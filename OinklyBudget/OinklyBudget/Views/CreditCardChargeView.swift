@@ -41,7 +41,7 @@ struct CreditCardChargeView: View {
 
     var body: some View {
         content
-            .frame(width: 460, height: 680)
+            .transactionWindowFrame()
             .background(Theme.background)
             .onAppear(perform: pickDefaultCard)
             .alert(limitAlertTitle, isPresented: limitAlertShowing) { Button("OK", role: .cancel) {} } message: { Text(limitMessage ?? "") }
@@ -108,10 +108,6 @@ struct CreditCardChargeView: View {
                 }
             }
 
-            Section("Receipt") {
-                ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
-            }
-
             if let confirmation {
                 Section {
                     Label(confirmation, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
@@ -122,8 +118,12 @@ struct CreditCardChargeView: View {
 
     private var form: some View {
         VStack(spacing: 0) {
-            Form { fields }
-                .formStyle(.grouped)
+            HStack(alignment: .top, spacing: 0) {
+                Form { fields }
+                    .formStyle(.grouped)
+                Divider()
+                ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt)
+            }
             HStack {
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
