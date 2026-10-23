@@ -11,63 +11,60 @@ struct TransactionsView: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
     private var accounts: [Account] { allAccounts.live }
 
-    @State private var month = MonthFilter.start(of: .now)
-    @State private var accountID: Account.ID?
+    @AppStorage(TransactionsSettings.monthKey) private var monthStamp = 0.0
+    @AppStorage(TransactionsSettings.accountKey) private var accountKey = ""
+    @Environment(\.openWindow) private var openWindow
     @State private var search = ""
 
-    /// The months you can step through: from the earliest transaction to the latest, always including this month.
-    /// Two one-row lookups, not a pass over every transaction.
-    private var range: ClosedRange<Date> {
-        var oldest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date)])
-        oldest.fetchLimit = 1
-        var newest = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
-        newest.fetchLimit = 1
-        let current = MonthFilter.start(of: .now)
-        let first = (try? modelContext.fetch(oldest))?.first?.date
-        let last = (try? modelContext.fetch(newest))?.first?.date
-        let lower = first.map { min(MonthFilter.start(of: $0), current) } ?? current
-        let upper = last.map { max(MonthFilter.start(of: $0), current) } ?? current
-        return lower...upper
-    }
-
-    private var accountPicker: some View {
-        Picker("Account", selection: $accountID) {
-            Text("All Accounts").tag(Account.ID?.none)
-            ForEach(accounts) { Text($0.name).tag(Optional($0.id)) }
-        }
-        .labelsHidden()
-        .fixedSize()
-    }
+    /// The month being shown, and the account if one was chosen. Both are chosen in the Settings window.
+    private var month: Date { TransactionsSettings.month(from: monthStamp) }
+    private var chosenAccount: Account? { accounts.first { MonthOutlook.accountKey($0) == accountKey } }
 
     private var heading: String { search.isEmpty ? "" : "Results for “\(search)”" }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Transactions").font(.largeTitle.bold())
-                Spacer()
-                if search.isEmpty {
-                    MonthSelector(month: $month, range: range, showsThisMonthButton: false)
-                    Spacer()
-                } else {
-                    Text(heading).font(.headline).foregroundStyle(.secondary)
+                // The month is only shown here, centred across the whole page; it is chosen in Settings.
+                ZStack {
+                    VStack(spacing: 2) {
+                        if search.isEmpty {
+                            Text(month.formatted(.dateTime.month(.wide).year())).font(.title3.weight(.semibold))
+                        } else {
+                            Text(heading).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
+                        }
+                        Text(chosenAccount?.name ?? "All Accounts").font(.caption).foregroundStyle(.secondary)
+                    }
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("Transactions").font(.largeTitle.bold())
+                        Spacer()
+                        Button {
+                            openWindow(id: TransactionsSettings.windowID)
+                        } label: {
+                            Label("Settings", systemImage: "slider.horizontal.3")
+                        }
+                        .help("Opens a window where you choose the month and the account")
+                    }
+                }
+                HStack {
+                    searchField
                     Spacer()
                 }
-            }
-            HStack {
-                searchField
-                Spacer()
-                if search.isEmpty { ThisMonthButton(month: $month) }
-                accountPicker
-            }
             }
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 12)
             .pinnedHeaderStyle()
-            TransactionsTable(month: month, accountID: accountID, search: search)
+            TransactionsTable(month: month, accountID: chosenAccount?.id, accountName: chosenAccount?.name ?? "All accounts", search: search)
                 .padding(16)
+        }
+        .onAppear {
+            // Each start of the app begins on this month and every account, whatever was chosen last time.
+            if !TransactionsSettings.resetThisLaunch {
+                monthStamp = 0
+                accountKey = ""
+                TransactionsSettings.resetThisLaunch = true
+            }
         }
         .background(Theme.background)
         #if DEBUG
@@ -105,8 +102,10 @@ private struct TransactionsTable: View {
     @Environment(\.openWindow) private var openWindow
     private let isSearching: Bool
     private let periodLabel: String
+    private let accountName: String
 
-    init(month: Date, accountID: Account.ID?, search: String) {
+    init(month: Date, accountID: Account.ID?, accountName: String, search: String) {
+        self.accountName = accountName
         let text = search.trimmingCharacters(in: .whitespaces)
         isSearching = !text.isEmpty
         periodLabel = text.isEmpty ? month.formatted(.dateTime.month(.wide).year()) : "Search results"
@@ -204,6 +203,6 @@ private struct TransactionsTable: View {
             }
             .font(.callout)
         }
-        .statusBarText("\(list.count.formatted()) transaction\(list.count == 1 ? "" : "s") · \(periodLabel) · All accounts")
+        .statusBarText("\(list.count.formatted()) transaction\(list.count == 1 ? "" : "s") · \(periodLabel) · \(accountName)")
     }
 }

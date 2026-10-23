@@ -158,6 +158,7 @@ enum HelpContent {
         Group(title: "Everyday Money", topics: [
             Topic(title: "Transactions & Registers", symbol: "list.bullet.rectangle", lines: [
                 "Each account has a register: every transaction with a running balance, one month at a time. The month picker at the top moves between months. Loans show everything at once.",
+                "The Transactions page shows every account together, a month at a time. The month and the account it shows are chosen in its Settings button, top right, which opens a window beside the page; the top of the page just shows the month and account being shown. Each start of the app begins on this month and every account. The search box on the page looks through every month.",
                 "## Adding a transaction",
                 "Choose File ▸ New Transaction… (⌘N). Pick Payment for money out or Deposit for money in, then the account, amount, date, payee, category, payment method and status. The categories offered match the direction you chose.",
                 "• Type a payee you have used before and the category, amount, memo and payment method fill in from last time. Change anything you like.",

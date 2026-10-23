@@ -181,6 +181,15 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        Window("Transactions Settings", id: TransactionsSettings.windowID) {
+            TransactionsSettingsView()
+                .appAppearance()
+        }
+        .modelContainer(container)
+        .defaultSize(width: 420, height: 480)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         Window("About Oinkly Budget", id: "about") {
             AboutWindow()
                 .appAppearance()
