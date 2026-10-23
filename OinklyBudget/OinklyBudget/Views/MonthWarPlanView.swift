@@ -39,6 +39,7 @@ struct MonthWarPlanView: View {
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
         let best = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: list)).best?.date
         return VStack(spacing: 14) {
+            SafeToMoveCard(outlook: outlook, plan: plan.items, opening: opening, buffer: kept)
             ReportCard(title: "Your Plan") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 30) {
