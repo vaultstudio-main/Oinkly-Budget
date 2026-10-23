@@ -16,6 +16,8 @@ enum Liabilities {
         var startOwed: Decimal?
         /// A card's limit, 0 when it has none set.
         var creditLimit: Decimal = 0
+        /// The end of the year a card's suggested payment aims to clear it by.
+        var yearEnd = Date.now
 
         /// A card with a limit is worked out like a loan, with the limit as the amount borrowed: whatever is not owed of it counts as paid off.
         var hasLimitBar: Bool { !isLoan && creditLimit > 0 }
@@ -71,6 +73,13 @@ enum Liabilities {
         }
     }
 
+    /// Up to the next cent.
+    private static func roundedUp(_ value: Decimal) -> Decimal {
+        var scaled = value * 100, result = Decimal()
+        NSDecimalRound(&result, &scaled, 0, .up)
+        return result / 100
+    }
+
     /// With a `range`, balances are as of the end of that period and the report also tracks how debt changed during it.
     static func build(_ accounts: [Account], range: ReportRange? = nil, now: Date = .now, calendar: Calendar = .current) -> Report {
         var report = Report()
@@ -81,6 +90,9 @@ enum Liabilities {
         let asOf = range.map { Trend.endDate($0, now: now) } ?? .distantFuture
         let reference = range.map { Trend.endDate($0, now: now) } ?? now
         let before = range.map { Trend.startDate($0) }
+        let yearEnd = calendar.date(from: DateComponents(year: calendar.component(.year, from: reference), month: 12, day: 31)) ?? reference
+        // Months to pay a card down in: this month and every one after it up to December.
+        let monthsToYearEnd = max(13 - calendar.component(.month, from: reference), 1)
         if before != nil { report.startOwed = 0 }
 
         for account in accounts.live {
@@ -90,7 +102,8 @@ enum Liabilities {
                 let progress = LoanProgress(
                     original: isLoan ? account.originalLoanAmount : 0,
                     owed: owed,
-                    monthlyPayment: isLoan ? account.monthlyPayment : 0,
+                    // A card has no schedule, so its payment is a guess: the balance spread over the months left in the year, to the cent.
+                    monthlyPayment: isLoan ? account.monthlyPayment : roundedUp(owed / Decimal(monthsToYearEnd)),
                     targetDate: isLoan ? account.payoffDate : nil,
                     annualRate: isLoan ? account.interestRate : 0
                 )
@@ -104,6 +117,7 @@ enum Liabilities {
                     progress: progress
                 )
                 line.creditLimit = isLoan ? 0 : account.creditLimit
+                line.yearEnd = yearEnd
                 if let before {
                     let startOwed = max(-account.balance(asOf: before), 0)
                     line.startOwed = startOwed

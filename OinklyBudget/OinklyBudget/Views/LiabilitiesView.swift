@@ -277,6 +277,11 @@ struct LiabilitiesView: View {
     @ViewBuilder
     private func details(_ line: Liabilities.Line) -> some View {
         let progress = line.progress
+        if !line.isLoan {
+            // A card has no schedule, so this is a guess: the balance spread over the months left in the year.
+            Text("Pay about \(progress.monthlyPayment.formatted(.appCurrency)) a month and it is paid off by \(line.yearEnd.formatted(.dateTime.month(.wide).year())), before any interest.")
+                .font(.caption).foregroundStyle(.secondary)
+        } else {
         let parts = [
             progress.monthlyPayment > 0 ? "\(progress.monthlyPayment.formatted(.appCurrency))/mo" : nil,
             progress.paymentsLeft.map { "\($0) payment\($0 == 1 ? "" : "s") left" },
@@ -292,6 +297,7 @@ struct LiabilitiesView: View {
         ].compactMap { $0 }
         if !parts.isEmpty {
             Text(parts.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
+        }
         }
     }
 }
