@@ -146,7 +146,7 @@ enum HelpContent {
 
             Topic(title: "Loans & Mortgages", symbol: "banknote", lines: [
                 "Loans keep what you borrowed, the interest rate, the monthly payment, a start date and a maturity date. Oinkly Budget estimates the payments left until maturity.",
-                "• Turn on Set a payment due date and the loan adds its own bill to the Bills & Recurring page, repeating monthly.",
+                "• Every loan and lease needs a monthly payment and a payment due date. They are required, and the loan adds its own bill to the Bills & Recurring page, repeating monthly.",
                 "• Mark it paid on the Bills tab, or pay it with Pay a Bill, and the loan's page shows this month as Paid.",
                 "• A loan's photo is used as the picture on its bill.",
                 "• Loans don't appear in New Transaction. They only take payments, through Pay a Bill.",

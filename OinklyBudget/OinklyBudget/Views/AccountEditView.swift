@@ -130,7 +130,7 @@ struct AccountEditView: View {
                     }
                     if type.group == .loans {
                         amountRow(leased ? "Total lease cost" : "Original loan amount", $originalLoanAmount)
-                        amountRow("Monthly payment", $monthlyPayment)
+                        amountRow("Monthly payment (required)", $monthlyPayment)
                         amountRow("Amount owed now", $owedNow)
                         if !leased {
                             HStack {
@@ -142,12 +142,13 @@ struct AccountEditView: View {
                                 Text("%").foregroundStyle(.secondary)
                             }
                         }
-                        Toggle("Set a payment due date", isOn: $hasDueDate.animation())
-                        if hasDueDate {
-                            DatePicker("Payment due date", selection: $dueDate, displayedComponents: .date)
-                            Text("This \(leased ? "lease" : "loan") is added to Bills for the monthly payment, due on this day every month.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
+                        DatePicker("Payment due date (required)", selection: $dueDate, displayedComponents: .date)
+                        Text("This \(leased ? "lease" : "loan") is added to Bills for the monthly payment, due on this day every month.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        if let loanProblem {
+                            Label(loanProblem, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote).foregroundStyle(.orange)
                         }
                         Toggle(leased ? "Set the lease start date" : "Set the loan start date", isOn: $hasStartDate.animation())
                         if hasStartDate {
@@ -272,7 +273,7 @@ struct AccountEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: save)
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || limitProblem != nil)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || limitProblem != nil || loanProblem != nil)
                 }
             }
         }
@@ -302,6 +303,12 @@ struct AccountEditView: View {
                 .font(.footnote)
                 .foregroundStyle(.orange)
         }
+    }
+
+    /// Every loan and lease has to say what it costs each month. Its due date is always set, so the loan lands in Bills.
+    private var loanProblem: String? {
+        guard type.group == .loans else { return nil }
+        return monthlyPayment > 0 ? nil : "Enter the monthly payment. It is required."
     }
 
     /// A card can't owe more than its credit limit, from the starting balance or once the limit is lowered.
@@ -373,7 +380,7 @@ struct AccountEditView: View {
                 else { target.openingBalance = 0; OpeningDeposit.set(openingBalance, for: target, in: modelContext) }
             }
         }
-        LoanBill.sync(target, dueDate: (type.group == .loans || type.group == .creditCards) && hasDueDate ? dueDate : nil, in: modelContext)
+        LoanBill.sync(target, dueDate: type.group == .loans || (type.group == .creditCards && hasDueDate) ? dueDate : nil, in: modelContext)
         ArtworkChoices.set(artworkTheme, for: target, previousKey: previousArtworkKey, in: modelContext)
         // Bills that came out of this account, and the outlook's account choice, follow a rename.
         if let previousPaySourceKey {
