@@ -14,6 +14,7 @@ struct MonthWarPlanView: View {
     let startLabel: String
 
     @Query(sort: \Account.name) private var allAccounts: [Account]
+    @Query(sort: \Category.name) private var allCategories: [Category]
     @State private var draft: WarPlanItem?
 
     /// The accounts lines can be pulled in from: checking, savings and cash only.
@@ -45,34 +46,50 @@ struct MonthWarPlanView: View {
         return VStack(spacing: 14) {
             ReportCard(title: "Your Plan") {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 30) {
-                        figure("Total Income", moneyIn, note: "\(list.filter(\.isIncome).count) line\(list.filter(\.isIncome).count == 1 ? "" : "s") coming in", color: Theme.green)
-                        figure("Total Outgoing", moneyOut, note: "\(list.filter { !$0.isIncome }.count) line\(list.filter { !$0.isIncome }.count == 1 ? "" : "s") going out", color: .primary)
-                        figure("Extra This Month", extra, note: "income less outgoing")
-                        figure("Left at the End", ending, note: "starting with \(opening.formatted(.appCurrency))")
-                        safeFigure(safe, hasLines: !list.isEmpty)
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 8) {
-                            Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
-                                .buttonStyle(.borderedProminent)
-                            Menu("Pull In…", systemImage: "square.and.arrow.down") {
-                                Button("Paycheques and Income") { pull(incomeLines) }
-                                Button("Bills and Repeating Expenses") { pull(billLines) }
-                                if !accounts.isEmpty {
-                                    Divider()
-                                    Menu("From an Account") {
-                                        ForEach(accounts) { account in
-                                            Button(account.name) { pull(accountLines(account)) }
-                                        }
+                    HStack(alignment: .center, spacing: 20) {
+                        Text("A blank sheet: add a line for anything you expect, or pull in what the Outlook already knows, then change or remove whatever you like. Starting amount, buffer and accounts are in Settings. It never changes your accounts, transactions, bills or budgets.")
+                            .font(.callout).foregroundStyle(.secondary)
+                        Spacer(minLength: 10)
+                        Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
+                            .buttonStyle(.borderedProminent)
+                        Menu("Pull In…", systemImage: "square.and.arrow.down") {
+                            Button("Paycheques and Income") { pull(incomeLines) }
+                            Button("Bills and Repeating Expenses") { pull(billLines) }
+                            if !accounts.isEmpty {
+                                Divider()
+                                Menu("From an Account") {
+                                    ForEach(accounts) { account in
+                                        Button(account.name) { pull(accountLines(account)) }
                                     }
                                 }
                             }
-                            .fixedSize()
-                            .help("Copies lines from the Outlook into the plan, where you can change or remove them: all the income, all the bills and repeating expenses, or just those that go through one account. Budgets are never pulled in")
                         }
+                        .fixedSize()
+                        .help("Copies lines from the Outlook into the plan, where you can change or remove them: all the income, all the bills and repeating expenses, or just those that go through one account. Budgets are never pulled in")
                     }
-                    Text("A blank sheet: add a line for anything you expect, or pull in what the Outlook already knows, then change or remove whatever you like. Starting amount, buffer and accounts are in Settings. It never changes your accounts, transactions, bills or budgets.")
-                        .font(.callout).foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 12) {
+                        let incomes = list.filter(\.isIncome), outgoings = list.filter { !$0.isIncome }
+                        StatTile(title: "Total Income") {
+                            Text(moneyIn, format: .appCurrency).foregroundStyle(Theme.green)
+                        } note: { Text("\(incomes.count) line\(incomes.count == 1 ? "" : "s") coming in") }
+                        StatTile(title: "Total Outgoing") {
+                            Text(moneyOut, format: .appCurrency)
+                        } note: { Text("\(outgoings.count) line\(outgoings.count == 1 ? "" : "s") going out") }
+                        StatTile(title: "Extra This Month") {
+                            Text(extra, format: .appCurrency).foregroundStyle(extra < 0 ? Theme.red : Theme.green)
+                        } note: { Text("income less outgoing") }
+                        StatTile(title: "Left at the End") {
+                            Text(ending, format: .appCurrency).foregroundStyle(ending < 0 ? Theme.red : Theme.green)
+                        } note: { Text("starting with \(opening.formatted(.appCurrency))") }
+                        StatTile(title: "Tightest Point") {
+                            Text(safe.lowest?.balance ?? opening, format: .appCurrency)
+                                .foregroundStyle((safe.lowest?.balance ?? opening) < kept ? Theme.red : Color.primary)
+                        } note: {
+                            Text(safe.lowest.map { "on \($0.date.formatted(.dateTime.month(.abbreviated).day())), buffer \(kept.formatted(.appCurrency))" } ?? "add lines to find it")
+                        }
+                        safeTile(safe, hasLines: !list.isEmpty)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
             table(list, kept: kept)
@@ -89,31 +106,22 @@ struct MonthWarPlanView: View {
 
     // MARK: Pieces
 
-    /// A figure for the Your Plan card, coloured by its sign unless a colour is given.
-    private func figure(_ title: String, _ amount: Decimal, note: String, color: Color? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased()).font(.caption).foregroundStyle(.secondary)
-            Text(amount, format: .appCurrency)
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(color ?? (amount < 0 ? Theme.red : Theme.green))
-            Text(note).font(.caption).foregroundStyle(.secondary)
-        }
-    }
-
     // MARK: Safe to move to savings
 
     /// What the plan says is safe to move to savings, and from which day: what it ends with less the buffer, from the earliest
     /// day all of it can come out and the balance still never drops under the buffer.
-    private func safeFigure(_ pull: SafePull, hasLines: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("SAFE TO MOVE TO SAVINGS").font(.caption).foregroundStyle(.secondary)
-            if pull.spare > 0, let best = pull.best {
-                Text(pull.spare, format: .appCurrency).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.green)
-                Text("from \(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())), buffer \(pull.buffer.formatted(.appCurrency))")
-                    .font(.caption).foregroundStyle(.secondary)
+    private func safeTile(_ pull: SafePull, hasLines: Bool) -> some View {
+        StatTile(title: "Safe to Move to Savings") {
+            if pull.spare > 0, pull.best != nil {
+                Text(pull.spare, format: .appCurrency).foregroundStyle(Theme.green)
             } else {
-                Text(max(pull.spare, 0), format: .appCurrency).font(.system(size: 30, weight: .bold)).foregroundStyle(.secondary)
-                Text(hasLines ? "nothing is safe to move yet" : "add lines to find it").font(.caption).foregroundStyle(.secondary)
+                Text(max(pull.spare, 0), format: .appCurrency).foregroundStyle(.secondary)
+            }
+        } note: {
+            if pull.spare > 0, let best = pull.best {
+                Text("from \(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())), buffer \(pull.buffer.formatted(.appCurrency))")
+            } else {
+                Text(hasLines ? "nothing is safe to move yet" : "add lines to find it")
             }
         }
         .help("What the plan ends with less your buffer, from the earliest day all of it can come out and the balance still never drops under the buffer.")
@@ -135,11 +143,19 @@ struct MonthWarPlanView: View {
     }
 
     /// A whole row of the table; blank for the empty rows that fill the rest of the page.
-    private func tableRow(icon: String? = nil, iconColor: Color = .secondary, date: String = "", title: String = "",
+    private func tableRow(icon: String? = nil, iconColor: Color = .secondary, artwork: (symbol: String, theme: Int)? = nil, date: String = "", title: String = "",
                           moneyIn: Decimal? = nil, moneyOut: Decimal? = nil, left: Decimal? = nil, extra: Decimal? = nil,
                           leftColor: Color = .primary, bold: Bool = false) -> some View {
         HStack(spacing: 0) {
-            cell(Self.widths.icon, .center) { if let icon { Image(systemName: icon).foregroundStyle(iconColor) } }
+            cell(Self.widths.icon, .center) {
+                if let artwork {
+                    ArtworkTile(symbol: artwork.symbol, theme: artwork.theme)
+                        .frame(width: 22, height: 22)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                } else if let icon {
+                    Image(systemName: icon).foregroundStyle(iconColor)
+                }
+            }
             cell(Self.widths.date) { Text(date) }
             cell(nil) { Text(title).fontWeight(bold ? .semibold : .regular) }
             cell(Self.widths.amount, .trailing) { if let moneyIn { Text(moneyIn, format: .appCurrency).foregroundStyle(Theme.green) } }
@@ -182,7 +198,7 @@ struct MonthWarPlanView: View {
                             tableRow(icon: "flag", date: "Start", title: startLabel, left: opening)
                             ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
                                 Button { draft = item } label: {
-                                    tableRow(icon: item.symbol, iconColor: item.isIncome ? Theme.green : .secondary,
+                                    tableRow(artwork: look(of: item),
                                              date: item.date.formatted(.dateTime.weekday(.abbreviated).day()), title: item.title,
                                              moneyIn: item.isIncome ? item.amount : nil, moneyOut: item.isIncome ? nil : item.amount,
                                              left: balances[index].left, extra: balances[index].extra,
@@ -210,6 +226,14 @@ struct MonthWarPlanView: View {
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .panelBackground(cornerRadius: 8)
+    }
+
+    /// The icon and colour a line shows: the ones chosen, else its category's icon, else the one for where it came from, in a colour
+    /// from the rainbow.
+    private func look(of item: WarPlanItem) -> (symbol: String, theme: Int) {
+        let category = item.categoryKey.flatMap { key in allCategories.live.first { ($0.systemKey ?? $0.name) == key } }
+        return (item.iconSymbol ?? category?.symbol ?? item.symbol,
+                ArtworkTheme.resolved(item.iconTheme ?? 0, seed: ArtworkTheme.seed(item.title)))
     }
 
     private func running(_ list: [WarPlanItem]) -> [(left: Decimal, extra: Decimal)] {
@@ -257,44 +281,112 @@ struct MonthWarPlanView: View {
 
 }
 
-/// Adds or changes one line of the plan.
+/// Adds or changes one line of the plan: what it is, when, how much and which category, and the icon and colour it has in the sheet.
 private struct PlanItemForm: View {
     @State var item: WarPlanItem
     let isNew: Bool
     let save: (WarPlanItem) -> Void
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Category.name) private var allCategories: [Category]
 
     private var canSave: Bool { !item.title.trimmingCharacters(in: .whitespaces).isEmpty && item.amount > 0 }
 
+    /// The categories to pick from: income ones for money in, the rest for money out.
+    private var categories: [Category] { allCategories.live.filter { $0.isIncome == item.isIncome } }
+    private var category: Category? { item.categoryKey.flatMap { key in allCategories.live.first { ($0.systemKey ?? $0.name) == key } } }
+
+    private var iconSymbol: Binding<String?> { Binding(get: { item.iconSymbol }, set: { item.iconSymbol = $0 }) }
+    private var iconTheme: Binding<Int> { Binding(get: { item.iconTheme ?? 0 }, set: { item.iconTheme = $0 == 0 ? nil : $0 }) }
+    private var categoryKey: Binding<String?> { Binding(get: { item.categoryKey }, set: { item.categoryKey = $0 }) }
+    private var notes: Binding<String> { Binding(get: { item.notes ?? "" }, set: { item.notes = $0.isEmpty ? nil : $0 }) }
+
+    /// The icons that fit: the category's own list, or the general ones for a line with no category.
+    private var fitting: [String] {
+        guard let category else { return SymbolChoices.general.symbols }
+        return category.systemKey.flatMap { SymbolChoices.symbols(forCategoryKey: $0) } ?? SymbolChoices.offer(for: category).symbols
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(isNew ? "Add a Line" : "Change Line").font(.headline)
-            Picker("Kind", selection: $item.isIncome) {
-                Text("Money Out").tag(false)
-                Text("Money In").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            TextField("What is it", text: $item.title)
-            DatePicker("Date", selection: $item.date, displayedComponents: .date)
-            CurrencyField("Amount", amount: $item.amount)
+        VStack(spacing: 0) {
             HStack {
-                if !isNew {
-                    Button("Remove", role: .destructive) { remove(); dismiss() }
-                }
+                Text(isNew ? "Add a Line" : "Change Line").font(.headline)
                 Spacer()
-                Button("Cancel") { dismiss() }
-                Button(isNew ? "Add" : "Save") {
-                    item.title = item.title.trimmingCharacters(in: .whitespaces)
-                    save(item)
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!canSave)
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
+                Form {
+                    Section {
+                        Picker("Kind", selection: $item.isIncome) {
+                            Text("Money Out").tag(false)
+                            Text("Money In").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: item.isIncome) { _, _ in
+                            // A category of the other kind no longer fits.
+                            item.categoryKey = nil
+                            item.iconSymbol = nil
+                        }
+                        TextField("What is it", text: $item.title)
+                        DatePicker("Date", selection: $item.date, displayedComponents: .date)
+                        CurrencyField("Amount", amount: $item.amount)
+                        Picker("Category", selection: categoryKey) {
+                            Text("None").tag(String?.none)
+                            Divider()
+                            ForEach(categories) { category in
+                                Label(category.name, systemImage: category.symbol).tag(Optional(category.systemKey ?? category.name))
+                            }
+                        }
+                        .onChange(of: item.categoryKey) { _, _ in item.iconSymbol = nil }
+                    }
+                    Section("Notes") {
+                        TextField("Anything to remember about it", text: notes, axis: .vertical)
+                            .lineLimit(3...5)
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                Divider()
+                Form {
+                    Section("Icon") {
+                        ArtworkTile(symbol: item.iconSymbol ?? category?.symbol ?? item.symbol,
+                                    theme: ArtworkTheme.resolved(item.iconTheme ?? 0, seed: ArtworkTheme.seed(item.title)))
+                            .frame(width: 96, height: 66)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .frame(maxWidth: .infinity)
+                        IconPicker(symbol: iconSymbol, theme: iconTheme, category: nil,
+                                   automaticSymbol: category?.symbol ?? item.symbol, automaticColor: nil,
+                                   rainbowSeed: ArtworkTheme.seed(item.title), fitting: fitting)
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                .frame(width: 400)
+            }
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: 10) {
+                    if !isNew {
+                        Button("Remove", role: .destructive) { remove(); dismiss() }
+                    }
+                    Spacer()
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                    Button(isNew ? "Add" : "Save") {
+                        item.title = item.title.trimmingCharacters(in: .whitespaces)
+                        save(item)
+                        dismiss()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!canSave)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .background(.bar)
         }
-        .padding(20)
-        .frame(width: 360)
+        .background(Theme.background)
+        .frame(width: 900, height: 560)
     }
 }

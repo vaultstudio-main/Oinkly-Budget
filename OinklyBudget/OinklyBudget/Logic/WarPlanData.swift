@@ -9,6 +9,13 @@ struct WarPlanItem: Codable, Identifiable, Equatable {
     var isIncome: Bool
     /// Where the line came from, for its icon: "bill", "budget", "income" or nil for one typed in.
     var origin: String?
+    /// The category picked for the line, by its key (the built-in key, or the name of one you made). Nil for none.
+    var categoryKey: String?
+    /// The icon and colour chosen, nil for the category's own icon and the rainbow colour. Kept as optionals so plans saved before
+    /// these existed still open.
+    var iconSymbol: String?
+    var iconTheme: Int?
+    var notes: String?
 
     var symbol: String {
         switch origin {
