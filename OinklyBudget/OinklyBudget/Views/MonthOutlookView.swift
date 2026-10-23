@@ -121,14 +121,13 @@ private struct OutlookBody: View {
                 .statusBarText("Monthly Outlook · \(title) · the war plan sheet"))
         }
         return AnyView(ScrollView {
-            VStack(spacing: 14) {
+            VStack(spacing: 10) {
                 versusCards(outlook, totals: totals, opening: opening, kept: buffer)
-                SafeToMoveCard(outlook: outlook, plan: plan.items, opening: opening, buffer: buffer)
                 pullOutCard(outlook, opening: opening, kept: buffer)
                 improveCard(outlook, opening: opening, kept: buffer)
                 notes(outlook, totals: totals, kept: kept)
             }
-            .padding(16)
+            .padding(12)
         }
         .statusBarText("Monthly Outlook · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
     }
@@ -156,10 +155,7 @@ private struct OutlookBody: View {
                 HStack(alignment: .top, spacing: 14) { cards() }
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 14, alignment: .top), GridItem(.flexible(), spacing: 14, alignment: .top)], spacing: 14) { cards() }
             }
-            Label(hasPlan ? "Each card sets your plan against what the outlook says now. The plan is only a what-if sheet and never changes the outlook."
-                          : "No plan for this month yet. Add lines on the War Plan tab, or pull them in, and each card will show the plan against the outlook.",
-                  systemImage: "info.circle")
-                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+
         }
     }
 
@@ -174,20 +170,38 @@ private struct OutlookBody: View {
         let calendar = Calendar.current
         return ReportCard(title: "When You Can Pull Money Out") {
             HStack(alignment: .top, spacing: 24) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
                     dayBlock("Planned", pull: hasPlan ? planned : nil)
                     dayBlock("Outlook", pull: actual)
                     if let p = planned.best, let a = actual.best, hasPlan {
                         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
                         dayChip(days)
                     }
-                    Text("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    tightest(actual, buffer: kept)
                 }
-                .frame(width: 290, alignment: .leading)
+                .frame(width: 270, alignment: .leading)
                 BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, buffer: kept)
             }
             .frame(height: Self.pullOutHeight, alignment: .top)
+        }
+        .help("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
+    }
+
+    /// The lowest the balance gets this month, so you can see how close it comes to the buffer.
+    private func tightest(_ pull: SafePull, buffer: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("TIGHTEST POINT").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if let low = pull.lowest {
+                Text(low.balance, format: .appCurrency)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(low.balance < buffer ? Theme.red : Color.primary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text("On \(low.date.formatted(.dateTime.month(.abbreviated).day())), buffer \(buffer.formatted(.appCurrency))")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("–").font(.system(size: 22, weight: .bold)).foregroundStyle(.tertiary)
+                Text("Nothing is dated yet").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -195,13 +209,13 @@ private struct OutlookBody: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if let pull, let best = pull.best {
-                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 26, weight: .bold))
+                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 22, weight: .bold))
                 Text("\(pull.spare.formatted(.appCurrency)) can come out from here").font(.caption).foregroundStyle(.secondary)
             } else if let pull {
-                Text("Not yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.secondary)
+                Text("Not yet").font(.system(size: 22, weight: .bold)).foregroundStyle(.secondary)
                 Text(pull.spare > 0 ? "Nothing is dated yet" : "Nothing is spare at the end of the month").font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("No plan yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text("No plan yet").font(.system(size: 22, weight: .bold)).foregroundStyle(.tertiary)
                 Text("Add lines on the War Plan tab").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -270,38 +284,18 @@ private struct OutlookBody: View {
 
     /// Every card on the page has a place that is always there, with a set height: when there is more than fits it scrolls inside,
     /// and when there is less it sits at the top of its place. The page never jumps about as a plan or a month changes.
-    private static let pullOutHeight: CGFloat = 255
-    private static let reportHeight: CGFloat = 135
+    private static let pullOutHeight: CGFloat = 200
+    private static let reportHeight: CGFloat = 122
 
-    /// Small print under the cards: a closed month's saved figures, bills that ran over and budgets past their limits.
+    /// Under the cards, only for a month that has closed: when its figures were kept, and what they would be now.
     @ViewBuilder
     private func notes(_ outlook: MonthOutlook, totals: Totals, kept: OutlookSnapshot?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(sentence(income: totals.income, out: totals.out)).font(.callout).foregroundStyle(.secondary)
-            if let kept {
-                Text("Saved \(kept.savedAt.formatted(date: .abbreviated, time: .omitted)), when the month closed."
-                     + (outlook.leftToSave != kept.leftToSave ? " With changes made since, it would now be \(outlook.leftToSave.formatted(.appCurrency))." : ""))
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            if totals.billDifference != 0 {
-                let more = totals.billDifference > 0
-                Label("Bills came to \(abs(totals.billDifference).formatted(.appCurrency)) \(more ? "more" : "less") than expected.",
-                      systemImage: more ? "arrow.up.right" : "arrow.down.right")
-                    .font(.callout).foregroundStyle(more ? Theme.red : Theme.green)
-            }
-            if totals.overspend > 0 {
-                Label("Budgets are \(totals.overspend.formatted(.appCurrency)) over their limits.", systemImage: "exclamationmark.triangle")
-                    .font(.callout).foregroundStyle(Theme.red)
-            }
+        if let kept {
+            Text("Saved \(kept.savedAt.formatted(date: .abbreviated, time: .omitted)), when the month closed."
+                 + (outlook.leftToSave != kept.leftToSave ? " With changes made since, it would now be \(outlook.leftToSave.formatted(.appCurrency))." : ""))
+                .font(.caption).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func sentence(income: Decimal, out: Decimal) -> String {
-        let basis = "The outlook is income of \(income.formatted(.appCurrency)), less \(out.formatted(.appCurrency)) for bills, budgets and other spending."
-        if isFuture { return basis + " This month hasn't started, so every figure is what is expected." }
-        if isPast { return basis + " This month is over; what was paid counts at what came out." }
-        return basis + " Paid bills count at what came out when their payment is linked; the rest count at what is expected."
     }
 
 }
@@ -331,18 +325,15 @@ private struct VersusCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: symbol).foregroundStyle(.secondary)
                 Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(actual, format: .appCurrency)
-                    .font(.system(size: 34, weight: .bold))
-                    .foregroundStyle(signed ? (actual < 0 ? Theme.red : Theme.green) : (title == "Money In" ? Theme.green : Color.primary))
-                    .minimumScaleFactor(0.7).lineLimit(1)
-                Text("in the outlook").font(.caption).foregroundStyle(.secondary)
-            }
+            Text(actual, format: .appCurrency)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(signed ? (actual < 0 ? Theme.red : Theme.green) : (title == "Money In" ? Theme.green : Color.primary))
+                .minimumScaleFactor(0.7).lineLimit(1)
             // The plan's place is always here, so the card is the same size with or without a plan.
             HStack {
                 Text("Planned").foregroundStyle(.secondary)
@@ -352,13 +343,12 @@ private struct VersusCard: View {
             .font(.callout)
             bar(ratio)
             if let difference { chip(difference) } else { noPlanChip }
-            Text(note).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .frame(height: 215)
+        .frame(height: 126)
         .panelBackground(cornerRadius: 8)
+        .help(note)
         .accessibilityElement(children: .combine)
     }
 
