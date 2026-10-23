@@ -208,22 +208,16 @@ struct MacRootView: View {
     private func sidebarRow(_ account: Account) -> some View {
         if account.isLive {
             let isPrimary = PrimaryChecking.isPrimary(account)
-            // One short line each, with a small icon, so a long list of accounts doesn't make the side panel scroll. What kind of
-            // account it is shows when you point at it; the primary checking account is marked on the line.
             Label {
-                HStack(spacing: 4) {
-                    Text(account.name).font(.callout).lineLimit(1)
-                    if isPrimary {
-                        Image(systemName: "star.fill").font(.system(size: 8)).foregroundStyle(.secondary)
-                            .accessibilityLabel("Primary checking")
-                    }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(account.name)
+                    Text(isPrimary ? "Primary Checking" : account.typeTitle)
+                        .font(.caption.weight(isPrimary ? .semibold : .regular))
+                        .foregroundStyle(.secondary)
                 }
             } icon: {
-                Image(systemName: account.type.symbol)
-                    .font(.system(size: 11))
-                    .foregroundStyle(account.type.group.sidebarColor)
+                Image(systemName: account.type.symbol).foregroundStyle(account.type.group.sidebarColor)
             }
-            .help(isPrimary ? "Primary Checking" : account.typeTitle)
             .tag(SidebarItem.account(account.id))
             .contextMenu {
                 Button("Edit Details") { editingAccount = account }
