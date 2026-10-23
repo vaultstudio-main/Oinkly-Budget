@@ -76,6 +76,9 @@ private struct OutlookBody: View {
     @AppStorage(OutlookSettings.startAccountKey) private var startAccount = ""
     @AppStorage(OutlookSettings.startAmountKey) private var startAmount = ""
     @AppStorage(OutlookSettings.bufferKey) private var bufferText = ""
+    /// The room the page has, so the pull-out card can take what the rest leaves.
+    @State private var viewport: CGFloat = 700
+    @State private var pageWidth: CGFloat = 900
 
     /// The figures kept when this month closed, for a month that is over.
     private var snapshot: OutlookSnapshot? {
@@ -129,6 +132,7 @@ private struct OutlookBody: View {
             }
             .padding(12)
         }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { viewport = $0.height; pageWidth = $0.width }
         .statusBarText("Monthly Outlook · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
     }
 
@@ -168,9 +172,10 @@ private struct OutlookBody: View {
         let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
         let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
         let calendar = Calendar.current
+        let advice = adviceItems(outlook, opening: opening, kept: kept)
         return ReportCard(title: "When You Can Pull Money Out") {
-            HStack(alignment: .top, spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 40) {
+                VStack(alignment: .leading, spacing: 18) {
                     dayBlock("Planned", pull: hasPlan ? planned : nil)
                     dayBlock("Outlook", pull: actual)
                     if let p = planned.best, let a = actual.best, hasPlan {
@@ -179,10 +184,13 @@ private struct OutlookBody: View {
                     }
                     tightest(actual, buffer: kept)
                 }
-                .frame(width: 270, alignment: .leading)
+                .frame(width: 280, alignment: .leading)
                 BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, buffer: kept)
             }
-            .frame(height: Self.pullOutHeight, alignment: .top)
+            // Roomy: it takes whatever height the rest of the page leaves, between a floor and a ceiling.
+            .padding(.horizontal, 12)
+            .padding(.vertical, 14)
+            .frame(height: pullOutHeight(advice: advice), alignment: .top)
         }
         .help("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
     }
@@ -193,13 +201,13 @@ private struct OutlookBody: View {
             Text("TIGHTEST POINT").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if let low = pull.lowest {
                 Text(low.balance, format: .appCurrency)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(low.balance < buffer ? Theme.red : Color.primary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Text("On \(low.date.formatted(.dateTime.month(.abbreviated).day())), buffer \(buffer.formatted(.appCurrency))")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("–").font(.system(size: 22, weight: .bold)).foregroundStyle(.tertiary)
+                Text("–").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
                 Text("Nothing is dated yet").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -209,13 +217,13 @@ private struct OutlookBody: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if let pull, let best = pull.best {
-                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 22, weight: .bold))
+                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 26, weight: .bold))
                 Text("\(pull.spare.formatted(.appCurrency)) can come out from here").font(.caption).foregroundStyle(.secondary)
             } else if let pull {
-                Text("Not yet").font(.system(size: 22, weight: .bold)).foregroundStyle(.secondary)
+                Text("Not yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.secondary)
                 Text(pull.spare > 0 ? "Nothing is dated yet" : "Nothing is spare at the end of the month").font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("No plan yet").font(.system(size: 22, weight: .bold)).foregroundStyle(.tertiary)
+                Text("No plan yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
                 Text("Add lines on the War Plan tab").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -233,32 +241,47 @@ private struct OutlookBody: View {
 
     // MARK: What to improve
 
-    /// A short report on what could be better this month.
-    private func improveCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
+    /// The few things that matter most this month.
+    private func adviceItems(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> [OutlookAdvice.Item] {
         let hasPlan = !plan.items.isEmpty
         let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
         let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
-        let items = OutlookAdvice.make(outlook: outlook, compare: hasPlan ? WarPlanComparison.build(items: plan.items, outlook: outlook) : nil,
-                                       plannedPull: hasPlan ? planned : nil, actualPull: actual, buffer: kept,
-                                       startingSet: !startAccount.isEmpty || OutlookSettings.decimal(startAmount) != nil, limit: 4)
-        // The few that matter most, two across, right under the card about pulling money out.
+        return OutlookAdvice.make(outlook: outlook, compare: hasPlan ? WarPlanComparison.build(items: plan.items, outlook: outlook) : nil,
+                                  plannedPull: hasPlan ? planned : nil, actualPull: actual, buffer: kept,
+                                  startingSet: !startAccount.isEmpty || OutlookSettings.decimal(startAmount) != nil, limit: 4)
+    }
+
+    /// Roughly what the list takes: each item's title, its detail over as many lines as the page's width needs, and its margins.
+    private func adviceHeight(_ items: [OutlookAdvice.Item]) -> CGFloat {
+        let characters = max((pageWidth - 150) / 6.6, 20)
+        return items.reduce(0) { $0 + 36 + 17 * ceil(CGFloat($1.detail.count) / characters) }
+    }
+
+    /// The pull-out card's height: what is left of the page once the cards and the list are placed, kept between a floor and a ceiling.
+    private func pullOutHeight(advice: [OutlookAdvice.Item]) -> CGFloat {
+        let chrome: CGFloat = 12 * 2 + Self.versusHeight + 10 + 62 + 10 + 62
+        let room = viewport - chrome - adviceHeight(advice)
+        return min(max(room, Self.pullOutHeight), 460)
+    }
+
+    /// A list, one under another, each with its detail in full.
+    private func improveCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
+        let items = adviceItems(outlook, opening: opening, kept: kept)
         return ReportCard(title: "What to Improve") {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 24, alignment: .top), GridItem(.flexible(), alignment: .top)],
-                          alignment: .leading, spacing: 12) {
-                    ForEach(items) { item in
-                        HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: symbol(item.level)).foregroundStyle(color(item.level)).frame(width: 20).padding(.top, 1)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title).font(.callout.weight(.semibold)).lineLimit(2)
-                                Text(item.detail).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                            }
-                            Spacer(minLength: 0)
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(items) { item in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: symbol(item.level)).foregroundStyle(color(item.level)).frame(width: 22).padding(.top, 1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).font(.callout.weight(.semibold))
+                            Text(item.detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
+                        Spacer(minLength: 0)
                     }
+                    .padding(.vertical, 7)
+                    if item.id != items.last?.id { Divider() }
                 }
             }
-            .frame(height: Self.reportHeight, alignment: .top)
         }
     }
 
@@ -284,8 +307,9 @@ private struct OutlookBody: View {
 
     /// Every card on the page has a place that is always there, with a set height: when there is more than fits it scrolls inside,
     /// and when there is less it sits at the top of its place. The page never jumps about as a plan or a month changes.
-    private static let pullOutHeight: CGFloat = 200
-    private static let reportHeight: CGFloat = 122
+    /// The least the pull-out card's chart area takes.
+    private static let pullOutHeight: CGFloat = 220
+    private static let versusHeight: CGFloat = 126
 
     /// Under the cards, only for a month that has closed: when its figures were kept, and what they would be now.
     @ViewBuilder
