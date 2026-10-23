@@ -37,16 +37,14 @@ struct MonthWarPlanView: View {
         let ending = opening + extra
         let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
-        let best = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: list)).best?.date
+        let safe = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: list))
         return VStack(spacing: 14) {
-            SafeToMoveCard(outlook: outlook, plan: plan.items, opening: opening, buffer: kept)
             ReportCard(title: "Your Plan") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 30) {
                         figure("Extra This Month", extra, note: "money in less money out")
                         figure("Left at the End", ending, note: "starting with \(opening.formatted(.appCurrency))")
-                        figure("Above the Buffer", ending - kept, note: "buffer \(kept.formatted(.appCurrency))")
-                        bestDayFigure(best, spare: ending - kept)
+                        safeFigure(safe, hasLines: !list.isEmpty)
                         Spacer()
                         VStack(alignment: .trailing, spacing: 8) {
                             Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
@@ -89,20 +87,23 @@ struct MonthWarPlanView: View {
         }
     }
 
-    // MARK: Best day to move the extra
+    // MARK: Safe to move to savings
 
-    private func bestDayFigure(_ date: Date?, spare: Decimal) -> some View {
+    /// What the plan says is safe to move to savings, and from which day: what it ends with less the buffer, from the earliest
+    /// day all of it can come out and the balance still never drops under the buffer.
+    private func safeFigure(_ pull: SafePull, hasLines: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("BEST DAY TO MOVE IT").font(.caption).foregroundStyle(.secondary)
-            if let date {
-                Text(date.formatted(.dateTime.month(.abbreviated).day()))
-                    .font(.system(size: 30, weight: .bold))
-                Text("from here the full \(spare.formatted(.appCurrency)) is there and stays above your buffer").font(.caption).foregroundStyle(.secondary)
+            Text("SAFE TO MOVE TO SAVINGS").font(.caption).foregroundStyle(.secondary)
+            if pull.spare > 0, let best = pull.best {
+                Text(pull.spare, format: .appCurrency).font(.system(size: 30, weight: .bold)).foregroundStyle(Theme.green)
+                Text("from \(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())), buffer \(pull.buffer.formatted(.appCurrency))")
+                    .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("None yet").font(.system(size: 30, weight: .bold)).foregroundStyle(.secondary)
-                Text(spare > 0 ? "add lines to find it" : "nothing is spare yet").font(.caption).foregroundStyle(.secondary)
+                Text(max(pull.spare, 0), format: .appCurrency).font(.system(size: 30, weight: .bold)).foregroundStyle(.secondary)
+                Text(hasLines ? "nothing is safe to move yet" : "add lines to find it").font(.caption).foregroundStyle(.secondary)
             }
         }
+        .help("What the plan ends with less your buffer, from the earliest day all of it can come out and the balance still never drops under the buffer.")
     }
 
     // MARK: The table

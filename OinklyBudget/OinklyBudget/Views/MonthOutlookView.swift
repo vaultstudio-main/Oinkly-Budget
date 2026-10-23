@@ -115,8 +115,8 @@ private struct OutlookBody: View {
         }
         return AnyView(ScrollView {
             VStack(spacing: 14) {
-                SafeToMoveCard(outlook: outlook, plan: plan.items, opening: opening, buffer: buffer)
                 versusCards(outlook, totals: totals, opening: opening, kept: buffer)
+                SafeToMoveCard(outlook: outlook, plan: plan.items, opening: opening, buffer: buffer)
                 pullOutCard(outlook, opening: opening, kept: buffer)
                 lineByLine(outlook)
                 planChart(outlook)
