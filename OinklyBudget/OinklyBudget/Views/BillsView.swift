@@ -775,22 +775,25 @@ struct PriorityBillsCard: View {
         ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
                     headline: count == 0 ? nil : (split.overdue.isEmpty ? "\(count) bill\(count == 1 ? "" : "s")" : "\(split.overdue.count) overdue"),
                     headlineNote: split.overdue.isEmpty || split.upcoming.isEmpty ? nil : "\(split.upcoming.count) coming up") {
+            // A card of one set height: a list that scrolls when there is more, a plain note in the same space when there is none.
             if count == 0 {
-                Label("No priority bills due soon. Mark a bill Important on the Bills page to see it here.", systemImage: "checkmark.circle")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                ReportEmpty(message: "No priority bills due soon. Mark a bill Important on the Bills page to see it here.", height: 150,
+                            title: "Nothing due soon", clean: true).frame(height: 150)
             } else {
-                VStack(alignment: .leading, spacing: 0) {
-                    if !split.overdue.isEmpty {
-                        sectionTitle("Overdue", color: Theme.red)
-                        rows(split.overdue)
-                    }
-                    if !split.upcoming.isEmpty {
-                        // The heading only helps when something late is listed above it.
-                        if !split.overdue.isEmpty { sectionTitle("Coming up", color: .secondary).padding(.top, 10) }
-                        rows(split.upcoming)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if !split.overdue.isEmpty {
+                            sectionTitle("Overdue", color: Theme.red)
+                            rows(split.overdue)
+                        }
+                        if !split.upcoming.isEmpty {
+                            // The heading only helps when something late is listed above it.
+                            if !split.overdue.isEmpty { sectionTitle("Coming up", color: .secondary).padding(.top, 10) }
+                            rows(split.upcoming)
+                        }
                     }
                 }
+                .frame(height: 150)
             }
         }
     }

@@ -2,6 +2,16 @@ import SwiftUI
 import SwiftData
 import Charts
 
+/// The set sizes of the Summary page's cards. Each card is always this tall, with or without anything in it, so the page keeps its shape.
+enum SummaryCardSize {
+    /// The room for the list inside the Loans, Goals and Priority Bills cards.
+    static let list: CGFloat = 150
+    /// The room for the Last 15 Transactions list.
+    static let recent: CGFloat = 360
+    /// The room for Top Spending Categories.
+    static let spending: CGFloat = 330
+}
+
 /// Small versions of the three reports, for the top of the Summary and Home screens.
 struct GlanceCards: View {
     let accounts: [Account]
@@ -254,14 +264,19 @@ struct LoansProgressCard: View {
     var body: some View {
         let loans = LedgerIndex.shared.whileStale { Liabilities.build(accounts).lines.filter(\.isLoan) }
         ReportCard(title: "Loans · Progress") {
+            // One set height: the loans scroll inside it when there are more, and a plain note holds its place when there are none.
             if loans == nil {
-                Text("Calculating…").font(.callout).foregroundStyle(.secondary)
+                ReportCalculating(height: SummaryCardSize.list).frame(height: SummaryCardSize.list)
             } else if let loans, loans.isEmpty {
-                GlancePlaceholder(symbol: "banknote", text: "No mortgages or loans yet. Add one in Settings ▸ Accounts to watch it get paid off.")
+                ReportEmpty(message: "Add one in Settings ▸ Accounts to watch it get paid off.", height: SummaryCardSize.list,
+                            title: "No mortgages or loans yet", clean: true, symbol: "banknote").frame(height: SummaryCardSize.list)
             } else if let loans {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
-                    ForEach(loans) { row($0) }
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
+                        ForEach(loans) { row($0) }
+                    }
                 }
+                .frame(height: SummaryCardSize.list)
             }
         }
     }
@@ -319,11 +334,15 @@ struct GoalsProgressCard: View {
         let list = goals
         ReportCard(title: "Goals · Progress") {
             if list.isEmpty {
-                GlancePlaceholder(symbol: "target", text: "No goals yet. Set one up in Planning to watch your progress here.")
+                ReportEmpty(message: "Set one up in Planning to watch your progress here.", height: SummaryCardSize.list,
+                            title: "No goals yet", clean: true, symbol: "target").frame(height: SummaryCardSize.list)
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
-                    ForEach(list) { row($0) }
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
+                        ForEach(list) { row($0) }
+                    }
                 }
+                .frame(height: SummaryCardSize.list)
             }
         }
     }

@@ -45,7 +45,7 @@ enum HelpContent {
             Topic(title: "Finding Your Way", symbol: "sidebar.left", lines: [
                 "The side panel stays open on the left. It has two parts.",
                 "## Overview",
-                "• Summary: your net worth, this month's income and spending, your priority bills, and cards for liabilities, investments, goals and recent transactions.",
+                "• Summary: your net worth, this month's income and spending, your priority bills, and cards for liabilities, investments, goals and recent transactions. Every card on it has a set size, and a card with nothing to show yet holds its place with a plain note, so the page keeps its shape. Long lists scroll inside their card.",
                 "• Transactions: every account's transactions together, with a search field.",
                 "• Reports: where your money goes, with six-month projections.",
                 "• Monthly Outlook: your plan for the month set against what is really happening.",

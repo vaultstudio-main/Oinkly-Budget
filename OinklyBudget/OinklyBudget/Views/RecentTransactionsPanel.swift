@@ -7,17 +7,22 @@ struct RecentTransactionsPanel: View {
 
     var body: some View {
         let recent = RecentActivity.latest(transactions)
+        // One set height: the list scrolls inside it, and a plain note holds its place when there is nothing yet.
         if recent.isEmpty {
-            ReportEmpty(message: "Transactions show up here as you add them. Use File ▸ New Transaction to add one.", height: 260, shape: .table)
+            ReportEmpty(message: "Transactions show up here as you add them. Use File ▸ New Transaction to add one.", height: SummaryCardSize.recent,
+                        title: "No transactions yet", clean: true, symbol: "list.bullet.rectangle").frame(height: SummaryCardSize.recent)
         } else {
-            VStack(spacing: 0) {
-                ForEach(Array(recent.enumerated()), id: \.element.persistentModelID) { index, transaction in
-                    row(transaction)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
-                        .background(index.isMultiple(of: 2) ? Color.secondary.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(Array(recent.enumerated()), id: \.element.persistentModelID) { index, transaction in
+                        row(transaction)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(index.isMultiple(of: 2) ? Color.secondary.opacity(0.06) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                    }
                 }
             }
+            .frame(height: SummaryCardSize.recent)
         }
     }
 

@@ -48,16 +48,20 @@ struct TopSpendingView: View {
     }
 
     var body: some View {
+        // One set height: the figures scroll inside it, and a plain note holds its place until there is enough to show.
         if hasData {
-            HStack(alignment: .top, spacing: 30) {
-                donut
-                details
+            ScrollView {
+                HStack(alignment: .top, spacing: 30) {
+                    donut
+                    details
+                }
             }
+            .frame(height: SummaryCardSize.spending)
         } else {
             ReportEmpty(message: income
                         ? "Your biggest income categories show up here once you've entered a few deposits with a category."
                         : "Your biggest spending categories show up here once you've entered a few expenses with a category.",
-                        height: 260, shape: .ring)
+                        height: SummaryCardSize.spending, title: "Not enough yet", clean: true, symbol: "chart.pie").frame(height: SummaryCardSize.spending)
         }
     }
 
