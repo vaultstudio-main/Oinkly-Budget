@@ -149,7 +149,7 @@ struct ReceiptColumn: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(.headline)
             if supported {
-                ReceiptPicker(data: $data, noReceipt: noReceipt, viewingHeight: 330)
+                ReceiptPicker(data: $data, noReceipt: noReceipt, viewingHeight: 430)
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "nosign").font(.system(size: 26, weight: .light)).foregroundStyle(.tertiary)
@@ -160,7 +160,7 @@ struct ReceiptColumn: View {
             Spacer(minLength: 0)
         }
         .padding(20)
-        .frame(width: 340)
+        .frame(width: 440)
     }
 }
 

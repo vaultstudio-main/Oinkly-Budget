@@ -5,6 +5,6 @@ extension View {
     /// card charge, a cash transaction and Pay a Bill. They are alike on purpose: the form on the left and the receipt on the right,
     /// so the form seldom has to scroll.
     func transactionWindowFrame() -> some View {
-        frame(width: 860, height: 640)
+        frame(width: 1000, height: 700)
     }
 }

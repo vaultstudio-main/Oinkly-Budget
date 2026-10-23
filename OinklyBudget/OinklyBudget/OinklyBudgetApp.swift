@@ -148,7 +148,7 @@ struct OinklyBudgetApp: App {
                 .appAppearance()
         }
         .modelContainer(container)
-        .defaultSize(width: 520, height: 640)
+        .defaultSize(width: 1000, height: 680)
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 

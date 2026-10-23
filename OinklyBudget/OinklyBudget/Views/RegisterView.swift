@@ -510,6 +510,7 @@ struct EditTransactionSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
             Form {
                 Section("Transaction") {
                     if accountChoices.count > 1 {
@@ -625,13 +626,12 @@ struct EditTransactionSheet: View {
                     }
                 }
 
-                if showsReceipt {
-                    Section("Receipt") {
-                        ReceiptPicker(data: $receipt, noReceipt: $noReceipt)
-                    }
-                }
             }
             .formStyle(.grouped)
+            Divider()
+            // The receipt beside the form, as in a new transaction, so neither has to scroll.
+            ReceiptColumn(supported: showsReceipt, data: $receipt, noReceipt: $noReceipt)
+            }
 
             if let limitMessage {
                 Text(limitMessage).font(.callout).foregroundStyle(.orange).padding(.horizontal, 16)
@@ -646,7 +646,8 @@ struct EditTransactionSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 480, height: (showsReceipt ? 760 : 620) + (isSplitting ? CGFloat(max(parts.count, 2)) * 70 + 40 : 0))
+        .frame(width: 1000, height: 700 + (isSplitting ? CGFloat(max(parts.count, 2)) * 70 + 40 : 0))
+        .background(Theme.background)
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
             for index in parts.indices where parts[index].category?.isIncome == new { parts[index].category = nil }

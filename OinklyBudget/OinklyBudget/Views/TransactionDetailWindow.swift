@@ -25,7 +25,7 @@ struct TransactionDetailWindow: View {
                                        description: Text("It may have been deleted."))
             }
         }
-        .frame(minWidth: 460, minHeight: 420)
+        .frame(minWidth: 980, minHeight: 640)
         .background(Theme.background)
     }
 
@@ -40,6 +40,7 @@ struct TransactionDetailWindow: View {
     private func content(_ transaction: Transaction, account: Account) -> some View {
         let investment = account.supportsHoldings && !transaction.isTransfer
         VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -76,21 +77,12 @@ struct TransactionDetailWindow: View {
                     }
                     .panelBackground(cornerRadius: 8)
 
-                    if let data = transaction.receiptData {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Receipt").font(.headline)
-                            if Receipt.isPDF(data) {
-                                PDFPreview(data: data).frame(height: 520)
-                            } else if let image = AccountPhoto.image(from: data) {
-                                image.resizable().scaledToFit()
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
-                        }
-                    } else if transaction.noReceipt {
-                        Text("Marked as having no receipt.").font(.callout).foregroundStyle(.secondary)
-                    }
                 }
                 .padding(20)
+            }
+            .frame(width: 500)
+            Divider()
+            receiptColumn(transaction)
             }
             Divider()
             HStack {
@@ -112,6 +104,33 @@ struct TransactionDetailWindow: View {
                 EditTransactionSheet(transaction: transaction, account: account, categories: allCategories.live)
             }
         }
+    }
+
+    /// The receipt takes the right-hand side, big enough to read, so the window never has to scroll.
+    private func receiptColumn(_ transaction: Transaction) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Receipt").font(.headline)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.06))
+                if let data = transaction.receiptData {
+                    if Receipt.isPDF(data) {
+                        PDFPreview(data: data, height: 520)
+                    } else if let image = AccountPhoto.image(from: data) {
+                        image.resizable().scaledToFit().padding(4)
+                    }
+                } else {
+                    VStack(spacing: 6) {
+                        Image(systemName: transaction.noReceipt ? "nosign" : "doc.text.viewfinder").font(.system(size: 26, weight: .light)).foregroundStyle(.tertiary)
+                        Text(transaction.noReceipt ? "Marked as having no receipt." : "No receipt attached.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func row(_ title: String, _ value: String) -> some View {
