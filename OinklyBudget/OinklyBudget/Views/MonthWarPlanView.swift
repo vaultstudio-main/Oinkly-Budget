@@ -31,6 +31,8 @@ struct MonthWarPlanView: View {
         var start: Decimal = 0
         /// An account whose balance is the starting amount, as `MonthOutlook.accountKey`. Nil when a number is typed.
         var startAccount: String?
+        /// Money to keep out of reach: the plan counts only what is above it as spare.
+        var buffer: Decimal?
         var items: [PlanItem] = []
     }
 
@@ -38,6 +40,7 @@ struct MonthWarPlanView: View {
     @State private var items: [PlanItem] = []
     @State private var typedStart: Decimal?
     @State private var startAccount: String?
+    @State private var buffer: Decimal?
     @State private var draft: PlanItem?
 
     private var storageKey: String { "warPlan." + OutlookSnapshots.key(for: outlook.month) }
@@ -60,12 +63,16 @@ struct MonthWarPlanView: View {
         let list = sorted
         let extra = list.reduce(Decimal(0)) { $0 + signed($1) }
         let ending = opening + extra
+        let kept = buffer ?? 0
+        let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
+        let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
         return VStack(spacing: 14) {
                 ReportCard(title: "Monthly War Plan") {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .top, spacing: 30) {
                             figure("Extra This Month", extra, note: "money in less money out, from the lines below")
                             figure("Left at the End", ending, note: "the starting amount plus the extra")
+                            figure("Above the Buffer", ending - kept, note: "left at the end less your buffer")
                             Spacer()
                         }
                         HStack(spacing: 10) {
@@ -88,6 +95,12 @@ struct MonthWarPlanView: View {
                                     .multilineTextAlignment(.trailing)
                                     .frame(width: 130)
                             }
+                            Text("Buffer")
+                            CurrencyField("Buffer", value: $buffer)
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 110)
+                                .help("Money to keep untouched. Left After turns orange when a line takes you under it")
                             Spacer()
                             Menu("Pull In…", systemImage: "square.and.arrow.down") {
                                 Button("Paycheques and Income") { pull(incomeLines) }
@@ -113,11 +126,22 @@ struct MonthWarPlanView: View {
                                     Text("No lines yet. Use Add a Line, or Pull In.").foregroundStyle(.secondary).padding(.vertical, 12)
                                 }
                                 ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                                    line(item, left: balances[index].left, extra: balances[index].extra)
+                                    line(item, left: balances[index].left, extra: balances[index].extra, buffer: kept)
                                     Divider()
                                 }
                             }
                         }
+                    }
+                    .frame(maxHeight: .infinity, alignment: .top)
+                }
+                ReportCard(title: "Running Totals") {
+                    HStack(alignment: .top, spacing: 30) {
+                        total("Starting With", opening)
+                        total("Money In", moneyIn, color: Theme.green)
+                        total("Money Out", -moneyOut)
+                        total("Left at the End", ending, color: ending < 0 ? Theme.red : Theme.green)
+                        total("Above the Buffer", ending - kept, color: ending - kept < 0 ? Theme.red : Theme.green)
+                        Spacer()
                     }
                 }
         }
@@ -134,6 +158,7 @@ struct MonthWarPlanView: View {
         .onChange(of: items) { _, _ in save() }
         .onChange(of: typedStart) { _, _ in save() }
         .onChange(of: startAccount) { _, _ in save() }
+        .onChange(of: buffer) { _, _ in save() }
     }
 
     // MARK: Pieces
@@ -163,7 +188,14 @@ struct MonthWarPlanView: View {
         .padding(.bottom, 6)
     }
 
-    private func line(_ item: PlanItem, left: Decimal, extra: Decimal) -> some View {
+    private func total(_ title: String, _ amount: Decimal, color: Color = .primary) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased()).font(.caption).foregroundStyle(.secondary)
+            Text(amount, format: .appCurrency).font(.title3.bold()).foregroundStyle(color)
+        }
+    }
+
+    private func line(_ item: PlanItem, left: Decimal, extra: Decimal, buffer: Decimal) -> some View {
         Button { draft = item } label: {
             HStack(spacing: 12) {
                 Image(systemName: item.symbol)
@@ -174,7 +206,7 @@ struct MonthWarPlanView: View {
                 Text(item.isIncome ? item.amount.formatted(.appCurrency) : "").foregroundStyle(Theme.green).frame(width: 95, alignment: .trailing)
                 Text(item.isIncome ? "" : item.amount.formatted(.appCurrency)).frame(width: 95, alignment: .trailing)
                 Text(left, format: .appCurrency).fontWeight(.semibold)
-                    .foregroundStyle(left < 0 ? Theme.red : Color.primary)
+                    .foregroundStyle(left < 0 ? Theme.red : (left < buffer ? Color.orange : Color.primary))
                     .frame(width: 105, alignment: .trailing)
                 Text(extra, format: .appCurrency)
                     .foregroundStyle(extra < 0 ? Theme.red : Theme.green)
@@ -235,16 +267,18 @@ struct MonthWarPlanView: View {
             items = []
             typedStart = nil
             startAccount = nil
+            buffer = nil
             return
         }
         items = stored.items
         typedStart = stored.start == 0 ? nil : stored.start
         startAccount = stored.startAccount
+        buffer = stored.buffer
     }
 
     private func save() {
-        let stored = Stored(start: typedStart ?? 0, startAccount: startAccount, items: items)
-        if stored.items.isEmpty && stored.start == 0 && stored.startAccount == nil {
+        let stored = Stored(start: typedStart ?? 0, startAccount: startAccount, buffer: buffer, items: items)
+        if stored.items.isEmpty && stored.start == 0 && stored.startAccount == nil && (buffer ?? 0) == 0 {
             UserDefaults.standard.removeObject(forKey: storageKey)
         } else if let data = try? JSONEncoder().encode(stored) {
             UserDefaults.standard.set(data, forKey: storageKey)
