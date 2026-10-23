@@ -7,7 +7,10 @@ import Charts
 /// pulled out; the War Plan tab is the sheet you plan on. Settings, in a window of its own, holds the accounts counted, what the
 /// month starts with and the buffer.
 struct MonthOutlookView: View {
-    enum OutlookTab: String, CaseIterable { case outlook = "Outlook", warPlan = "War Plan" }
+    enum OutlookTab: String, CaseIterable, Identifiable {
+        case outlook = "Outlook", warPlan = "War Plan"
+        var id: Self { self }
+    }
 
     @AppStorage(OutlookSettings.monthKey) private var monthStamp = 0.0
     @State private var tab = OutlookTab.outlook
@@ -18,29 +21,28 @@ struct MonthOutlookView: View {
     /// The month being shown. It is chosen in the Settings window.
     private var month: Date { OutlookSettings.month(from: monthStamp) }
 
+    /// Which month the page is showing. It is only shown here; it is chosen in Settings.
+    private var monthLine: some View {
+        let which = tab == .warPlan ? "War Plan" : "Outlook"
+        let when = month.formatted(.dateTime.month(.wide).year())
+        return Text("\(which) for \(when)").font(.headline).contentTransition(.numericText())
+    }
+
+    private var settingsButton: some View {
+        Button {
+            openWindow(id: OutlookSettings.windowID)
+        } label: {
+            Label("Settings", systemImage: "slider.horizontal.3")
+        }
+        .help("Opens this tab's settings in a window, where you choose the month: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            PinnedHeader("Monthly Outlook") {
-                HStack {
-                    // The month is only shown here; it is chosen in Settings.
-                    Text("\(tab == .warPlan ? "War Plan" : "Outlook") for \(month.formatted(.dateTime.month(.wide).year()))")
-                        .font(.headline)
-                        .frame(minWidth: 200, alignment: .leading)
-                        .contentTransition(.numericText())
-                    Picker("View", selection: $tab) {
-                        ForEach(OutlookTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 200)
-                    Spacer()
-                    Button {
-                        openWindow(id: OutlookSettings.windowID)
-                    } label: {
-                        Label("Settings", systemImage: "slider.horizontal.3")
-                    }
-                    .help("Opens this tab's settings in a window, where you choose the month: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
-                }
+            FolderTabbedHeader(title: "Monthly Outlook", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
+                monthLine
+            } centre: { EmptyView() } trailing: {
+                settingsButton
             }
             OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
         }

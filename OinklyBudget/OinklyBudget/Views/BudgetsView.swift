@@ -60,24 +60,16 @@ struct BudgetsView: View {
         let isCash: (Category) -> Bool = { cashKeys.contains(CashBudgets.key(for: $0)) }
 
         VStack(spacing: 0) {
-            PinnedHeader("Budgets") {
-                HStack(spacing: 14) {
-                    Picker("", selection: $tab) {
-                        ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 180)
-                    Spacer()
-                    setBudgetsButton
-                }
+            FolderTabbedHeader(title: "Budgets", tabs: Tab.allCases, selection: $tab, label: { $0.rawValue }) {
+                EmptyView()
+            } centre: {
                 // The month or week is only shown here, centred across the whole window; it is chosen in Settings.
-                .overlay {
-                    Text(tab == .monthly ? month.formatted(.dateTime.month(.wide).year()) : BudgetsSettings.weekLabel(week))
-                        .font(.title3.weight(.semibold))
-                        .offset(x: -leftInset / 2)
-                        .contentTransition(.numericText())
-                }
+                Text(tab == .monthly ? month.formatted(.dateTime.month(.wide).year()) : BudgetsSettings.weekLabel(week))
+                    .font(.title3.weight(.semibold))
+                    .offset(x: -leftInset / 2)
+                    .contentTransition(.numericText())
+            } trailing: {
+                setBudgetsButton
             }
             ScrollView {
                 VStack(spacing: 14) {

@@ -19,18 +19,9 @@ struct ReportsView: View {
     var body: some View {
         VStack(spacing: 0) {
             // The title and the tabs stay at the top while the reports scroll below them. The tabs are like those on file folders.
-            VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 6) {
-                    PageTitle("Reports")
-                    Text(section.blurb).font(.callout).foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                FolderTabs(tabs: ReportSection.allCases, selection: $section) { $0.rawValue }
-            }
-            .background(Theme.background)
+            FolderTabbedHeader(title: "Reports", tabs: ReportSection.allCases, selection: $section, label: { $0.rawValue }) {
+                Text(section.blurb).font(.callout).foregroundStyle(.secondary)
+            } centre: { EmptyView() } trailing: { EmptyView() }
             ScrollView {
                 VStack(spacing: 14) {
                     if section == .projections { ProjectionsPage() } else { grid(section.reports) }

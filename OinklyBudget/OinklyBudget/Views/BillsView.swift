@@ -47,19 +47,9 @@ struct BillsView: View {
         let monthItems = Bills.occurrences(bills, from: monthStart, through: monthEnd)
         Group {
             VStack(spacing: 0) {
-            HStack {
-                PageTitle("Bills & Recurring")
-                Picker("", selection: $tab) {
-                    ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(width: 220)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
-            .pinnedHeaderStyle()
+            FolderTabbedHeader(title: "Bills & Recurring", tabs: Tab.allCases, selection: $tab, label: { $0.rawValue }) {
+                EmptyView()
+            } centre: { EmptyView() } trailing: { EmptyView() }
             if tab == .recurring {
                 RecurringView()
             } else {

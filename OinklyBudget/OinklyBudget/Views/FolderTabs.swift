@@ -44,3 +44,36 @@ struct FolderTabs<Tab: Hashable & Identifiable>: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
+
+/// The top of a page that has tabs: the page's title, with any buttons at its right and a line under it, then the folder tabs sitting on
+/// the bottom edge. It stays put while the page below scrolls. Every page with tabs uses it, so they all look the same.
+struct FolderTabbedHeader<Tab: Hashable & Identifiable, Subtitle: View, Centre: View, Trailing: View>: View {
+    let title: String
+    let tabs: [Tab]
+    @Binding var selection: Tab
+    let label: (Tab) -> String
+    @ViewBuilder let subtitle: Subtitle
+    /// Shown in the middle of the title row, for a page that says which month or week it is on.
+    @ViewBuilder let centre: Centre
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .center, spacing: 12) {
+                    PageTitle(title)
+                    Spacer()
+                    trailing
+                }
+                .overlay { centre }
+                subtitle
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            FolderTabs(tabs: tabs, selection: $selection, title: label)
+        }
+        .background(Theme.background)
+    }
+}
