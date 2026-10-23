@@ -26,7 +26,7 @@ struct SettingsWindowLayout<Content: View, Footer: View>: View {
             }
             .background(.bar)
         }
-        .frame(minWidth: 400, minHeight: 440)
+        .frame(minWidth: 400, minHeight: 360)
     }
 }
 

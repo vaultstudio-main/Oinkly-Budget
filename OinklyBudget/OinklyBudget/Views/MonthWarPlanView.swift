@@ -14,7 +14,25 @@ struct MonthWarPlanView: View {
     let startLabel: String
 
     @Query(sort: \Category.name) private var allCategories: [Category]
+    @Query private var monthTransactions: [Transaction]
     @State private var draft: WarPlanItem?
+
+    init(outlook: MonthOutlook, plan: Binding<WarPlanData>, opening: Decimal, kept: Decimal, startLabel: String) {
+        self.outlook = outlook
+        _plan = plan
+        self.opening = opening
+        self.kept = kept
+        self.startLabel = startLabel
+        let start = outlook.month
+        let end = Calendar.current.date(byAdding: .month, value: 1, to: start) ?? start
+        _monthTransactions = Query(filter: #Predicate<Transaction> { $0.date >= start && $0.date < end })
+    }
+
+    /// The transaction tagged to a line, when there is one and it still exists.
+    private func matched(_ item: WarPlanItem) -> Transaction? {
+        guard let stamp = item.transactionStamp else { return nil }
+        return monthTransactions.live.first { $0.createdAt.timeIntervalSinceReferenceDate == stamp }
+    }
 
     private var items: [WarPlanItem] {
         get { plan.items }
@@ -130,7 +148,7 @@ struct MonthWarPlanView: View {
     /// A whole row of the table; blank for the empty rows that fill the rest of the page.
     private func tableRow(icon: String? = nil, iconColor: Color = .secondary, artwork: (symbol: String, theme: Int)? = nil, date: String = "", title: String = "",
                           moneyIn: Decimal? = nil, moneyOut: Decimal? = nil, left: Decimal? = nil, extra: Decimal? = nil,
-                          leftColor: Color = .primary, bold: Bool = false) -> some View {
+                          leftColor: Color = .primary, bold: Bool = false, matched: Transaction? = nil) -> some View {
         HStack(spacing: 0) {
             cell(Self.widths.icon, .center) {
                 if let artwork {
@@ -142,7 +160,15 @@ struct MonthWarPlanView: View {
                 }
             }
             cell(Self.widths.date) { Text(date) }
-            cell(nil) { Text(title).fontWeight(bold ? .semibold : .regular) }
+            cell(nil) {
+                HStack(spacing: 6) {
+                    Text(title).fontWeight(bold ? .semibold : .regular)
+                    if let matched {
+                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.green)
+                            .help("Matched: \(matched.payee) on \(matched.date.formatted(.dateTime.month(.abbreviated).day())), \(matched.amount.formatted(.appCurrency)), \(matched.account?.name ?? "")")
+                    }
+                }
+            }
             cell(Self.widths.amount, .trailing) { if let moneyIn { Text(moneyIn, format: .appCurrency).foregroundStyle(Theme.green) } }
             cell(Self.widths.amount, .trailing) { if let moneyOut { Text(moneyOut, format: .appCurrency) } }
             cell(Self.widths.balance, .trailing) { if let left { Text(left, format: .appCurrency).fontWeight(.semibold).foregroundStyle(leftColor) } }
@@ -187,7 +213,7 @@ struct MonthWarPlanView: View {
                                              date: item.date.formatted(.dateTime.weekday(.abbreviated).day()), title: item.title,
                                              moneyIn: item.isIncome ? item.amount : nil, moneyOut: item.isIncome ? nil : item.amount,
                                              left: balances[index].left, extra: balances[index].extra,
-                                             leftColor: leftColor(balances[index].left, kept: kept))
+                                             leftColor: leftColor(balances[index].left, kept: kept), matched: matched(item))
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)

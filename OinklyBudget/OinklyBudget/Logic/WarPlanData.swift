@@ -16,6 +16,8 @@ struct WarPlanItem: Codable, Identifiable, Equatable {
     var iconSymbol: String?
     var iconTheme: Int?
     var notes: String?
+    /// The real transaction this line turned out to be, by its creation time, once one is tagged to it in the settings.
+    var transactionStamp: Double?
 
     var symbol: String {
         switch origin {

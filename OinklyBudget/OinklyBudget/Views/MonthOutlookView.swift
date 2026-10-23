@@ -56,6 +56,11 @@ struct MonthOutlookView: View {
         .onChange(of: tab) { _, new in UserDefaults.standard.set(new == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey) }
         .onChange(of: month) { _, new in plan = WarPlanData.load(for: new) }
         .onChange(of: plan) { _, new in new.save(for: month) }
+        // Tagging a transaction in the settings window changes the saved plan, so the page picks it up.
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            let loaded = WarPlanData.load(for: month)
+            if loaded != plan && !(loaded.isEmpty && plan.isEmpty) { plan = loaded }
+        }
     }
 }
 
