@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 
 /// The Monthly Outlook's settings, in a window of their own so the page stays open and in view behind them. Changes apply as
-/// they are made. The window follows the tab: the Outlook tab's settings are the month and which accounts count; the War Plan
-/// tab adds what the month starts with and the buffer. Only checking, savings and cash accounts are listed, because nothing owed
-/// and nothing invested is part of the outlook.
+/// they are made. The window follows the tab: the Outlook tab's settings are the month and which accounts count, laid out in columns
+/// so a long list of accounts doesn't scroll; the War Plan tab's are the month, what the month starts with and the buffer, with no
+/// accounts to tick. Only checking, savings and cash accounts are listed, because nothing owed and nothing invested is part of the outlook.
 struct OutlookSettingsView: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @AppStorage(OutlookSettings.startAccountKey) private var startAccount = ""
@@ -93,18 +93,21 @@ struct OutlookSettingsView: View {
         ].filter { !$0.accounts.isEmpty }
         return SettingsSection(title: "Accounts to count",
                                note: "Tick the checking, savings and cash accounts the Outlook counts: their income, spending and repeating transactions. Credit cards, loans, investments and property never count. A bill is left out when the payment linked to it came from an account that is unticked.") {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 14) {
                 ForEach(groups, id: \.title) { group in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(group.title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                        ForEach(group.accounts) { account in
-                            Toggle(isOn: toggle(for: account)) {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(account.name)
-                                    Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
+                        // Three to a row, so even a long list of accounts stays short.
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16, alignment: .topLeading), count: 3), alignment: .leading, spacing: 10) {
+                            ForEach(group.accounts) { account in
+                                Toggle(isOn: toggle(for: account)) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(account.name).lineLimit(1)
+                                        Text(account.typeTitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                    }
                                 }
+                                .toggleStyle(.checkbox)
                             }
-                            .toggleStyle(.checkbox)
                         }
                     }
                 }
@@ -139,18 +142,14 @@ struct OutlookSettingsView: View {
             Divider()
             startingSection
             bufferSection
-            Divider()
-            accountsSection
         } footer: {
-            Button("Select All") { excludedStored = "" }.disabled(excluded.isEmpty)
             Spacer()
             Button("Reset Settings", role: .destructive) {
                 startAccount = ""
                 startAmount = ""
                 bufferText = ""
-                excludedStored = ""
             }
-            .help("Clears the starting amount and the buffer and counts every account again. Your War Plan lines are not touched.")
+            .help("Clears the starting amount and the buffer. Your War Plan lines are not touched.")
         }
     }
 }

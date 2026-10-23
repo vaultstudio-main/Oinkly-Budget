@@ -245,7 +245,7 @@ enum HelpContent {
                 "## Settings",
                 "• Settings, top right, opens a window of its own, so the page stays open behind it. It shows the settings for the tab you are on, and both start with Month: step through months with the arrows there and the page follows. Each start of the app begins on this month.",
                 "• On the Outlook tab it is only which accounts count: pick from your checking, savings and cash accounts, with Select All and Select None. Credit cards, loans, investments and property never count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
-                "• On the War Plan tab it has everything: Starting with is the money already there when the month begins, from an account's balance now or a number you type. Buffer is money to keep untouched. They apply to every month. It also has the same account list, and Reset Settings clears the starting amount and buffer and counts every account again.",
+                "• On the War Plan tab it has the month, Starting with (the money already there when the month begins, from an account's balance now or a number you type) and Buffer (money to keep untouched). They apply to every month. There are no accounts to tick there, because the starting balance already says where the money starts. Reset Settings clears the starting amount and buffer.",
             ]),
 
             Topic(title: "Autofill & Clean Up", symbol: "wand.and.sparkles", lines: [
@@ -294,8 +294,8 @@ enum HelpContent {
                 "• Each line shows what is left after it, and Extra So Far. Your Plan at the top adds it up: Total Income, Total Outgoing, Extra This Month, Left at the End, and Safe to Move to Savings, which is the plan's spare amount (what it ends with less your buffer) and the earliest day all of it can come out while the plan stays above your buffer. The table below has the whole page to itself.",
                 "• It is only a what-if sheet. It never changes your accounts, transactions, bills or budgets, and nothing else in the app changes because of it. It is kept on this Mac, a month at a time, and is not part of backups.",
                 "## Settings",
-                "• Settings, top right, opens a window of its own, so the page stays open behind it. Starting with is the money already there when the month begins, from an account's balance now or a number you type. Buffer is money to keep untouched. They apply to every month.",
-                "• Accounts to count picks which accounts the Outlook uses. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account. Reset Settings clears the starting amount and buffer and counts every account again.",
+                "• Settings, top right, opens a window of its own, so the page stays open behind it. On the Outlook tab it has the month and Accounts to count. The starting amount and buffer are in the War Plan tab's settings.",
+                "• Accounts to count picks which accounts the Outlook uses. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account. The accounts are listed three to a row, so a long list stays short. Select All counts every account again.",
             ]),
 
             Topic(title: "Recurring Transactions", symbol: "arrow.triangle.2.circlepath", lines: [
