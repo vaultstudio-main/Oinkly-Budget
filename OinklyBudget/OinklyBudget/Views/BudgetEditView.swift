@@ -94,9 +94,11 @@ struct CustomBudgetEditView: View {
     @State private var isIncome: Bool
     @State private var isTaxRelated: Bool
     @State private var isCashBudget: Bool
+    /// Which tab of the budget lists it goes on. Custom means none in particular.
+    @State private var group: CategoryGroup
     @State private var confirmingDelete = false
 
-    init(category: Category?) {
+    init(category: Category?, group initialGroup: CategoryGroup = .custom) {
         self.category = category
         _name = State(initialValue: category?.name ?? "")
         let weekly = category.flatMap { BudgetPeriods.weeklyAmount(for: $0) }
@@ -105,6 +107,8 @@ struct CustomBudgetEditView: View {
         _isIncome = State(initialValue: category?.isIncome ?? false)
         _isTaxRelated = State(initialValue: category?.isTaxRelated ?? false)
         _isCashBudget = State(initialValue: category.map { CashBudgets.isCash($0) } ?? false)
+        let picked = category.flatMap { found in found.modelContext.map { CashBudgets.groups(in: $0) } } ?? [:]
+        _group = State(initialValue: category.map { CategoryGroup.of($0, picked: picked) } ?? initialGroup)
     }
 
     private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -129,12 +133,15 @@ struct CustomBudgetEditView: View {
                         }
                         .pickerStyle(.segmented)
                         CurrencyField(isWeekly ? "Weekly budget" : "Monthly budget", value: $limit)
+                        Picker("Group", selection: $group) {
+                            ForEach(CategoryGroup.choosable) { Text($0.title).tag($0) }
+                        }
                         Toggle("Counts as tax-related", isOn: $isTaxRelated)
                         Toggle("Counts as a cash budget", isOn: $isCashBudget)
                     }
                 } footer: {
                     Text(isIncome ? "This also adds a new income category you can pick when you record a transaction."
-                         : "This also adds a new category with the same name. Pick it as the category when you record a transaction or set up a bill, and what you spend in it counts toward this budget.")
+                         : "The group is the tab it is listed on in the budget lists. This also adds a new category with the same name. Pick it as the category when you record a transaction or set up a bill, and what you spend in it counts toward this budget.")
                 }
                 if category != nil {
                     Section {
@@ -158,7 +165,7 @@ struct CustomBudgetEditView: View {
                 }
             }
         }
-        .macSheetFrame(minHeight: 280)
+        .macSheetFrame(minHeight: 330)
     }
 
     private func save() {
@@ -175,6 +182,7 @@ struct CustomBudgetEditView: View {
             category.isTaxRelated = isIncome ? false : isTaxRelated
             category.isIncome = isIncome
             CashBudgets.set(isCashBudget && !isIncome, for: category, in: modelContext)
+            CashBudgets.setGroup(isIncome ? nil : group, for: category, in: modelContext)
             if kindChanged {
                 category.colorHex = colorHex
                 category.symbol = symbol
@@ -186,6 +194,7 @@ struct CustomBudgetEditView: View {
             modelContext.insert(made)
             BudgetPeriods.set(amount: amount, weekly: isWeekly && !isIncome, for: made, in: modelContext)
             CashBudgets.set(isCashBudget && !isIncome, for: made, in: modelContext)
+            CashBudgets.setGroup(isIncome ? nil : group, for: made, in: modelContext)
         }
         modelContext.saveNow()
         dismiss()

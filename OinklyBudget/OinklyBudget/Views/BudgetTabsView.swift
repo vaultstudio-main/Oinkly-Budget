@@ -11,6 +11,7 @@ struct BudgetTabsView<Trailing: View>: View {
 
     @Query(sort: \Category.name) private var allCategories: [Category]
     @Query private var periods: [BudgetPeriod]
+    @Query private var marks: [CashBudgetMark]
     @State private var tab = CategoryGroup.housing
     @State private var editing: Category?
     @State private var isAddingCustom = false
@@ -18,7 +19,8 @@ struct BudgetTabsView<Trailing: View>: View {
     private var categories: [Category] { allCategories.live }
 
     private func members(of group: CategoryGroup) -> [Category] {
-        let list = categories.filter { CategoryGroup.of($0) == group }
+        let picked = CashBudgets.groups(from: marks.live.map(\.key))
+        let list = categories.filter { CategoryGroup.of($0, picked: picked) == group }
         // Built-in ones keep their usual order, which is the order of the built-in list.
         let order = Dictionary(uniqueKeysWithValues: Category.definitions.enumerated().map { ($1.key, $0) })
         return list.sorted {
@@ -75,7 +77,7 @@ struct BudgetTabsView<Trailing: View>: View {
         .sheet(item: $editing) { category in
             if category.isCustom { CustomBudgetEditView(category: category) } else { BudgetEditView(category: category) }
         }
-        .sheet(isPresented: $isAddingCustom) { CustomBudgetEditView(category: nil) }
+        .sheet(isPresented: $isAddingCustom) { CustomBudgetEditView(category: nil, group: CategoryGroup.choosable.contains(tab) ? tab : .custom) }
     }
 
     private var footnote: String {

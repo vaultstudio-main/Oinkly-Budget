@@ -46,9 +46,16 @@ enum CategoryGroup: String, CaseIterable, Identifiable {
         return result
     }()
 
-    /// The group a category belongs to. Ones you made yourself are Custom, except income ones, which stay with Income.
-    static func of(_ category: Category) -> CategoryGroup {
-        if category.isCustom { return category.isIncome ? .income : .custom }
+    /// The groups a budget of your own can be put in: every spending group, or Custom for none in particular.
+    static var choosable: [CategoryGroup] { allCases.filter { $0 != .income } }
+
+    /// The group a category belongs to. One you made yourself is in the group you picked for it, or Custom when you picked none,
+    /// and an income one stays with Income. `picked` is what you chose, by category key (see `CashBudgets.groups`).
+    static func of(_ category: Category, picked: [String: CategoryGroup] = [:]) -> CategoryGroup {
+        if category.isCustom {
+            if category.isIncome { return .income }
+            return category.systemKey.flatMap { picked[$0] } ?? .custom
+        }
         return category.systemKey.flatMap { byKey[$0] } ?? (category.isIncome ? .income : .financial)
     }
 }

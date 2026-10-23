@@ -300,10 +300,47 @@ enum CashBudgets {
         }
     }
 
+    // MARK: The group a budget of your own is in
+
+    /// A budget you made yourself can be put in one of the budget groups (Housing, Food and so on). That choice is kept as a mark
+    /// of its own in this same table, "group|<group>|<category key>", so no model changes. It never matches a category's key, so
+    /// it is never read as a cash budget.
+    private static let groupPrefix = "group|"
+
+    /// The group each budget of your own was put in, by category key.
+    static func groups(from keys: [String]) -> [String: CategoryGroup] {
+        var result: [String: CategoryGroup] = [:]
+        for key in keys where key.hasPrefix(groupPrefix) {
+            let parts = key.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+            if parts.count == 3, let group = CategoryGroup(rawValue: String(parts[1])) { result[String(parts[2])] = group }
+        }
+        return result
+    }
+
+    static func groups(in context: ModelContext) -> [String: CategoryGroup] { groups(from: all(in: context).map(\.key)) }
+
+    /// Puts a budget of your own in a group, or in none (Custom) when `group` is nil. Does not save.
+    static func setGroup(_ group: CategoryGroup?, for category: Category, in context: ModelContext) {
+        guard let categoryKey = category.systemKey else { return }
+        let suffix = "|" + categoryKey
+        let mine = all(in: context).filter { $0.key.hasPrefix(groupPrefix) && $0.key.hasSuffix(suffix) }
+        for old in mine { context.delete(old) }
+        if let group, group != .custom, group != .income { context.insert(CashBudgetMark(key: groupPrefix + group.rawValue + suffix)) }
+    }
+
     /// Marks for categories that are gone.
     static func removeOrphans(in context: ModelContext) {
         let present = Set(((try? context.fetch(FetchDescriptor<Category>())) ?? []).live.map { key(for: $0) })
-        for mark in all(in: context) where !present.contains(mark.key) { context.delete(mark) }
+        for mark in all(in: context) {
+            let owner: String
+            if mark.key.hasPrefix(groupPrefix) {
+                let parts = mark.key.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false)
+                owner = parts.count == 3 ? String(parts[2]) : mark.key
+            } else {
+                owner = mark.key
+            }
+            if !present.contains(owner) { context.delete(mark) }
+        }
     }
 }
 

@@ -1450,6 +1450,39 @@ enum SharedHardeningTest {
                 gc.insert(rule)
                 check("S50 a repeating charge past the limit makes no entry", Recurring.makeEntry(for: rule, on: today, in: gc) == nil)
             }
+
+            // S51: a budget of your own can be put in one of the budget groups
+            do {
+                let hc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                Category.ensureSystemCategories(in: hc)
+                let own = Category(name: "S51 own", colorHex: "007AFF", symbol: "tag", monthlyLimit: 50, systemKey: Category.customKeyPrefix + UUID().uuidString)
+                let ownIncome = Category(name: "S51 income", colorHex: "34C759", symbol: "tag", monthlyLimit: 0, isIncome: true, systemKey: Category.customKeyPrefix + UUID().uuidString)
+                hc.insert(own); hc.insert(ownIncome)
+                try hc.save()
+                let groceries = ((try? hc.fetch(FetchDescriptor<Category>())) ?? []).first { $0.systemKey == "groceries" }!
+                let rent = ((try? hc.fetch(FetchDescriptor<Category>())) ?? []).first { $0.systemKey == "housing" }!
+                let pay = ((try? hc.fetch(FetchDescriptor<Category>())) ?? []).first { $0.systemKey == "paycheck" }!
+                check("S51 built-in categories are in their groups", CategoryGroup.of(groceries) == .food && CategoryGroup.of(rent) == .housing && CategoryGroup.of(pay) == .income)
+                check("S51 your own with no pick is Custom", CategoryGroup.of(own, picked: CashBudgets.groups(in: hc)) == .custom)
+                CashBudgets.setGroup(.food, for: own, in: hc)
+                try hc.save()
+                check("S51 your own goes where you put it", CategoryGroup.of(own, picked: CashBudgets.groups(in: hc)) == .food)
+                CashBudgets.setGroup(.giving, for: own, in: hc)
+                try hc.save()
+                check("S51 changing it keeps one record", CategoryGroup.of(own, picked: CashBudgets.groups(in: hc)) == .giving && ((try? hc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).count == 1)
+                check("S51 the pick is not a cash budget", !CashBudgets.isCash(own))
+                CashBudgets.removeOrphans(in: hc)
+                check("S51 the pick survives the tidy-up", CategoryGroup.of(own, picked: CashBudgets.groups(in: hc)) == .giving)
+                CashBudgets.setGroup(.custom, for: own, in: hc)
+                try hc.save()
+                check("S51 choosing Custom takes the pick away", CategoryGroup.of(own, picked: CashBudgets.groups(in: hc)) == .custom && ((try? hc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).isEmpty)
+                CashBudgets.setGroup(.food, for: own, in: hc)
+                hc.delete(own)
+                try hc.save()
+                CashBudgets.removeOrphans(in: hc)
+                check("S51 deleting the budget leaves no stray pick", ((try? hc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).isEmpty)
+                check("S51 your own income stays with Income", CategoryGroup.of(ownIncome, picked: ["x": .food]) == .income)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
