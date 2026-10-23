@@ -111,39 +111,11 @@ struct MonthWarPlanView: View {
                             .help("Copies lines from the Overview into the plan, where you can change or remove them")
                             Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
                         }
-                        Text("This sheet starts blank. Add a line for anything you expect, or pull in the paycheques, bills and budgets the Overview already knows, then change or remove whatever you like. Nothing here changes your accounts, bills or budgets.")
+                        Text("This sheet starts blank. Add a line for anything you expect, or pull in the paycheques, bills and budgets the Overview already knows, then change or remove whatever you like. This is only a what-if sheet: it never changes your accounts, transactions, bills or budgets, and nothing else in the app reads it.")
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
-                ReportCard(title: "War Plan", fillsHeight: true) {
-                    VStack(spacing: 0) {
-                        header
-                        Divider()
-                        let balances = running(list)
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                if list.isEmpty {
-                                    Text("No lines yet. Use Add a Line, or Pull In.").foregroundStyle(.secondary).padding(.vertical, 12)
-                                }
-                                ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                                    line(item, left: balances[index].left, extra: balances[index].extra, buffer: kept)
-                                    Divider()
-                                }
-                            }
-                        }
-                    }
-                    .frame(maxHeight: .infinity, alignment: .top)
-                }
-                ReportCard(title: "Running Totals") {
-                    HStack(alignment: .top, spacing: 30) {
-                        total("Starting With", opening)
-                        total("Money In", moneyIn, color: Theme.green)
-                        total("Money Out", -moneyOut)
-                        total("Left at the End", ending, color: ending < 0 ? Theme.red : Theme.green)
-                        total("Above the Buffer", ending - kept, color: ending - kept < 0 ? Theme.red : Theme.green)
-                        Spacer()
-                    }
-                }
+                table(list, kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
         }
         .padding(16)
         .sheet(item: $draft) { item in
@@ -173,54 +145,106 @@ struct MonthWarPlanView: View {
         }
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            Color.clear.frame(width: 22)
-            Text("Date").frame(width: 80, alignment: .leading)
-            Text("Item").frame(maxWidth: .infinity, alignment: .leading)
-            Text("Money In").frame(width: 95, alignment: .trailing)
-            Text("Money Out").frame(width: 95, alignment: .trailing)
-            Text("Left After").frame(width: 105, alignment: .trailing)
-            Text("Extra So Far").frame(width: 105, alignment: .trailing)
+    // MARK: The table
+
+    private static let rowHeight: CGFloat = 30
+    private static let widths: (icon: CGFloat, date: CGFloat, amount: CGFloat, balance: CGFloat) = (34, 90, 115, 125)
+
+    /// One cell: a fixed width, or the rest of the row when `width` is nil, with a line down its left edge.
+    private func cell<Content: View>(_ width: CGFloat?, _ alignment: Alignment = .leading, @ViewBuilder _ content: () -> Content) -> some View {
+        ZStack { content() }
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .frame(width: width, height: Self.rowHeight, alignment: alignment)
+            .frame(maxWidth: width == nil ? .infinity : nil, alignment: alignment)
+            .overlay(alignment: .leading) { Rectangle().fill(Color.primary.opacity(0.14)).frame(width: 1) }
+    }
+
+    /// A whole row of the table; blank for the empty rows that fill the rest of the page.
+    private func tableRow(icon: String? = nil, iconColor: Color = .secondary, date: String = "", title: String = "",
+                          moneyIn: Decimal? = nil, moneyOut: Decimal? = nil, left: Decimal? = nil, extra: Decimal? = nil,
+                          leftColor: Color = .primary, bold: Bool = false) -> some View {
+        HStack(spacing: 0) {
+            cell(Self.widths.icon, .center) { if let icon { Image(systemName: icon).foregroundStyle(iconColor) } }
+            cell(Self.widths.date) { Text(date) }
+            cell(nil) { Text(title).fontWeight(bold ? .semibold : .regular) }
+            cell(Self.widths.amount, .trailing) { if let moneyIn { Text(moneyIn, format: .appCurrency).foregroundStyle(Theme.green) } }
+            cell(Self.widths.amount, .trailing) { if let moneyOut { Text(moneyOut, format: .appCurrency) } }
+            cell(Self.widths.balance, .trailing) { if let left { Text(left, format: .appCurrency).fontWeight(.semibold).foregroundStyle(leftColor) } }
+            cell(Self.widths.balance, .trailing) { if let extra { Text(extra, format: .appCurrency).foregroundStyle(extra < 0 ? Theme.red : Theme.green) } }
+        }
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.primary.opacity(0.14)).frame(height: 1) }
+    }
+
+    private var headerRow: some View {
+        HStack(spacing: 0) {
+            cell(Self.widths.icon, .center) { Text("") }
+            cell(Self.widths.date) { Text("Date") }
+            cell(nil) { Text("Item") }
+            cell(Self.widths.amount, .trailing) { Text("Money In") }
+            cell(Self.widths.amount, .trailing) { Text("Money Out") }
+            cell(Self.widths.balance, .trailing) { Text("Left After") }
+            cell(Self.widths.balance, .trailing) { Text("Extra So Far") }
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
-        .padding(.bottom, 6)
+        .background(Color.primary.opacity(0.08))
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.primary.opacity(0.14)).frame(height: 1) }
     }
 
-    private func total(_ title: String, _ amount: Decimal, color: Color = .primary) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title.uppercased()).font(.caption).foregroundStyle(.secondary)
-            Text(amount, format: .appCurrency).font(.title3.bold()).foregroundStyle(color)
-        }
+    private func leftColor(_ left: Decimal, kept: Decimal) -> Color {
+        left < 0 ? Theme.red : (left < kept ? Color.orange : Color.primary)
     }
 
-    private func line(_ item: PlanItem, left: Decimal, extra: Decimal, buffer: Decimal) -> some View {
-        Button { draft = item } label: {
-            HStack(spacing: 12) {
-                Image(systemName: item.symbol)
-                    .foregroundStyle(item.isIncome ? Theme.green : Color.secondary)
-                    .frame(width: 22)
-                Text(item.date.formatted(.dateTime.weekday(.abbreviated).day())).frame(width: 80, alignment: .leading)
-                Text(item.title).frame(maxWidth: .infinity, alignment: .leading)
-                Text(item.isIncome ? item.amount.formatted(.appCurrency) : "").foregroundStyle(Theme.green).frame(width: 95, alignment: .trailing)
-                Text(item.isIncome ? "" : item.amount.formatted(.appCurrency)).frame(width: 95, alignment: .trailing)
-                Text(left, format: .appCurrency).fontWeight(.semibold)
-                    .foregroundStyle(left < 0 ? Theme.red : (left < buffer ? Color.orange : Color.primary))
-                    .frame(width: 105, alignment: .trailing)
-                Text(extra, format: .appCurrency)
-                    .foregroundStyle(extra < 0 ? Theme.red : Theme.green)
-                    .frame(width: 105, alignment: .trailing)
+    private func table(_ list: [PlanItem], kept: Decimal, extra: Decimal, ending: Decimal, moneyIn: Decimal, moneyOut: Decimal) -> some View {
+        let balances = running(list)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("WAR PLAN").font(.caption).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                headerRow
+                GeometryReader { geo in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            tableRow(icon: "flag", date: "Start", title: startingAccount.map { "Starting with \($0.name)'s balance" } ?? "Starting with", left: opening)
+                            ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
+                                Button { draft = item } label: {
+                                    tableRow(icon: item.symbol, iconColor: item.isIncome ? Theme.green : .secondary,
+                                             date: item.date.formatted(.dateTime.weekday(.abbreviated).day()), title: item.title,
+                                             moneyIn: item.isIncome ? item.amount : nil, moneyOut: item.isIncome ? nil : item.amount,
+                                             left: balances[index].left, extra: balances[index].extra,
+                                             leftColor: leftColor(balances[index].left, kept: kept))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .help("Click to change or remove this line")
+                                .contextMenu {
+                                    Button("Change…", systemImage: "pencil") { draft = item }
+                                    Button("Remove", systemImage: "trash", role: .destructive) { items.removeAll { $0.id == item.id } }
+                                }
+                            }
+                            // Empty rows to the bottom of the page, so it reads as a sheet to fill in.
+                            ForEach(0..<max(0, Int(geo.size.height / Self.rowHeight) - list.count - 1), id: \.self) { _ in tableRow() }
+                        }
+                    }
+                }
+                .frame(maxHeight: .infinity)
+                VStack(spacing: 0) {
+                    tableRow(icon: "sum", title: "Totals", moneyIn: moneyIn, moneyOut: moneyOut, left: ending, extra: extra,
+                             leftColor: leftColor(ending, kept: kept), bold: true)
+                    tableRow(icon: "shield", iconColor: .orange, title: "Buffer zone: kept untouched", left: kept)
+                        .background(Color.orange.opacity(0.08))
+                    tableRow(icon: "checkmark.circle", iconColor: ending - kept < 0 ? Theme.red : Theme.green, title: "Above the buffer: what is really spare",
+                             left: ending - kept, leftColor: ending - kept < 0 ? Theme.red : Theme.green, bold: true)
+                        .background(Color.primary.opacity(0.06))
+                }
             }
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
+            .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2), lineWidth: 1) }
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .frame(maxHeight: .infinity)
         }
-        .buttonStyle(.plain)
-        .help("Click to change or remove this line")
-        .contextMenu {
-            Button("Change…", systemImage: "pencil") { draft = item }
-            Button("Remove", systemImage: "trash", role: .destructive) { items.removeAll { $0.id == item.id } }
-        }
+        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .panelBackground(cornerRadius: 8)
     }
 
     private func running(_ list: [PlanItem]) -> [(left: Decimal, extra: Decimal)] {
