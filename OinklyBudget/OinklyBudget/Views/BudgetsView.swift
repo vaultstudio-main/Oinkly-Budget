@@ -4,9 +4,9 @@ import SwiftData
 /// Progress on every budget. The Monthly tab shows the budgets set as a monthly amount, a month at a time; the Weekly tab shows the
 /// ones set as a weekly amount, a week at a time, with the monthly maximum they add up to. A cash budget is marked as one on its
 /// card, whichever tab it is on. Click a budget to change its amount. Budgets you have hidden, or made yourself, are set in
-/// Settings ▸ Categories.
+/// Settings ▸ Categories or the Set Budgets window.
 struct BudgetsView: View {
-    @Environment(\.openSettings) private var openSettings
+    @Environment(\.openWindow) private var openWindow
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var allCategories: [Category]
     @Query private var cashMarks: [CashBudgetMark]
@@ -127,7 +127,7 @@ struct BudgetsView: View {
                   color: budgeted - spent < 0 ? Theme.red : Theme.green)
         }
         if shown.isEmpty {
-            Text("No monthly budgets are set. Choose Set Budgets above, or add some in Settings ▸ Categories.")
+            Text("No monthly budgets are set. Choose Set Budgets above.")
                 .foregroundStyle(.secondary)
                 .padding(.top, 30)
         } else {
@@ -194,15 +194,14 @@ struct BudgetsView: View {
         .foregroundStyle(.secondary)
     }
 
-    /// In the page's top bar: opens Settings ▸ Categories, where budgets are set, shown or hidden, and made.
+    /// In the page's top bar: opens the Set Budgets window, where budgets are set, shown or hidden, and made.
     private var setBudgetsButton: some View {
         Button {
-            UserDefaults.standard.set("categories", forKey: MacSettingsView.tabKey)
-            openSettings()
+            openWindow(id: BudgetSetupWindow.id)
         } label: {
             Label("Set Budgets…", systemImage: "slider.horizontal.3")
         }
-        .help("Opens Settings ▸ Categories, where you can set a budget on any category, show or hide it here, and add budgets of your own")
+        .help("Opens the Set Budgets window, where you can set a budget on any category, show or hide it here, and add budgets of your own. The same list is in Settings ▸ Categories")
     }
 
     private func grid(_ items: [Shown]) -> some View {
