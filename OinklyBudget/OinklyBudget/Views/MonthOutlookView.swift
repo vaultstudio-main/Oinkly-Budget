@@ -4,8 +4,11 @@ import SwiftData
 /// What is left to save this month: paycheques and other income, less bills and repeating expenses, less each budget
 /// (at its limit, or what has been spent if that is more). Bills count at what really came out once a payment is linked.
 struct MonthOutlookView: View {
+    enum OutlookTab: String, CaseIterable { case overview = "Overview", warPlan = "War Plan" }
+
     @State private var month = MonthFilter.start(of: .now)
     @State private var choosingAccounts = false
+    @State private var tab = OutlookTab.overview
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @AppStorage(MonthOutlook.excludedKey) private var excludedStored = ""
 
@@ -24,6 +27,12 @@ struct MonthOutlookView: View {
             PinnedHeader("Month Outlook") {
                 HStack {
                     MonthSelector(month: $month, range: range)
+                    Picker("View", selection: $tab) {
+                        ForEach(OutlookTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(width: 200)
                     Spacer()
                     Button {
                         choosingAccounts = true
@@ -34,7 +43,7 @@ struct MonthOutlookView: View {
                     .popover(isPresented: $choosingAccounts, arrowEdge: .bottom) { accountChooser }
                 }
             }
-            OutlookBody(month: month, excluded: MonthOutlook.excluded(from: excludedStored))
+            OutlookBody(month: month, tab: tab, excluded: MonthOutlook.excluded(from: excludedStored))
         }
         .background(Theme.background)
     }
@@ -75,6 +84,7 @@ extension MonthOutlookView {
 
 private struct OutlookBody: View {
     let month: Date
+    let tab: MonthOutlookView.OutlookTab
     let excluded: Set<String>
     @Query private var transactions: [Transaction]
     @Query private var allBills: [Bill]
@@ -94,8 +104,9 @@ private struct OutlookBody: View {
         let income, bills, budgets, other, left, billDifference, overspend: Decimal
     }
 
-    init(month: Date, excluded: Set<String>) {
+    init(month: Date, tab: MonthOutlookView.OutlookTab, excluded: Set<String>) {
         self.month = month
+        self.tab = tab
         self.excluded = excluded
         let end = Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month
         _transactions = Query(filter: #Predicate<Transaction> { $0.date >= month && $0.date < end })
@@ -114,7 +125,11 @@ private struct OutlookBody: View {
                                        billDifference: $0.billDifference, overspend: $0.budgetOverspend) }
             ?? Totals(income: outlook.incomeTotal, bills: outlook.billsTotal, budgets: outlook.budgetsTotal, other: outlook.otherSpending,
                       left: outlook.leftToSave, billDifference: outlook.billDifference, overspend: outlook.budgetOverspend)
-        return ScrollView {
+        if tab == .warPlan {
+            return AnyView(MonthWarPlanView(outlook: outlook)
+                .statusBarText("Monthly War Plan · \(month.formatted(.dateTime.month(.wide).year()))"))
+        }
+        return AnyView(ScrollView {
             VStack(spacing: 14) {
                 summaryCard(outlook, totals: totals, kept: kept)
                 StatGrid {
@@ -133,7 +148,7 @@ private struct OutlookBody: View {
             }
             .padding(16)
         }
-        .statusBarText("Month Outlook · \(month.formatted(.dateTime.month(.wide).year())) · \(outlook.leftToSave.formatted(.appCurrency)) left to save")
+        .statusBarText("Month Outlook · \(month.formatted(.dateTime.month(.wide).year())) · \(outlook.leftToSave.formatted(.appCurrency)) left to save"))
     }
 
     // MARK: Cards
