@@ -1404,6 +1404,31 @@ enum SharedHardeningTest {
                 check("S48 and ticks it off", bill.isPaid(on: today, calendar: calendar))
                 check("S48 and takes its amount off the balance too", owed(loan) == -4_500, "balance \(owed(loan))")
             }
+
+            // S49: narrowing a register to some statuses, or to with or without a receipt
+            do {
+                let fc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                func make(_ payee: String, _ state: ReconcileState, receipt: Bool) -> Transaction {
+                    let t = Transaction(account: nil, date: .now, payee: payee, amount: -10)
+                    fc.insert(t)
+                    t.state = state
+                    t.receiptData = receipt ? Data([1, 2, 3]) : nil
+                    return t
+                }
+                let a1 = make("A", .unreconciled, receipt: true), a2 = make("B", .unreconciled, receipt: false)
+                let a3 = make("C", .pending, receipt: true), a4 = make("D", .reconciled, receipt: false)
+                let all = [a1, a2, a3, a4]
+                func names(_ f: RegisterFilter) -> String { all.filter(f.matches).map(\.payee).joined() }
+                check("S49 with nothing ticked everything shows", names(RegisterFilter()) == "ABCD" && !RegisterFilter().isActive)
+                check("S49 ticking Unreconciled shows only those", names(RegisterFilter(states: [.unreconciled])) == "AB")
+                check("S49 ticking two statuses shows both", names(RegisterFilter(states: [.unreconciled, .pending])) == "ABC")
+                check("S49 only reconciled", names(RegisterFilter(states: [.reconciled])) == "D")
+                check("S49 with a receipt", names(RegisterFilter(withReceipt: true)) == "AC")
+                check("S49 without a receipt", names(RegisterFilter(withoutReceipt: true)) == "BD")
+                check("S49 both receipt ticks narrow nothing", names(RegisterFilter(withReceipt: true, withoutReceipt: true)) == "ABCD" && !RegisterFilter(withReceipt: true, withoutReceipt: true).isActive)
+                check("S49 a status and a receipt together", names(RegisterFilter(states: [.unreconciled], withoutReceipt: true)) == "B")
+                check("S49 the page says what it is showing", RegisterFilter(states: [.pending, .unreconciled], withReceipt: true).summary == "Pending, Unreconciled · With Receipt" && RegisterFilter().summary == "")
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

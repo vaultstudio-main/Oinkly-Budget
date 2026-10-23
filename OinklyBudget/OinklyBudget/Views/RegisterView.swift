@@ -39,6 +39,8 @@ private struct RegisterContent: View {
     @State private var makingRecurring: Transaction?
     @Environment(\.openWindow) private var openWindow
     @State private var choosingMonth = false
+    /// Narrowing the register to some statuses, or to transactions with or without a receipt. Chosen in Settings.
+    @State private var filter = RegisterFilter()
     /// How far the page starts from the left edge of the window, so the month can sit in the middle of the whole window.
     @State private var leftInset: CGFloat = 0
 
@@ -68,6 +70,8 @@ private struct RegisterContent: View {
                 balance += transaction.amount
                 return RegisterRow(transaction: transaction, balance: balance)
             }
+            // The balance runs through every transaction, then the ones that don't match are left out, so it stays true.
+            .filter { filter.matches($0.transaction) }
     }
 
     private func amountColor(_ amount: Decimal) -> Color {
@@ -77,18 +81,21 @@ private struct RegisterContent: View {
     private var header: some View {
         ZStack {
             // The month is only shown here, in the middle of the whole window, under the window's title. It is chosen in Settings.
-            Text(account.isLoan ? "All Activity" : month.formatted(.dateTime.month(.wide).year()))
-                .font(.title3.weight(.semibold))
-                .offset(x: -leftInset / 2)
-                .contentTransition(.numericText())
+            VStack(spacing: 2) {
+                Text(account.isLoan ? "All Activity" : month.formatted(.dateTime.month(.wide).year()))
+                    .font(.title3.weight(.semibold))
+                    .contentTransition(.numericText())
+                if filter.isActive {
+                    Text("Showing: \(filter.summary)").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .offset(x: -leftInset / 2)
             HStack(alignment: .firstTextBaseline) {
                 Text(account.name).font(.largeTitle.bold())
                 Spacer()
-                if !account.isLoan {
-                    Button("Settings", systemImage: "slider.horizontal.3") { choosingMonth = true }
-                        .help("Choose which month this register shows")
-                        .popover(isPresented: $choosingMonth, arrowEdge: .bottom) { monthPopover }
-                }
+                Button("Settings", systemImage: "slider.horizontal.3") { choosingMonth = true }
+                    .help(account.isLoan ? "Narrow this register to some statuses" : "Choose which month this register shows, and narrow it to some statuses or to transactions with or without a receipt")
+                    .popover(isPresented: $choosingMonth, arrowEdge: .bottom) { settingsPopover }
                 // Every button says what it does. Importing and exporting data are one pair; printing a statement is separate.
                 Button("Import CSV", systemImage: "square.and.arrow.down") {
                     if let url = StatementFilePicker.choose() { pendingImport = PendingImport(url: url) }
@@ -102,15 +109,48 @@ private struct RegisterContent: View {
         }
     }
 
-    /// The bubble that opens from Settings: the month this register shows.
-    private var monthPopover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Month").font(.headline)
-            MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
-            Text("The month this register is showing.").font(.caption).foregroundStyle(.secondary)
+    /// The bubble that opens from Settings: the month this register shows, and what to narrow it to. With none ticked in a group,
+    /// everything in it shows.
+    private var settingsPopover: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Register Settings").font(.headline)
+            if !account.isLoan {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Month").font(.subheadline.weight(.semibold))
+                    MonthSelector(month: $month, range: MonthFilter.range(first: dateRange.first, last: dateRange.last))
+                }
+                Divider()
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Status").font(.subheadline.weight(.semibold))
+                ForEach(ReconcileState.allCases) { state in
+                    Toggle(isOn: Binding(
+                        get: { filter.states.contains(state) },
+                        set: { on in if on { filter.states.insert(state) } else { filter.states.remove(state) } }
+                    )) {
+                        Label(state.title, systemImage: state.symbol).foregroundStyle(state.color)
+                    }
+                    .toggleStyle(.checkbox)
+                }
+            }
+            if account.supportsReceipts {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Receipts").font(.subheadline.weight(.semibold))
+                    Toggle("With a receipt", isOn: $filter.withReceipt).toggleStyle(.checkbox)
+                    Toggle("Without a receipt", isOn: $filter.withoutReceipt).toggleStyle(.checkbox)
+                }
+            }
+            Divider()
+            HStack {
+                Text("Tick what to show. With nothing ticked in a group, all of it shows.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Button("Clear") { filter = RegisterFilter() }.disabled(!filter.isActive)
+            }
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 330)
     }
 
     private var dateRange: (first: Date?, last: Date?) { modelContext.transactionDateRange(of: account) }
@@ -230,6 +270,9 @@ private struct RegisterContent: View {
             .overlay {
                 if !hasAny {
                     ContentUnavailableView("No Transactions", systemImage: "list.bullet.rectangle", description: Text(account.isCreditCard ? "Use File ▸ New Credit Card Charge to add a charge, or Pay a Bill to pay the card." : (account.isLoan ? "Use File ▸ Pay a Bill to make a payment." : (account.isCashOnHand ? "Use the New Cash Transaction button to record cash, or File ▸ ATM Withdrawal to put cash here." : "Use File ▸ New Transaction to add one."))))
+                } else if rows.isEmpty && filter.isActive {
+                    ContentUnavailableView("Nothing Matches", systemImage: "line.3.horizontal.decrease.circle",
+                                           description: Text("No transactions here match what is ticked in Settings. Open Settings and press Clear to see them all."))
                 } else if rows.isEmpty {
                     ContentUnavailableView("No Transactions in \(month.formatted(.dateTime.month(.wide).year()))", systemImage: "calendar")
                 }
