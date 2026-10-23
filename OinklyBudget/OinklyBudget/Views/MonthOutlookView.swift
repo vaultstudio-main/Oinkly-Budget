@@ -142,6 +142,7 @@ private struct OutlookBody: View {
                     StatTile(title: "Everything Else") { Text(totals.other, format: .appCurrency) }
                         note: { Text("spent with no bill or budget") }
                 }
+                planCard(outlook)
                 incomeCard(outlook)
                 billsCard(outlook)
                 budgetsCard(outlook)
@@ -152,6 +153,75 @@ private struct OutlookBody: View {
     }
 
     // MARK: Cards
+
+    /// What the War Plan said for this month against what the outlook now says. Shown only when there is a plan.
+    @ViewBuilder
+    private func planCard(_ outlook: MonthOutlook) -> some View {
+        let items = MonthWarPlanView.savedItems(for: month)
+        if !items.isEmpty {
+            let compare = WarPlanComparison.build(items: items, outlook: outlook)
+            ReportCard(title: "War Plan vs. Outlook") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Grid(alignment: .trailing, horizontalSpacing: 24, verticalSpacing: 6) {
+                        GridRow {
+                            Text("").gridColumnAlignment(.leading)
+                            Text("PLANNED").frame(minWidth: 110, alignment: .trailing)
+                            Text("OUTLOOK").frame(minWidth: 110, alignment: .trailing)
+                            Text("DIFFERENCE").frame(minWidth: 110, alignment: .trailing)
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                        planTotal("Money In", compare.plannedIn, compare.actualIn, goodWhenMore: true)
+                        planTotal("Money Out", compare.plannedOut, compare.actualOut, goodWhenMore: false)
+                        planTotal("Left to Save", compare.plannedExtra, compare.actualExtra, goodWhenMore: true, bold: true)
+                        Divider().gridCellColumns(4)
+                        GridRow {
+                            Text("LINE").gridColumnAlignment(.leading)
+                            Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]); Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]); Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                        ForEach(compare.rows) { row in
+                            GridRow {
+                                HStack(spacing: 6) {
+                                    Text(row.title)
+                                    if row.planned == nil { Text("not in plan").font(.caption2).foregroundStyle(.secondary) }
+                                    if row.actual == nil { Text("not in outlook").font(.caption2).foregroundStyle(.secondary) }
+                                }
+                                .gridColumnAlignment(.leading)
+                                Text(row.planned.map { $0.formatted(.appCurrency) } ?? "")
+                                Text(row.actual.map { $0.formatted(.appCurrency) } ?? "")
+                                differenceText(row.difference, goodWhenMore: row.isIncome)
+                            }
+                        }
+                    }
+                    Text("Lines are matched by name. The plan is only a what-if sheet and never changes the outlook.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func planTotal(_ title: String, _ planned: Decimal, _ actual: Decimal, goodWhenMore: Bool, bold: Bool = false) -> some View {
+        GridRow {
+            Text(title).fontWeight(bold ? .semibold : .regular).gridColumnAlignment(.leading)
+            Text(planned, format: .appCurrency)
+            Text(actual, format: .appCurrency)
+            differenceText(actual - planned, goodWhenMore: goodWhenMore)
+        }
+    }
+
+    private func differenceText(_ difference: Decimal?, goodWhenMore: Bool) -> some View {
+        Group {
+            if let difference, difference != 0 {
+                Text((difference > 0 ? "+" : "−") + abs(difference).formatted(.appCurrency))
+                    .foregroundStyle((difference > 0) == goodWhenMore ? Theme.green : Theme.red)
+            } else if difference != nil {
+                Text("On plan").foregroundStyle(.secondary)
+            } else {
+                Text("")
+            }
+        }
+    }
 
     private func summaryCard(_ outlook: MonthOutlook, totals: Totals, kept: OutlookSnapshot?) -> some View {
         let left = totals.left

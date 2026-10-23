@@ -1234,6 +1234,27 @@ enum SharedHardeningTest {
                 try mc.save()
                 check("S42 deleting the bills leaves no stray record", ((try? mc.fetch(FetchDescriptor<BillMethod>())) ?? []).isEmpty)
             }
+
+            // S43: the War Plan set against the Month Outlook
+            do {
+                let today = Date.now
+                func line(_ id: String, _ title: String, _ amount: Decimal) -> MonthOutlook.Line {
+                    MonthOutlook.Line(id: id, title: title, date: today, kind: "Bill", expected: amount, actual: nil, status: .expected)
+                }
+                let outlook = MonthOutlook(month: today, income: [line("i1", "Paycheque", 3000)], bills: [line("b1", "Rent", 1300), line("b2", "Power", 90)],
+                                           budgets: [], otherIncome: 0, otherSpending: 0)
+                let plan: [MonthWarPlanView.PlanItem] = [
+                    .init(title: "paycheque", date: today, amount: 3000, isIncome: true, origin: nil),
+                    .init(title: "Rent", date: today, amount: 1200, isIncome: false, origin: nil),
+                    .init(title: "Concert", date: today, amount: 80, isIncome: false, origin: nil)]
+                let compare = WarPlanComparison.build(items: plan, outlook: outlook)
+                func row(_ title: String) -> WarPlanComparison.Row? { compare.rows.first { $0.title == title } }
+                check("S43 a planned line is matched by name, whatever the case", row("paycheque")?.actual == 3000 && row("paycheque")?.difference == 0)
+                check("S43 a bill that cost more shows the difference", row("Rent")?.difference == 100)
+                check("S43 a planned line the outlook lacks has no outlook amount", row("Concert")?.actual == nil && row("Concert")?.difference == nil)
+                check("S43 an outlook line not planned is listed", row("Power")?.planned == nil && row("Power")?.actual == 90)
+                check("S43 totals compare the plan with the outlook", compare.plannedOut == 1280 && compare.actualOut == 1390 && compare.plannedExtra == 1720 && compare.actualExtra == 1610)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

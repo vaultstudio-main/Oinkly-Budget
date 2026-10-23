@@ -43,7 +43,15 @@ struct MonthWarPlanView: View {
     @State private var buffer: Decimal?
     @State private var draft: PlanItem?
 
-    private var storageKey: String { "warPlan." + OutlookSnapshots.key(for: outlook.month) }
+    private static func storageKey(for month: Date) -> String { "warPlan." + OutlookSnapshots.key(for: month) }
+    private var storageKey: String { Self.storageKey(for: outlook.month) }
+
+    /// The lines saved for a month, for the Overview to set against the outlook. Read only.
+    static func savedItems(for month: Date) -> [PlanItem] {
+        guard let data = UserDefaults.standard.data(forKey: storageKey(for: month)),
+              let stored = try? JSONDecoder().decode(Stored.self, from: data) else { return [] }
+        return stored.items
+    }
     private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
     private var startingAccount: Account? { startAccount.flatMap { key in accounts.first { MonthOutlook.accountKey($0) == key } } }
     private var opening: Decimal { startingAccount?.balance(asOf: .now) ?? typedStart ?? 0 }
