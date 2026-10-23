@@ -162,6 +162,16 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        WindowGroup("New Goal", id: "new-goal", for: NewGoalRequest.self) { $request in
+            NewGoalWindow(payoff: request?.payoff ?? false)
+                .savesChangesImmediately()
+                .appAppearance()
+        }
+        .modelContainer(container)
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         Window("Budget Settings", id: BudgetSetupWindow.id) {
             BudgetSetupWindow()
                 .savesChangesImmediately()

@@ -1,8 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Planning, in two tabs: Goals, the things you save up for or pay down, and Loans, each loan with how much is paid off and when it
-/// will be done. The Summary's Goals and Loans cards open the matching tab.
+/// Planning, in two tabs: Goals, the savings goals you are working toward, and Loans, each loan with how much is paid off and when it
+/// will be done, and the goals that pay a loan or card down. Each tab's button opens its own New Goal window. The Summary's Goals and
+/// Loans cards open the matching tab.
 struct PlanningView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case goals = "Goals"
@@ -20,7 +21,7 @@ struct PlanningView: View {
     }
 
     @AppStorage(PlanningView.tabKey) private var tabName = Tab.goals.rawValue
-    @State private var isAddingGoal = false
+    @Environment(\.openWindow) private var openWindow
 
     private var current: Tab { Tab(rawValue: tabName) ?? .goals }
     private var tabBinding: Binding<Tab> { Binding(get: { current }, set: { tabName = $0.rawValue }) }
@@ -30,21 +31,32 @@ struct PlanningView: View {
             FolderTabbedHeader(title: "Planning", tabs: Tab.allCases, selection: tabBinding, label: { $0.rawValue }) {
                 EmptyView()
             } centre: { EmptyView() } trailing: {
-                if current == .goals {
-                    Button { isAddingGoal = true } label: {
-                        Label("New Goal", systemImage: "plus")
-                            .font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                Button {
+                    openWindow(id: "new-goal", value: NewGoalRequest(payoff: current == .loans))
+                } label: {
+                    Label(current == .goals ? "New Savings Goal" : "New Loan Payoff Goal", systemImage: "plus")
+                        .font(.body.weight(.semibold))
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .help(current == .goals ? "Open a window to set up something to save toward" : "Open a window to set up paying a loan or card down")
             }
 
             switch current {
-            case .goals: GoalsView(isAdding: $isAddingGoal)
-            case .loans: LoansView()
+            case .goals: GoalsView(kind: .save)
+            case .loans: GoalsView(kind: .payoff, showsLoans: true)
             }
         }
         .background(Theme.background)
+    }
+}
+
+/// The window that makes a new goal: a savings goal, or the payoff of a loan or card, chosen by the button that opened it.
+struct NewGoalWindow: View {
+    let payoff: Bool
+
+    var body: some View {
+        GoalEditView(goal: nil, newKind: payoff ? .payoff : .save, locksKind: true)
+            .frame(width: 520, height: 620)
     }
 }

@@ -25,6 +25,11 @@ struct NewTransactionRequest: Codable, Hashable {
     var accountID: PersistentIdentifier?
 }
 
+/// What the New Goal window opens for: a savings goal, or the payoff of a loan or card.
+struct NewGoalRequest: Codable, Hashable {
+    var payoff = false
+}
+
 /// Which transaction the read-only detail window shows.
 struct TransactionDetailRequest: Codable, Hashable {
     var id: PersistentIdentifier

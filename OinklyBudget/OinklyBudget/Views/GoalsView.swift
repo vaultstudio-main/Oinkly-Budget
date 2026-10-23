@@ -15,19 +15,24 @@ private enum GoalSheet: Identifiable {
     }
 }
 
-/// Every goal, saving up or paying off a debt. Goals stand on their own: you record progress on the goal itself.
+/// The goals of one kind: savings goals on the Goals tab, and on the Loans tab the payoff goals along with every loan, each with how
+/// far along it is. Goals stand on their own: you record progress on the goal itself.
 struct GoalsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
-    private var goals: [Goal] { allGoals.live }
+    private var goals: [Goal] { allGoals.live.filter { $0.kind == kind } }
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
-    /// Set by the Planning header's New Goal button. Reset as soon as the sheet opens.
-    @Binding var isAdding: Bool
+    /// Savings goals, or the goals that pay a debt down.
+    var kind: GoalKind = .save
+    /// Show the loans too, above the goals: the Loans tab.
+    var showsLoans = false
 
     @State private var sheet: GoalSheet?
     @State private var detail: Goal?
     @State private var deleting: Goal?
+
+    private var loans: [Account] { showsLoans ? allAccounts.live.filter { $0.isLoan && !$0.isClosed } : [] }
 
     /// Goals still being worked on: nearest date first, then ones with no date.
     private var activeGoals: [Goal] {
@@ -42,65 +47,72 @@ struct GoalsView: View {
         goals.filter(\.isArchived).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
 
+    private var goalWord: String { kind == .save ? "savings goal" : "loan payoff goal" }
+
     var body: some View {
         let open = activeGoals
         let archived = archivedGoals
-        let saving = open.filter { !$0.isPayoff }
-        let paying = open.filter(\.isPayoff)
-        let saved = saving.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
-        let savingTarget = saving.reduce(Decimal(0)) { $0 + $1.targetAmount }
-        let paidDown = paying.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
-        let payoffTarget = paying.reduce(Decimal(0)) { $0 + $1.targetAmount }
+        let saved = open.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
+        let target = open.reduce(Decimal(0)) { $0 + $1.targetAmount }
         let needed = open.compactMap { $0.progress().neededPerMonth }.reduce(Decimal(0), +)
 
         ScrollView {
             VStack(spacing: 14) {
-                if goals.isEmpty {
+                if goals.isEmpty && loans.isEmpty {
                     empty
                 } else {
-                    StatGrid {
-                        StatTile(title: "Saved") {
-                            Text(saved, format: .appCurrency).foregroundStyle(Theme.green)
-                        } note: {
-                            Text("of \(savingTarget.formatted(.appCurrency)) · \(saving.count) goal\(saving.count == 1 ? "" : "s")")
-                        }
-                        StatTile(title: "Debt Paid Down") {
-                            Text(paidDown, format: .appCurrency).foregroundStyle(Theme.green)
-                        } note: {
-                            Text("of \(payoffTarget.formatted(.appCurrency)) · \(paying.count) goal\(paying.count == 1 ? "" : "s")")
-                        }
-                        StatTile(title: "Needed Per Month") {
-                            Text(needed, format: .appCurrency)
-                        } note: {
-                            Text("to hit every date")
-                        }
-                        StatTile(title: "Reached") {
-                            Text("\(archived.count)")
-                        } note: {
-                            Text("of \(goals.count) goal\(goals.count == 1 ? "" : "s")")
-                        }
-                    }
+                    if showsLoans { loansSection }
 
-                    ForEach(open) { goal in
-                        if goal.isLive { card(goal) }
-                    }
-
-                    if !archived.isEmpty {
+                    if showsLoans {
                         HStack {
-                            Text("COMPLETED").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            Text("LOAN PAYOFF GOALS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             Spacer()
                         }
                         .padding(.top, 6)
-                        ForEach(archived) { goal in
+                    }
+
+                    if goals.isEmpty {
+                        ReportCard(title: "No \(kind == .save ? "Savings" : "Loan Payoff") Goals Yet") {
+                            Text("Use New \(kind == .save ? "Savings Goal" : "Loan Payoff Goal") at the top of this page to make one.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        StatGrid {
+                            StatTile(title: kind == .save ? "Saved" : "Debt Paid Down") {
+                                Text(saved, format: .appCurrency).foregroundStyle(Theme.green)
+                            } note: {
+                                Text("of \(target.formatted(.appCurrency)) · \(open.count) goal\(open.count == 1 ? "" : "s")")
+                            }
+                            StatTile(title: "Needed Per Month") {
+                                Text(needed, format: .appCurrency)
+                            } note: {
+                                Text("to hit every date")
+                            }
+                            StatTile(title: "Reached") {
+                                Text("\(archived.count)")
+                            } note: {
+                                Text("of \(goals.count) goal\(goals.count == 1 ? "" : "s")")
+                            }
+                        }
+
+                        ForEach(open) { goal in
                             if goal.isLive { card(goal) }
+                        }
+
+                        if !archived.isEmpty {
+                            HStack {
+                                Text("COMPLETED").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .padding(.top, 6)
+                            ForEach(archived) { goal in
+                                if goal.isLive { card(goal) }
+                            }
                         }
                     }
                 }
             }
             .padding(16)
-        }
-        .onChange(of: isAdding) {
-            if isAdding { sheet = .add; isAdding = false }
         }
         .confirmationDialog(
             "Delete \(deleting?.name ?? "this goal")?",
@@ -152,18 +164,51 @@ struct GoalsView: View {
     }
 
     private var empty: some View {
-        ReportCard(title: "No Goals Yet") {
+        ReportCard(title: kind == .save ? "No Savings Goals Yet" : "No Loans or Payoff Goals Yet") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Planning is where you set goals and watch them get closer. Save toward something, like an emergency fund, a trip or a down payment, or set a goal to pay a debt down. Give each goal a target and a date.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Text("Follow a savings or checking account, or a loan or card, and the goal keeps up on its own as the balance changes. Or add progress yourself whenever you put money aside or make a payment. Each goal shows how far along you are and whether you are on pace to reach it by your date.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Text("Use New Goal at the top of this page to make your first one.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                if kind == .save {
+                    Text("Planning is where you set goals and watch them get closer. Save toward something, like an emergency fund, a trip or a down payment. Give each goal a target and a date.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Text("Follow a savings or checking account and the goal keeps up on its own as the balance changes. Or add progress yourself whenever you put money aside. Each goal shows how far along you are and whether you are on pace to reach it by your date.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Text("Use New Savings Goal at the top of this page to make your first one.")
+                        .font(.callout).foregroundStyle(.secondary)
+                } else {
+                    Text("This is where your loans and your plans to pay them down live. Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
+                        .font(.callout).foregroundStyle(.secondary)
+                    Text("Use New Loan Payoff Goal at the top of this page to aim at paying a loan or card down, or off, by a date. Follow the loan or card and the goal keeps up on its own as you pay.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
             }
+        }
+    }
+
+    /// The loans, with the totals across them, for the Loans tab.
+    @ViewBuilder
+    private var loansSection: some View {
+        let list = loans
+        let owed = list.reduce(Decimal(0)) { $0 + $1.loanProgress.owed }
+        let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
+        let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
+        if !list.isEmpty {
+            StatGrid {
+                StatTile(title: "Still Owed") {
+                    Text(owed, format: .appCurrency)
+                } note: {
+                    Text("across \(list.count) loan\(list.count == 1 ? "" : "s")")
+                }
+                StatTile(title: "Monthly Payments") {
+                    Text(monthly, format: .appCurrency)
+                } note: {
+                    Text("every month")
+                }
+                StatTile(title: "Paid Off") {
+                    Text("\(paidOff)")
+                } note: {
+                    Text("of \(list.count) loan\(list.count == 1 ? "" : "s")")
+                }
+            }
+            ForEach(list) { LoanPlanCard(account: $0) }
         }
     }
 }
@@ -502,6 +547,8 @@ struct GoalDetailView: View {
 
 struct GoalEditView: View {
     let goal: Goal?
+    /// For a new goal: what kind it is. When it is chosen by the button that opened the window, the type picker is left out.
+    var locksKind = false
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -525,9 +572,10 @@ struct GoalEditView: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @Query(sort: \Category.name) private var allCategories: [Category]
 
-    init(goal: Goal?) {
+    init(goal: Goal?, newKind: GoalKind = .save, locksKind: Bool = false) {
         self.goal = goal
-        let kind = goal?.kind ?? .save
+        self.locksKind = locksKind
+        let kind = goal?.kind ?? newKind
         _kind = State(initialValue: kind)
         _category = State(initialValue: GoalCategory.list(for: kind).first { $0.title == goal?.categoryName })
         _name = State(initialValue: goal?.name ?? "")
@@ -566,12 +614,14 @@ struct GoalEditView: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Goal type", selection: $kind) {
-                        ForEach(GoalKind.allCases) { Text($0.title).tag($0) }
+                    if !locksKind {
+                        Picker("Goal type", selection: $kind) {
+                            ForEach(GoalKind.allCases) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .disabled(goal != nil)
+                        .onChange(of: kind) { _, _ in category = nil; accountID = nil }
                     }
-                    .pickerStyle(.segmented)
-                    .disabled(goal != nil)
-                    .onChange(of: kind) { _, _ in category = nil; accountID = nil }
 
                     Picker(kind == .save ? "What are you saving for?" : "What kind of debt?", selection: $category) {
                         Text("Choose…").tag(GoalCategory?.none)
@@ -672,7 +722,7 @@ struct GoalEditView: View {
 
             }
             .formStyle(.grouped)
-            .navigationTitle(goal == nil ? "New Goal" : "Edit Goal")
+            .navigationTitle(goal != nil ? "Edit Goal" : (kind == .payoff ? "New Loan Payoff Goal" : "New Savings Goal"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 if goal != nil {
@@ -833,52 +883,5 @@ private struct LoanPlanCard: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(color)
             .fixedSize()
-    }
-}
-
-
-// MARK: Loans tab
-
-/// Every open loan on its own card: what is paid off, what is still owed, and the estimated payoff against its maturity date.
-struct LoansView: View {
-    @Query(sort: \Account.name) private var allAccounts: [Account]
-
-    private var loans: [Account] { allAccounts.live.filter { $0.isLoan && !$0.isClosed } }
-
-    var body: some View {
-        let list = loans
-        let owed = list.reduce(Decimal(0)) { $0 + $1.loanProgress.owed }
-        let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
-        let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
-        ScrollView {
-            VStack(spacing: 14) {
-                if list.isEmpty {
-                    ReportCard(title: "No Loans Yet") {
-                        Text("Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
-                            .font(.callout).foregroundStyle(.secondary)
-                    }
-                } else {
-                    StatGrid {
-                        StatTile(title: "Still Owed") {
-                            Text(owed, format: .appCurrency)
-                        } note: {
-                            Text("across \(list.count) loan\(list.count == 1 ? "" : "s")")
-                        }
-                        StatTile(title: "Monthly Payments") {
-                            Text(monthly, format: .appCurrency)
-                        } note: {
-                            Text("every month")
-                        }
-                        StatTile(title: "Paid Off") {
-                            Text("\(paidOff)")
-                        } note: {
-                            Text("of \(list.count) loan\(list.count == 1 ? "" : "s")")
-                        }
-                    }
-                    ForEach(list) { LoanPlanCard(account: $0) }
-                }
-            }
-            .padding(16)
-        }
     }
 }
