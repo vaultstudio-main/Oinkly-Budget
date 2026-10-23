@@ -170,11 +170,15 @@ struct GoalsView: View {
     private var empty: some View {
         ReportCard(title: "No Goals Yet") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Save toward something, like an emergency fund, a trip or a down payment, or set a goal to pay a debt down. Give it a target and a date. Follow a savings or checking account, or a loan or card, and the goal keeps up on its own, or add progress yourself.")
+                Text("Planning is where you set goals and watch them get closer. Save toward something, like an emergency fund, a trip or a down payment, or set a goal to pay a debt down. Give each goal a target and a date.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                Button("Create Your First Goal") { sheet = .add }
-                    .buttonStyle(.borderedProminent)
+                Text("Follow a savings or checking account, or a loan or card, and the goal keeps up on its own as the balance changes. Or add progress yourself whenever you put money aside or make a payment. Each goal shows how far along you are and whether you are on pace to reach it by your date.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Text("Use New Goal at the top of this page to make your first one.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
         }
     }
