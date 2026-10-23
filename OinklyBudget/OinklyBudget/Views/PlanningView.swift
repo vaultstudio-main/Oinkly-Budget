@@ -57,6 +57,5 @@ struct NewGoalWindow: View {
 
     var body: some View {
         GoalEditView(goal: nil, newKind: payoff ? .payoff : .save, locksKind: true)
-            .frame(width: 520, height: 660)
     }
 }

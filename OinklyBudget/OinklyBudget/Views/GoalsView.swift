@@ -219,7 +219,7 @@ private struct GoalCard: View {
                                     .frame(width: 64, height: 44)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                             } else {
-                                CategoryBadge(symbol: goal.symbol, color: color, size: 44)
+                                GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(goal.name).font(.headline)
@@ -323,7 +323,7 @@ struct GoalProgressSheet: View {
                 if goal.isLive {
                     Section {
                         HStack(spacing: 12) {
-                            CategoryBadge(symbol: goal.symbol, color: Color(hex: goal.colorHex), size: 40)
+                            GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
                             VStack(alignment: .leading) {
                                 Text(goal.name).font(.headline)
                                 Text(summary).font(.caption).foregroundStyle(.secondary)
@@ -399,7 +399,7 @@ struct GoalDetailView: View {
         return Form {
             Section {
                 HStack(spacing: 12) {
-                    CategoryBadge(symbol: goal.symbol, color: Color(hex: goal.colorHex), size: 44)
+                    GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
                     VStack(alignment: .leading) {
                         Text(goal.name).font(.title3.bold())
                         Text([goal.categoryName, goal.targetDate.map { "Target \($0.formatted(.dateTime.month(.wide).day().year()))" }]
@@ -542,12 +542,16 @@ struct GoalEditView: View {
     @State private var makeAccount = false
     @State private var newInstitution = ""
     @State private var newAccountNumber = ""
+    /// The icon chosen for the goal, or nil for its category's own, and its colour, 0 for its category's own.
+    @State private var iconSymbol: String?
+    @State private var iconTheme: Int
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @Query(sort: \Category.name) private var allCategories: [Category]
 
     init(goal: Goal?, newKind: GoalKind = .save, locksKind: Bool = false) {
         self.goal = goal
-        self.locksKind = locksKind
+        // Each kind of goal has its own editor: an existing goal never offers the other kind.
+        self.locksKind = locksKind || goal != nil
         let kind = goal?.kind ?? newKind
         _kind = State(initialValue: kind)
         _category = State(initialValue: GoalCategory.list(for: kind).first { $0.title == goal?.categoryName })
@@ -558,6 +562,9 @@ struct GoalEditView: View {
         _hasDate = State(initialValue: goal?.targetDate != nil)
         _targetDate = State(initialValue: goal?.targetDate ?? Calendar.current.date(byAdding: .year, value: 1, to: .now) ?? .now)
         _notes = State(initialValue: goal?.notes ?? "")
+        let own = GoalCategory.list(for: kind).first { $0.title == goal?.categoryName }
+        _iconSymbol = State(initialValue: goal.flatMap { $0.symbol != own?.symbol ? $0.symbol : nil })
+        _iconTheme = State(initialValue: goal.map { ArtworkTheme.theme(forHex: $0.colorHex) } ?? 0)
         _accountID = State(initialValue: goal?.followedAccount?.persistentModelID)
         _fromNow = State(initialValue: goal?.followedAccount != nil && !(goal?.isPayoff ?? false) && (goal?.startingAmount ?? 0) != 0)
     }
@@ -582,116 +589,55 @@ struct GoalEditView: View {
         return (target ?? 0) > 0
     }
 
+    private var kindTitle: String { kind == .payoff ? "Loan Payoff Goal" : "Savings Goal" }
+
+    /// One wide window, a column each for the goal, the money and the picture, so nothing scrolls.
     var body: some View {
-        SettingsWindowLayout(title: goal != nil ? "Edit Goal" : (kind == .payoff ? "New Loan Payoff Goal" : "New Savings Goal")) {
-            if !locksKind {
-                SettingsSection(title: "Goal Type") {
-                    Picker("Goal type", selection: $kind) {
-                        ForEach(GoalKind.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .disabled(goal != nil)
-                    .onChange(of: kind) { _, _ in category = nil; accountID = nil }
+        VStack(spacing: 0) {
+            HStack {
+                Text(goal != nil ? "Edit \(kindTitle)" : "New \(kindTitle)").font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
+                Form {
+                    goalSection
+                    if makeAccount && kind == .save && accountID == nil { newAccountSection }
+                    notesSection
                 }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
                 Divider()
-            }
-
-            SettingsSection(title: "About the Goal", note: kind == .save ? "What the money is for, and what to call it." : "What kind of debt this is, and what to call the goal.") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Picker(kind == .save ? "What are you saving for?" : "What kind of debt?", selection: $category) {
-                        Text("Choose…").tag(GoalCategory?.none)
-                        ForEach(GoalCategory.list(for: kind)) { item in
-                            Label(item.title, systemImage: item.symbol).tag(Optional(item))
-                        }
-                    }
-                    .onChange(of: category) { _, new in
-                        if let new, name.trimmingCharacters(in: .whitespaces).isEmpty { name = new.title }
-                    }
-                    FormTextField("Name", text: $name, hint: kind == .save ? "e.g. Japan trip" : "e.g. Pay off Visa")
+                Form {
+                    accountSection
+                    amountsSection
                 }
-            }
-            Divider()
-
-            SettingsSection(title: kind == .save ? "Account" : "Loan or Card", note: accountNote) {
-                VStack(alignment: .leading, spacing: 10) {
-                    if kind == .payoff && followable.isEmpty {
-                        Text("There is no loan or credit card to pay off yet. Add one under Accounts first.")
-                            .font(.callout).foregroundStyle(Theme.red)
-                    } else {
-                        Picker(kind == .save ? "Follow an account" : "Loan or card to pay off", selection: $accountID) {
-                            Text(kind == .save ? "None, I'll add progress myself" : "Choose…").tag(PersistentIdentifier?.none)
-                            ForEach(followable) { account in
-                                Text(account.name).tag(Optional(account.persistentModelID))
-                            }
-                        }
-                    }
-                    if linked != nil, kind == .save {
-                        Toggle("Count only what's added from now on", isOn: $fromNow).toggleStyle(.checkbox)
-                    }
-                    if kind == .save && accountID == nil && goal?.followedAccount == nil {
-                        Toggle("Create a savings account for this goal", isOn: $makeAccount).toggleStyle(.checkbox)
-                    }
-                }
-            }
-
-            if makeAccount && kind == .save && accountID == nil {
+                .formStyle(.grouped)
+                .scrollDisabled(true)
                 Divider()
-                SettingsSection(title: "New Savings Account", note: "The starting balance is what you entered as already saved below.") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        FormTextField("Institution", text: $newInstitution, hint: "Optional")
-                        FormTextField("Account number", text: $newAccountNumber, hint: "Optional, up to 17 digits")
-                            .onChange(of: newAccountNumber) { _, new in
-                                let clean = Account.digits(new, limit: Account.maxAccountNumberLength)
-                                if clean != new { newAccountNumber = clean }
-                            }
-                        LabeledContent("Starting balance", value: max(starting ?? 0, 0).formatted(.appCurrency))
+                Form { pictureSection }
+                    .formStyle(.grouped)
+                    .scrollDisabled(true)
+                    .frame(width: 380)
+            }
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: 10) {
+                    if goal != nil {
+                        Button("Delete Goal", role: .destructive) { confirmingDelete = true }
                     }
+                    Spacer()
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                    Button("Save", action: save).keyboardShortcut(.defaultAction).disabled(!canSave)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
-            Divider()
-
-            SettingsSection(title: "Amounts", note: amountsNote) {
-                VStack(alignment: .leading, spacing: 10) {
-                    if kind == .save {
-                        LabeledContent("Target amount") {
-                            CurrencyField("Target amount", value: $target).labelsHidden().multilineTextAlignment(.trailing)
-                        }
-                        if linked == nil {
-                            LabeledContent("Already saved") {
-                                CurrencyField("Already saved", value: $starting).labelsHidden().multilineTextAlignment(.trailing)
-                            }
-                        }
-                    } else {
-                        if let linked {
-                            LabeledContent("Amount owed today", value: Goal.owed(on: linked).formatted(.appCurrency))
-                        }
-                        LabeledContent("Pay it down to") {
-                            CurrencyField("Leave empty for paid off", value: $payoffTo).labelsHidden().multilineTextAlignment(.trailing)
-                        }
-                        if let linked, Goal.owed(on: linked) > 0 {
-                            LabeledContent("Amount to pay down", value: max(Goal.owed(on: linked) - (payoffTo ?? 0), 0).formatted(.appCurrency))
-                        }
-                    }
-                    Toggle("Set a target date", isOn: $hasDate.animation()).toggleStyle(.checkbox)
-                    if hasDate {
-                        DatePicker("Target date", selection: $targetDate, in: Date.now..., displayedComponents: .date)
-                    }
-                }
-            }
-            Divider()
-
-            SettingsSection(title: "Notes") {
-                FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false).lineLimit(1...4)
-            }
-        } footer: {
-            if goal != nil {
-                Button("Delete Goal", role: .destructive) { confirmingDelete = true }
-            }
-            Spacer()
-            Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-            Button("Save", action: save).keyboardShortcut(.defaultAction).disabled(!canSave)
+            .background(.bar)
         }
+        .background(Theme.background)
         .confirmationDialog("Delete this goal?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete Goal", role: .destructive) {
                 if let goal { modelContext.delete(goal) }
@@ -701,7 +647,150 @@ struct GoalEditView: View {
         } message: {
             Text("The goal and the progress you recorded on it are removed. Your accounts aren't affected.")
         }
-        .macSheetFrame(minHeight: 640)
+        .frame(width: 1180, height: 640)
+    }
+
+    // MARK: Columns
+
+    @ViewBuilder
+    private var goalSection: some View {
+        Section("Goal") {
+            if !locksKind {
+                Picker("Goal type", selection: $kind) {
+                    ForEach(GoalKind.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: kind) { _, _ in category = nil; accountID = nil }
+            }
+            Picker(kind == .save ? "What are you saving for?" : "What kind of debt?", selection: $category) {
+                Text("Choose…").tag(GoalCategory?.none)
+                ForEach(GoalCategory.list(for: kind)) { item in
+                    Label(item.title, systemImage: item.symbol).tag(Optional(item))
+                }
+            }
+            .onChange(of: category) { _, new in
+                if let new, name.trimmingCharacters(in: .whitespaces).isEmpty { name = new.title }
+            }
+            FormTextField("Name", text: $name, hint: kind == .save ? "e.g. Japan trip" : "e.g. Pay off Visa")
+        }
+    }
+
+    @ViewBuilder
+    private var notesSection: some View {
+        Section("Notes") {
+            FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false).lineLimit(3...5)
+        }
+    }
+
+    @ViewBuilder
+    private var newAccountSection: some View {
+        Section("New Savings Account") {
+            FormTextField("Institution", text: $newInstitution, hint: "Optional")
+            FormTextField("Account number", text: $newAccountNumber, hint: "Optional, up to 17 digits")
+                .onChange(of: newAccountNumber) { _, new in
+                    let clean = Account.digits(new, limit: Account.maxAccountNumberLength)
+                    if clean != new { newAccountNumber = clean }
+                }
+            LabeledContent("Starting balance", value: max(starting ?? 0, 0).formatted(.appCurrency))
+        }
+    }
+
+    @ViewBuilder
+    private var accountSection: some View {
+        Section(kind == .save ? "Account" : "Loan or Card") {
+            if kind == .payoff && followable.isEmpty {
+                Text("There is no loan or credit card to pay off yet. Add one under Accounts first.")
+                    .font(.callout).foregroundStyle(Theme.red)
+            } else {
+                Picker(kind == .save ? "Follow an account" : "Loan or card to pay off", selection: $accountID) {
+                    Text(kind == .save ? "None, I'll add progress myself" : "Choose…").tag(PersistentIdentifier?.none)
+                    ForEach(followable) { account in
+                        Text(account.name).tag(Optional(account.persistentModelID))
+                    }
+                }
+            }
+            if linked != nil, kind == .save {
+                Toggle("Count only what's added from now on", isOn: $fromNow)
+            }
+            if kind == .save && accountID == nil && goal?.followedAccount == nil {
+                Toggle("Create a savings account for this goal", isOn: $makeAccount)
+            }
+            Text(accountNote).font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var amountsSection: some View {
+        Section("Amounts") {
+            if kind == .save {
+                LabeledContent("Target amount") {
+                    CurrencyField("Target amount", value: $target).labelsHidden().multilineTextAlignment(.trailing)
+                }
+                if linked == nil {
+                    LabeledContent("Already saved") {
+                        CurrencyField("Already saved", value: $starting).labelsHidden().multilineTextAlignment(.trailing)
+                    }
+                }
+            } else {
+                if let linked {
+                    LabeledContent("Amount owed today", value: Goal.owed(on: linked).formatted(.appCurrency))
+                }
+                LabeledContent("Pay it down to") {
+                    CurrencyField("Leave empty for paid off", value: $payoffTo).labelsHidden().multilineTextAlignment(.trailing)
+                }
+                if let linked, Goal.owed(on: linked) > 0 {
+                    LabeledContent("Amount to pay down", value: max(Goal.owed(on: linked) - (payoffTo ?? 0), 0).formatted(.appCurrency))
+                }
+            }
+            Toggle("Set a target date", isOn: $hasDate.animation())
+            if hasDate {
+                DatePicker("Target date", selection: $targetDate, in: Date.now..., displayedComponents: .date)
+            }
+            Text(amountsNote).font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    /// The symbol and colour that show for the goal now.
+    private var shownSymbol: String { iconSymbol ?? category?.symbol ?? goal?.symbol ?? (kind == .save ? "target" : "arrow.down.circle") }
+    private var shownHex: String {
+        ArtworkTheme.hex(iconTheme) ?? category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
+    }
+
+    @ViewBuilder
+    private var pictureSection: some View {
+        Section("Icon") {
+            GoalIcon(symbol: shownSymbol, colorHex: shownHex, width: 96, height: 66)
+                .frame(maxWidth: .infinity)
+            Picker("Icon", selection: $iconSymbol) {
+                Label("Automatic", systemImage: category?.symbol ?? shownSymbol).tag(String?.none)
+                Divider()
+                ForEach(SymbolChoices.goalSymbols(for: kind).filter { $0 != category?.symbol }, id: \.self) { name in
+                    Label(SymbolChoices.name(name), systemImage: name).tag(Optional(name))
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Colour").font(.callout)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 38, maximum: 42), spacing: 8)], alignment: .leading, spacing: 8) {
+                    ForEach(0...ArtworkTheme.options.count, id: \.self) { number in
+                        Button { iconTheme = number } label: {
+                            Group {
+                                if number == 0 {
+                                    ArtworkTile(symbol: shownSymbol, color: Color(hex: category?.colorHex ?? goal?.colorHex ?? shownHex))
+                                } else {
+                                    ArtworkTile(symbol: shownSymbol, theme: number)
+                                }
+                            }
+                            .frame(width: 38, height: 26)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(iconTheme == number ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: iconTheme == number ? 3 : 1))
+                        }
+                        .buttonStyle(.plain)
+                        .help(ArtworkTheme.name(number))
+                        .accessibilityLabel(ArtworkTheme.name(number))
+                    }
+                }
+            }
+        }
     }
 
     private var accountNote: String {
@@ -725,8 +814,8 @@ struct GoalEditView: View {
     private func save() {
         let clean = String(name.trimmingCharacters(in: .whitespaces).prefix(40))
         let date = hasDate ? Calendar.current.startOfDay(for: targetDate) : nil
-        let symbol = category?.symbol ?? goal?.symbol ?? (kind == .save ? "target" : "arrow.down.circle")
-        let color = category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
+        let symbol = shownSymbol
+        let color = shownHex
         let floor = max(payoffTo ?? 0, 0)
         var account = linked
         if account == nil, makeAccount, kind == .save {

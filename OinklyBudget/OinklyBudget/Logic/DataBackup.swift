@@ -210,6 +210,9 @@ struct BackupFile: Codable {
         var autoEnter: Bool
         var isActive: Bool
         var createdAt: Date
+        /// The icon chosen for it, when it isn't its category's own. Added later; absent in older files.
+        var iconSymbol: String?
+        var artworkTheme: Int?
     }
 
     struct TagRecord: Codable {
@@ -265,6 +268,8 @@ struct BackupFile: Codable {
         var paysFromMadeThrough: Date?
         /// The payment method the bill is usually paid with, as a built-in method's raw value or "custom:" and a name.
         var paymentMethodRaw: String?
+        /// The icon chosen for the bill, when it isn't its category's own. Added later; absent in older files.
+        var iconSymbol: String?
     }
 
     /// A short description for the confirmation message.
@@ -340,7 +345,8 @@ enum DataBackup {
                 .init(accountID: ids[r.account!.persistentModelID]!, payee: r.payee,
                       categoryKey: r.category?.isLive == true ? r.category?.systemKey : nil, memo: r.memo, amount: text(r.amount),
                       paymentTypeRaw: r.paymentTypeRaw, frequencyRaw: r.frequencyRaw, startDate: r.startDate, endDate: r.endDate,
-                      nextDate: r.nextDate, autoEnter: r.autoEnter, isActive: r.isActive, createdAt: r.createdAt)
+                      nextDate: r.nextDate, autoEnter: r.autoEnter, isActive: r.isActive, createdAt: r.createdAt,
+                      iconSymbol: ItemIcons.symbol(of: ItemIcons.key(for: r), in: choices), artworkTheme: themeByKey[ItemIcons.key(for: r)])
             }
         }
 
@@ -385,7 +391,8 @@ enum DataBackup {
                   categoryKey: b.category?.isLive == true ? b.category?.systemKey : nil,
                   artworkTheme: themeByKey[ArtworkChoices.key(for: b)],
                   paysFromIndex: paySource(b)?.0, paysFromMadeThrough: paySource(b)?.1,
-                  paymentMethodRaw: BillMethods.raw(for: b, in: context))
+                  paymentMethodRaw: BillMethods.raw(for: b, in: context),
+                  iconSymbol: ItemIcons.symbol(of: ItemIcons.key(for: b), in: choices))
         }
 
         file.paymentMethods = try context.fetch(FetchDescriptor<CustomPaymentMethod>()).live.map { .init(name: $0.name, symbol: $0.symbol) }
@@ -627,6 +634,8 @@ enum DataBackup {
             rule.isActive = record.isActive
             rule.createdAt = record.createdAt
             context.insert(rule)
+            if let symbol = record.iconSymbol, !symbol.isEmpty { context.insert(ArtworkChoice(key: ItemIcons.prefix + ItemIcons.key(for: rule) + "|" + symbol, theme: 1)) }
+            if let theme = record.artworkTheme, theme > 0, ArtworkTheme.isValid(theme) { context.insert(ArtworkChoice(key: ItemIcons.key(for: rule), theme: theme)) }
             restoredRules.append(rule)
         }
 
@@ -686,6 +695,7 @@ enum DataBackup {
             bill.photoData = record.photoData
             bill.category = record.categoryKey.flatMap { byKey[$0] }
             context.insert(bill)
+            if let symbol = record.iconSymbol, !symbol.isEmpty { context.insert(ArtworkChoice(key: ItemIcons.prefix + ItemIcons.key(for: bill) + "|" + symbol, theme: 1)) }
             if let theme = record.artworkTheme, theme > 0, ArtworkTheme.isValid(theme) { context.insert(ArtworkChoice(key: ArtworkChoices.key(for: bill), theme: theme)) }
             if let index = record.paysFromIndex, let account = accounts[index] {
                 let source = BillPaySource(billKey: BillPaySources.key(for: bill), accountKey: BillPaySources.key(for: account))

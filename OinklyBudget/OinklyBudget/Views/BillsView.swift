@@ -223,9 +223,7 @@ private struct BillSetupRow: View {
         if bill.isLive {
             Button(action: onEdit) {
                 HStack(spacing: 10) {
-                    AccountPicture(data: bill.displayPhotoData, type: bill.loan?.isLive == true ? bill.loan?.type : nil, bill: bill)
-                        .frame(width: 32, height: 32)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    BillIconView(bill: bill, size: 32)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Text(bill.name).font(.body).lineLimit(1)
@@ -288,9 +286,7 @@ private struct BillRow: View {
 
                 Button(action: onEdit) {
                     HStack {
-                        AccountPicture(data: item.bill.displayPhotoData, type: item.bill.loan?.isLive == true ? item.bill.loan?.type : nil, bill: item.bill)
-                            .frame(width: 36, height: 36)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        BillIconView(bill: item.bill, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 4) {
                                 Text(item.bill.name).font(.body).strikethrough(item.isPaid)
@@ -494,6 +490,8 @@ struct BillEditView: View {
     @State private var category: Category?
     @State private var photoData: Data?
     @State private var artworkTheme = 0
+    /// The icon chosen for the bill, or nil for its category's own.
+    @State private var iconSymbol: String?
     @Query(sort: \Account.name) private var allAccounts: [Account]
     /// The account this bill comes out of, for the pending entry it makes on each due date. Optional.
     @State private var paysFrom: Account?
@@ -600,6 +598,7 @@ struct BillEditView: View {
             if let bill {
                 paysFrom = BillPaySources.account(for: bill, in: modelContext)
                 paymentChoice = BillMethods.choice(for: bill, in: modelContext)
+                iconSymbol = ItemIcons.symbol(of: ItemIcons.key(for: bill), in: modelContext)
             }
         }
     }
@@ -673,10 +672,19 @@ struct BillEditView: View {
     @ViewBuilder
     private var pictureSections: some View {
         Section("Photo") {
-            AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: artworkTheme)
-                .frame(maxWidth: .infinity)
-                .frame(height: 110)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            if photoData == nil && inheritedPhoto == nil && bill?.loan == nil {
+                // No photo: the bill shows its icon, so that is what the preview shows.
+                ArtworkTile(symbol: iconSymbol ?? (category?.isLive == true ? category?.symbol : nil) ?? "calendar", theme: artworkTheme, category: category)
+                    .frame(width: 84, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 96)
+            } else {
+                AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: artworkTheme)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 110)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
             if photoData == nil, inheritedPhoto != nil, let loan = bill?.loan {
                 Text("Using the photo from \(loan.name). Choose a different one to replace it for this bill.")
                     .font(.footnote).foregroundStyle(.secondary)
@@ -692,8 +700,13 @@ struct BillEditView: View {
             }
         }
         if photoData == nil && inheritedPhoto == nil {
-            Section("Picture Colour") {
-                ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)
+            if bill?.loan == nil {
+                // A bill shows its category's icon unless you choose another, or add a photo.
+                Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category) }
+            } else {
+                Section("Picture Colour") {
+                    ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)
+                }
             }
         }
     }
@@ -723,11 +736,13 @@ struct BillEditView: View {
             created.category = category
             modelContext.insert(created)
             ArtworkChoices.set(artworkTheme, for: created, in: modelContext)
+            ItemIcons.set(iconSymbol, owner: ItemIcons.key(for: created), in: modelContext)
             BillPaySources.set(paysFrom, for: created, in: modelContext)
             BillMethods.set(paymentChoice, for: created, in: modelContext)
         }
         if let bill {
             ArtworkChoices.set(artworkTheme, for: bill, in: modelContext)
+            ItemIcons.set(iconSymbol, owner: ItemIcons.key(for: bill), in: modelContext)
             if bill.loan == nil { BillPaySources.set(paysFrom, for: bill, in: modelContext) }
             BillMethods.set(paymentChoice, for: bill, in: modelContext)
         }

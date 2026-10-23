@@ -1503,6 +1503,33 @@ enum SharedHardeningTest {
                 check("S52 the buffer, the starting account and the chosen accounts are gone", suite.object(forKey: OutlookSettings.bufferKey) == nil && suite.object(forKey: OutlookSettings.startAccountKey) == nil && suite.object(forKey: MonthOutlook.excludedKey) == nil && suite.object(forKey: TransactionsSettings.accountsKey) == nil)
                 check("S52 the month being shown is only a view and stays", suite.object(forKey: OutlookSettings.monthKey) as? Double == 12.0)
             }
+
+            // S53: a bill or repeating rule can have an icon of its own
+            do {
+                let ic = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bill = Bill(name: "S53 bill", amount: 10, frequency: .monthly, dueDate: .now)
+                ic.insert(bill)
+                try ic.save()
+                let owner = ItemIcons.key(for: bill)
+                check("S53 a bill starts with no icon of its own", ItemIcons.symbol(of: owner, in: ic) == nil)
+                ItemIcons.set("bolt", owner: owner, in: ic)
+                try ic.save()
+                check("S53 the icon is kept", ItemIcons.symbol(of: owner, in: ic) == "bolt")
+                ItemIcons.set("car", owner: owner, in: ic)
+                try ic.save()
+                check("S53 changing it keeps one", ItemIcons.symbol(of: owner, in: ic) == "car" && ((try? ic.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).count == 1)
+                ArtworkChoices.removeOrphans(in: ic)
+                ItemIcons.removeOrphans(in: ic)
+                check("S53 the tidy-ups keep it while the bill is there", ItemIcons.symbol(of: owner, in: ic) == "car")
+                ItemIcons.set(nil, owner: owner, in: ic)
+                try ic.save()
+                check("S53 choosing Automatic takes it away", ItemIcons.symbol(of: owner, in: ic) == nil)
+                ItemIcons.set("house", owner: owner, in: ic)
+                ic.delete(bill)
+                try ic.save()
+                ItemIcons.removeOrphans(in: ic)
+                check("S53 deleting the bill leaves no stray icon", ((try? ic.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).isEmpty)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

@@ -94,7 +94,7 @@ enum ArtworkChoices {
     static func removeOrphans(in context: ModelContext) {
         let accounts = Set(((try? context.fetch(FetchDescriptor<Account>())) ?? []).live.map { key(for: $0) })
         let bills = Set(((try? context.fetch(FetchDescriptor<Bill>())) ?? []).live.map { key(for: $0) })
-        for choice in all(in: context) where !accounts.contains(choice.key) && !bills.contains(choice.key) { context.delete(choice) }
+        for choice in all(in: context) where !choice.key.hasPrefix(ItemIcons.prefix) && !choice.key.hasPrefix("rule|") && !choice.key.hasPrefix("cat|") && !accounts.contains(choice.key) && !bills.contains(choice.key) { context.delete(choice) }
     }
 }
 

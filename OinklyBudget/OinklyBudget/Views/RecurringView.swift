@@ -203,9 +203,7 @@ private struct OccurrenceRow: View {
                 checkOff
                 Button(action: onEdit) {
                     HStack {
-                        AccountPicture(data: nil, type: nil)
-                            .frame(width: 36, height: 36)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                        RuleIconView(rule: item.rule, size: 36)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.rule.payee).font(.body)
                             Text(subtitle).font(.caption).foregroundStyle(item.isOverdue ? Theme.red : (item.kind == .added ? Theme.green : Color.secondary))
@@ -315,9 +313,7 @@ private struct RuleRow: View {
         HStack(alignment: .center, spacing: 10) {
             Button(action: onEdit) {
                 HStack(spacing: 10) {
-                    AccountPicture(data: nil, type: nil)
-                        .frame(width: 32, height: 32)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    RuleIconView(rule: rule, size: 32)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(rule.payee).font(.body).lineLimit(1)
@@ -406,6 +402,9 @@ struct RecurringRuleEditor: View {
     @State private var endDate: Date
     @State private var autoEnter: Bool
     @State private var loadedMethod = false
+    /// The icon chosen for the rule, or nil for its category's own.
+    @State private var iconSymbol: String?
+    @State private var artworkTheme = 0
 
     init(rule: RecurringTransaction?, source: Transaction?) {
         self.rule = rule
@@ -494,6 +493,13 @@ struct RecurringRuleEditor: View {
                 }
                 .formStyle(.grouped)
                 .scrollDisabled(true)
+                Divider()
+                Form {
+                    Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category) }
+                }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                .frame(width: 360)
             }
             VStack(spacing: 0) {
                 Divider()
@@ -509,7 +515,7 @@ struct RecurringRuleEditor: View {
             }
             .background(.bar)
         }
-        .frame(width: 880, height: 500)
+        .frame(width: 1200, height: 440)
         .background(Theme.background)
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
@@ -526,6 +532,10 @@ struct RecurringRuleEditor: View {
                 }
             }
             if let account, !choosable.contains(where: { $0 === account }) { self.account = nil }
+            if let rule {
+                iconSymbol = ItemIcons.symbol(of: ItemIcons.key(for: rule), in: modelContext)
+                artworkTheme = ((try? modelContext.fetch(FetchDescriptor<ArtworkChoice>())) ?? []).live.first { $0.key == ItemIcons.key(for: rule) }?.theme ?? 0
+            }
         }
     }
 
@@ -557,6 +567,8 @@ struct RecurringRuleEditor: View {
                 target.nextDate = Recurring.firstDue(onOrAfter: .now, for: target) ?? start
             }
         }
+        ItemIcons.set(iconSymbol, owner: ItemIcons.key(for: target), in: modelContext)
+        ArtworkChoices.apply(artworkTheme, key: ItemIcons.key(for: target), in: modelContext)
         modelContext.saveNow()
         Recurring.run(in: modelContext)
         Task { await BillNotifier.refresh(in: modelContext) }

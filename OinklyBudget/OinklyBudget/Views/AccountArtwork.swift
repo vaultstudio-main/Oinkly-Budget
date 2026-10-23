@@ -45,7 +45,31 @@ enum ArtworkTheme {
         Option(name: "Gold", top: Color(red: 0.98, green: 0.80, blue: 0.28), bottom: Color(red: 0.93, green: 0.50, blue: 0.15)),
         Option(name: "Rose", top: Color(red: 0.98, green: 0.55, blue: 0.55), bottom: Color(red: 0.80, green: 0.20, blue: 0.40)),
         Option(name: "Graphite", top: Color(red: 0.55, green: 0.60, blue: 0.68), bottom: Color(red: 0.22, green: 0.26, blue: 0.34)),
+        // Added later, so they follow the first eight: 9 and up.
+        Option(name: "Mint", top: Color(red: 0.55, green: 0.90, blue: 0.70), bottom: Color(red: 0.12, green: 0.62, blue: 0.50)),
+        Option(name: "Sky", top: Color(red: 0.55, green: 0.85, blue: 0.99), bottom: Color(red: 0.20, green: 0.55, blue: 0.90)),
+        Option(name: "Lavender", top: Color(red: 0.80, green: 0.70, blue: 0.98), bottom: Color(red: 0.52, green: 0.38, blue: 0.85)),
+        Option(name: "Coral", top: Color(red: 1.00, green: 0.66, blue: 0.55), bottom: Color(red: 0.90, green: 0.36, blue: 0.34)),
+        Option(name: "Lime", top: Color(red: 0.80, green: 0.92, blue: 0.40), bottom: Color(red: 0.42, green: 0.68, blue: 0.18)),
+        Option(name: "Amber", top: Color(red: 1.00, green: 0.78, blue: 0.35), bottom: Color(red: 0.85, green: 0.45, blue: 0.10)),
+        Option(name: "Plum", top: Color(red: 0.78, green: 0.40, blue: 0.70), bottom: Color(red: 0.40, green: 0.16, blue: 0.48)),
+        Option(name: "Teal", top: Color(red: 0.30, green: 0.80, blue: 0.82), bottom: Color(red: 0.08, green: 0.42, blue: 0.52)),
+        Option(name: "Crimson", top: Color(red: 0.95, green: 0.40, blue: 0.40), bottom: Color(red: 0.62, green: 0.10, blue: 0.22)),
+        Option(name: "Sand", top: Color(red: 0.92, green: 0.84, blue: 0.68), bottom: Color(red: 0.68, green: 0.55, blue: 0.38)),
+        Option(name: "Steel", top: Color(red: 0.62, green: 0.72, blue: 0.82), bottom: Color(red: 0.30, green: 0.40, blue: 0.55)),
+        Option(name: "Fuchsia", top: Color(red: 0.98, green: 0.45, blue: 0.85), bottom: Color(red: 0.70, green: 0.15, blue: 0.62)),
     ]
+
+    /// A theme's colour as a hex string, for the places that keep one colour (a goal's).
+    static func hex(_ theme: Int) -> String? {
+        guard theme >= 1 && theme <= options.count, let rgb = NSColor(options[theme - 1].bottom).usingColorSpace(.sRGB) else { return nil }
+        return String(format: "%02X%02X%02X", Int((rgb.redComponent * 255).rounded()), Int((rgb.greenComponent * 255).rounded()), Int((rgb.blueComponent * 255).rounded()))
+    }
+
+    /// The theme a hex string came from, or 0 when it is none of them.
+    static func theme(forHex hex: String) -> Int {
+        (1...options.count).first { Self.hex($0)?.uppercased() == hex.uppercased() } ?? 0
+    }
 
     static func isValid(_ theme: Int) -> Bool { theme >= 0 && theme <= options.count }
     static func name(_ theme: Int) -> String { theme >= 1 && theme <= options.count ? options[theme - 1].name : "Automatic" }
