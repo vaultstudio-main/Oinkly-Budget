@@ -22,13 +22,6 @@ struct GoalsView: View {
     private var goals: [Goal] { allGoals.live }
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
-    /// Loans with a maturity date that no goal already follows. They sit with the goals so you can see whether the
-    /// loan will be paid off before it matures.
-    private var datedLoans: [Account] {
-        let followed = Set(goals.filter { !$0.isArchived }.compactMap { $0.followedAccount?.persistentModelID })
-        return allAccounts.live.filter { $0.isLoan && !$0.isClosed && $0.payoffDate != nil && !followed.contains($0.persistentModelID) && !$0.loanProgress.isPaidOff }
-    }
-
     /// Set by the Planning header's New Goal button. Reset as soon as the sheet opens.
     @Binding var isAdding: Bool
 
@@ -62,7 +55,7 @@ struct GoalsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                if goals.isEmpty && datedLoans.isEmpty {
+                if goals.isEmpty {
                     empty
                 } else {
                     StatGrid {
@@ -90,15 +83,6 @@ struct GoalsView: View {
 
                     ForEach(open) { goal in
                         if goal.isLive { card(goal) }
-                    }
-
-                    if !datedLoans.isEmpty {
-                        HStack {
-                            Text("LOANS WITH A MATURITY DATE").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        .padding(.top, 6)
-                        ForEach(datedLoans) { LoanPlanCard(account: $0) }
                     }
 
                     if !archived.isEmpty {
@@ -849,5 +833,52 @@ private struct LoanPlanCard: View {
             .font(.caption.weight(.semibold))
             .foregroundStyle(color)
             .fixedSize()
+    }
+}
+
+
+// MARK: Loans tab
+
+/// Every open loan on its own card: what is paid off, what is still owed, and the estimated payoff against its maturity date.
+struct LoansView: View {
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+
+    private var loans: [Account] { allAccounts.live.filter { $0.isLoan && !$0.isClosed } }
+
+    var body: some View {
+        let list = loans
+        let owed = list.reduce(Decimal(0)) { $0 + $1.loanProgress.owed }
+        let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
+        let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
+        ScrollView {
+            VStack(spacing: 14) {
+                if list.isEmpty {
+                    ReportCard(title: "No Loans Yet") {
+                        Text("Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                } else {
+                    StatGrid {
+                        StatTile(title: "Still Owed") {
+                            Text(owed, format: .appCurrency)
+                        } note: {
+                            Text("across \(list.count) loan\(list.count == 1 ? "" : "s")")
+                        }
+                        StatTile(title: "Monthly Payments") {
+                            Text(monthly, format: .appCurrency)
+                        } note: {
+                            Text("every month")
+                        }
+                        StatTile(title: "Paid Off") {
+                            Text("\(paidOff)")
+                        } note: {
+                            Text("of \(list.count) loan\(list.count == 1 ? "" : "s")")
+                        }
+                    }
+                    ForEach(list) { LoanPlanCard(account: $0) }
+                }
+            }
+            .padding(16)
+        }
     }
 }

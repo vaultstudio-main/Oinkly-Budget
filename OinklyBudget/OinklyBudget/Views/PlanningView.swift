@@ -1,43 +1,48 @@
 import SwiftUI
 import SwiftData
 
-/// Planning: a place for the things you do ahead of time. Goals is the first section; more can sit beside it.
+/// Planning, in two tabs: Goals, the things you save up for or pay down, and Loans, each loan with how much is paid off and when it
+/// will be done. The Summary's Goals and Loans cards open the matching tab.
 struct PlanningView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case goals = "Goals"
+        case loans = "Loans"
         var id: Self { self }
     }
 
-    @State private var tab = Tab.goals
+    /// The tab to show, kept in preferences so the Summary can choose it before it opens this page.
+    static let tabKey = "planningTab"
+
+    /// Opens Planning on the given tab, from anywhere in the app.
+    static func open(_ tab: Tab) {
+        UserDefaults.standard.set(tab.rawValue, forKey: tabKey)
+        NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": "planning"])
+    }
+
+    @AppStorage(PlanningView.tabKey) private var tabName = Tab.goals.rawValue
     @State private var isAddingGoal = false
+
+    private var current: Tab { Tab(rawValue: tabName) ?? .goals }
+    private var tabBinding: Binding<Tab> { Binding(get: { current }, set: { tabName = $0.rawValue }) }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 16) {
-                Text("Planning").font(.largeTitle.bold())
-                Spacer()
-                if Tab.allCases.count > 1 {
-                    Picker("Planning", selection: $tab) {
-                        ForEach(Tab.allCases) { Text($0.rawValue).tag($0) }
+            FolderTabbedHeader(title: "Planning", tabs: Tab.allCases, selection: tabBinding, label: { $0.rawValue }) {
+                EmptyView()
+            } centre: { EmptyView() } trailing: {
+                if current == .goals {
+                    Button { isAddingGoal = true } label: {
+                        Label("New Goal", systemImage: "plus")
+                            .font(.body.weight(.semibold))
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(maxWidth: 260)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                 }
-                Button { isAddingGoal = true } label: {
-                    Label("New Goal", systemImage: "plus")
-                        .font(.body.weight(.semibold))
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
-            .pinnedHeaderStyle()
 
-            switch tab {
+            switch current {
             case .goals: GoalsView(isAdding: $isAddingGoal)
+            case .loans: LoansView()
             }
         }
         .background(Theme.background)

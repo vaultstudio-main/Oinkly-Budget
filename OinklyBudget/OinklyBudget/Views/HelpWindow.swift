@@ -374,7 +374,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Goals & Planning", symbol: "target", lines: [
-                "Planning is where your goals live, with your loans and their estimated payoff dates beside them.",
+                "Planning has two tabs. Goals is where your goals live. Loans lists each of your loans with how much is paid off, what is still owed and its estimated payoff date against its maturity date. On the Summary, the Goals · Progress and Loans · Progress cards each show two rows to start with, scroll for more, and open the matching tab of Planning when you click them.",
                 "## Making a goal",
                 "• Pick Save up or Pay off a debt, and set a target amount and date.",
                 "• Link the goal to an account. A savings goal follows a checking or savings balance, and a payoff goal follows a loan or card. Progress then updates by itself: a savings goal counts the balance above where it started, a payoff goal counts how far the balance has come down.",

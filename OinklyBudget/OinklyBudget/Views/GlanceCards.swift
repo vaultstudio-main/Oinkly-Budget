@@ -4,8 +4,10 @@ import Charts
 
 /// The set sizes of the Summary page's cards. Each card is always this tall, with or without anything in it, so the page keeps its shape.
 enum SummaryCardSize {
-    /// The room for the list inside the Loans, Goals and Priority Bills cards.
+    /// The room for the list inside the Priority Bills card.
     static let list: CGFloat = 150
+    /// The room for the Loans and Goals progress cards: two rows of them to start with, and more scroll.
+    static let progress: CGFloat = 160
     /// The room for the Last 15 Transactions list.
     static let recent: CGFloat = 360
     /// The room for Top Spending Categories.
@@ -266,19 +268,25 @@ struct LoansProgressCard: View {
         ReportCard(title: "Loans · Progress") {
             // One set height: the loans scroll inside it when there are more, and a plain note holds its place when there are none.
             if loans == nil {
-                ReportCalculating(height: SummaryCardSize.list).frame(height: SummaryCardSize.list)
+                ReportCalculating(height: SummaryCardSize.progress).frame(height: SummaryCardSize.progress)
             } else if let loans, loans.isEmpty {
-                ReportEmpty(message: "Add one in Settings ▸ Accounts to watch it get paid off.", height: SummaryCardSize.list,
-                            title: "No mortgages or loans yet", clean: true, symbol: "banknote").frame(height: SummaryCardSize.list)
+                ReportEmpty(message: "Add one in Settings ▸ Accounts to watch it get paid off.", height: SummaryCardSize.progress,
+                            title: "No mortgages or loans yet", clean: true, symbol: "banknote").frame(height: SummaryCardSize.progress)
             } else if let loans {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
                         ForEach(loans) { row($0) }
                     }
                 }
-                .frame(height: SummaryCardSize.list)
+                .frame(height: SummaryCardSize.progress)
             }
         }
+        // Clicking the card opens Planning on its Loans tab, from the top.
+        .contentShape(Rectangle())
+        .onTapGesture { PlanningView.open(.loans) }
+        .help("Open Loans in Planning")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens Loans in Planning")
     }
 
     private func row(_ line: Liabilities.Line) -> some View {
@@ -334,17 +342,23 @@ struct GoalsProgressCard: View {
         let list = goals
         ReportCard(title: "Goals · Progress") {
             if list.isEmpty {
-                ReportEmpty(message: "Set one up in Planning to watch your progress here.", height: SummaryCardSize.list,
-                            title: "No goals yet", clean: true, symbol: "target").frame(height: SummaryCardSize.list)
+                ReportEmpty(message: "Set one up in Planning to watch your progress here.", height: SummaryCardSize.progress,
+                            title: "No goals yet", clean: true, symbol: "target").frame(height: SummaryCardSize.progress)
             } else {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 380), spacing: 28, alignment: .top)], alignment: .leading, spacing: 18) {
                         ForEach(list) { row($0) }
                     }
                 }
-                .frame(height: SummaryCardSize.list)
+                .frame(height: SummaryCardSize.progress)
             }
         }
+        // Clicking the card opens Planning on its Goals tab, from the top.
+        .contentShape(Rectangle())
+        .onTapGesture { PlanningView.open(.goals) }
+        .help("Open Goals in Planning")
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens Goals in Planning")
     }
 
     @ViewBuilder
