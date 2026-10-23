@@ -437,59 +437,79 @@ struct RecurringRuleEditor: View {
             && (!hasEnd || endDate >= startDate)
     }
 
+    /// Two columns on one wide window, so nothing scrolls: what repeats on the left, when and how it is added on the right.
     var body: some View {
         VStack(spacing: 0) {
-            Form {
-                Section("What repeats") {
-                    FormTextField("Payee", text: $payee)
-                    Picker("Account", selection: $account) {
-                        Text("Choose…").tag(Account?.none)
-                        ForEach(choosable) { Text($0.name).tag(Optional($0)) }
-                    }
-                    Picker("Type", selection: $isPayment) {
-                        Text("Payment (money out)").tag(true)
-                        Text("Deposit (money in)").tag(false)
-                    }
-                    .pickerStyle(.segmented)
-                    CurrencyField("Amount", value: $amount)
-                    Picker("Category", selection: $category) {
-                        CategoryOptions(categories: allCategories.live, only: isPayment ? .expense : .income, keeping: category)
-                    }
-                    if account?.lockedPaymentType == nil {
-                        Picker("Payment method", selection: $paymentChoice) { PaymentTypeOptions() }
-                    }
-                    FormTextField("Memo", text: $memo)
-                }
-                Section("When") {
-                    Picker("Repeats", selection: $frequency) {
-                        ForEach(BillFrequency.allCases) { Text($0.title).tag($0) }
-                    }
-                    DatePicker(frequency == .once ? "Date" : "First date", selection: $startDate, displayedComponents: .date)
-                    if frequency != .once {
-                        Toggle("Stops on a date", isOn: $hasEnd)
-                        if hasEnd { DatePicker("Last date", selection: $endDate, in: startDate..., displayedComponents: .date) }
-                    }
-                }
-                Section {
-                    Toggle("Add a pending transaction automatically", isOn: $autoEnter)
-                } footer: {
-                    Text(autoEnter
-                         ? "On each due date a pending transaction appears in the account's register. Confirm it, or change it with Edit Transaction."
-                         : "Nothing is added by itself. The rule shows as Due here, and you choose Add Now or Skip.")
-                }
-            }
-            .formStyle(.grouped)
-
             HStack {
+                Text(rule == nil ? "New Recurring Transaction" : "Edit Recurring Transaction").font(.headline)
                 Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(rule == nil ? "Add" : "Save", action: save)
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave)
             }
-            .padding(16)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
+                Form {
+                    Section("What Repeats") {
+                        FormTextField("Payee", text: $payee)
+                        Picker("Account", selection: $account) {
+                            Text("Choose…").tag(Account?.none)
+                            ForEach(choosable) { Text($0.name).tag(Optional($0)) }
+                        }
+                        Picker("Type", selection: $isPayment) {
+                            Text("Payment (money out)").tag(true)
+                            Text("Deposit (money in)").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        CurrencyField("Amount", value: $amount)
+                        Picker("Category", selection: $category) {
+                            CategoryOptions(categories: allCategories.live, only: isPayment ? .expense : .income, keeping: category)
+                        }
+                        if account?.lockedPaymentType == nil {
+                            Picker("Payment method", selection: $paymentChoice) { PaymentTypeOptions() }
+                        }
+                        FormTextField("Memo", text: $memo)
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                Divider()
+                Form {
+                    Section("When") {
+                        Picker("Repeats", selection: $frequency) {
+                            ForEach(BillFrequency.allCases) { Text($0.title).tag($0) }
+                        }
+                        DatePicker(frequency == .once ? "Date" : "First date", selection: $startDate, displayedComponents: .date)
+                        if frequency != .once {
+                            Toggle("Stops on a date", isOn: $hasEnd)
+                            if hasEnd { DatePicker("Last date", selection: $endDate, in: startDate..., displayedComponents: .date) }
+                        }
+                    }
+                    Section("Adding It") {
+                        Toggle("Add a pending transaction automatically", isOn: $autoEnter)
+                        Text(autoEnter
+                             ? "On each due date a pending transaction appears in the account's register. Confirm it, or change it with Edit Transaction."
+                             : "Nothing is added by itself. The rule shows as Due here, and you choose Add Now or Skip.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+            }
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: 10) {
+                    Spacer()
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                    Button(rule == nil ? "Add" : "Save", action: save)
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!canSave)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .background(.bar)
         }
-        .frame(width: 500, height: 640)
+        .frame(width: 880, height: 500)
         .background(Theme.background)
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }
