@@ -60,8 +60,7 @@ struct MonthWarPlanView: View {
         let list = sorted
         let extra = list.reduce(Decimal(0)) { $0 + signed($1) }
         let ending = opening + extra
-        return ScrollView {
-            VStack(spacing: 14) {
+        return VStack(spacing: 14) {
                 ReportCard(title: "Monthly War Plan") {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack(alignment: .top, spacing: 30) {
@@ -103,23 +102,26 @@ struct MonthWarPlanView: View {
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
-                ReportCard(title: "Line by Line") {
+                ReportCard(title: "War Plan", fillsHeight: true) {
                     VStack(spacing: 0) {
                         header
                         Divider()
-                        if list.isEmpty {
-                            Text("No lines yet. Use Add a Line, or Pull In.").foregroundStyle(.secondary).padding(.vertical, 12)
-                        }
                         let balances = running(list)
-                        ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
-                            line(item, left: balances[index].left, extra: balances[index].extra)
-                            Divider()
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                if list.isEmpty {
+                                    Text("No lines yet. Use Add a Line, or Pull In.").foregroundStyle(.secondary).padding(.vertical, 12)
+                                }
+                                ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
+                                    line(item, left: balances[index].left, extra: balances[index].extra)
+                                    Divider()
+                                }
+                            }
                         }
                     }
                 }
-            }
-            .padding(16)
         }
+        .padding(16)
         .sheet(item: $draft) { item in
             PlanItemForm(item: item, isNew: !items.contains { $0.id == item.id },
                          save: { saved in
