@@ -3,3 +3,7 @@ xcuserdata/
 DerivedData/
 build/
 *.xcuserstate
+
+# Kept on this Mac only, not published
+website-vaultstudio/
+scripts/
