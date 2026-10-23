@@ -318,7 +318,7 @@ enum HelpContent {
 
             Topic(title: "Paying a Bill", symbol: "creditcard.fill", lines: [
                 "Choose File ▸ Pay a Bill… (⇧⌘B). One payment does everything at once.",
-                "• Pay a loan or a card and a switch appears: Extra payment toward the balance. Turn it on to make a principal payment. All of it comes out of the account you pay from and goes toward what you owe, and the bill is left alone: it is not marked paid, and its due dates and amount do not change. The memo becomes Extra principal payment, and the usual amount is cleared so you can type what you are adding. A bill with no loan behind it has no balance, so the switch does not appear for it.",
+                "• Pay a loan or a card and a switch appears: Extra payment toward the balance. Turn it on to make a principal payment. All of it comes out of the account you pay from and goes toward what you owe, and the bill is left alone: it is not marked paid, and its due dates and amount do not change. On a loan or card payment the memo is locked to Monthly Payment, or Extra Principal Payment when the switch is on, so every one reads the same. The usual amount is cleared when you turn the switch on, so you can type what you are adding. A bill with no loan behind it has no balance, so the switch does not appear for it.",
                 "## What to fill in",
                 "• From: one of your own money accounts, such as checking, savings or Cash on Hand. Investment accounts are never used to pay bills.",
                 "• To: a bill, or a loan or credit card.",

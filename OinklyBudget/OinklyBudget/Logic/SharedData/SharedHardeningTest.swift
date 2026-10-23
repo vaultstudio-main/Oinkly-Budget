@@ -1390,7 +1390,7 @@ enum SharedHardeningTest {
                 bill.loan = loan
                 ec.insert(bill)
                 try ec.save()
-                let extra = BillPayment.record(from: bank, debt: loan, bill: bill, amount: 200, date: today, memo: "Extra principal payment", isExtra: true, in: ec)
+                let extra = BillPayment.record(from: bank, debt: loan, bill: bill, amount: 200, date: today, memo: "Extra Principal Payment", isExtra: true, in: ec)
                 try ec.save()
                 check("S48 an extra payment comes out of the paying account", owed(bank) == 800)
                 check("S48 and goes wholly toward the balance owed", owed(loan) == -4_800)

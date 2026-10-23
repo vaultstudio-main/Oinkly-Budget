@@ -12,9 +12,10 @@ struct BillPayWindow: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @Query(sort: \Bill.name) private var allBills: [Bill]
 
-    /// What the memo starts as. You can change it before paying.
-    private static let defaultMemo = "Monthly payment"
-    private static let extraMemo = "Extra principal payment"
+    /// What the memo starts as for a plain bill, where it can be changed. A loan or card payment has one of these two and nothing else:
+    /// the memo is locked to them.
+    private static let defaultMemo = "Monthly Payment"
+    private static let extraMemo = "Extra Principal Payment"
 
     private enum Choice: Hashable {
         case bill(Bill)
@@ -126,7 +127,12 @@ struct BillPayWindow: View {
                 if paymentChoice?.isCheck == true {
                     FormTextField("Check number", text: $checkNumber)
                 }
-                FormTextField("Memo", text: $memo)
+                if resolved.debt != nil {
+                    // A loan or card payment is either the regular one or an extra one toward the balance, and the memo says which.
+                    LabeledContent("Memo") { Text(lockedMemo).foregroundStyle(.secondary) }
+                } else {
+                    FormTextField("Memo", text: $memo)
+                }
                 Picker("Status", selection: $state) {
                     ForEach(ReconcileState.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
                 }
@@ -190,17 +196,14 @@ struct BillPayWindow: View {
         return parts.joined(separator: ", ") + "."
     }
 
-    /// Turning extra on makes the memo say so and clears the usual amount, so the regular payment isn't paid again by mistake;
-    /// turning it off puts the usual memo back.
+    /// The memo a loan or card payment carries: Monthly Payment, or Extra Principal Payment when it is an extra one.
+    private var lockedMemo: String { isExtra ? Self.extraMemo : Self.defaultMemo }
+
+    /// Turning extra on clears the usual amount, so the regular payment isn't paid again by mistake.
     private func setExtra(_ on: Bool) {
         guard on != isExtra else { return }
         isExtra = on
-        if on {
-            if memo == Self.defaultMemo { memo = Self.extraMemo }
-            if let amount, amount == resolved.bill?.amount || amount == resolved.debt?.monthlyPayment { self.amount = nil }
-        } else if memo == Self.extraMemo {
-            memo = Self.defaultMemo
-        }
+        if on, let amount, amount == resolved.bill?.amount || amount == resolved.debt?.monthlyPayment { self.amount = nil }
     }
 
     private func prefill(_ new: Choice?) {
@@ -217,7 +220,7 @@ struct BillPayWindow: View {
     private func pay() {
         guard let source, source.isLive, let amount, amount > 0 else { return }
         let (debt, bill) = resolved
-        guard BillPayment.record(from: source, debt: debt, bill: bill, amount: amount, date: date, memo: memo,
+        guard BillPayment.record(from: source, debt: debt, bill: bill, amount: amount, date: date, memo: debt != nil ? lockedMemo : memo,
                                        state: state, paymentChoice: paymentChoice, checkNumber: checkNumber,
                                        receiptData: receipt, noReceipt: noReceipt, isExtra: isExtra && debt != nil, in: modelContext) != nil else { return }
         modelContext.saveNow()
