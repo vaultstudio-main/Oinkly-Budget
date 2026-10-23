@@ -219,7 +219,7 @@ private struct GoalCard: View {
                                     .frame(width: 64, height: 44)
                                     .clipShape(RoundedRectangle(cornerRadius: 6))
                             } else {
-                                GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
+                                GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex, seed: goal.name)
                             }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(goal.name).font(.headline)
@@ -323,7 +323,7 @@ struct GoalProgressSheet: View {
                 if goal.isLive {
                     Section {
                         HStack(spacing: 12) {
-                            GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
+                            GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex, seed: goal.name)
                             VStack(alignment: .leading) {
                                 Text(goal.name).font(.headline)
                                 Text(summary).font(.caption).foregroundStyle(.secondary)
@@ -399,7 +399,7 @@ struct GoalDetailView: View {
         return Form {
             Section {
                 HStack(spacing: 12) {
-                    GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex)
+                    GoalIcon(symbol: goal.symbol, colorHex: goal.colorHex, seed: goal.name)
                     VStack(alignment: .leading) {
                         Text(goal.name).font(.title3.bold())
                         Text([goal.categoryName, goal.targetDate.map { "Target \($0.formatted(.dateTime.month(.wide).day().year()))" }]
@@ -545,6 +545,8 @@ struct GoalEditView: View {
     /// The icon chosen for the goal, or nil for its category's own, and its colour, 0 for its category's own.
     @State private var iconSymbol: String?
     @State private var iconTheme: Int
+    /// Which set of icons the menu draws from: money matters to begin with, and any other set is a pick away.
+    @State private var iconSet = CategoryGroup.financial
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @Query(sort: \Category.name) private var allCategories: [Category]
 
@@ -753,43 +755,17 @@ struct GoalEditView: View {
     /// The symbol and colour that show for the goal now.
     private var shownSymbol: String { iconSymbol ?? category?.symbol ?? goal?.symbol ?? (kind == .save ? "target" : "arrow.down.circle") }
     private var shownHex: String {
-        ArtworkTheme.hex(iconTheme) ?? category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
+        ArtworkTheme.hex(ArtworkTheme.resolved(iconTheme, seed: ArtworkTheme.seed(name))) ?? category?.colorHex ?? goal?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")
     }
 
     @ViewBuilder
     private var pictureSection: some View {
         Section("Icon") {
-            GoalIcon(symbol: shownSymbol, colorHex: shownHex, width: 96, height: 66)
+            GoalIcon(symbol: shownSymbol, colorHex: shownHex, seed: name, width: 96, height: 66)
                 .frame(maxWidth: .infinity)
-            Picker("Icon", selection: $iconSymbol) {
-                Label("Automatic", systemImage: category?.symbol ?? shownSymbol).tag(String?.none)
-                Divider()
-                ForEach(SymbolChoices.goalSymbols(for: kind).filter { $0 != category?.symbol }, id: \.self) { name in
-                    Label(SymbolChoices.name(name), systemImage: name).tag(Optional(name))
-                }
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Colour").font(.callout)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 38, maximum: 42), spacing: 8)], alignment: .leading, spacing: 8) {
-                    ForEach(0...ArtworkTheme.options.count, id: \.self) { number in
-                        Button { iconTheme = number } label: {
-                            Group {
-                                if number == 0 {
-                                    ArtworkTile(symbol: shownSymbol, color: Color(hex: category?.colorHex ?? goal?.colorHex ?? shownHex))
-                                } else {
-                                    ArtworkTile(symbol: shownSymbol, theme: number)
-                                }
-                            }
-                            .frame(width: 38, height: 26)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(iconTheme == number ? Color.accentColor : Color.primary.opacity(0.15), lineWidth: iconTheme == number ? 3 : 1))
-                        }
-                        .buttonStyle(.plain)
-                        .help(ArtworkTheme.name(number))
-                        .accessibilityLabel(ArtworkTheme.name(number))
-                    }
-                }
-            }
+            IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: nil, automaticSymbol: category?.symbol ?? (kind == .save ? "target" : "arrow.down.circle"),
+                       automaticColor: Color(hex: category?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")), setChoice: $iconSet,
+                       rainbowSeed: ArtworkTheme.seed(name), extra: SymbolChoices.goalSymbols(for: kind))
         }
     }
 

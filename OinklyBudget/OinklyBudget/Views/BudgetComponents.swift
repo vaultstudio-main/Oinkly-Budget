@@ -22,7 +22,7 @@ struct CategoryBadge: View {
         let owner = category.flatMap { $0.isLive ? ItemIcons.key(for: $0) : nil }
         let chosenSymbol = owner.flatMap { ItemIcons.symbol(of: $0, in: choices) }
         let theme = owner.flatMap { key in choices.live.first { $0.key == key }?.theme } ?? 0
-        ArtworkTile(symbol: chosenSymbol ?? symbol, theme: theme, color: color)
+        ArtworkTile(symbol: chosenSymbol ?? symbol, theme: ArtworkTheme.resolved(theme, seed: category.flatMap { $0.isLive ? ItemIcons.seed(for: $0) : nil }), color: color)
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: max(size * 0.22, 5), style: .continuous))
     }

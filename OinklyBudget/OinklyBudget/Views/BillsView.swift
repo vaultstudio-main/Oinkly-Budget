@@ -702,7 +702,7 @@ struct BillEditView: View {
         if photoData == nil && inheritedPhoto == nil {
             if bill?.loan == nil {
                 // A bill shows its category's icon unless you choose another, or add a photo.
-                Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category) }
+                Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category, rainbowSeed: ArtworkTheme.seed(name)) }
             } else {
                 Section("Picture Colour") {
                     ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)

@@ -71,6 +71,29 @@ enum ArtworkTheme {
         (1...options.count).first { Self.hex($0)?.uppercased() == hex.uppercased() } ?? 0
     }
 
+    /// The colours in rainbow order, red round to pink, left out the greys so a row of them is bright. Names, so numbering can grow.
+    private static let rainbowOrder = ["Crimson", "Rose", "Coral", "Sunset", "Amber", "Gold", "Lime", "Forest", "Mint", "Teal", "Ocean", "Sky",
+                                       "Indigo", "Lavender", "Plum", "Berry", "Fuchsia"]
+
+    /// The colour an item gets when you have not picked one: step `index` round the rainbow, so neighbours in a list are neighbours in hue.
+    static func rainbow(_ index: Int) -> Int {
+        let names = rainbowOrder.compactMap { name in options.firstIndex { $0.name == name }.map { $0 + 1 } }
+        guard !names.isEmpty else { return 1 }
+        return names[((index % names.count) + names.count) % names.count]
+    }
+
+    /// A steady number for a name, the same on every launch and every Mac, to pick its colour from.
+    static func seed(_ text: String) -> Int {
+        var hash: UInt32 = 5381
+        for byte in text.lowercased().utf8 { hash = hash &* 33 &+ UInt32(byte) }
+        return Int(hash % 100_000)
+    }
+
+    /// `theme` as chosen, or when it is 0 (Automatic) the rainbow colour for `seed`.
+    static func resolved(_ theme: Int, seed: Int?) -> Int {
+        theme == 0 ? (seed.map(rainbow) ?? 0) : theme
+    }
+
     static func isValid(_ theme: Int) -> Bool { theme >= 0 && theme <= options.count }
     static func name(_ theme: Int) -> String { theme >= 1 && theme <= options.count ? options[theme - 1].name : "Automatic" }
 

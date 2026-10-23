@@ -44,7 +44,7 @@ struct BudgetEditView: View {
                 Form {
                     Section {
                         HStack(spacing: 12) {
-                            ArtworkTile(symbol: iconSymbol ?? category.symbol, theme: iconTheme, color: Color(hex: category.colorHex))
+                            ArtworkTile(symbol: iconSymbol ?? category.symbol, theme: ArtworkTheme.resolved(iconTheme, seed: ItemIcons.seed(for: category)), color: Color(hex: category.colorHex))
                                 .frame(width: 44, height: 44)
                                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                             Text(category.name).font(.headline)
@@ -85,7 +85,7 @@ struct BudgetEditView: View {
                 Divider()
                 Form {
                     Section("Icon") {
-                        IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: category, setChoice: $iconSet)
+                        IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: category, setChoice: $iconSet, rainbowSeed: ItemIcons.seed(for: category))
                     }
                 }
                 .formStyle(.grouped)
@@ -225,7 +225,8 @@ struct CustomBudgetEditView: View {
                 Form {
                     Section("Icon") {
                         IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: nil, automaticSymbol: plainSymbol,
-                                   automaticColor: plainColor, setChoice: $iconSet)
+                                   automaticColor: plainColor, setChoice: $iconSet,
+                                   rainbowSeed: category.map { ItemIcons.seed(for: $0) } ?? ArtworkTheme.seed(name))
                     }
                 }
                 .formStyle(.grouped)

@@ -80,6 +80,12 @@ enum ItemIcons {
     static func key(for category: Category) -> String { "cat|" + (category.systemKey ?? category.name) }
     static func key(for rule: RecurringTransaction) -> String { "rule|" + String(format: "%.6f", rule.createdAt.timeIntervalSinceReferenceDate) }
 
+    /// Where a category sits in the rainbow: built-in ones in their built-in order, so a tab of them runs through the colours, and your own by name.
+    static func seed(for category: Category) -> Int {
+        if let key = category.systemKey, let index = Category.definitions.firstIndex(where: { $0.key == key }) { return index }
+        return ArtworkTheme.seed(category.name)
+    }
+
     static func symbol(of owner: String, in choices: [ArtworkChoice]) -> String? {
         let head = prefix + owner + "|"
         return choices.live.first { $0.key.hasPrefix(head) }.map { String($0.key.dropFirst(head.count)) }
@@ -160,6 +166,8 @@ struct ArtworkTile: View {
 struct ItemIconBadge: View {
     let owner: String
     let category: Category?
+    /// The name its default colour comes from.
+    var seed: String = ""
     var size: CGFloat = 36
 
     @Query private var choices: [ArtworkChoice]
@@ -167,7 +175,8 @@ struct ItemIconBadge: View {
     var body: some View {
         let chosen = ItemIcons.symbol(of: owner, in: choices)
         let theme = choices.live.first { $0.key == owner }?.theme ?? 0
-        ArtworkTile(symbol: chosen ?? (category?.isLive == true ? category?.symbol : nil) ?? "calendar", theme: theme, category: category)
+        ArtworkTile(symbol: chosen ?? (category?.isLive == true ? category?.symbol : nil) ?? "calendar",
+                    theme: ArtworkTheme.resolved(theme, seed: ArtworkTheme.seed(seed.isEmpty ? owner : seed)), category: category)
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: max(size * 0.2, 6), style: .continuous))
     }
@@ -184,7 +193,7 @@ struct BillIconView: View {
                 .frame(width: size, height: size)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
         } else {
-            ItemIconBadge(owner: ItemIcons.key(for: bill), category: bill.category, size: size)
+            ItemIconBadge(owner: ItemIcons.key(for: bill), category: bill.category, seed: bill.name, size: size)
         }
     }
 }
@@ -195,7 +204,7 @@ struct RuleIconView: View {
     var size: CGFloat = 36
 
     var body: some View {
-        ItemIconBadge(owner: ItemIcons.key(for: rule), category: rule.category, size: size)
+        ItemIconBadge(owner: ItemIcons.key(for: rule), category: rule.category, seed: rule.payee, size: size)
     }
 }
 
@@ -209,6 +218,10 @@ struct IconPicker: View {
     var automaticSymbol: String?
     var automaticColor: Color?
     var setChoice: Binding<CategoryGroup>?
+    /// Where Automatic sits in the rainbow, so its tile shows the colour the item really gets.
+    var rainbowSeed: Int?
+    /// More icons for the menu after the set's own, such as a goal's.
+    var extra: [String] = []
 
     @Query private var marks: [CashBudgetMark]
 
@@ -224,7 +237,8 @@ struct IconPicker: View {
 
     /// A choice made earlier, or under another category, is still in the menu so it can be seen and kept.
     private var symbols: [String] {
-        let list = offer.symbols.filter { $0 != automatic }
+        var seen = Set<String>()
+        let list = (offer.symbols + extra).filter { $0 != automatic && seen.insert($0).inserted }
         if let symbol, symbol != automatic, !list.contains(symbol) { return [symbol] + list }
         return list
     }
@@ -233,7 +247,7 @@ struct IconPicker: View {
     private var themes: [Int] { Array(1...ArtworkTheme.options.count) }
 
     private func tile(_ name: String, theme: Int, size: CGFloat) -> some View {
-        ArtworkTile(symbol: name, theme: theme, category: category, color: theme == 0 ? automaticColor : nil)
+        ArtworkTile(symbol: name, theme: ArtworkTheme.resolved(theme, seed: rainbowSeed), category: category, color: theme == 0 ? automaticColor : nil)
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
     }
@@ -276,11 +290,14 @@ struct IconPicker: View {
 struct GoalIcon: View {
     let symbol: String
     let colorHex: String
+    /// The goal's name. A colour that is none of the artwork colours is the plain default, which takes its place in the rainbow by this.
+    var seed: String = ""
     var width: CGFloat = 64
     var height: CGFloat = 44
 
     var body: some View {
-        ArtworkTile(symbol: symbol, color: Color(hex: colorHex))
+        let theme = ArtworkTheme.theme(forHex: colorHex)
+        ArtworkTile(symbol: symbol, theme: ArtworkTheme.resolved(theme, seed: ArtworkTheme.seed(seed)), color: Color(hex: colorHex))
             .frame(width: width, height: height)
             .clipShape(RoundedRectangle(cornerRadius: 6))
     }

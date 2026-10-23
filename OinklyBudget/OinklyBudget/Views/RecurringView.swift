@@ -495,7 +495,7 @@ struct RecurringRuleEditor: View {
                 .scrollDisabled(true)
                 Divider()
                 Form {
-                    Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category) }
+                    Section("Icon") { IconPicker(symbol: $iconSymbol, theme: $artworkTheme, category: category, rainbowSeed: ArtworkTheme.seed(payee)) }
                 }
                 .formStyle(.grouped)
                 .scrollDisabled(true)
