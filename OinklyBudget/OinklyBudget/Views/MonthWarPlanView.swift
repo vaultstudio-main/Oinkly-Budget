@@ -66,6 +66,7 @@ struct MonthWarPlanView: View {
         let kept = buffer ?? 0
         let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
+        let best = bestDay(list, spare: ending - kept)
         return VStack(spacing: 14) {
                 ReportCard(title: "Monthly War Plan") {
                     VStack(alignment: .leading, spacing: 12) {
@@ -73,6 +74,7 @@ struct MonthWarPlanView: View {
                             figure("Extra This Month", extra, note: "money in less money out, from the lines below")
                             figure("Left at the End", ending, note: "the starting amount plus the extra")
                             figure("Above the Buffer", ending - kept, note: "left at the end less your buffer")
+                            bestDayFigure(best, spare: ending - kept)
                             Spacer()
                         }
                         HStack(spacing: 10) {
@@ -115,7 +117,8 @@ struct MonthWarPlanView: View {
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }
-                table(list, kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
+                table(list, kept: kept)
+                totalsCard(kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
         }
         .padding(16)
         .sheet(item: $draft) { item in
@@ -142,6 +145,32 @@ struct MonthWarPlanView: View {
                 .font(.system(size: 30, weight: .bold))
                 .foregroundStyle(amount < 0 ? Theme.red : Theme.green)
             Text(note).font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: Best day to move the extra
+
+    /// The earliest day from which the whole spare amount can be taken out and the plan still never drops below the buffer.
+    /// That is the day after the last line that leaves less than the month ends with.
+    private func bestDay(_ list: [PlanItem], spare: Decimal) -> Date? {
+        guard spare > 0, !list.isEmpty else { return nil }
+        let balances = running(list)
+        let ending = balances[balances.count - 1].left
+        let first = (balances.lastIndex { $0.left < ending } ?? -1) + 1
+        return first < list.count ? list[first].date : nil
+    }
+
+    private func bestDayFigure(_ date: Date?, spare: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("BEST DAY TO MOVE IT").font(.caption).foregroundStyle(.secondary)
+            if let date {
+                Text(date.formatted(.dateTime.month(.abbreviated).day()))
+                    .font(.system(size: 30, weight: .bold))
+                Text("from here the full \(spare.formatted(.appCurrency)) is there and stays above your buffer").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("None yet").font(.system(size: 30, weight: .bold)).foregroundStyle(.secondary)
+                Text(spare > 0 ? "add lines to find it" : "nothing is spare yet").font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -196,7 +225,7 @@ struct MonthWarPlanView: View {
         left < 0 ? Theme.red : (left < kept ? Color.orange : Color.primary)
     }
 
-    private func table(_ list: [PlanItem], kept: Decimal, extra: Decimal, ending: Decimal, moneyIn: Decimal, moneyOut: Decimal) -> some View {
+    private func table(_ list: [PlanItem], kept: Decimal) -> some View {
         let balances = running(list)
         return VStack(alignment: .leading, spacing: 8) {
             Text("WAR PLAN").font(.caption).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
@@ -228,15 +257,6 @@ struct MonthWarPlanView: View {
                     }
                 }
                 .frame(maxHeight: .infinity)
-                VStack(spacing: 0) {
-                    tableRow(icon: "sum", title: "Totals", moneyIn: moneyIn, moneyOut: moneyOut, left: ending, extra: extra,
-                             leftColor: leftColor(ending, kept: kept), bold: true)
-                    tableRow(icon: "shield", iconColor: .orange, title: "Buffer zone: kept untouched", left: kept)
-                        .background(Color.orange.opacity(0.08))
-                    tableRow(icon: "checkmark.circle", iconColor: ending - kept < 0 ? Theme.red : Theme.green, title: "Above the buffer: what is really spare",
-                             left: ending - kept, leftColor: ending - kept < 0 ? Theme.red : Theme.green, bold: true)
-                        .background(Color.primary.opacity(0.06))
-                }
             }
             .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2), lineWidth: 1) }
             .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -244,6 +264,27 @@ struct MonthWarPlanView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .panelBackground(cornerRadius: 8)
+    }
+
+    /// Its own card under the table: the totals, the buffer zone and what is really spare.
+    private func totalsCard(kept: Decimal, extra: Decimal, ending: Decimal, moneyIn: Decimal, moneyOut: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("TOTALS").font(.caption).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
+            VStack(spacing: 0) {
+                tableRow(icon: "sum", title: "Totals", moneyIn: moneyIn, moneyOut: moneyOut, left: ending, extra: extra,
+                         leftColor: leftColor(ending, kept: kept), bold: true)
+                tableRow(icon: "shield", iconColor: .orange, title: "Buffer zone: kept untouched", left: kept)
+                    .background(Color.orange.opacity(0.08))
+                tableRow(icon: "checkmark.circle", iconColor: ending - kept < 0 ? Theme.red : Theme.green, title: "Above the buffer: what is really spare",
+                         left: ending - kept, leftColor: ending - kept < 0 ? Theme.red : Theme.green, bold: true)
+                    .background(Color.primary.opacity(0.06))
+            }
+            .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2), lineWidth: 1) }
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .panelBackground(cornerRadius: 8)
     }
 
