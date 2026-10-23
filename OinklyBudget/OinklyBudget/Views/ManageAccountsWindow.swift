@@ -1,9 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Every account in one window of its own, on a tab for each kind: Checking & Savings, Credit Cards, Mortgages & Loans,
-/// Investments and Assets. Each row says what the account is, who it is with and what it holds. Clicking a row edits it, and
-/// Add Account adds to the tab you are on.
+/// Every account in one window of its own, on a tab for each group: Checking & Savings, Credit Cards, Mortgages & Loans,
+/// Investments and Assets. Under each tab a row of smaller tabs narrows it to one type, such as Savings or Store Card. Each row
+/// says what the account is, who it is with and what it holds. Clicking a row edits it, and Add adds the type you are on.
 struct ManageAccountsWindow: View {
     static let id = "manage-accounts"
 
@@ -12,6 +12,8 @@ struct ManageAccountsWindow: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
     @State private var tab = AccountGroup.checkingSavings
+    /// The type picked under the tab, or nil for every type in it.
+    @State private var kind: AccountType?
     @State private var isAdding = false
     @State private var editing: Account?
     @State private var pendingDelete: Account?
@@ -22,12 +24,19 @@ struct ManageAccountsWindow: View {
         accounts.filter { $0.type.group == group }
     }
 
+    /// What the page shows: the whole tab, or only the type picked under it.
+    private func shown(in group: AccountGroup) -> [Account] {
+        members(of: group).filter { kind == nil || $0.type == kind }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             FolderTabs(tabs: AccountGroup.setupOrder, selection: $tab, title: { "\($0.title) (\(members(of: $0).count))" }, leading: 20)
                 .padding(.top, 12)
-            SettingsWindowLayout(title: tab.title) {
-                let list = members(of: tab)
+                .onChange(of: tab) { _, _ in kind = nil }
+            typeChips
+            SettingsWindowLayout(title: kind?.title ?? tab.title) {
+                let list = shown(in: tab)
                 SettingsSection(title: summary(of: list, in: tab), note: nil) {
                     if list.isEmpty {
                         Text(emptyMessage).font(.callout).foregroundStyle(.secondary)
@@ -43,14 +52,14 @@ struct ManageAccountsWindow: View {
                 Text("Click an account to edit it. Deleting an account also deletes all of its transactions, and can't be undone. Cash on Hand is built in and stays.")
                     .font(.caption).foregroundStyle(.secondary)
             } footer: {
-                Button { isAdding = true } label: { Label("Add \(singular(tab))", systemImage: "plus.circle.fill") }
+                Button { isAdding = true } label: { Label("Add \(kind.map { $0.title } ?? singular(tab))", systemImage: "plus.circle.fill") }
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
         }
         .background(Theme.background)
-        .frame(minWidth: 760, minHeight: 520)
-        .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: tab.accountTypes.first ?? .checking) }
+        .frame(minWidth: 900, minHeight: 600)
+        .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: kind ?? tab.accountTypes.first ?? .checking) }
         .sheet(item: $editing) { AccountEditView(account: $0) }
         .confirmationDialog(
             "Delete this account?",
@@ -76,8 +85,39 @@ struct ManageAccountsWindow: View {
         }
     }
 
+    /// The smaller tabs under the group tabs: every type, then one for each type in the group, each with how many accounts it holds.
+    /// They wrap onto more lines rather than hiding any.
+    private var typeChips: some View {
+        let types = tab.accountTypes
+        return FlowLayout(spacing: 8) {
+            chip("All", count: members(of: tab).count, picked: kind == nil) { kind = nil }
+            ForEach(types) { type in
+                chip(type.title, count: members(of: tab).filter { $0.type == type }.count, picked: kind == type) { kind = type }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+    }
+
+    private func chip(_ title: String, count: Int, picked: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(count > 0 ? "\(title) · \(count)" : title)
+                .font(.callout.weight(picked ? .semibold : .regular))
+                .foregroundStyle(picked ? Color.white : (count > 0 ? Color.primary : Color.secondary))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(picked ? Color.accentColor : Theme.panel, in: Capsule())
+                .overlay { Capsule().strokeBorder(Theme.separator.opacity(picked ? 0 : 0.6), lineWidth: 1) }
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(picked ? .isSelected : [])
+    }
+
     private var emptyMessage: String {
-        switch tab {
+        if let kind { return "No \(kind.title) accounts yet. Use the button below to add one." }
+        return switch tab {
         case .checkingSavings: "No checking or savings accounts yet. Use the button below to add one."
         case .creditCards: "No credit cards yet. Use the button below to add one, with its limit and payment due date."
         case .loans: "No loans yet. Use the button below to add one. Every loan needs a monthly payment and a due date."
