@@ -92,7 +92,9 @@ struct BudgetsView: View {
         }
         .background(Theme.background)
         .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: { leftInset = $0 }
+        .onChange(of: tab) { _, new in UserDefaults.standard.set(new == .weekly ? "weekly" : "monthly", forKey: BudgetsSettings.tabKey) }
         .onAppear {
+            UserDefaults.standard.set(tab == .weekly ? "weekly" : "monthly", forKey: BudgetsSettings.tabKey)
             // Each start of the app begins on this month and this week, whatever was chosen last time.
             if !BudgetsSettings.resetThisLaunch {
                 monthStamp = 0

@@ -8,6 +8,9 @@ enum BudgetsSettings {
     /// The week, as a time since the reference date. Zero means this week.
     static let weekKey = "budgetsWeek"
 
+    /// Which tab of the page the Settings window is for, so it shows that tab's choice: "monthly" or "weekly".
+    static let tabKey = "budgetsSettingsTab"
+
     /// Each start of the app begins on this month and this week, whatever was chosen last time.
     static var resetThisLaunch = false
 
