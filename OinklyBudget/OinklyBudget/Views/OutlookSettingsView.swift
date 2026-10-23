@@ -172,6 +172,8 @@ struct OutlookSettingsView: View {
         }
         .frame(minWidth: 520, minHeight: 360)
         .background(Theme.background)
+        // The settings are small; matching transactions wants room for every account, so the window grows for that tab.
+        .background(WindowSizer(size: warTab == .match ? CGSize(width: 1000, height: 720) : CGSize(width: 620, height: 480)))
     }
 
     private var warPlanSettingsTab: some View {

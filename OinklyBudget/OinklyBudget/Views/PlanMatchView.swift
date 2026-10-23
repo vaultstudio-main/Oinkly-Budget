@@ -12,6 +12,18 @@ struct PlanMatchView: View {
     @State private var search = ""
     /// Every account, or one kind of them: checking and savings, credit cards, loans, investments or assets.
     @State private var kind = KindTab.all
+    /// One account under the kind, or every account in it.
+    @State private var accountKey: String?
+    @Query(sort: \Account.name) private var allAccounts: [Account]
+
+    /// A tab for one account, or for every account of the kind. Only the key decides which one it is.
+    private struct AccountTab: Hashable, Identifiable {
+        let key: String?
+        let name: String
+        var id: String { key ?? "" }
+        static func == (lhs: AccountTab, rhs: AccountTab) -> Bool { lhs.key == rhs.key }
+        func hash(into hasher: inout Hasher) { hasher.combine(key) }
+    }
 
     private enum KindTab: Hashable, Identifiable {
         case all
@@ -35,7 +47,7 @@ struct PlanMatchView: View {
     /// The transactions that match the search: by payee, account, memo, category or amount.
     private var shown: [Transaction] {
         let words = search.lowercased().split(separator: " ").map(String.init)
-        return transactions.live.filter { !$0.isOpeningDeposit }.filter { kind.includes($0) }.filter { transaction in
+        return transactions.live.filter { !$0.isOpeningDeposit }.filter { kind.includes($0) }.filter { accountKey == nil || $0.account.map(MonthOutlook.accountKey) == accountKey }.filter { transaction in
             guard !words.isEmpty else { return true }
             let text = [transaction.payee, transaction.account?.name ?? "", transaction.memo, transaction.category?.name ?? "",
                         "\(abs(transaction.amount))"].joined(separator: " ").lowercased()
@@ -51,6 +63,22 @@ struct PlanMatchView: View {
     private func candidates(for transaction: Transaction) -> [WarPlanItem] {
         plan.items.filter { $0.isIncome == (transaction.amount > 0) && $0.transactionStamp == nil }
             .sorted { ($0.date, $0.title) < ($1.date, $1.title) }
+    }
+
+    /// The plan line a transaction most likely is, for a one-click link: the same kind and amount, nearest in date within a week, or one
+    /// named like its payee. Nil when nothing fits.
+    private func suggestion(for transaction: Transaction) -> WarPlanItem? {
+        let calendar = Calendar.current
+        let payee = transaction.payee.lowercased()
+        let scored: [(WarPlanItem, Int)] = candidates(for: transaction).compactMap { item in
+            let days = abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: item.date), to: calendar.startOfDay(for: transaction.date)).day ?? 99)
+            let sameAmount = item.amount == abs(transaction.amount)
+            let name = item.title.lowercased()
+            let similar = !payee.isEmpty && (name.contains(payee) || payee.contains(name))
+            guard (sameAmount && days <= 7) || similar else { return nil }
+            return (item, (sameAmount ? 0 : 20) + (similar ? 0 : 10) + days)
+        }
+        return scored.min { $0.1 < $1.1 }?.0
     }
 
     private func attach(_ item: WarPlanItem, to transaction: Transaction) {
@@ -75,6 +103,18 @@ struct PlanMatchView: View {
                 if case .group(let group) = tab { return "\(group.title) (\(count))" }
                 return "All Accounts (\(count))"
             }, leading: 0)
+            // A second row of tabs, one for each account of the kind, so a payment between two accounts is found on either.
+            let accounts = allAccounts.live.filter { account in
+                if case .group(let group) = kind { return account.type.group == group }
+                return true
+            }
+            FolderTabs(tabs: [AccountTab(key: nil, name: "Every account")] + accounts.map { AccountTab(key: MonthOutlook.accountKey($0), name: $0.name) },
+                       selection: Binding(get: { AccountTab(key: accountKey, name: "") }, set: { accountKey = $0.key }),
+                       title: { tab in
+                let count = transactions.live.filter { !$0.isOpeningDeposit && kind.includes($0) && (tab.key == nil || $0.account.map(MonthOutlook.accountKey) == tab.key) }.count
+                return "\(tab.name) (\(count))"
+            }, leading: 0)
+            .onChange(of: kind) { _, _ in accountKey = nil }
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search payee, account, memo or amount", text: $search).textFieldStyle(.plain)
@@ -120,6 +160,16 @@ struct PlanMatchView: View {
                 }
                 .fixedSize()
             } else {
+                if let best = suggestion(for: transaction) {
+                    Button {
+                        attach(best, to: transaction)
+                    } label: {
+                        Label("Link to \(best.title)", systemImage: "link.badge.plus").lineLimit(1)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .help("This looks like the plan line “\(best.title)”: the same amount, close to the same date")
+                }
                 Menu {
                     if options.isEmpty {
                         Text("No open plan lines of this kind")
