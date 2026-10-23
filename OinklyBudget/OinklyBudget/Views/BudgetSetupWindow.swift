@@ -2,8 +2,9 @@ import SwiftUI
 
 /// The window behind the Budgets page's Settings button, roomy and resizable, so the page stays open and in view behind it. It
 /// follows the tab: on the Monthly tab it offers the month, on the Weekly tab (the cash budgets are often weekly ones) the week,
-/// centred under the title. Below is the whole budget list, the same as Settings ▸ Categories, where any category can be given a
-/// budget, shown or hidden, and made. Settings keeps its copy.
+/// centred under the title. Below is the whole budget list, a tab for each group of categories (Housing, Food, Transport and so on,
+/// then Income and your own), where any category can be given a budget, shown or hidden, and made. Settings ▸ Categories keeps its
+/// own plain list.
 struct BudgetSetupWindow: View {
     static let id = "set-budgets"
 
@@ -47,8 +48,8 @@ struct BudgetSetupWindow: View {
             .frame(maxWidth: .infinity)
             .padding(20)
             Divider()
-            CategoriesSettingsView()
+            BudgetTabsView {}
         }
-        .frame(minWidth: 620, minHeight: 620)
+        .frame(minWidth: 1200, minHeight: 640)
     }
 }

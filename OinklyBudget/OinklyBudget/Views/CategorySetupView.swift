@@ -9,7 +9,6 @@ struct CategorySetupView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var allCategories: [Category]
-    @State private var addingOwn = false
 
     /// Your own first, then the built-in ones in their usual order (housing, food, transport and so on).
     private var expenses: [Category] {
@@ -23,95 +22,41 @@ struct CategorySetupView: View {
         let budgeted = list.filter { $0.monthlyLimit > 0 }
         let total = budgeted.reduce(Decimal(0)) { $0 + $1.monthlyLimit }
 
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 14) {
-                    Image(systemName: "chart.pie.fill")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.pink)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Set up your budgets")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                        Text("Give each category a monthly amount, or leave it at zero if you don't want a budget for it. You can change any of these later on the Budgets page or in Settings ▸ Categories.")
-                            .foregroundStyle(.secondary)
-                    }
+        VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                Image(systemName: "chart.pie.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.pink)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Set up your budgets")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                    Text("Give each category a monthly amount, or leave it blank if you don't want a budget for it. You can change any of these later on the Budgets page or in Settings.")
+                        .foregroundStyle(.secondary)
                 }
-
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 320, maximum: 520), spacing: 14, alignment: .top)], alignment: .leading, spacing: 10) {
-                        ForEach(list) { category in row(category) }
-                    }
-                    .padding(.bottom, 8)
-                }
+                Spacer()
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+            .padding(.bottom, 4)
 
-            Divider()
-
-            VStack(alignment: .leading, spacing: 14) {
-                Text("YOUR BUDGETS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(total, format: .appCurrency).font(.system(size: 28, weight: .bold, design: .rounded))
-                    Text("a month across \(budgeted.count) budget\(budgeted.count == 1 ? "" : "s")")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-                Text("Monthly Outlook counts these as money set aside each month, so keep only the ones you really want.")
-                    .font(.caption).foregroundStyle(.secondary)
-
-                Spacer(minLength: 0)
-
-                VStack(spacing: 10) {
-                    Button(action: useSuggested) {
-                        Label("Suggested Amounts", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
+            BudgetTabsView(inlineAmounts: true) {
+                Text("\(total.formatted(.appCurrency)) a month across \(budgeted.count) budget\(budgeted.count == 1 ? "" : "s")")
+                    .font(.callout).foregroundStyle(.secondary)
+                Button(action: useSuggested) { Label("Suggested Amounts", systemImage: "wand.and.stars") }
                     .help("Fill in the amounts the app suggests, which you can then change")
-
-                    Button(action: clearAll) {
-                        Label("Clear All", systemImage: "xmark.circle").frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
+                Button(action: clearAll) { Label("Clear All", systemImage: "xmark.circle") }
                     .help("Set every budget to zero, so you choose which ones to have")
-
-                    Button { addingOwn = true } label: {
-                        Label("Add Your Own…", systemImage: "plus.circle").frame(maxWidth: .infinity)
-                    }
-                    .controlSize(.large)
-                    .help("Make a category of your own with its own budget")
-
-                    Divider().padding(.vertical, 4)
-
-                    Button {
-                        modelContext.saveNow()
-                        onFinish()
-                    } label: {
-                        Text("Continue").frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .keyboardShortcut(.defaultAction)
+                Button {
+                    modelContext.saveNow()
+                    onFinish()
+                } label: {
+                    Text("Continue")
                 }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
             }
-            .padding(20)
-            .frame(width: 300)
-            .frame(maxHeight: .infinity, alignment: .top)
         }
         .background(Theme.background)
-        .sheet(isPresented: $addingOwn) { CustomBudgetEditView(category: nil) }
-    }
-
-    private func row(_ category: Category) -> some View {
-        HStack(spacing: 10) {
-            CategoryBadge(category: category, size: 28)
-            Text(category.name).lineLimit(1)
-            Spacer(minLength: 4)
-            BudgetAmountField(category: category)
-                .frame(width: 110)
-        }
-        .padding(10)
-        .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .accessibilityElement(children: .combine)
     }
 
     /// The amounts the app suggests for the built-in categories. Your own keep what they have.
@@ -131,7 +76,7 @@ struct CategorySetupView: View {
 
 /// A budget box that gets out of the way: type any number you like and nothing is rewritten under your fingers. The amount is kept as
 /// you type, and the box is tidied into currency (such as $1,500.00) only once you leave it.
-private struct BudgetAmountField: View {
+struct BudgetAmountField: View {
     let category: Category
     @State private var text = ""
     @FocusState private var focused: Bool
