@@ -33,7 +33,7 @@ struct CashBalanceProjectionReport: View {
         return ReportPanel(title: "Cash Balance", summary: "Your checking and savings at the start of each of the next six months, with bills and your usual income and spending.",
                            headline: end.map { ReportFormat.money($0.value) }, headlineNote: first == nil ? nil : "from \(ReportFormat.money(first?.value ?? 0)) today") {
             if points.count < 3 {
-                ReportEmpty(message: snapshot == nil ? "Calculating…" : "Needs at least four months of history and a checking or savings account.", height: 190)
+                ReportEmpty(message: snapshot == nil ? "Calculating…" : "Needs at least four months of history and a checking or savings account.", height: ReportSize.h(190))
             } else {
                 Chart(points) { point in
                     AreaMark(x: .value("Date", point.date), y: .value("Balance", point.value)).foregroundStyle(Color.accentColor.opacity(0.12))
@@ -44,7 +44,7 @@ struct CashBalanceProjectionReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
             }
         }
     }
@@ -96,7 +96,7 @@ private struct FlowProjection: View {
 
         return ReportPanel(title: title, summary: summary, headline: average > 0 ? ReportFormat.money(average) : nil, headlineNote: average > 0 ? "expected per month" : nil) {
             if average == 0 && past.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "Nothing recorded yet.", height: 170)
+                ReportEmpty(message: "Nothing recorded yet.", height: ReportSize.h(170))
             } else {
                 Chart(past + future) { bar in
                     BarMark(x: .value("Month", bar.date, unit: .month), y: .value(title, bar.value))
@@ -106,7 +106,7 @@ private struct FlowProjection: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.narrow)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 170)
+                .frame(height: ReportSize.h(170))
             }
         }
     }
@@ -141,7 +141,7 @@ private struct BalanceLines: View {
 
         return ReportPanel(title: title, summary: summary, headline: accounts.isEmpty ? nil : ReportFormat.money(later), headlineNote: accounts.isEmpty ? nil : "in 6 months, from \(ReportFormat.money(now))") {
             if accounts.isEmpty {
-                ReportEmpty(message: empty, height: 170)
+                ReportEmpty(message: empty, height: ReportSize.h(170))
             } else {
                 Chart(points) { point in
                     LineMark(x: .value("Month", point.date, unit: .month), y: .value("Owed", point.value))
@@ -152,7 +152,7 @@ private struct BalanceLines: View {
                 .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                 .chartLegend(position: .bottom, alignment: .leading)
-                .frame(height: 180)
+                .frame(height: ReportSize.h(180))
             }
         }
     }
@@ -185,7 +185,7 @@ struct GoalFinishDatesReport: View {
 
         ReportPanel(title: "Goal Finish Dates", summary: "When each goal lands at your current pace, against the date you set.") {
             if goals.isEmpty {
-                ReportEmpty(message: "No goals yet. Set one up in Planning.", height: 140)
+                ReportEmpty(message: "No goals yet. Set one up in Planning.", height: ReportSize.h(140))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 9) {
                     GridRow {

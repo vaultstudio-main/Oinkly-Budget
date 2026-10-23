@@ -32,7 +32,7 @@ struct YearEndSummaryReport: View {
         return ReportPanel(title: "Year-End Summary", summary: "The last twelve months on one page: what came in, what went out, what you kept and how your net worth and debt moved.",
                            headline: empty ? nil : ReportFormat.money(saved), headlineNote: empty ? nil : "kept over 12 months") {
             if empty {
-                ReportEmpty(message: "A summary appears once you've recorded some income and spending.", height: 200)
+                ReportEmpty(message: "A summary appears once you've recorded some income and spending.", height: ReportSize.h(200))
             } else {
                 VStack(spacing: 10) {
                     HStack(spacing: 10) {
@@ -118,7 +118,7 @@ struct ReportCardReport: View {
         return ReportPanel(title: "Report Card", summary: "Four checks on your money: how much you keep, how heavy your debt is, how long your savings would last, and how your budgets are doing.",
                            headline: overall.map { Grade(title: "", value: "", note: "", score: $0).letter }, headlineNote: overall == nil ? nil : "overall") {
             if grades.isEmpty {
-                ReportEmpty(message: "Needs some income, spending and savings to grade.", height: 190)
+                ReportEmpty(message: "Needs some income, spending and savings to grade.", height: ReportSize.h(190))
             } else {
                 HStack(spacing: 10) {
                     ForEach(grades) { grade in
@@ -174,7 +174,7 @@ struct WhatChangedReport: View {
 
         return ReportPanel(title: "What Changed", summary: "The last three months against the three before: the biggest moves in income and spending.") {
             if !hasData {
-                ReportEmpty(message: "Needs transactions in the last six months to compare.", height: 190)
+                ReportEmpty(message: "Needs transactions in the last six months to compare.", height: ReportSize.h(190))
             } else {
                 HStack(spacing: 10) {
                     delta("Income", now.income, before.income, goodWhenUp: true)
@@ -242,7 +242,7 @@ struct IncomeSpendingWindowsReport: View {
 
         return ReportPanel(title: "Income & Spending", summary: "What came in and went out this month, over the last three and six months and over the last year, with twelve months of bars and the next six projected.") {
             if empty {
-                ReportEmpty(message: "Income and spending appear here once you record some transactions.", height: 300, shape: .bars)
+                ReportEmpty(message: "Income and spending appear here once you record some transactions.", height: ReportSize.h(300), shape: .bars)
             } else {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(figures, id: \.0) { title, income, spending in
@@ -270,7 +270,7 @@ struct IncomeSpendingWindowsReport: View {
                 .chartLegend(position: .bottom, alignment: .leading)
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
                 ReportKey(items: [.init(color: .secondary, text: "Faded: next 6 months", dashed: true)])
             }
         }
@@ -302,7 +302,7 @@ struct SpendingByCategoryWindowsReport: View {
         ReportPanel(title: "Spending by Category", summary: "Every category's spending this month, over three and six months and over the last year, and its share of the year.",
                     headline: year.isEmpty ? nil : ReportFormat.money(total), headlineNote: year.isEmpty ? nil : "spent in the last year") {
             if year.isEmpty {
-                ReportEmpty(message: "Spending by category appears here once you record some spending.", height: 300, shape: .table)
+                ReportEmpty(message: "Spending by category appears here once you record some spending.", height: ReportSize.h(300), shape: .table)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 9) {
                     GridRow {

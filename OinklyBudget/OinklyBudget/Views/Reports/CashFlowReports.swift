@@ -14,9 +14,9 @@ struct MonthlyCashFlowReport: View {
         ReportPanel(title: "Monthly Cash Flow", summary: "Money in, money out and what's left, month by month, with the next six months at your recent average.",
                     headline: past.isEmpty ? nil : ReportFormat.money(netYear), headlineNote: past.isEmpty ? nil : "net over 12 months") {
             if snapshot == nil {
-                ReportCalculating(height: 230)
+                ReportCalculating(height: ReportSize.h(230))
             } else if past.allSatisfy({ $0.income == 0 && $0.spending == 0 }) {
-                ReportEmpty(message: "No income or spending yet. Add some transactions to see your cash flow.", height: 230)
+                ReportEmpty(message: "No income or spending yet. Add some transactions to see your cash flow.", height: ReportSize.h(230))
             } else {
                 Chart {
                     ForEach(months) { month in
@@ -38,7 +38,7 @@ struct MonthlyCashFlowReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 230)
+                .frame(height: ReportSize.h(230))
                 ReportKey(items: [.init(color: Theme.green, text: "In"), .init(color: Theme.red, text: "Out"),
                                   .init(color: .primary.opacity(0.7), text: "Net"), .init(color: .secondary, text: "Faded: next 6 months", dashed: true)])
             }
@@ -67,7 +67,7 @@ struct AccountBalancesReport: View {
                     ReportMath.history(of: account, snapshot: snapshot).map { Line(name: account.name, date: $0.date, value: $0.value) }
                 }
                 if accounts.isEmpty {
-                    ReportEmpty(message: "Add a checking or savings account to see its balance here.", height: 190)
+                    ReportEmpty(message: "Add a checking or savings account to see its balance here.", height: ReportSize.h(190))
                 } else {
                     Chart(lines) { line in
                         LineMark(x: .value("Month", line.date, unit: .month), y: .value("Balance", line.value))
@@ -78,10 +78,10 @@ struct AccountBalancesReport: View {
                     .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                     .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                     .chartLegend(position: .bottom, alignment: .leading)
-                    .frame(height: 210)
+                    .frame(height: ReportSize.h(210))
                 }
             } else {
-                ReportCalculating(height: 190)
+                ReportCalculating(height: ReportSize.h(190))
             }
         }
     }
@@ -130,12 +130,12 @@ struct CashFlowForecastReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 220)
+                .frame(height: ReportSize.h(220))
                 ReportKey(items: [.init(color: .accentColor, text: "Expected balance"), .init(color: Theme.red.opacity(0.6), text: "Zero", dashed: true)])
             } else if snapshot == nil {
-                ReportCalculating(height: 220)
+                ReportCalculating(height: ReportSize.h(220))
             } else {
-                ReportEmpty(message: "A forecast needs at least four months of history and a checking or savings account.", height: 220)
+                ReportEmpty(message: "A forecast needs at least four months of history and a checking or savings account.", height: ReportSize.h(220))
             }
         }
     }
@@ -167,9 +167,9 @@ struct LowestBalanceReport: View {
                     }
                 }
             } else if snapshot == nil {
-                ReportCalculating(height: 200)
+                ReportCalculating(height: ReportSize.h(200))
             } else {
-                ReportEmpty(message: "Needs at least four months of history and a checking or savings account.", height: 200)
+                ReportEmpty(message: "Needs at least four months of history and a checking or savings account.", height: ReportSize.h(200))
             }
         }
     }
@@ -193,7 +193,7 @@ struct TransfersReport: View {
         let list = transfers.filter { $0.account?.isDebt == false }.prefix(8)
         ReportPanel(title: "Transfers Between Accounts", summary: "Money you moved between your own accounts, newest first.") {
             if list.isEmpty {
-                ReportEmpty(message: "No transfers yet.", height: 170)
+                ReportEmpty(message: "No transfers yet.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {

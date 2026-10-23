@@ -34,7 +34,7 @@ struct BillsByMonthReport: View {
         return ReportPanel(title: "Bills by Month", summary: "What you pay in bills each month: the last five months, this one and the next six.",
                            headline: bills.isEmpty ? nil : ReportFormat.money(upcoming), headlineNote: bills.isEmpty ? nil : "due over the next 6 months") {
             if bills.isEmpty {
-                ReportEmpty(message: "No bills yet. Add some on the Bills page.", height: 190)
+                ReportEmpty(message: "No bills yet. Add some on the Bills page.", height: ReportSize.h(190))
             } else {
                 Chart(bars) { bar in
                     BarMark(x: .value("Month", bar.date, unit: .month), y: .value("Amount", bar.value))
@@ -45,7 +45,7 @@ struct BillsByMonthReport: View {
                 .chartLegend(position: .bottom, alignment: .leading)
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
             }
         }
     }
@@ -76,7 +76,7 @@ struct BillsPaidVsDueReport: View {
 
         ReportPanel(title: "Paid vs Due", summary: "Bills in the last three months and the next 30 days: paid, overdue and still to come.") {
             if slices.isEmpty {
-                ReportEmpty(message: "No bills in this window.", height: 170)
+                ReportEmpty(message: "No bills in this window.", height: ReportSize.h(170))
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -132,7 +132,7 @@ struct NextSixMonthsBillsReport: View {
         return ReportPanel(title: "Next 6 Months of Bills", summary: "Every bill still to pay over the next six months, and what it adds up to.",
                            headline: rows.isEmpty ? nil : ReportFormat.money(total), headlineNote: rows.isEmpty ? nil : "\(ReportFormat.money(total / 6)) a month on average") {
             if rows.isEmpty {
-                ReportEmpty(message: "Nothing due in the next six months.", height: 170)
+                ReportEmpty(message: "Nothing due in the next six months.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 9) {
                     GridRow {
@@ -188,7 +188,7 @@ struct BillsByCategoryReport: View {
         return ReportPanel(title: "Bills by Category", summary: "Which categories your bills fall in, as a monthly amount.",
                            headline: slices.isEmpty ? nil : ReportFormat.money(total), headlineNote: slices.isEmpty ? nil : "a month in bills") {
             if slices.isEmpty {
-                ReportEmpty(message: "No bills yet.", height: 170)
+                ReportEmpty(message: "No bills yet.", height: ReportSize.h(170))
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in

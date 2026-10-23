@@ -25,7 +25,7 @@ struct IncomeByCategoryReport: View {
         return ReportPanel(title: "Income by Category", summary: "Each source of income over the last three months and its share.",
                     headline: slices.isEmpty ? nil : ReportFormat.money(total), headlineNote: slices.isEmpty ? nil : "in the last 3 months") {
             if slices.isEmpty {
-                ReportEmpty(message: "Income appears here once you record some.", height: 170)
+                ReportEmpty(message: "Income appears here once you record some.", height: ReportSize.h(170))
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -72,7 +72,7 @@ struct IncomeByPayerReport: View {
 
         return ReportPanel(title: "Income by Payer", summary: "Who paid you over the last three months, and how steady each source has been over the last year.") {
             if groups.isEmpty {
-                ReportEmpty(message: "Income appears here once you record some.", height: 170)
+                ReportEmpty(message: "Income appears here once you record some.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -122,7 +122,7 @@ struct IncomeTrendReport: View {
         return ReportPanel(title: "Income Trend", summary: "Income month by month, with the next six months at your average over the last three full months.",
                     headline: past.allSatisfy({ $0.value == 0 }) ? nil : ReportFormat.money(average), headlineNote: "expected per month") {
             if past.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "No income yet.", height: 210)
+                ReportEmpty(message: "No income yet.", height: ReportSize.h(210))
             } else {
                 Chart(past + future) { bar in
                     BarMark(x: .value("Month", bar.date, unit: .month), y: .value("Income", bar.value))
@@ -132,7 +132,7 @@ struct IncomeTrendReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 210)
+                .frame(height: ReportSize.h(210))
                 ReportKey(items: [.init(color: Theme.green, text: "Income"), .init(color: Theme.green.opacity(0.4), text: "Next 6 months")])
             }
         }
@@ -161,7 +161,7 @@ struct SavingsRateReport: View {
         return ReportPanel(title: "Savings Rate", summary: "The share of income you keep each month, and the next six months at your recent average.",
                     headline: past.isEmpty ? nil : ReportFormat.percent(average), headlineNote: past.isEmpty ? nil : "recent average") {
             if past.count < 2 {
-                ReportEmpty(message: "Needs income in at least two months.", height: 190)
+                ReportEmpty(message: "Needs income in at least two months.", height: ReportSize.h(190))
             } else if let last = past.last {
                 let future = [Point(date: last.date, value: last.value, projected: true)]
                     + (1...ReportTrends.futureMonths).compactMap { month in
@@ -183,7 +183,7 @@ struct SavingsRateReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text("\(Int(n))%") } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
             }
         }
     }

@@ -42,9 +42,9 @@ struct PortfolioValueCard: View {
         ReportPanel(title: "Portfolio Value", summary: "Your investments together over the last year, and six months ahead at your recent pace of growth and contributions.",
                     headline: last.map { ReportFormat.money($0.value) }, headlineNote: end == nil ? nil : "\(ReportFormat.money(end?.value ?? 0)) in 6 months") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "Add an investment account to see its value and projection.", height: 290, shape: .line)
+                ReportEmpty(message: "Add an investment account to see its value and projection.", height: ReportSize.h(290), shape: .line)
             } else if history.isEmpty {
-                ReportCalculating(height: 290)
+                ReportCalculating(height: ReportSize.h(290))
             } else {
                 Chart {
                     ForEach(history) { point in
@@ -62,7 +62,7 @@ struct PortfolioValueCard: View {
                 .chartYScale(domain: .automatic(includesZero: false))
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 210)
+                .frame(height: ReportSize.h(210))
                 HStack(spacing: 10) {
                     ReportFigure(label: "Today", value: ReportFormat.money(last?.value ?? 0))
                     ReportFigure(label: "In 6 months", value: ReportFormat.money(end?.value ?? 0), color: change >= 0 ? Theme.green : Theme.red)
@@ -94,7 +94,7 @@ struct InvestmentAllocationCard: View {
         ReportPanel(title: "Allocation", summary: byHolding.isEmpty ? "How your investments are split between accounts." : "How your investments are spread across your holdings.",
                     headline: slices.first.map { "\(Int($0.value / max(total, 1) * 100))% \($0.name)" }, headlineNote: slices.isEmpty ? nil : "largest position") {
             if slices.isEmpty {
-                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: 150, shape: .ring)
+                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: ReportSize.h(150), shape: .ring)
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -134,7 +134,7 @@ struct InvestmentBucketsCard: View {
 
         ReportPanel(title: "Where It Is", summary: "Retirement, brokerage, education and crypto: what share of your investments sits in each.") {
             if buckets.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 170, shape: .table)
+                ReportEmpty(message: "No investment accounts yet.", height: ReportSize.h(170), shape: .table)
             } else {
                 VStack(spacing: 12) {
                     ForEach(buckets, id: \.name) { bucket in
@@ -167,9 +167,9 @@ struct InvestmentContributionsCard: View {
         ReportPanel(title: "Contributions", summary: "Money you've put in (or taken out), month by month. Growth isn't counted.",
                     headline: data.accounts.isEmpty ? nil : ReportFormat.money(total), headlineNote: data.accounts.isEmpty ? nil : "net over 12 months") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 170, shape: .bars)
+                ReportEmpty(message: "No investment accounts yet.", height: ReportSize.h(170), shape: .bars)
             } else if data.contributions.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "No contributions in the last 12 months.", height: 170, shape: .bars)
+                ReportEmpty(message: "No contributions in the last 12 months.", height: ReportSize.h(170), shape: .bars)
             } else {
                 Chart(data.contributions) { month in
                     BarMark(x: .value("Month", month.date, unit: .month), y: .value("Contributed", month.value))
@@ -178,7 +178,7 @@ struct InvestmentContributionsCard: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 170)
+                .frame(height: ReportSize.h(170))
             }
         }
     }
@@ -193,7 +193,7 @@ struct InvestmentGrowthCard: View {
         ReportPanel(title: "Growth by Account", summary: "What each account grew (or lost) over the last twelve months, as an amount and a return.",
                     headline: data.accounts.isEmpty ? nil : ReportFormat.signed(Decimal(data.growth12)), headlineNote: data.accounts.isEmpty ? nil : "in total") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "No investment accounts yet.", height: 200, shape: .bars)
+                ReportEmpty(message: "No investment accounts yet.", height: ReportSize.h(200), shape: .bars)
             } else {
                 Chart(data.accounts) { account in
                     BarMark(x: .value("Growth", account.growth), y: .value("Account", account.name))
@@ -224,7 +224,7 @@ struct InvestmentGainsCard: View {
                     headline: holdings.isEmpty ? nil : ReportFormat.signed(Decimal(data.unrealizedGain)),
                     headlineNote: holdings.isEmpty || data.costBasis == 0 ? nil : "\(ReportFormat.percent(data.unrealizedGain / data.costBasis * 100, digits: 1)) on cost") {
             if holdings.isEmpty {
-                ReportEmpty(message: "No holdings yet. Add shares to an investment account to see gains and losses.", height: 300, shape: .table)
+                ReportEmpty(message: "No holdings yet. Add shares to an investment account to see gains and losses.", height: ReportSize.h(300), shape: .table)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 9) {
                     GridRow {
@@ -294,7 +294,7 @@ struct InvestmentProjectionCard: View {
                     headline: data.accounts.isEmpty ? nil : ReportFormat.money(value(after: 120, annual: annual, monthly: monthly)),
                     headlineNote: data.accounts.isEmpty ? nil : "expected in 10 years") {
             if data.accounts.isEmpty {
-                ReportEmpty(message: "Add an investment account to see how it could grow.", height: 340, shape: .line)
+                ReportEmpty(message: "Add an investment account to see how it could grow.", height: ReportSize.h(340), shape: .line)
             } else {
                 Chart(points) { point in
                     LineMark(x: .value("Years", point.years), y: .value("Value", point.value), series: .value("Scenario", point.scenario))
@@ -306,7 +306,7 @@ struct InvestmentProjectionCard: View {
                 .chartXAxis { AxisMarks(values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) { v in AxisValueLabel { if let n = v.as(Double.self) { Text(n == 0 ? "Now" : "\(Int(n))y") } } } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                 .chartLegend(position: .bottom, alignment: .leading)
-                .frame(height: 200)
+                .frame(height: ReportSize.h(200))
 
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 8) {
                     GridRow {

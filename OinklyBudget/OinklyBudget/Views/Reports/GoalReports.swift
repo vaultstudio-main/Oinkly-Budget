@@ -25,7 +25,7 @@ struct GoalProgressReport: View {
         ReportPanel(title: "Goal Progress", summary: "Every open goal against its target, with the estimated finish and whether it will make its date.",
                     headline: goals.isEmpty ? nil : saved.formatted(.appCurrency), headlineNote: goals.isEmpty ? nil : "saved of \(target.formatted(.appCurrency))") {
             if goals.isEmpty {
-                ReportEmpty(message: "No goals yet. Set one up in Planning.", height: 170)
+                ReportEmpty(message: "No goals yet. Set one up in Planning.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 11) {
                     GridRow {
@@ -83,7 +83,7 @@ struct GoalStatusReport: View {
 
         ReportPanel(title: "On Track or Behind", summary: "Which goals will make their date and which need more.") {
             if goals.isEmpty && reached == 0 {
-                ReportEmpty(message: "No goals yet.", height: 170)
+                ReportEmpty(message: "No goals yet.", height: ReportSize.h(170))
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -150,7 +150,7 @@ struct GoalNeededReport: View {
         ReportPanel(title: "Needed Per Month", summary: "What each goal needs every month to finish on time, against the pace you're on.",
                     headline: goals.isEmpty ? nil : needed.formatted(.appCurrency), headlineNote: goals.isEmpty ? nil : "needed in all, per month") {
             if goals.isEmpty {
-                ReportEmpty(message: "Needs a goal with a target date.", height: 170)
+                ReportEmpty(message: "Needs a goal with a target date.", height: ReportSize.h(170))
             } else {
                 Chart(rows) { row in
                     BarMark(x: .value("Per month", row.amount), y: .value("Goal", row.name))
@@ -186,7 +186,7 @@ struct SavingsGrowthReport: View {
 
         ReportPanel(title: "Savings Growth", summary: "Your savings accounts over the last year, and six months ahead at their recent pace.") {
             if savings.isEmpty {
-                ReportEmpty(message: "Add a savings account to see its growth.", height: 190)
+                ReportEmpty(message: "Add a savings account to see its growth.", height: ReportSize.h(190))
             } else if let snapshot {
                 let lines = savings.flatMap { account -> [Line] in
                     let history = ReportMath.history(of: account, snapshot: snapshot)
@@ -206,10 +206,10 @@ struct SavingsGrowthReport: View {
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 3)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                 .chartLegend(position: .bottom, alignment: .leading)
-                .frame(height: 200)
+                .frame(height: ReportSize.h(200))
                 ReportKey(items: [.init(color: .secondary, text: "Last 12 months"), .init(color: .secondary, text: "Next 6 months", dashed: true)])
             } else {
-                ReportCalculating(height: 190)
+                ReportCalculating(height: ReportSize.h(190))
             }
         }
     }
@@ -235,7 +235,7 @@ struct EmergencyFundReport: View {
         ReportPanel(title: "Emergency Fund Coverage", summary: "How many months of spending your savings would cover. Three to six months is a common aim.",
                     headline: coverage.map { "\($0.formatted(.number.precision(.fractionLength(1)))) months" }, headlineNote: coverage == nil ? nil : "of spending covered") {
             if savings.isEmpty || months.isEmpty {
-                ReportEmpty(message: "Add a savings account to see how many months it covers.", height: 170)
+                ReportEmpty(message: "Add a savings account to see how many months it covers.", height: ReportSize.h(170))
             } else if let coverage {
                 HStack(spacing: 22) {
                     ZStack {
@@ -256,7 +256,7 @@ struct EmergencyFundReport: View {
                     }
                 }
             } else {
-                ReportEmpty(message: "Needs a few months of spending to work out coverage.", height: 170)
+                ReportEmpty(message: "Needs a few months of spending to work out coverage.", height: ReportSize.h(170))
             }
         }
     }

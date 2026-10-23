@@ -35,7 +35,7 @@ struct AssetsVsLiabilitiesReport: View {
                     headline: nowDebt > 0 ? "\((nowAssets / nowDebt).formatted(.number.precision(.fractionLength(1)))) : 1" : nil,
                     headlineNote: nowDebt > 0 ? "assets for every $1 owed" : nil) {
             if snapshot == nil {
-                ReportCalculating(height: 190)
+                ReportCalculating(height: ReportSize.h(190))
             } else {
                 // The first projected point repeats the last real month (it joins lines), so bars skip it.
                 let bars = bars(assets, "Assets") + bars(debt, "Liabilities")
@@ -50,7 +50,7 @@ struct AssetsVsLiabilitiesReport: View {
                 .chartLegend(.hidden)
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
                 ReportKey(items: [.init(color: Theme.green, text: "Assets"), .init(color: Theme.red, text: "Liabilities"),
                                   .init(color: .secondary, text: "Faded: next 6 months", dashed: true)])
             }
@@ -87,7 +87,7 @@ struct NetWorthByTypeReport: View {
                 let cards = -Summary.total(of: accounts, in: [.creditCards], snapshot: snapshot).doubleValue
                 let loans = -Summary.total(of: accounts, in: [.loans], snapshot: snapshot).doubleValue
                 if owned.isEmpty && cards <= 0 && loans <= 0 {
-                    ReportEmpty(message: "Add accounts and transactions to see where your net worth sits.", height: 190)
+                    ReportEmpty(message: "Add accounts and transactions to see where your net worth sits.", height: ReportSize.h(190))
                 } else {
                     HStack(alignment: .center, spacing: 20) {
                         Chart(owned) { slice in
@@ -110,7 +110,7 @@ struct NetWorthByTypeReport: View {
                     .frame(minHeight: 170)
                 }
             } else {
-                ReportCalculating(height: 170)
+                ReportCalculating(height: ReportSize.h(170))
             }
         }
     }
@@ -137,7 +137,7 @@ struct BiggestMoversReport: View {
             if let snapshot {
                 let movers = ReportMath.movers(accounts: allAccounts.live, snapshot: snapshot).filter { $0.threeMonths != 0 || $0.twelveMonths != 0 }.prefix(7)
                 if movers.isEmpty {
-                    ReportEmpty(message: "Nothing has moved yet. This fills in as your balances change.", height: 170)
+                    ReportEmpty(message: "Nothing has moved yet. This fills in as your balances change.", height: ReportSize.h(170))
                 } else {
                     Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                         GridRow {
@@ -161,7 +161,7 @@ struct BiggestMoversReport: View {
                     }
                 }
             } else {
-                ReportCalculating(height: 170)
+                ReportCalculating(height: ReportSize.h(170))
             }
         }
     }
@@ -188,9 +188,9 @@ struct NetWorthRangeReport: View {
         ReportPanel(title: "Net Worth Range", summary: "A low, expected and high path for the next six months, from how much your net worth has varied.",
                     headline: end.map { ReportFormat.money($0.expected) }, headlineNote: end == nil ? nil : "expected in 6 months") {
             if snapshot == nil {
-                ReportCalculating(height: 210)
+                ReportCalculating(height: ReportSize.h(210))
             } else if range.isEmpty {
-                ReportEmpty(message: "Not enough history yet. This needs a few months of transactions.", height: 210)
+                ReportEmpty(message: "Not enough history yet. This needs a few months of transactions.", height: ReportSize.h(210))
             } else {
                 Chart {
                     ForEach(history) { point in
@@ -209,7 +209,7 @@ struct NetWorthRangeReport: View {
                 }
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 210)
+                .frame(height: ReportSize.h(210))
                 HStack(spacing: 10) {
                     if let end {
                         ReportFigure(label: "Low", value: ReportFormat.money(end.low), color: Theme.red)

@@ -14,7 +14,7 @@ struct LoanPayoffScheduleReport: View {
         ReportPanel(title: "Loan Payoff Schedule", summary: "Every loan and card still owing, with its payment, estimated payoff and maturity date.",
                     headline: lines.isEmpty ? nil : monthly.formatted(.appCurrency), headlineNote: lines.isEmpty ? nil : "paid each month") {
             if lines.isEmpty {
-                ReportEmpty(message: "No loans or cards with a balance. Debt you add in Settings ▸ Accounts shows up here.", height: 170)
+                ReportEmpty(message: "No loans or cards with a balance. Debt you add in Settings ▸ Accounts shows up here.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 9) {
                     GridRow {
@@ -83,7 +83,7 @@ struct AheadOrBehindReport: View {
         }
         ReportPanel(title: "Ahead or Behind", summary: "Estimated payoff against the maturity date, in months. Right of zero is ahead of schedule.") {
             if rows.isEmpty {
-                ReportEmpty(message: "Needs a loan with a maturity date and a monthly payment.", height: 170)
+                ReportEmpty(message: "Needs a loan with a maturity date and a monthly payment.", height: ReportSize.h(170))
             } else {
                 Chart(rows) { row in
                     BarMark(x: .value("Months", row.months), y: .value("Loan", row.name))
@@ -131,7 +131,7 @@ struct InterestPaidReport: View {
         return ReportPanel(title: "Interest Paid", summary: "An estimate of interest paid so far and what's still to come at the current payment.",
                            headline: loans.isEmpty ? nil : ReportFormat.money(paidTotal), headlineNote: loans.isEmpty ? nil : "paid so far · \(ReportFormat.money(aheadTotal)) to come") {
             if loans.isEmpty {
-                ReportEmpty(message: "Needs a loan with its original amount filled in, so principal can be told from interest.", height: 170)
+                ReportEmpty(message: "Needs a loan with its original amount filled in, so principal can be told from interest.", height: ReportSize.h(170))
             } else {
                 Chart(rows) { row in
                     BarMark(x: .value("Interest", row.amount), y: .value("Loan", row.name))
@@ -161,7 +161,7 @@ struct CreditCardUseReport: View {
         ReportPanel(title: "Credit Card Use", summary: "Each card's balance against its limit, and where the balance is heading at the minimum payment.",
                     headline: overall.map { ReportFormat.percent($0 * 100) }, headlineNote: overall == nil ? nil : "of total limit used") {
             if cards.isEmpty {
-                ReportEmpty(message: "No credit cards yet.", height: 170)
+                ReportEmpty(message: "No credit cards yet.", height: ReportSize.h(170))
             } else {
                 VStack(spacing: 12) {
                     ForEach(cards) { card in
@@ -218,7 +218,7 @@ struct DebtPayoffPlanReport: View {
 
         ReportPanel(title: "Debt Payoff Plan", summary: "How much sooner you'd be debt-free, and how much interest you'd save, by adding to your payments each month. The extra goes to the highest rate first.") {
             if usable.isEmpty {
-                ReportEmpty(message: debts.isEmpty ? "No debt to pay off." : "Set a monthly payment on your loans and cards to see a plan.", height: 170)
+                ReportEmpty(message: debts.isEmpty ? "No debt to pay off." : "Set a monthly payment on your loans and cards to see a plan.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 9) {
                     GridRow {

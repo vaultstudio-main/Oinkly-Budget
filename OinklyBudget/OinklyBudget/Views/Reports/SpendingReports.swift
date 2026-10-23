@@ -48,7 +48,7 @@ struct SpendingTrendReport: View {
 
         return ReportPanel(title: "Spending Trend by Category", summary: "Your five biggest spending categories month by month, with the next six months at their recent average.") {
             if top.isEmpty {
-                ReportEmpty(message: "No spending yet. Categories appear here as you spend.", height: 220)
+                ReportEmpty(message: "No spending yet. Categories appear here as you spend.", height: ReportSize.h(220))
             } else {
                 Chart(points) { point in
                     LineMark(x: .value("Month", point.date, unit: .month), y: .value("Spent", point.value),
@@ -60,7 +60,7 @@ struct SpendingTrendReport: View {
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
                 .chartLegend(position: .bottom, alignment: .leading)
-                .frame(height: 230)
+                .frame(height: ReportSize.h(230))
             }
         }
     }
@@ -89,7 +89,7 @@ struct SpendingByPayeeReport: View {
 
         return ReportPanel(title: "Spending by Payee", summary: "Who you pay the most: this month, the last three months and the last year.") {
             if rows.isEmpty {
-                ReportEmpty(message: "Payees appear here once you record some spending.", height: 220, shape: .table)
+                ReportEmpty(message: "Payees appear here once you record some spending.", height: ReportSize.h(220), shape: .table)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -127,7 +127,7 @@ struct TopSpendingReport: View {
         let biggest = inputs.real(since: ReportInputs.windows()[1].start).filter { $0.amount < 0 }.sorted { $0.amount < $1.amount }.prefix(8)
         return ReportPanel(title: "Top Spending", summary: "The biggest single transactions in the last three months.") {
             if biggest.isEmpty {
-                ReportEmpty(message: "No spending in this period.", height: 170)
+                ReportEmpty(message: "No spending in this period.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -174,7 +174,7 @@ struct PaymentMethodReport: View {
 
         return ReportPanel(title: "Spending by Payment Method", summary: "How you paid over the last three months: cards, bank, cash, digital and your own methods.") {
             if slices.isEmpty {
-                ReportEmpty(message: "No spending in this period.", height: 170)
+                ReportEmpty(message: "No spending in this period.", height: ReportSize.h(170))
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -230,7 +230,7 @@ struct CashSpendingReport: View {
         return ReportPanel(title: "Cash Spending", summary: "Cash on Hand: what you took out and what you spent, month by month.",
                     headline: cash.map { ReportFormat.money($0.balance.doubleValue) }, headlineNote: cash == nil ? nil : "cash on hand now") {
             if bars.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "No cash transactions yet. ATM withdrawals and cash spending show here.", height: 170)
+                ReportEmpty(message: "No cash transactions yet. ATM withdrawals and cash spending show here.", height: ReportSize.h(170))
             } else {
                 Chart(bars) { bar in
                     BarMark(x: .value("Month", bar.date, unit: .month), y: .value("Amount", bar.value))
@@ -242,7 +242,7 @@ struct CashSpendingReport: View {
                 .chartLegend(position: .bottom, alignment: .leading)
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 170)
+                .frame(height: ReportSize.h(170))
             }
         }
     }
@@ -289,7 +289,7 @@ struct MonthAgainstMonthReport: View {
 
         return ReportPanel(title: "Month Against Month", summary: "The first \(day) days of this month against the same days of last month and of this month last year.") {
             if bars.allSatisfy({ $0.value == 0 }) {
-                ReportEmpty(message: "Needs a few months of transactions.", height: 190)
+                ReportEmpty(message: "Needs a few months of transactions.", height: ReportSize.h(190))
             } else {
                 Chart(bars) { bar in
                     BarMark(x: .value("Period", bar.label), y: .value("Amount", bar.value))
@@ -300,7 +300,7 @@ struct MonthAgainstMonthReport: View {
                 .chartForegroundStyleScale(["Income": Theme.green, "Spending": Theme.red])
                 .chartLegend(position: .bottom, alignment: .leading)
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 170)
+                .frame(height: ReportSize.h(170))
                 if !changes.isEmpty {
                     Divider()
                     Text("BIGGEST CHANGES VS LAST MONTH").font(.caption2).foregroundStyle(.secondary)
@@ -343,7 +343,7 @@ struct TaxRelatedReport: View {
         return ReportPanel(title: "Tax-Related Spending", summary: "Over the last 12 months, spending in the categories you flag as tax-related in Settings ▸ Categories.",
                     headline: rows.isEmpty ? nil : total.formatted(.appCurrency), headlineNote: rows.isEmpty ? nil : "across \(rows.count) categories") {
             if rows.isEmpty {
-                ReportEmpty(message: "No spending in categories flagged as tax-related yet. Flag them in Settings ▸ Categories.", height: 170)
+                ReportEmpty(message: "No spending in categories flagged as tax-related yet. Flag them in Settings ▸ Categories.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow { Text("CATEGORY"); Text("TRANSACTIONS").gridColumnAlignment(.trailing); Text("TOTAL").gridColumnAlignment(.trailing) }

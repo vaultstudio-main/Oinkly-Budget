@@ -68,7 +68,7 @@ struct BudgetVsActualReport: View {
                            headline: history.categories.isEmpty ? nil : "\(ReportFormat.money(spent)) of \(ReportFormat.money(budgeted))",
                            headlineNote: history.categories.isEmpty ? nil : "\(ReportFormat.money(max(budgeted - spent, 0))) left · showing \(rows.count) of \(all.count)") {
             if history.categories.isEmpty {
-                ReportEmpty(message: "No budgets are set. Add some in Settings ▸ Categories.", height: 190)
+                ReportEmpty(message: "No budgets are set. Add some in Settings ▸ Categories.", height: ReportSize.h(190))
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 14) {
@@ -140,7 +140,7 @@ struct BudgetOverUnderReport: View {
 
         ReportPanel(title: "Over and Under", summary: "Months you went over each budget in the last six full months, and your average against it.") {
             if history.categories.isEmpty {
-                ReportEmpty(message: "No budgets are set.", height: 170)
+                ReportEmpty(message: "No budgets are set.", height: ReportSize.h(170))
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -191,7 +191,7 @@ struct BudgetTrendReport: View {
 
         ReportPanel(title: "Budget Trend", summary: "Spent each month against your total budget, the dotted line.") {
             if history.categories.isEmpty {
-                ReportEmpty(message: "No budgets are set.", height: 190)
+                ReportEmpty(message: "No budgets are set.", height: ReportSize.h(190))
             } else {
                 let recent = totals.suffix(4).dropLast()
                 let average = recent.isEmpty ? 0 : recent.reduce(0, +) / Double(recent.count)
@@ -237,7 +237,7 @@ struct BudgetTrendReport: View {
                 .chartYScale(domain: 0...max(top, 1))
                 .chartXAxis { AxisMarks(values: .stride(by: .month, count: 2)) { _ in AxisValueLabel(format: .dateTime.month(.abbreviated)) } }
                 .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-                .frame(height: 190)
+                .frame(height: ReportSize.h(190))
             }
         }
     }
@@ -265,7 +265,7 @@ struct ProjectedMonthEndReport: View {
         ReportPanel(title: "Projected Month End", summary: "Where each budget lands by the end of the month if you keep spending at today's pace.",
                     headline: history.categories.isEmpty ? nil : "\(over.count) over", headlineNote: history.categories.isEmpty ? nil : "of \(rows.count) budgets") {
             if history.categories.isEmpty {
-                ReportEmpty(message: "No budgets are set.", height: 190)
+                ReportEmpty(message: "No budgets are set.", height: ReportSize.h(190))
             } else {
                 VStack(spacing: 10) {
                     ForEach(rows.prefix(8), id: \.0.persistentModelID) { category, spent, projected in
