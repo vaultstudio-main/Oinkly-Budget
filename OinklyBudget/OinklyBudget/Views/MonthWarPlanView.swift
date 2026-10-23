@@ -38,8 +38,6 @@ struct MonthWarPlanView: View {
 
     var body: some View {
         let list = sorted
-        let extra = list.reduce(Decimal(0)) { $0 + signed($1) }
-        let ending = opening + extra
         let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
         let safe = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: list))
@@ -75,17 +73,16 @@ struct MonthWarPlanView: View {
                         StatTile(title: "Total Outgoing") {
                             Text(moneyOut, format: .appCurrency)
                         } note: { Text("\(outgoings.count) line\(outgoings.count == 1 ? "" : "s") going out") }
-                        StatTile(title: "Extra This Month") {
-                            Text(extra, format: .appCurrency).foregroundStyle(extra < 0 ? Theme.red : Theme.green)
-                        } note: { Text("income less outgoing") }
-                        StatTile(title: "Left at the End") {
-                            Text(ending, format: .appCurrency).foregroundStyle(ending < 0 ? Theme.red : Theme.green)
-                        } note: { Text("starting with \(opening.formatted(.appCurrency))") }
                         StatTile(title: "Tightest Point") {
                             Text(safe.lowest?.balance ?? opening, format: .appCurrency)
                                 .foregroundStyle((safe.lowest?.balance ?? opening) < kept ? Theme.red : Color.primary)
                         } note: {
                             Text(safe.lowest.map { "on \($0.date.formatted(.dateTime.month(.abbreviated).day())), buffer \(kept.formatted(.appCurrency))" } ?? "add lines to find it")
+                        }
+                        StatTile(title: "Highest Point") {
+                            Text(safe.points.max { $0.balance < $1.balance }?.balance ?? opening, format: .appCurrency)
+                        } note: {
+                            Text(safe.points.max { $0.balance < $1.balance }.map { "on \($0.date.formatted(.dateTime.month(.abbreviated).day()))" } ?? "add lines to find it")
                         }
                         safeTile(safe, hasLines: !list.isEmpty)
                     }
