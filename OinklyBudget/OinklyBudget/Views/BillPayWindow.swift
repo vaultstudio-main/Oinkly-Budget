@@ -14,6 +14,7 @@ struct BillPayWindow: View {
 
     /// What the memo starts as. You can change it before paying.
     private static let defaultMemo = "Monthly payment"
+    private static let extraMemo = "Extra principal payment"
 
     private enum Choice: Hashable {
         case bill(Bill)
@@ -32,6 +33,8 @@ struct BillPayWindow: View {
     @State private var receipt: Data?
     @State private var noReceipt = false
     @State private var confirmation: String?
+    /// An extra payment toward the balance of a loan or card: it does not pay the bill.
+    @State private var isExtra = false
 
     private var sources: [Account] { Transfers.billPayable(allAccounts) }
     private var bills: [Bill] { allBills.live }
@@ -97,7 +100,19 @@ struct BillPayWindow: View {
                         }
                     }
                 }
-                .onChange(of: choice) { _, new in prefill(new) }
+                .onChange(of: choice) { _, new in
+                    prefill(new)
+                    // A bill with no loan behind it has no balance to put extra toward.
+                    if resolved.debt == nil { setExtra(false) }
+                }
+
+                if resolved.debt != nil {
+                    Toggle("Extra payment toward the balance", isOn: Binding(get: { isExtra }, set: { setExtra($0) }))
+                    if isExtra {
+                        Text("All of it goes toward what you owe. The bill isn't marked paid and its schedule and amount stay as they are.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }
 
                 LabeledContent("Amount") {
                     CurrencyField("Amount", value: $amount)
@@ -148,7 +163,7 @@ struct BillPayWindow: View {
                 Spacer()
                 Button("Done") { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button("Pay", action: pay)
+                Button(isExtra ? "Pay Extra" : "Pay", action: pay)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canPay)
             }
@@ -163,6 +178,9 @@ struct BillPayWindow: View {
         }
         let (debt, bill) = resolved
         let money = amount.formatted(.appCurrency)
+        if isExtra, let debt {
+            return "Takes \(money) out of \(source.name) and puts all of it toward what you owe on \(debt.name), as an extra payment. \(bill.map { "\($0.name) is left as it is." } ?? "")"
+        }
         var parts = ["Takes \(money) out of \(source.name)"]
         if let debt { parts.append("takes \(money) off what you owe on \(debt.name)") }
         if let bill {
@@ -170,6 +188,19 @@ struct BillPayWindow: View {
             parts.append("marks \(bill.name)\(due.map { " (due \($0))" } ?? "") as paid")
         }
         return parts.joined(separator: ", ") + "."
+    }
+
+    /// Turning extra on makes the memo say so and clears the usual amount, so the regular payment isn't paid again by mistake;
+    /// turning it off puts the usual memo back.
+    private func setExtra(_ on: Bool) {
+        guard on != isExtra else { return }
+        isExtra = on
+        if on {
+            if memo == Self.defaultMemo { memo = Self.extraMemo }
+            if let amount, amount == resolved.bill?.amount || amount == resolved.debt?.monthlyPayment { self.amount = nil }
+        } else if memo == Self.extraMemo {
+            memo = Self.defaultMemo
+        }
     }
 
     private func prefill(_ new: Choice?) {
@@ -188,13 +219,16 @@ struct BillPayWindow: View {
         let (debt, bill) = resolved
         guard BillPayment.record(from: source, debt: debt, bill: bill, amount: amount, date: date, memo: memo,
                                        state: state, paymentChoice: paymentChoice, checkNumber: checkNumber,
-                                       receiptData: receipt, noReceipt: noReceipt, in: modelContext) != nil else { return }
+                                       receiptData: receipt, noReceipt: noReceipt, isExtra: isExtra && debt != nil, in: modelContext) != nil else { return }
         modelContext.saveNow()
         Task { await BillNotifier.refresh(in: modelContext) }
 
-        confirmation = "Paid \(amount.formatted(.appCurrency)) from \(source.name)\(bill.map { ", and marked \($0.name) paid" } ?? "")."
+        confirmation = isExtra && debt != nil
+            ? "Paid an extra \(amount.formatted(.appCurrency)) from \(source.name) toward \(debt?.name ?? "the balance"). The bill was left alone."
+            : "Paid \(amount.formatted(.appCurrency)) from \(source.name)\(bill.map { ", and marked \($0.name) paid" } ?? "")."
         self.amount = nil
         choice = nil
+        isExtra = false
         memo = Self.defaultMemo
         state = .reconciled
         checkNumber = ""

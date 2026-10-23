@@ -1375,6 +1375,35 @@ enum SharedHardeningTest {
                 check("S47 and each year adds a year's saving to what is kept", long[0].keptInYear == 9600 && abs(long[0].netWorth - (5_000 + 9600)) < 20 && abs(long[9].netWorth - (5_000 + 9600 * 10)) < 20)
                 check("S47 with no history there is nothing to project", !Projection.make(history: [], netWorthNow: 0, bills: [], months: 3).hasData)
             }
+
+            // S48: an extra payment toward a loan leaves its bill alone
+            do {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                let ec = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                // Added up straight from the transactions, so the test doesn't depend on the balance cache refreshing.
+                func owed(_ account: Account) -> Decimal { account.transactions.live.reduce(account.openingBalance) { $0 + $1.amount } }
+                let bank = Account(name: "S48 bank", type: .checking, openingBalance: 1_000)
+                let loan = Account(name: "S48 loan", type: .loan, openingBalance: -5_000)
+                ec.insert(bank); ec.insert(loan)
+                let bill = Bill(name: "S48 loan payment", amount: 300, frequency: .monthly, dueDate: today)
+                bill.loan = loan
+                ec.insert(bill)
+                try ec.save()
+                let extra = BillPayment.record(from: bank, debt: loan, bill: bill, amount: 200, date: today, memo: "Extra principal payment", isExtra: true, in: ec)
+                try ec.save()
+                check("S48 an extra payment comes out of the paying account", owed(bank) == 800)
+                check("S48 and goes wholly toward the balance owed", owed(loan) == -4_800)
+                check("S48 it is not linked to the bill", extra?.paidBill == nil && extra?.paidDueDate == nil && extra?.isBillPayment == false)
+                check("S48 the bill is not marked paid", bill.isPaid(on: today, calendar: calendar) == false)
+                check("S48 it is a transfer, so it is neither income nor spending", extra?.isTransfer == true)
+                check("S48 a plain bill has no balance to put extra toward", BillPayment.record(from: bank, debt: nil, bill: Bill(name: "S48 power", amount: 50, frequency: .monthly, dueDate: today), amount: 50, date: today, isExtra: true, in: ec) == nil)
+                let regular = BillPayment.record(from: bank, debt: loan, bill: bill, amount: 300, date: today, in: ec)
+                try ec.save()
+                check("S48 a regular payment is linked to the bill", regular?.paidBill === bill, "linked \(regular?.paidBill?.name ?? "nil")")
+                check("S48 and ticks it off", bill.isPaid(on: today, calendar: calendar))
+                check("S48 and takes its amount off the balance too", owed(loan) == -4_500, "balance \(owed(loan))")
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

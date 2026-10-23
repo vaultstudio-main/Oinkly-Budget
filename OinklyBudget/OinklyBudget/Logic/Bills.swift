@@ -196,7 +196,9 @@ extension BillPayment {
 enum BillPayment {
     /// Records a payment from `source`. Paying a loan or card puts a payment in the paying account and takes the same amount
     /// off the debt. Paying a plain bill puts one expense in the paying account. Either way, the bill, if there is one,
-    /// is ticked off for the due date the payment settles. Returns the paying side's transaction.
+    /// is ticked off for the due date the payment settles. An extra payment, which only a loan or card can take, goes the same way
+    /// but is not tied to the bill: it takes the whole amount off the balance and leaves the bill, its due dates and what it
+    /// expects exactly as they were. Returns the paying side's transaction.
     @discardableResult
     static func record(
         from source: Account,
@@ -210,18 +212,24 @@ enum BillPayment {
         checkNumber: String = "",
         receiptData: Data? = nil,
         noReceipt: Bool = false,
+        isExtra: Bool = false,
         in context: ModelContext,
         calendar: Calendar = .current
     ) -> Transaction? {
         // Bills are never paid out of an investment account, and never by way of one.
         guard !source.supportsHoldings, !(debt?.supportsHoldings ?? false) else { return nil }
+        // An extra payment is toward a balance, so there has to be one.
+        if isExtra && debt == nil { return nil }
         let day = calendar.startOfDay(for: date)
         let out: Transaction
         let check = paymentChoice?.isCheck == true ? checkNumber : ""
         if let debt {
             // One payment, two sides: the method and check number are recorded on both.
-            let paid = Transfers.pay(from: source, toward: debt, amount: amount, date: day, memo: memo, state: state,
-                                     paymentType: nil, checkNumber: "", in: context)
+            let paid = isExtra
+                ? Transfers.move(from: source, to: debt, amount: amount, date: day, memo: memo, state: state, paymentType: nil, checkNumber: "",
+                                 payeeOut: "Extra Payment to \(debt.name)", payeeIn: "Extra Payment from \(source.name)", in: context)
+                : Transfers.pay(from: source, toward: debt, amount: amount, date: day, memo: memo, state: state,
+                                paymentType: nil, checkNumber: "", in: context)
             paid.into.paymentChoice = paymentChoice
             paid.into.checkNumber = check
             out = paid.out
@@ -234,8 +242,8 @@ enum BillPayment {
             return nil
         }
         out.paymentChoice = paymentChoice
-        out.isBillPayment = true
-        if let bill, let due = Bills.nearestDue(bill, to: day, calendar: calendar) {
+        out.isBillPayment = !isExtra
+        if !isExtra, let bill, let due = Bills.nearestDue(bill, to: day, calendar: calendar) {
             // The pending entry the bill made for this date is replaced by the real payment.
             for placeholder in BillLink.payments(of: bill, on: due, calendar: calendar) where placeholder.state == .pending && !placeholder.isBillPayment {
                 context.delete(placeholder)
@@ -249,7 +257,7 @@ enum BillPayment {
             out.noReceipt = receiptData == nil && noReceipt
         }
         out.checkNumber = check
-        if let bill, let due = Bills.nearestDue(bill, to: day, calendar: calendar) {
+        if !isExtra, let bill, let due = Bills.nearestDue(bill, to: day, calendar: calendar) {
             bill.setPaid(true, on: due, calendar: calendar)
         }
         return out
