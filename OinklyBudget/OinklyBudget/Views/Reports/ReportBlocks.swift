@@ -6,18 +6,7 @@ private struct ReportCardMinHeightKey: EnvironmentKey {
     static let defaultValue: CGFloat = 0
 }
 
-private struct ReportContentCapKey: EnvironmentKey {
-    static let defaultValue: CGFloat? = nil
-}
-
 extension EnvironmentValues {
-    /// The most height a report's content takes under its title, when the Reports page has run out of room. What does not fit
-    /// scrolls inside the card, so the page itself doesn't have to.
-    var reportContentCap: CGFloat? {
-        get { self[ReportContentCapKey.self] }
-        set { self[ReportContentCapKey.self] = newValue }
-    }
-
     /// The least height a report card takes. The Reports page sets it to the size of a placeholder.
     var reportCardMinHeight: CGFloat {
         get { self[ReportCardMinHeightKey.self] }
@@ -28,7 +17,6 @@ extension EnvironmentValues {
 /// The shell every built report sits in: a title, what it shows, an optional headline figure, then the content.
 struct ReportPanel<Content: View>: View {
     @Environment(\.reportCardMinHeight) private var minHeight
-    @Environment(\.reportContentCap) private var contentCap
     let title: String
     let summary: String
     var headline: String?
@@ -52,13 +40,7 @@ struct ReportPanel<Content: View>: View {
             }
             // Title, what it shows and the headline figure read as one sentence.
             .accessibilityElement(children: .combine)
-            if let contentCap {
-                // Built once: as tall as it needs to be up to the cap, and scrolling inside the card past it.
-                ScrollView(showsIndicators: false) { content }
-                    .frame(maxHeight: contentCap, alignment: .top)
-            } else {
-                content
-            }
+            content
         }
         // Each card is a group VoiceOver can move between, with its chart or figures inside.
         .accessibilityElement(children: .contain)
