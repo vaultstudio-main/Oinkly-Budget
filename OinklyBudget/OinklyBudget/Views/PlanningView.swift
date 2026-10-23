@@ -1,14 +1,13 @@
 import SwiftUI
 import SwiftData
 
-/// Planning, in three tabs: Goals, the savings goals you are working toward, Loans, each loan with how much is paid off and when it
-/// will be done, and Payoff Goals, the goals that pay a loan or card down. The Goals and Payoff Goals buttons open their own New Goal window. The Summary's Goals and
-/// Loans cards open the matching tab.
+/// Planning, in two tabs: Goals, the savings goals you are working toward, and Loan Payoff Goals, the goals that pay a loan or card
+/// down. Loans themselves live in Bills & Recurring and Liabilities. Each tab's button opens its own New Goal window. The Summary's
+/// Goals card opens the Goals tab.
 struct PlanningView: View {
     enum Tab: String, CaseIterable, Identifiable {
         case goals = "Goals"
-        case loans = "Loans"
-        case payoff = "Payoff Goals"
+        case payoff = "Loan Payoff Goals"
         var id: Self { self }
     }
 
@@ -32,22 +31,19 @@ struct PlanningView: View {
             FolderTabbedHeader(title: "Planning", tabs: Tab.allCases, selection: tabBinding, label: { $0.rawValue }) {
                 EmptyView()
             } centre: { EmptyView() } trailing: {
-                if current != .loans {
-                    Button {
-                        openWindow(id: "new-goal", value: NewGoalRequest(payoff: current == .payoff))
-                    } label: {
-                        Label(current == .goals ? "New Savings Goal" : "New Loan Payoff Goal", systemImage: "plus")
-                            .font(.body.weight(.semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .help(current == .goals ? "Open a window to set up something to save toward" : "Open a window to set up paying a loan or card down")
+                Button {
+                    openWindow(id: "new-goal", value: NewGoalRequest(payoff: current == .payoff))
+                } label: {
+                    Label(current == .goals ? "New Savings Goal" : "New Loan Payoff Goal", systemImage: "plus")
+                        .font(.body.weight(.semibold))
                 }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .help(current == .goals ? "Open a window to set up something to save toward" : "Open a window to set up paying a loan or card down")
             }
 
             switch current {
             case .goals: GoalsView(kind: .save)
-            case .loans: GoalsView(kind: .payoff, loansOnly: true)
             case .payoff: GoalsView(kind: .payoff)
             }
         }

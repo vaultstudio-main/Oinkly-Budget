@@ -281,12 +281,12 @@ struct LoansProgressCard: View {
                 .frame(height: SummaryCardSize.progress)
             }
         }
-        // Clicking the card opens Planning on its Loans tab, from the top.
+        // Clicking the card opens Liabilities, where the loans are.
         .contentShape(Rectangle())
-        .onTapGesture { PlanningView.open(.loans) }
-        .help("Open Loans in Planning")
+        .onTapGesture { NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": "liabilities"]) }
+        .help("Open Liabilities")
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Opens Loans in Planning")
+        .accessibilityHint("Opens Liabilities")
     }
 
     private func row(_ line: Liabilities.Line) -> some View {

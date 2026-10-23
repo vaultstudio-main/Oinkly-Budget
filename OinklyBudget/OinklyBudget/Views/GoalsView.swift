@@ -21,19 +21,14 @@ struct GoalsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
     private var goals: [Goal] { allGoals.live.filter { $0.kind == kind } }
-    @Query(sort: \Account.name) private var allAccounts: [Account]
 
     /// Savings goals, or the goals that pay a debt down.
     var kind: GoalKind = .save
-    /// Show the loans, and no goals: the Loans tab.
-    var loansOnly = false
 
     @State private var sheet: GoalSheet?
     @State private var detail: Goal?
     @State private var deleting: Goal?
     @State private var showsArchive = false
-
-    private var loans: [Account] { loansOnly ? allAccounts.live.filter { $0.isLoan && !$0.isClosed } : [] }
 
     /// Goals still being worked on: nearest date first, then ones with no date.
     private var activeGoals: [Goal] {
@@ -68,9 +63,7 @@ struct GoalsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                if loansOnly {
-                    if loans.isEmpty { emptyLoans } else { loansSection }
-                } else if goals.isEmpty && kind == .save {
+                if goals.isEmpty && kind == .save {
                     empty
                 } else {
                     if goals.isEmpty {
@@ -181,52 +174,6 @@ struct GoalsView: View {
         }
     }
 
-    private var emptyLoans: some View {
-        ReportCard(title: "No Loans Yet") {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("This is where your loans live. Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
-                    .font(.callout).foregroundStyle(.secondary)
-                Text("To aim at paying a loan or card down by a date, use the Payoff Goals tab.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        HStack {
-            Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-            Spacer()
-        }
-    }
-
-    /// The loans, with the totals across them, for the Loans tab.
-    @ViewBuilder
-    private var loansSection: some View {
-        let list = loans
-        let owed = list.reduce(Decimal(0)) { $0 + $1.loanProgress.owed }
-        let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
-        let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
-        if !list.isEmpty {
-            StatGrid(fillsRow: true) {
-                StatTile(title: "Still Owed") {
-                    Text(owed, format: .appCurrency)
-                } note: {
-                    Text("across \(list.count) loan\(list.count == 1 ? "" : "s")")
-                }
-                StatTile(title: "Monthly Payments") {
-                    Text(monthly, format: .appCurrency)
-                } note: {
-                    Text("every month")
-                }
-                StatTile(title: "Paid Off") {
-                    Text("\(paidOff)")
-                } note: {
-                    Text("of \(list.count) loan\(list.count == 1 ? "" : "s")")
-                }
-            }
-            ForEach(list) { LoanPlanCard(account: $0) }
-        }
-    }
 }
 
 // MARK: Card
@@ -838,80 +785,5 @@ struct GoalEditView: View {
         modelContext.saveNow()
         GoalArchiver.archiveReached(in: modelContext)
         dismiss()
-    }
-}
-
-// MARK: Loans on the Planning page
-
-/// A loan with a maturity date, shown beside the goals: how far along it is and whether it will be paid off before it matures.
-private struct LoanPlanCard: View {
-    let account: Account
-
-    var body: some View {
-        let loan = account.loanProgress
-        let estimate = loan.payoffDate()
-        GoalCardBackground {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    AccountPicture(data: account.supportsPhoto ? account.photoData : nil, type: account.type, account: account)
-                        .frame(width: 64, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(account.name).font(.headline)
-                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    badge(estimate)
-                }
-                if loan.hasOriginal {
-                    ProgressView(value: loan.fraction).tint(Theme.green)
-                }
-                HStack(alignment: .firstTextBaseline) {
-                    if loan.hasOriginal {
-                        Text(loan.paidOff, format: .appCurrency).font(.title3.bold())
-                        Text("paid").foregroundStyle(.secondary)
-                        Text(loan.fraction, format: .percent.precision(.fractionLength(0))).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Text("\(loan.owed.formatted(.appCurrency)) owed").font(.callout.weight(.medium))
-                }
-                .font(.subheadline)
-                if let estimate {
-                    Text("Estimated payoff \(estimate.formatted(.dateTime.month(.abbreviated).year())) at \(loan.monthlyPayment.formatted(.appCurrency))/mo")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private var subtitle: String {
-        var parts = [account.typeTitle]
-        if let date = account.payoffDate { parts.append("matures \(date.formatted(.dateTime.month(.abbreviated).year()))") }
-        return parts.joined(separator: " · ")
-    }
-
-    /// Ahead of or behind the maturity date, by comparing the estimated payoff with it.
-    @ViewBuilder
-    private func badge(_ estimate: Date?) -> some View {
-        if let maturity = account.payoffDate, let estimate {
-            let months = Calendar.current.dateComponents([.month], from: estimate, to: maturity).month ?? 0
-            if months > 0 {
-                label("\(months) mo ahead", "checkmark.circle.fill", Theme.green)
-            } else if months < 0 {
-                label("\(-months) mo behind", "exclamationmark.triangle.fill", .orange)
-            } else {
-                label("On schedule", "checkmark.circle", Theme.green)
-            }
-        } else if account.payoffDate != nil, account.loanProgress.monthlyPayment <= 0 {
-            label("No payment set", "questionmark.circle", .secondary)
-        }
-    }
-
-    private func label(_ text: String, _ symbol: String, _ color: Color) -> some View {
-        HStack(spacing: 4) { Image(systemName: symbol); Text(text) }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(color)
-            .fixedSize()
     }
 }
