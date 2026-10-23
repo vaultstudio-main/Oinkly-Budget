@@ -238,7 +238,8 @@ private struct ScreenshotRun {
         let context = container.mainContext
         // Give the app a moment to finish starting before the test data goes in; loading it holds the app up.
         await wait(3)
-        if ((try? context.fetchCount(FetchDescriptor<Account>())) ?? 0) <= 1 {
+        // `-screenshotNoData YES` leaves the throwaway file empty, to look at the setup page a new user starts on.
+        if ((try? context.fetchCount(FetchDescriptor<Account>())) ?? 0) <= 1, !UserDefaults.standard.bool(forKey: "screenshotNoData") {
             NSLog("SHOT: loading the test data")
             do { try TestData.load(into: context); context.saveNow() } catch { NSLog("SHOT: test data failed: \(error.localizedDescription)") }
             NSLog("SHOT: test data loaded")

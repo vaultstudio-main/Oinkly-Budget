@@ -8,8 +8,22 @@ import SwiftData
 struct ManageAccountsWindow: View {
     static let id = "manage-accounts"
 
-    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        AccountTabsView {
+            Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+        }
+        .frame(minWidth: 1180, minHeight: 600)
+    }
+}
+
+/// The tabbed list of accounts, shared by the Manage Accounts window and the setup page a new user starts on. What goes at the
+/// right end of the bottom bar, after Add Account, is up to the page that shows it.
+struct AccountTabsView<Trailing: View>: View {
+    @ViewBuilder let trailing: Trailing
+
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
     @State private var tab = AccountGroup.checkingSavings
@@ -78,9 +92,9 @@ struct ManageAccountsWindow: View {
             VStack(spacing: 0) {
                 Divider()
                 HStack(spacing: 10) {
-                    Button { isAdding = true } label: { Label("Add \(kind?.title ?? singular(tab))", systemImage: "plus.circle.fill") }
+                    Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") }
                     Spacer()
-                    Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+                    trailing
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -88,7 +102,6 @@ struct ManageAccountsWindow: View {
             .background(.bar)
         }
         .background(Theme.background)
-        .frame(minWidth: 1180, minHeight: 600)
         .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: kind ?? tab.accountTypes.first ?? .checking) }
         .sheet(item: $editing) { AccountEditView(account: $0) }
         .confirmationDialog(
@@ -132,6 +145,12 @@ struct ManageAccountsWindow: View {
         case .flexSpending: "FSA"
         case .prepaidCard: "Prepaid / Debit"
         case .paymentApp: "Payment App"
+        case .loan: "Other Loan"
+        case .personalLoan: "Personal"
+        case .businessLoan: "Business"
+        case .studentLoan: "Student"
+        case .autoLoan: "Auto"
+        case .medicalDebt: "Medical"
         case .homeEquity: "HELOC"
         case .vehicleLoan: "Boat / RV"
         case .retirement401k: "401(k)"
@@ -142,7 +161,7 @@ struct ManageAccountsWindow: View {
     }
 
     private var emptyMessage: String {
-        if let kind { return "No \(kind.title) accounts yet. Use the button below to add one." }
+        if let kind { return "No \(kind.title) accounts yet. \(kind.blurb). Use Add Account below to add one." }
         return switch tab {
         case .checkingSavings: "No checking or savings accounts yet. Use the button below to add one."
         case .creditCards: "No credit cards yet. Use the button below to add one, with its limit and payment due date."
