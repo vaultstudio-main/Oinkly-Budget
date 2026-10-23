@@ -1330,6 +1330,29 @@ enum SharedHardeningTest {
                 check("S46 a bill set to come out of an account carries that account", outlook.bills.first { $0.title == "Power" }?.accountKey == MonthOutlook.accountKey(bank))
                 check("S46 a bill with no account carries none", outlook.bills.first { $0.title == "Water" }?.accountKey == nil)
             }
+
+            // S47: projections for the quarter, the year and the long run
+            do {
+                let calendar = Calendar.current
+                let thisMonth = MonthFilter.start(of: .now)
+                let history: [(date: Date, income: Double, spending: Double)] = (0..<12).map { index in
+                    let date = calendar.date(byAdding: .month, value: index - 11, to: thisMonth)!
+                    // This month, the last, is part way through and must not count.
+                    return index == 11 ? (date, 100, 900) : (date, 3000, 2200)
+                }
+                let average = Projection.averages(history: history)
+                check("S47 the average is of the last three full months and leaves this month out", average.income == 3000 && average.spending == 2200)
+                let quarter = Projection.make(history: history, netWorthNow: 10_000, bills: [], months: 3)
+                check("S47 a quarter is three months at the average", quarter.months.count == 3 && quarter.totalIncome == 9000 && quarter.totalSpending == 6600 && quarter.totalSaved == 2400)
+                check("S47 the first projected month is next month", quarter.months.first?.date == calendar.date(byAdding: .month, value: 1, to: thisMonth))
+                check("S47 net worth starts where it is now and adds what is kept", quarter.netWorth.count == 4 && quarter.netWorth.first?.value == 10_000 && quarter.netWorth.last?.value == 12_400)
+                check("S47 the savings rate is what is kept of what comes in", abs((quarter.savingsRate ?? 0) - 26.666) < 0.01)
+                let year = Projection.make(history: history, netWorthNow: 0, bills: [], months: 12)
+                check("S47 a year is twelve months", year.months.count == 12 && year.totalSaved == 9600)
+                let long = Projection.years(10, monthlyIncome: average.income, monthlySpending: average.spending, netWorthNow: 5_000)
+                check("S47 the long range runs year by year", long.count == 10 && long[0].saved == 9600 && long[4].netWorth == 5_000 + 9600 * 5 && long[9].netWorth == 5_000 + 9600 * 10)
+                check("S47 with no history there is nothing to project", !Projection.make(history: [], netWorthNow: 0, bills: [], months: 3).hasData)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

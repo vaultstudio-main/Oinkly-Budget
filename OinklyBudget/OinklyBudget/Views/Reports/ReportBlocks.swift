@@ -103,8 +103,25 @@ struct ReportEmpty: View {
     var shape: ReportShape?
     /// "Needs more data" while the report is waiting for data; something like "All clear" when there is just nothing to flag.
     var title: String? = "Needs more data"
+    /// A plain note with an icon, with no faint outline behind it. Used for "All clear" and for lists with nothing in them yet.
+    var clean = false
+    var symbol = "checkmark.circle"
 
     var body: some View {
+        if clean || title != "Needs more data" { plain } else { ghosted }
+    }
+
+    private var plain: some View {
+        VStack(spacing: 8) {
+            Image(systemName: symbol).font(.system(size: 28, weight: .light)).foregroundStyle(.tertiary)
+            if let title { Text(title).font(.callout.weight(.semibold)) }
+            Text(message).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: .infinity)
+    }
+
+    private var ghosted: some View {
         ZStack {
             GhostView(shape: shape ?? inheritedShape, projects: false)
                 .opacity(0.8)

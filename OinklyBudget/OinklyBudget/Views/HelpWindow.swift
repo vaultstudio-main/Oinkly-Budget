@@ -361,7 +361,9 @@ enum HelpContent {
             ]),
 
             Topic(title: "Reports", symbol: "chart.bar.xaxis", lines: [
-                "Reports are grouped into sections: net worth, cash flow, debt and loans, savings and goals, budgets, spending, income, bills and investments.",
+                "Reports are grouped into tabs across the top: Overview, Projections, Spending, Income, Cash Flow, Net Worth, Debt & Loans, Savings & Goals, Budgets, Bills, Investments and Books & Records. The tab you are on is underlined.",
+                "• Projections looks ahead in three areas. Quarter is the next three months, Year the next twelve, and Long Range one to ten years out. Each shows what you can expect to take in, spend and keep, month by month, how what you are worth would move, and the bills due. It assumes your income and spending stay at the average of your last three full months and that what you own holds its value, so treat it as an estimate to plan with.",
+                "• Books & Records is four cards: how much is reconciled, what is still to match by account, spending with no receipt, and look-alike payees to clean up. A card with nothing to flag says so plainly.",
                 "• One period button picks the span. Each report totals this month, the last three and six months and the last year side by side.",
                 "• Line charts show a dashed six-month projection of where things are heading.",
                 "• A card without enough data keeps its size and says what it needs, so the page doesn't jump around.",

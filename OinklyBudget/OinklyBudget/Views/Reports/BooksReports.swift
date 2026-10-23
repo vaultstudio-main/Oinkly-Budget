@@ -36,7 +36,7 @@ struct ReconciliationStatusReport: View {
             if snapshot == nil {
                 ReportCalculating(height: 170)
             } else if total == 0 {
-                ReportEmpty(message: "No transactions yet.", height: 170)
+                ReportEmpty(message: "No transactions yet.", height: 170, title: "Nothing yet", clean: true, symbol: "tray")
             } else {
                 HStack(spacing: 18) {
                     Chart(slices) { slice in
@@ -79,7 +79,7 @@ struct UnreconciledByAccountReport: View {
             if snapshot == nil {
                 ReportCalculating(height: 170)
             } else if rows.isEmpty {
-                ReportEmpty(message: "Everything is reconciled. Nothing waiting.", height: 170, shape: .table, title: "All clear")
+                ReportEmpty(message: "Everything is reconciled. Nothing waiting.", height: 170, title: "All clear", clean: true)
             } else {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 8) {
                     GridRow {
@@ -123,7 +123,7 @@ struct MissingReceiptsReport: View {
         return ReportPanel(title: "Missing Receipts", summary: "Spending with no receipt attached and not marked as having none.",
                            headline: missing.isEmpty ? nil : "\(missing.count)\(candidates.count == 800 ? "+" : "")", headlineNote: missing.isEmpty ? nil : "to add or mark") {
             if missing.isEmpty {
-                ReportEmpty(message: "Every spending transaction has a receipt or is marked as having none.", height: 170, shape: .table, title: "All clear")
+                ReportEmpty(message: "Every spending transaction has a receipt or is marked as having none.", height: 170, title: "All clear", clean: true)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(missing.prefix(5)) { transaction in
@@ -171,9 +171,9 @@ struct DuplicatePayeesReport: View {
         return ReportPanel(title: "Duplicate Payees", summary: "Payees that look like the same one written differently. Merge them so your reports group them together.",
                            headline: groups.isEmpty ? nil : "\(groups.count)", headlineNote: groups.isEmpty ? nil : "groups to clean up") {
             if payees.isEmpty {
-                ReportEmpty(message: "No payees yet.", height: 170)
+                ReportEmpty(message: "No payees yet.", height: 170, title: "Nothing yet", clean: true, symbol: "person.2")
             } else if groups.isEmpty {
-                ReportEmpty(message: "No look-alike payees. Your list is clean.", height: 170, shape: .table, title: "All clear")
+                ReportEmpty(message: "No look-alike payees. Your list is clean.", height: 170, title: "All clear", clean: true)
             } else {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(groups.prefix(5), id: \.0) { _, names in

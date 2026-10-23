@@ -22,7 +22,7 @@ struct ReportsView: View {
             PinnedHeader("Reports") { sectionPicker }
             ScrollView {
                 VStack(spacing: 14) {
-                    grid(section.reports)
+                    if section == .projections { ProjectionsPage() } else { grid(section.reports) }
                 }
                 .padding(16)
             }
@@ -42,20 +42,25 @@ struct ReportsView: View {
 
     private var sectionPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Plain tabs with an underline under the one you are on, spaced evenly, instead of a crowd of buttons.
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 22) {
                     ForEach(ReportSection.allCases) { item in
+                        let selected = section == item
                         Button { section = item } label: {
-                            Label(item.rawValue, systemImage: item.symbol)
-                                .font(.callout.weight(section == item ? .semibold : .regular))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(section == item ? Color.accentColor.opacity(0.22) : Theme.panel, in: Capsule())
-                                .contentShape(Capsule())
+                            VStack(spacing: 5) {
+                                Text(item.rawValue)
+                                    .font(.callout.weight(selected ? .semibold : .regular))
+                                    .foregroundStyle(selected ? Color.primary : Color.secondary)
+                                Capsule().fill(selected ? Color.accentColor : Color.clear).frame(height: 2.5)
+                            }
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
                     }
                 }
+                .padding(.horizontal, 2)
             }
             Text(section.blurb).font(.callout).foregroundStyle(.secondary)
         }
@@ -95,7 +100,7 @@ struct ReportsView: View {
 
     private func grid(_ items: [ReportItem]) -> some View {
         // Three across when the page is wide enough.
-        let columns = pageWidth >= 1000 ? 3 : 2
+        let columns = pageWidth >= 1000 ? section.columns : 2
         return VStack(spacing: 14) {
             ForEach(Array(rows(of: items, columns: columns).enumerated()), id: \.offset) { _, row in
                 HStack(alignment: .top, spacing: 14) {

@@ -271,11 +271,19 @@ private struct ScreenshotRun {
         scrollMain(toBottom: true); await wait(1); await bringForward(window); capture(window, as: "page-summary-lower"); scrollMain(toBottom: false)
         await pageShot("transactions", as: "page-transactions")
         await pageShot("reports", as: "page-reports")
-        for section in ["Spending", "Income", "Cash Flow", "Net Worth", "Debt & Loans", "Savings & Goals", "Budgets", "Bills", "Investments"] {
+        for section in ["Projections", "Spending", "Income", "Cash Flow", "Net Worth", "Debt & Loans", "Savings & Goals", "Budgets", "Bills", "Investments", "Books & Records"] {
             post("reportSection:\(section)")
             await wait(1.6)
             await bringForward(window)
             capture(window, as: "page-reports-" + section.lowercased().replacingOccurrences(of: " & ", with: "-").replacingOccurrences(of: " ", with: "-"))
+            if section == "Projections" {
+                for area in ["year", "longrange"] {
+                    post("projectionsArea:\(area)")
+                    await wait(1.4)
+                    await bringForward(window)
+                    capture(window, as: "page-reports-projections-\(area)")
+                }
+            }
         }
         await pageShot("liabilities", as: "page-liabilities")
         await pageShot("investments", as: "page-investments")

@@ -24,6 +24,7 @@ struct ReportItem: Identifiable {
 /// The groups of reports across the top of the Reports page.
 enum ReportSection: String, CaseIterable, Identifiable {
     case overview = "Overview"
+    case projections = "Projections"
     case spending = "Spending"
     case income = "Income"
     case cashFlow = "Cash Flow"
@@ -40,6 +41,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .overview: "rectangle.grid.2x2"
+        case .projections: "scope"
         case .spending: "cart"
         case .income: "arrow.down.circle"
         case .cashFlow: "arrow.left.arrow.right"
@@ -57,6 +59,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
     var blurb: String {
         switch self {
         case .overview: "Income, spending and the year at a glance."
+        case .projections: "Where the next quarter, the next year and the long run are heading, at your recent pace."
         case .spending: "Where the money goes, by category, payee, card and cash."
         case .income: "Where the money comes from and how steady it is."
         case .cashFlow: "Money in and out, month by month, and what's coming."
@@ -70,8 +73,14 @@ enum ReportSection: String, CaseIterable, Identifiable {
         }
     }
 
+    /// How many cards sit side by side on a page wide enough for three. The records pages are tidier as a pair of pairs.
+    var columns: Int { self == .health ? 2 : 3 }
+
     var reports: [ReportItem] {
         switch self {
+        case .projections:
+            // This page is built by hand from its own areas, not from a list of reports.
+            []
         case .overview:
             [
                 ReportItem(title: "Net Worth Over Time", summary: "", symbol: "scalemass", shape: .line, isWide: true, trend: .netWorth),
