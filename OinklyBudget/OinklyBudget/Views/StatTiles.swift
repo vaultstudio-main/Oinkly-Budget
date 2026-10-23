@@ -25,19 +25,22 @@ struct StatTile<Value: View, Note: View>: View {
 /// Lays tiles out in equal columns, four across when there's room and two by two otherwise, with every tile the
 /// same width and height so the row fills the card area evenly.
 struct StatGrid<Content: View>: View {
+    /// Spread a row of three or fewer tiles across the whole width, instead of leaving the last column empty.
+    var fillsRow = false
     @ViewBuilder let content: Content
 
     var body: some View {
-        TileGridLayout { content }
+        TileGridLayout(fillsRow: fillsRow) { content }
     }
 }
 
 private struct TileGridLayout: Layout {
+    var fillsRow = false
     var spacing: CGFloat = 12
 
     private func metrics(_ proposal: ProposedViewSize, _ subviews: Subviews) -> (columns: Int, cellWidth: CGFloat, rowHeight: CGFloat, rows: Int, width: CGFloat) {
         let width = proposal.width ?? 360
-        let columns = width >= 640 ? 4 : 2
+        let columns = width >= 640 ? (fillsRow ? max(min(subviews.count, 4), 1) : 4) : 2
         let cellWidth = max((width - spacing * CGFloat(columns - 1)) / CGFloat(columns), 0)
         let rowHeight = subviews.map { $0.sizeThatFits(ProposedViewSize(width: cellWidth, height: nil)).height }.max() ?? 0
         let rows = (subviews.count + columns - 1) / columns

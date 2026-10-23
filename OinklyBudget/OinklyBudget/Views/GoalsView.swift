@@ -31,6 +31,7 @@ struct GoalsView: View {
     @State private var sheet: GoalSheet?
     @State private var detail: Goal?
     @State private var deleting: Goal?
+    @State private var showsArchive = false
 
     private var loans: [Account] { showsLoans ? allAccounts.live.filter { $0.isLoan && !$0.isClosed } : [] }
 
@@ -47,11 +48,20 @@ struct GoalsView: View {
         goals.filter(\.isArchived).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) }
     }
 
+    /// A goal that has just been reached stays among the open ones for a few days, with a congratulations, then moves to the archive.
+    static let celebrationDays = 3
+
+    private func isCelebrating(_ goal: Goal) -> Bool {
+        guard let done = goal.completedAt else { return false }
+        return Date.now.timeIntervalSince(done) < Double(Self.celebrationDays) * 86_400
+    }
+
     private var goalWord: String { kind == .save ? "savings goal" : "loan payoff goal" }
 
     var body: some View {
+        let celebrating = archivedGoals.filter(isCelebrating)
+        let archived = archivedGoals.filter { !isCelebrating($0) }
         let open = activeGoals
-        let archived = archivedGoals
         let saved = open.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
         let target = open.reduce(Decimal(0)) { $0 + $1.targetAmount }
         let needed = open.compactMap { $0.progress().neededPerMonth }.reduce(Decimal(0), +)
@@ -63,13 +73,7 @@ struct GoalsView: View {
                 } else {
                     if showsLoans { loansSection }
 
-                    if showsLoans {
-                        HStack {
-                            Text("LOAN PAYOFF GOALS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        .padding(.top, 6)
-                    }
+                    if showsLoans { sectionHeader("Loan Payoff Goals").padding(.top, 10) }
 
                     if goals.isEmpty {
                         ReportCard(title: "No \(kind == .save ? "Savings" : "Loan Payoff") Goals Yet") {
@@ -77,7 +81,7 @@ struct GoalsView: View {
                                 .font(.callout).foregroundStyle(.secondary)
                         }
                     } else {
-                        StatGrid {
+                        StatGrid(fillsRow: true) {
                             StatTile(title: kind == .save ? "Saved" : "Debt Paid Down") {
                                 Text(saved, format: .appCurrency).foregroundStyle(Theme.green)
                             } note: {
@@ -89,25 +93,28 @@ struct GoalsView: View {
                                 Text("to hit every date")
                             }
                             StatTile(title: "Reached") {
-                                Text("\(archived.count)")
+                                Text("\(celebrating.count + archived.count)")
                             } note: {
                                 Text("of \(goals.count) goal\(goals.count == 1 ? "" : "s")")
                             }
                         }
 
-                        ForEach(open) { goal in
+                        ForEach(celebrating + open) { goal in
                             if goal.isLive { card(goal) }
                         }
 
                         if !archived.isEmpty {
-                            HStack {
-                                Text("COMPLETED").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                                Spacer()
+                            DisclosureGroup(isExpanded: $showsArchive) {
+                                VStack(spacing: 14) {
+                                    ForEach(archived) { goal in
+                                        if goal.isLive { card(goal) }
+                                    }
+                                }
+                                .padding(.top, 8)
+                            } label: {
+                                Text("Archived Goals (\(archived.count))").font(.subheadline.weight(.semibold))
                             }
                             .padding(.top, 6)
-                            ForEach(archived) { goal in
-                                if goal.isLive { card(goal) }
-                            }
                         }
                     }
                 }
@@ -153,7 +160,7 @@ struct GoalsView: View {
     }
 
     private func card(_ goal: Goal) -> some View {
-        GoalCard(goal: goal, onOpen: { detail = goal }, onProgress: { sheet = .progress(goal) })
+        GoalCard(goal: goal, celebrating: isCelebrating(goal), onOpen: { detail = goal }, onProgress: { sheet = .progress(goal) })
             .contextMenu {
                 if !goal.isArchived && !goal.isLinked {
                     Button(goal.isPayoff ? "Add a Payment" : "Add to Savings", systemImage: "plus.circle") { sheet = .progress(goal) }
@@ -183,6 +190,13 @@ struct GoalsView: View {
         }
     }
 
+    private func sectionHeader(_ title: String) -> some View {
+        HStack {
+            Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Spacer()
+        }
+    }
+
     /// The loans, with the totals across them, for the Loans tab.
     @ViewBuilder
     private var loansSection: some View {
@@ -191,7 +205,8 @@ struct GoalsView: View {
         let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
         let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
         if !list.isEmpty {
-            StatGrid {
+            sectionHeader("Loans")
+            StatGrid(fillsRow: true) {
                 StatTile(title: "Still Owed") {
                     Text(owed, format: .appCurrency)
                 } note: {
@@ -229,6 +244,7 @@ private struct GoalCardBackground<Content: View>: View {
 
 private struct GoalCard: View {
     let goal: Goal
+    var celebrating = false
     let onOpen: () -> Void
     let onProgress: () -> Void
 
@@ -237,6 +253,16 @@ private struct GoalCard: View {
         let color = Color(hex: goal.colorHex)
         GoalCardBackground {
             VStack(alignment: .leading, spacing: 8) {
+                if celebrating {
+                    Label(goal.isPayoff ? "Congratulations! \(goal.name) is paid off." : "Congratulations! You reached \(goal.name).",
+                          systemImage: "party.popper.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.green)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Theme.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
+                }
                 Button(action: onOpen) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack(spacing: 12) {
