@@ -64,7 +64,101 @@ enum SymbolChoices {
         "calendar": "Calendar", "tag": "Tag",
     ]
 
-    static func name(_ symbol: String) -> String { names[symbol] ?? goalNames[symbol] ?? symbol }
+    /// A symbol's menu name: the one given above, or its own name made readable ("figure.run" is "Run").
+    static func name(_ symbol: String) -> String {
+        if let known = names[symbol] ?? goalNames[symbol] { return known }
+        let last = symbol.split(separator: ".").first { !["fill", "circle", "square"].contains($0) } ?? Substring(symbol)
+        return last.prefix(1).uppercased() + last.dropFirst()
+    }
+
+    /// What suits one built-in budget category, so the menu holds what fits it and little else. Nil for one with no list of its own.
+    static func symbols(forCategoryKey key: String) -> [String]? { byCategory[key] }
+
+    private static let byCategory: [String: [String]] = [
+        "housing": ["house", "building.2", "key", "door.left.hand.open", "bed.double", "sofa", "lightbulb", "shield"],
+        "property-tax": ["doc.text", "building.columns", "house", "seal", "percent", "doc.plaintext"],
+        "hoa-fees": ["building.2", "person.3", "house", "key", "leaf"],
+        "utilities": ["bolt", "drop", "flame", "lightbulb", "powerplug", "trash", "thermometer.medium", "wifi"],
+        "phone-internet": ["wifi", "phone", "iphone", "antenna.radiowaves.left.and.right", "network", "tv"],
+        "home-maintenance": ["hammer", "wrench.and.screwdriver", "screwdriver", "wrench", "paintbrush", "house"],
+        "home-improvement": ["paintbrush", "hammer", "ruler", "paintbrush.pointed", "house", "lightbulb", "square.split.2x2"],
+        "furniture-appliances": ["sofa", "bed.double", "chair.lounge", "refrigerator", "washer", "lamp.desk", "tv"],
+        "lawn-garden": ["leaf", "tree", "sun.max", "drop", "pawprint", "camera.macro", "scissors"],
+        "household-supplies": ["sparkles", "cart", "basket", "trash", "bubbles.and.sparkles", "shippingbox", "bag"],
+        "groceries": ["cart", "basket", "bag", "carrot", "fork.knife", "takeoutbag.and.cup.and.straw", "leaf", "birthday.cake"],
+        "dining-out": ["fork.knife", "takeoutbag.and.cup.and.straw", "cup.and.saucer", "wineglass", "birthday.cake", "fork.knife.circle", "star"],
+        "coffee-snacks": ["cup.and.saucer", "mug", "birthday.cake", "takeoutbag.and.cup.and.straw", "carrot", "leaf"],
+        "alcohol-bars": ["wineglass", "mug", "party.popper", "music.note", "moon.stars", "takeoutbag.and.cup.and.straw"],
+        "gas-fuel": ["fuelpump", "car", "bolt.car", "gauge", "drop", "flame", "location"],
+        "auto-maintenance": ["wrench.and.screwdriver", "car", "gearshape", "wrench", "battery.100", "gauge", "fuelpump"],
+        "auto-payment": ["car", "key", "doc.text", "creditcard", "bolt.car", "banknote", "calendar"],
+        "parking-tolls": ["parkingsign", "car", "road.lanes", "creditcard", "location", "ticket", "mappin"],
+        "public-transit": ["tram", "bus", "train.side.front.car", "ferry", "bicycle", "ticket", "figure.walk"],
+        "rideshare-taxi": ["location", "car", "car.2", "mappin.and.ellipse", "bicycle", "scooter", "figure.walk"],
+        "insurance": ["checkmark.shield", "shield", "umbrella", "doc.text", "lock", "person.2", "heart.text.square"],
+        "auto-insurance": ["shield", "car", "checkmark.shield", "doc.text", "lock", "wrench.and.screwdriver"],
+        "health-insurance": ["heart.text.square", "cross.case", "stethoscope", "checkmark.shield", "pills", "heart"],
+        "home-insurance": ["umbrella", "house", "checkmark.shield", "lock", "flame", "cloud.bolt", "drop"],
+        "life-insurance": ["person.crop.circle", "heart", "person.2", "checkmark.shield", "leaf", "star"],
+        "healthcare": ["cross.case", "stethoscope", "heart.text.square", "cross", "bandage", "waveform.path.ecg", "pills"],
+        "dental": ["mouth", "cross.case", "stethoscope", "sparkles", "checkmark.circle"],
+        "vision": ["eyeglasses", "eye", "sun.max", "cross.case", "stethoscope"],
+        "pharmacy": ["pills", "cross.case", "syringe", "bandage", "drop", "cart"],
+        "mental-health": ["brain.head.profile", "heart", "leaf", "bubble.left.and.bubble.right", "moon.stars", "sparkles"],
+        "fitness": ["figure.run", "dumbbell", "figure.walk", "bicycle", "figure.yoga", "figure.pool.swim", "heart", "trophy"],
+        "personal-care": ["scissors", "comb", "sparkles", "drop", "face.smiling", "bubbles.and.sparkles", "heart"],
+        "salon-barber": ["comb", "scissors", "sparkles", "face.smiling", "paintbrush", "star"],
+        "clothing": ["tshirt", "bag", "shoeprints.fill", "eyeglasses", "sparkles", "hanger", "gift"],
+        "shopping": ["bag", "cart", "gift", "creditcard", "tag", "shippingbox", "basket"],
+        "electronics": ["desktopcomputer", "laptopcomputer", "iphone", "headphones", "keyboard", "tv", "gamecontroller", "externaldrive"],
+        "entertainment": ["film", "play.rectangle", "popcorn", "tv", "music.note", "ticket", "theatermasks", "party.popper"],
+        "events-concerts": ["ticket", "music.note", "guitars", "party.popper", "theatermasks", "mic", "star"],
+        "hobbies": ["paintpalette", "camera", "guitars", "puzzlepiece", "scissors", "books.vertical", "hammer", "fish"],
+        "books-media": ["books.vertical", "book", "newspaper", "headphones", "film", "play.rectangle", "music.note"],
+        "games": ["gamecontroller", "dice", "puzzlepiece", "trophy", "desktopcomputer", "party.popper"],
+        "subscriptions": ["play.rectangle", "tv", "music.note", "newspaper", "icloud", "repeat", "headphones", "star"],
+        "travel": ["airplane", "suitcase", "globe.americas", "map", "camera", "sailboat", "ticket", "mappin.and.ellipse"],
+        "hotels-lodging": ["bed.double", "building.2", "key", "suitcase", "moon.stars", "house"],
+        "kids-family": ["person.2", "figure.and.child.holdinghands", "teddybear", "balloon", "heart", "house", "birthday.cake"],
+        "childcare": ["figure.and.child.holdinghands", "teddybear", "figure.2.and.child.holdinghands", "heart", "clock", "house"],
+        "kids-activities": ["soccerball", "basketball", "tennis.racket", "figure.run", "music.note", "paintpalette", "trophy", "teddybear"],
+        "education": ["book", "graduationcap", "pencil", "backpack", "books.vertical", "laptopcomputer", "studentdesk"],
+        "student-loans": ["graduationcap", "book", "banknote", "doc.text", "building.columns", "percent"],
+        "pets": ["pawprint", "dog", "cat", "bird", "fish", "teddybear"],
+        "pet-care-vet": ["stethoscope", "pawprint", "cross.case", "pills", "dog", "cat"],
+        "gifts-donations": ["gift", "heart", "balloon", "party.popper", "birthday.cake", "star", "envelope"],
+        "charity": ["heart", "hands.sparkles", "person.2", "gift", "globe.americas", "leaf", "star"],
+        "fees-charges": ["creditcard", "exclamationmark.circle", "doc.text", "percent", "minus.circle", "banknote"],
+        "bank-fees": ["building.columns", "creditcard", "minus.circle", "banknote", "doc.text", "percent"],
+        "interest-paid": ["percent", "chart.line.downtrend.xyaxis", "creditcard", "banknote", "building.columns", "arrow.down.circle"],
+        "investment-fees": ["minus.circle", "chart.line.uptrend.xyaxis", "chart.pie", "percent", "doc.text", "building.columns"],
+        "taxes-income": ["doc.plaintext", "building.columns", "percent", "doc.text", "seal", "banknote"],
+        "taxes-other": ["seal", "doc.text", "building.columns", "house", "car", "percent"],
+        "professional-services": ["briefcase", "person.crop.rectangle", "doc.text", "scalemass", "chart.bar", "phone", "envelope"],
+        "postage-shipping": ["shippingbox", "envelope", "box.truck", "tray", "airplane", "doc.text"],
+        "memberships-dues": ["person.crop.rectangle", "person.2", "star", "ticket", "dumbbell", "building.columns", "creditcard"],
+        "cash-withdrawals": ["banknote", "dollarsign.circle", "building.columns", "creditcard", "wallet.pass", "arrow.down.to.line"],
+        "business-expenses": ["briefcase", "doc.text", "laptopcomputer", "chart.bar", "building.2", "creditcard", "shippingbox"],
+        "miscellaneous": ["ellipsis.circle", "tag", "star", "questionmark.circle", "shippingbox", "square.grid.2x2", "bag"],
+        "paycheck": ["briefcase", "banknote", "building.2", "dollarsign.circle", "calendar", "creditcard"],
+        "bonus": ["star", "gift", "trophy", "banknote", "party.popper", "sparkles"],
+        "freelance-income": ["laptopcomputer", "pencil", "briefcase", "paintpalette", "camera", "dollarsign.circle", "hammer"],
+        "business-income": ["storefront", "briefcase", "building.2", "chart.bar", "cart", "banknote"],
+        "rental-income": ["key", "house", "building.2", "banknote", "door.left.hand.open", "calendar"],
+        "interest-dividends": ["percent", "chart.pie", "banknote", "building.columns", "chart.line.uptrend.xyaxis", "dollarsign.circle"],
+        "investment-gains": ["chart.line.uptrend.xyaxis", "chart.bar", "chart.pie", "arrow.up.right", "bitcoinsign.circle", "dollarsign.circle"],
+        "refunds": ["arrow.uturn.backward", "creditcard", "bag", "shippingbox", "banknote", "arrow.counterclockwise"],
+        "tax-refund": ["arrow.uturn.backward.circle", "doc.plaintext", "building.columns", "banknote", "seal", "percent"],
+        "reimbursements": ["arrow.triangle.2.circlepath", "doc.text", "briefcase", "banknote", "creditcard", "arrow.uturn.backward"],
+        "gifts-received": ["gift", "heart", "balloon", "envelope", "party.popper", "star"],
+        "government-benefits": ["building.columns", "doc.text", "person.2", "shield", "star", "banknote"],
+        "pension-retirement": ["hourglass", "figure.walk", "building.columns", "banknote", "chart.pie", "sun.max"],
+        "support-received": ["person.2", "heart", "figure.and.child.holdinghands", "banknote", "house", "calendar"],
+        "cashback-rewards": ["star.circle", "creditcard", "gift", "percent", "star", "banknote"],
+        "sale-of-items": ["tag", "bag", "cart", "shippingbox", "dollarsign.circle", "car"],
+        "deposit": ["arrow.down.to.line", "building.columns", "banknote", "dollarsign.circle", "creditcard", "tray"],
+        "other-income": ["dollarsign.circle", "banknote", "star", "plus.circle", "gift", "tag"],
+    ]
 
     /// For a bill with no category yet, or one of your own.
     static let general = Offer(symbols: ["calendar", "tag", "star", "heart", "house", "car", "creditcard", "bolt", "phone", "cart", "doc.text", "briefcase"], themes: [1, 2, 3, 4, 5, 6])
@@ -222,6 +316,8 @@ struct IconPicker: View {
     var rainbowSeed: Int?
     /// More icons for the menu after the set's own, such as a goal's.
     var extra: [String] = []
+    /// When the category itself says what fits (a goal's, a budget's), this is the whole menu and the set menu is not shown.
+    var fitting: [String]?
 
     @Query private var marks: [CashBudgetMark]
 
@@ -238,7 +334,7 @@ struct IconPicker: View {
     /// A choice made earlier, or under another category, is still in the menu so it can be seen and kept.
     private var symbols: [String] {
         var seen = Set<String>()
-        let list = (offer.symbols + extra).filter { $0 != automatic && seen.insert($0).inserted }
+        let list = (fitting ?? (offer.symbols + extra)).filter { $0 != automatic && seen.insert($0).inserted }
         if let symbol, symbol != automatic, !list.contains(symbol) { return [symbol] + list }
         return list
     }
@@ -304,6 +400,46 @@ struct GoalIcon: View {
 }
 
 extension SymbolChoices {
+    /// What suits one kind of goal, by the category picked for it ("Vacation & Travel", "Student Loan").
+    static func goalOffer(category title: String?, kind: GoalKind) -> [String] {
+        guard let title, let list = goalByTitle[title] else { return goalSymbols(for: kind) }
+        return list
+    }
+
+    private static let goalByTitle: [String: [String]] = [
+        "Emergency Fund": ["shield.lefthalf.filled", "checkmark.shield", "lifepreserver", "lock", "banknote", "umbrella", "cross.case", "bolt"],
+        "Vacation & Travel": ["airplane", "suitcase", "globe.americas", "map", "camera", "sailboat", "beach.umbrella", "tent", "mountain.2"],
+        "Home Down Payment": ["house", "key", "building.2", "door.left.hand.open", "banknote", "doc.text", "sofa"],
+        "Car": ["car", "key", "bolt.car", "fuelpump", "steeringwheel", "wrench.and.screwdriver", "car.2"],
+        "Wedding": ["heart", "party.popper", "gift", "balloon", "sparkles", "birthday.cake", "camera", "wineglass"],
+        "Education": ["graduationcap", "book", "pencil", "backpack", "books.vertical", "laptopcomputer", "studentdesk"],
+        "Retirement": ["figure.walk", "sun.max", "beach.umbrella", "hourglass", "chart.pie", "banknote", "house", "leaf"],
+        "Investing": ["chart.line.uptrend.xyaxis", "chart.pie", "chart.bar", "bitcoinsign.circle", "banknote", "building.columns", "arrow.up.right"],
+        "Home Improvement": ["hammer", "paintbrush", "wrench.and.screwdriver", "ruler", "house", "sofa", "lightbulb", "leaf"],
+        "Medical & Health": ["cross.case", "heart.text.square", "stethoscope", "pills", "bandage", "figure.run", "waveform.path.ecg"],
+        "New Baby & Family": ["figure.and.child.holdinghands", "teddybear", "balloon", "heart", "person.2", "house", "stroller"],
+        "Holidays & Gifts": ["gift", "heart", "snowflake", "party.popper", "balloon", "star", "tree", "birthday.cake"],
+        "Gadgets & Tech": ["laptopcomputer", "iphone", "headphones", "desktopcomputer", "gamecontroller", "tv", "camera", "keyboard"],
+        "Big Purchase": ["bag", "cart", "shippingbox", "creditcard", "tag", "sofa", "star", "gift"],
+        "Rainy Day Cushion": ["umbrella", "cloud.rain", "shield", "lifepreserver", "banknote", "lock"],
+        "Other Savings": ["banknote", "star", "dollarsign.circle", "target", "flag", "heart", "sparkles"],
+        "Credit Card": ["creditcard", "banknote", "percent", "calendar", "arrow.down.circle", "lock", "star"],
+        "Store Card": ["bag", "creditcard", "tag", "cart", "storefront", "gift", "percent"],
+        "Auto Loan": ["car", "key", "banknote", "doc.text", "calendar", "percent", "wrench.and.screwdriver"],
+        "Mortgage": ["house", "key", "building.2", "doc.text", "banknote", "calendar", "percent"],
+        "Home Equity / HELOC": ["building.2", "house", "key", "banknote", "percent", "doc.text", "hammer"],
+        "Student Loan": ["graduationcap", "book", "backpack", "banknote", "doc.text", "percent", "building.columns"],
+        "Personal Loan": ["person.crop.circle", "banknote", "doc.text", "calendar", "percent", "creditcard"],
+        "Line of Credit": ["arrow.triangle.2.circlepath", "creditcard", "banknote", "building.columns", "percent", "calendar"],
+        "Business Loan": ["briefcase", "building.2", "storefront", "chart.bar", "banknote", "doc.text", "laptopcomputer"],
+        "Medical Debt": ["cross.case", "heart.text.square", "stethoscope", "pills", "doc.text", "banknote", "bandage"],
+        "Tax Debt": ["doc.text", "doc.plaintext", "building.columns", "seal", "percent", "banknote", "calendar"],
+        "Buy Now Pay Later": ["calendar", "bag", "creditcard", "cart", "clock", "tag", "shippingbox"],
+        "Boat / RV / Motorcycle Loan": ["sailboat", "ferry", "bicycle", "car", "tent", "fuelpump", "key"],
+        "Loan from Family or Friend": ["person.2", "heart", "banknote", "house", "gift", "figure.and.child.holdinghands"],
+        "Other Debt": ["arrow.down.circle", "banknote", "doc.text", "calendar", "creditcard", "percent", "minus.circle"],
+    ]
+
     /// The icons a goal can have, besides its category's own.
     static func goalSymbols(for kind: GoalKind) -> [String] {
         kind == .save

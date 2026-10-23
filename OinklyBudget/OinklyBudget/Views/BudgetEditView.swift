@@ -10,10 +10,9 @@ struct BudgetEditView: View {
     @State private var isWeekly: Bool
     @State private var isTaxRelated: Bool
     @State private var isCashBudget: Bool
-    /// The icon and colour chosen, or nil and 0 for the category's own, and which set of icons the menu draws from.
+    /// The icon and colour chosen, or nil and 0 for the category's own.
     @State private var iconSymbol: String?
     @State private var iconTheme = 0
-    @State private var iconSet: CategoryGroup
 
     init(category: Category) {
         self.category = category
@@ -23,7 +22,6 @@ struct BudgetEditView: View {
         _isTaxRelated = State(initialValue: category.isTaxRelated)
         _isCashBudget = State(initialValue: CashBudgets.isCash(category))
         let picked = category.modelContext.map { CashBudgets.groups(in: $0) } ?? [:]
-        _iconSet = State(initialValue: CategoryGroup.of(category, picked: picked))
         if let context = category.modelContext {
             let key = ItemIcons.key(for: category)
             _iconSymbol = State(initialValue: ItemIcons.symbol(of: key, in: context))
@@ -85,7 +83,9 @@ struct BudgetEditView: View {
                 Divider()
                 Form {
                     Section("Icon") {
-                        IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: category, setChoice: $iconSet, rainbowSeed: ItemIcons.seed(for: category))
+                        IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: category,
+                                   rainbowSeed: ItemIcons.seed(for: category),
+                                   fitting: category.systemKey.flatMap { SymbolChoices.symbols(forCategoryKey: $0) } ?? SymbolChoices.offer(for: category).symbols)
                     }
                 }
                 .formStyle(.grouped)
@@ -141,8 +141,6 @@ struct CustomBudgetEditView: View {
     /// The icon and colour chosen, or nil and 0 for the plain one.
     @State private var iconSymbol: String?
     @State private var iconTheme = 0
-    /// Which set of icons the menu draws from. Starts on the group, and follows it until you pick a set yourself.
-    @State private var iconSet: CategoryGroup
     /// The key a new category will be saved under, so its icon can be remembered before it exists.
     private let newKey = Category.customKeyPrefix + UUID().uuidString
 
@@ -158,7 +156,6 @@ struct CustomBudgetEditView: View {
         let picked = category.flatMap { found in found.modelContext.map { CashBudgets.groups(in: $0) } } ?? [:]
         let startGroup = category.map { CategoryGroup.of($0, picked: picked) } ?? initialGroup
         _group = State(initialValue: startGroup)
-        _iconSet = State(initialValue: startGroup)
         if let category, let context = category.modelContext {
             let key = ItemIcons.key(for: category)
             _iconSymbol = State(initialValue: ItemIcons.symbol(of: key, in: context))
@@ -203,7 +200,6 @@ struct CustomBudgetEditView: View {
                             Picker("Group", selection: $group) {
                                 ForEach(CategoryGroup.choosable) { Text($0.title).tag($0) }
                             }
-                            .onChange(of: group) { _, new in if iconSymbol == nil { iconSet = new } }
                             Toggle("Counts as tax-related", isOn: $isTaxRelated)
                             Toggle("Counts as a cash budget", isOn: $isCashBudget)
                         }
@@ -225,8 +221,9 @@ struct CustomBudgetEditView: View {
                 Form {
                     Section("Icon") {
                         IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: nil, automaticSymbol: plainSymbol,
-                                   automaticColor: plainColor, setChoice: $iconSet,
-                                   rainbowSeed: category.map { ItemIcons.seed(for: $0) } ?? ArtworkTheme.seed(name))
+                                   automaticColor: plainColor,
+                                   rainbowSeed: category.map { ItemIcons.seed(for: $0) } ?? ArtworkTheme.seed(name),
+                                   fitting: isIncome ? SymbolChoices.offer(for: .income).symbols : SymbolChoices.offer(for: group).symbols)
                     }
                 }
                 .formStyle(.grouped)

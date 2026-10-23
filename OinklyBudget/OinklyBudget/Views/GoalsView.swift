@@ -545,8 +545,6 @@ struct GoalEditView: View {
     /// The icon chosen for the goal, or nil for its category's own, and its colour, 0 for its category's own.
     @State private var iconSymbol: String?
     @State private var iconTheme: Int
-    /// Which set of icons the menu draws from: money matters to begin with, and any other set is a pick away.
-    @State private var iconSet = CategoryGroup.financial
     @Query(sort: \Account.name) private var allAccounts: [Account]
     @Query(sort: \Category.name) private var allCategories: [Category]
 
@@ -764,8 +762,8 @@ struct GoalEditView: View {
             GoalIcon(symbol: shownSymbol, colorHex: shownHex, seed: name, width: 96, height: 66)
                 .frame(maxWidth: .infinity)
             IconPicker(symbol: $iconSymbol, theme: $iconTheme, category: nil, automaticSymbol: category?.symbol ?? (kind == .save ? "target" : "arrow.down.circle"),
-                       automaticColor: Color(hex: category?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")), setChoice: $iconSet,
-                       rainbowSeed: ArtworkTheme.seed(name), extra: SymbolChoices.goalSymbols(for: kind))
+                       automaticColor: Color(hex: category?.colorHex ?? (kind == .save ? "007AFF" : "FF2D55")),
+                       rainbowSeed: ArtworkTheme.seed(name), fitting: SymbolChoices.goalOffer(category: category?.title, kind: kind))
         }
     }
 
