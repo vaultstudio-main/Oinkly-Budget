@@ -74,211 +74,246 @@ struct AccountEditView: View {
     /// An auto account chosen as a lease instead of a loan.
     private var leased: Bool { type == .autoLoan && isLease }
 
+    /// One wide window with everything on it, so nothing scrolls: the account and its notes, the money, then the bank and the picture.
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Account") {
-                    FormTextField("Name", text: $name)
-                        .onChange(of: name) { _, new in
-                            if new.count > Account.maxNameLength { name = String(new.prefix(Account.maxNameLength)) }
-                        }
-                    Picker("Type", selection: $type) {
-                        ForEach(AccountGroup.setupOrder) { group in
-                            Section(group.title) {
-                                // Cash on Hand is built in, so it isn't offered again.
-                                ForEach(group.accountTypes.filter { $0 != .cash || type == .cash }) { Text($0.title).tag($0) }
-                            }
-                        }
-                    }
-                    .disabled(account?.isDefault == true)
-                    if type == .checking {
-                        Toggle("Primary checking account", isOn: $isPrimary)
-                        Text("Your main checking account is pinned to the top of the account list, under Cash on Hand, and marked Primary Checking. Only one account can be primary.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("Kind")
-                        Spacer()
-                        HStack(spacing: 6) {
-                            Image(systemName: isDebt ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
-                            Text(isDebt ? "Debt: you owe this" : "Asset: you own this")
-                        }
-                        .foregroundStyle(isDebt ? Color.red : Color.green)
-                    }
-                    if type == .autoLoan {
-                        Picker("Financing", selection: $isLease) {
-                            Text("Loan").tag(false)
-                            Text("Lease").tag(true)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    if type.group == .loans {
-                        FormTextField("What is this loan for?", text: $loanPurpose, hint: "e.g. 2021 Honda Civic")
-                    }
-                    if Account.typeHasVIN(type) {
-                        FormTextField("VIN", text: $vin, hint: "17 characters")
-                            .onChange(of: vin) { _, new in
-                                let clean = Account.cleanVIN(new)
-                                if clean != new { vin = clean }
-                            }
-                        if !vin.isEmpty && vin.count != Account.vinLength {
-                            Text("A VIN has exactly 17 letters and numbers (no I, O or Q).")
-                                .font(.footnote)
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                    if type.group == .loans {
-                        amountRow(leased ? "Total lease cost" : "Original loan amount", $originalLoanAmount)
-                        amountRow("Monthly payment (required)", $monthlyPayment)
-                        amountRow("Amount owed now", $owedNow)
-                        if !leased {
-                            HStack {
-                                Text("Interest rate (APR)")
-                                Spacer()
-                                TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
-                                    .labelsHidden()
-                                    .multilineTextAlignment(.trailing)
-                                Text("%").foregroundStyle(.secondary)
-                            }
-                        }
-                        DatePicker("Payment due date (required)", selection: $dueDate, displayedComponents: .date)
-                        Text("This \(leased ? "lease" : "loan") is added to Bills for the monthly payment, due on this day every month.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        if let loanProblem {
-                            Label(loanProblem, systemImage: "exclamationmark.triangle.fill")
-                                .font(.footnote).foregroundStyle(.orange)
-                        }
-                        Toggle(leased ? "Set the lease start date" : "Set the loan start date", isOn: $hasStartDate.animation())
-                        if hasStartDate {
-                            DatePicker(leased ? "Lease start date" : "Loan start date", selection: $startDate, in: ...Date.now, displayedComponents: .date)
-                        }
-                        Toggle(leased ? "Set a lease end date" : "Set a maturity date", isOn: $hasPayoffDate.animation())
-                        if hasPayoffDate {
-                            DatePicker(leased ? "Lease end date" : "Maturity date", selection: $payoffDate, in: Date.now..., displayedComponents: .date)
-                        }
-                    } else {
-                        if type.group == .creditCards {
-                            HStack {
-                                Text("Interest rate (APR)")
-                                Spacer()
-                                TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
-                                    .labelsHidden()
-                                    .multilineTextAlignment(.trailing)
-                                Text("%").foregroundStyle(.secondary)
-                            }
-                        }
-                        if type.group == .creditCards {
-                            amountRow("Credit limit", $creditLimit)
-                            amountRow("Current balance on card", $cardBalance)
-                            if let limitProblem {
-                                Label(limitProblem, systemImage: "exclamationmark.triangle.fill")
-                                    .font(.footnote).foregroundStyle(.orange)
-                            }
-                            amountRow("Minimum payment", $monthlyPayment)
-                            Toggle("Set a payment due date", isOn: $hasDueDate.animation())
-                            if hasDueDate {
-                                DatePicker("Payment due date", selection: $dueDate, displayedComponents: .date)
-                                Text("This card is added to Bills for the minimum payment, due on this day every month.")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Text("What you owe on the card right now. Charges and payments you add change it from here.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        } else if type == .cash {
-                            Text("Cash on Hand starts at $0.00 and is filled by ATM withdrawals.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        } else {
-                        HStack {
-                            Text("Opening balance")
-                            Spacer()
-                            CurrencyField("Opening balance", amount: $openingBalance)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                        }
-                        }
-                    }
-                }
-
-                if photoData == nil || !(type.group == .loans || type.group == .assets) {
-                    Section("Picture Colour") {
-                        ArtworkThemePicker(type: type, theme: $artworkTheme)
-                    }
-                }
-
-                if type.group == .loans || type.group == .assets {
-                    Section("Photo") {
-                        AccountPicture(data: photoData, type: type, theme: artworkTheme)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 180)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        if photoData == nil {
-                            Text("This picture is used until you choose a photo.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                        PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                            Label(photoData == nil ? "Choose Photo" : "Change Photo", systemImage: "photo")
-                        }
-                        if photoData != nil {
-                            Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }
-                        }
-                    }
-                }
-
-                if type != .cash {
-                Section(type.group == .loans ? (leased ? "Leasing Company" : "Lender") : "Bank Details") {
-                    FormTextField(type.group == .loans ? (leased ? "Leasing company" : "Lender") : "Institution", text: $institution)
-                    FormTextField(type.group == .creditCards ? "Card number" : "Account number", text: $accountNumber, hint: type.group == .creditCards ? "Up to 19 digits" : "Up to 17 digits")
-                        .onChange(of: accountNumber) { _, new in
-                            let clean = Account.digits(new, limit: Account.numberLimit(for: type))
-                            if clean != new { accountNumber = clean }
-                        }
-                        .onChange(of: type) { _, new in
-                            accountNumber = Account.digits(accountNumber, limit: Account.numberLimit(for: new))
-                        }
-                    if type == .checking {
-                        routingField("Routing number (ACH)", $routingNumber)
-                        routingField("Wire transfer routing number", $wireRouting, letters: true)
-                        routingField("Digital routing number", $digitalRouting)
-                    }
-                }
-                }
-
-                Section("Notes") {
-                    FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
-                        .lineLimit(3...6)
-                }
+        VStack(spacing: 0) {
+            HStack {
+                Text(account == nil ? "New Account" : "Edit Account").font(.headline)
+                Spacer()
+                Label(isDebt ? "Debt: you owe this" : "Asset: you own this",
+                      systemImage: isDebt ? "arrow.down.right.circle.fill" : "arrow.up.right.circle.fill")
+                    .font(.callout)
+                    .foregroundStyle(isDebt ? Theme.red : Theme.green)
             }
-            .formStyle(.grouped)
-            .onChange(of: type) { _, new in
-                // A new cash account starts out named for what it is.
-                if new == .cash && name.trimmingCharacters(in: .whitespaces).isEmpty { name = "Cash on Hand" }
-            }
-            .onChange(of: pickedPhoto) { _, item in
-                guard let item else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        photoData = AccountPhoto.compress(data)
-                    }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
+                Form {
+                    accountSection
+                    notesSection
                 }
-            }
-            .navigationTitle(account == nil ? "New Account" : "Edit Account")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                Divider()
+                Form { termsSection }
+                    .formStyle(.grouped)
+                    .scrollDisabled(true)
+                Divider()
+                Form {
+                    bankSection
+                    pictureSections
                 }
-                ToolbarItem(placement: .confirmationAction) {
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+            }
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: 10) {
+                    Spacer()
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                     Button("Save", action: save)
+                        .keyboardShortcut(.defaultAction)
                         .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || limitProblem != nil || loanProblem != nil)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .background(.bar)
+        }
+        .background(Theme.background)
+        .onChange(of: type) { _, new in
+            // A new cash account starts out named for what it is.
+            if new == .cash && name.trimmingCharacters(in: .whitespaces).isEmpty { name = "Cash on Hand" }
+        }
+        .onChange(of: pickedPhoto) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    photoData = AccountPhoto.compress(data)
                 }
             }
         }
-        .frame(minWidth: 460, minHeight: 600)
+        .frame(width: 1180, height: 680)
     }
+
+    // MARK: Columns
+
+    @ViewBuilder
+    private var accountSection: some View {
+        Section("Account") {
+            FormTextField("Name", text: $name)
+                .onChange(of: name) { _, new in
+                    if new.count > Account.maxNameLength { name = String(new.prefix(Account.maxNameLength)) }
+                }
+            Picker("Type", selection: $type) {
+                ForEach(AccountGroup.setupOrder) { group in
+                    Section(group.title) {
+                        // Cash on Hand is built in, so it isn't offered again.
+                        ForEach(group.accountTypes.filter { $0 != .cash || type == .cash }) { Text($0.title).tag($0) }
+                    }
+                }
+            }
+            .disabled(account?.isDefault == true)
+            if type == .checking {
+                Toggle("Primary checking account", isOn: $isPrimary)
+                Text("Pinned to the top of the account list, under Cash on Hand. Only one account can be primary.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            if type == .autoLoan {
+                Picker("Financing", selection: $isLease) {
+                    Text("Loan").tag(false)
+                    Text("Lease").tag(true)
+                }
+                .pickerStyle(.segmented)
+            }
+            if type.group == .loans {
+                FormTextField("What is this loan for?", text: $loanPurpose, hint: "e.g. 2021 Honda Civic")
+            }
+            if Account.typeHasVIN(type) {
+                FormTextField("VIN", text: $vin, hint: "17 characters")
+                    .onChange(of: vin) { _, new in
+                        let clean = Account.cleanVIN(new)
+                        if clean != new { vin = clean }
+                    }
+                if !vin.isEmpty && vin.count != Account.vinLength {
+                    Text("A VIN has exactly 17 letters and numbers (no I, O or Q).")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notesSection: some View {
+        Section("Notes") {
+            FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
+                .lineLimit(3...5)
+        }
+    }
+
+    /// The money: terms for a loan or lease, the limit and balance for a card, the opening balance for anything else.
+    @ViewBuilder
+    private var termsSection: some View {
+        Section(type.group == .loans ? (leased ? "Lease Terms" : "Loan Terms") : (type.group == .creditCards ? "Card Terms" : "Balance")) {
+            if type.group == .loans {
+                amountRow(leased ? "Total lease cost" : "Original loan amount", $originalLoanAmount)
+                amountRow("Monthly payment (required)", $monthlyPayment)
+                amountRow("Amount owed now", $owedNow)
+                if !leased { aprRow }
+                DatePicker("Payment due date (required)", selection: $dueDate, displayedComponents: .date)
+                Text("This \(leased ? "lease" : "loan") is added to Bills for the monthly payment, due on this day every month.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                if let loanProblem {
+                    Label(loanProblem, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
+                Toggle(leased ? "Set the lease start date" : "Set the loan start date", isOn: $hasStartDate.animation())
+                if hasStartDate {
+                    DatePicker(leased ? "Lease start date" : "Loan start date", selection: $startDate, in: ...Date.now, displayedComponents: .date)
+                }
+                Toggle(leased ? "Set a lease end date" : "Set a maturity date", isOn: $hasPayoffDate.animation())
+                if hasPayoffDate {
+                    DatePicker(leased ? "Lease end date" : "Maturity date", selection: $payoffDate, in: Date.now..., displayedComponents: .date)
+                }
+            } else if type.group == .creditCards {
+                aprRow
+                amountRow("Credit limit", $creditLimit)
+                amountRow("Current balance on card", $cardBalance)
+                if let limitProblem {
+                    Label(limitProblem, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
+                amountRow("Minimum payment", $monthlyPayment)
+                Toggle("Set a payment due date", isOn: $hasDueDate.animation())
+                if hasDueDate {
+                    DatePicker("Payment due date", selection: $dueDate, displayedComponents: .date)
+                    Text("This card is added to Bills for the minimum payment, due on this day every month.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Text("What you owe on the card right now. Charges and payments you add change it from here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if type == .cash {
+                Text("Cash on Hand starts at $0.00 and is filled by ATM withdrawals.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    Text("Opening balance")
+                    Spacer()
+                    CurrencyField("Opening balance", amount: $openingBalance)
+                        .labelsHidden()
+                        .multilineTextAlignment(.trailing)
+                }
+            }
+        }
+    }
+
+    private var aprRow: some View {
+        HStack {
+            Text("Interest rate (APR)")
+            Spacer()
+            TextField("Interest rate", value: $interestRate, format: .number.precision(.fractionLength(0...3)), prompt: Text("0.00"))
+                .labelsHidden()
+                .multilineTextAlignment(.trailing)
+            Text("%").foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var bankSection: some View {
+        if type != .cash {
+            Section(type.group == .loans ? (leased ? "Leasing Company" : "Lender") : "Bank Details") {
+                FormTextField(type.group == .loans ? (leased ? "Leasing company" : "Lender") : "Institution", text: $institution)
+                FormTextField(type.group == .creditCards ? "Card number" : "Account number", text: $accountNumber, hint: type.group == .creditCards ? "Up to 19 digits" : "Up to 17 digits")
+                    .onChange(of: accountNumber) { _, new in
+                        let clean = Account.digits(new, limit: Account.numberLimit(for: type))
+                        if clean != new { accountNumber = clean }
+                    }
+                    .onChange(of: type) { _, new in
+                        accountNumber = Account.digits(accountNumber, limit: Account.numberLimit(for: new))
+                    }
+                if type == .checking {
+                    routingField("Routing number (ACH)", $routingNumber)
+                    routingField("Wire transfer routing number", $wireRouting, letters: true)
+                    routingField("Digital routing number", $digitalRouting)
+                }
+            }
+        }
+    }
+
+    /// The picture on the side: a colour for the account's artwork, and for loans and assets a photo of the thing itself.
+    @ViewBuilder
+    private var pictureSections: some View {
+        if type.group == .loans || type.group == .assets {
+            Section("Photo") {
+                AccountPicture(data: photoData, type: type, theme: artworkTheme)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 96)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                HStack {
+                    PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                        Label(photoData == nil ? "Choose Photo" : "Change Photo", systemImage: "photo")
+                    }
+                    if photoData != nil {
+                        Spacer()
+                        Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }
+                    }
+                }
+            }
+        }
+        if photoData == nil || !(type.group == .loans || type.group == .assets) {
+            Section("Picture Colour") {
+                ArtworkThemePicker(type: type, theme: $artworkTheme)
+            }
+        }
+    }
+
 
     private func amountRow(_ title: String, _ value: Binding<Decimal>) -> some View {
         HStack {
