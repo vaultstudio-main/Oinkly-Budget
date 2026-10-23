@@ -25,15 +25,15 @@ struct GoalsView: View {
 
     /// Savings goals, or the goals that pay a debt down.
     var kind: GoalKind = .save
-    /// Show the loans too, above the goals: the Loans tab.
-    var showsLoans = false
+    /// Show the loans, and no goals: the Loans tab.
+    var loansOnly = false
 
     @State private var sheet: GoalSheet?
     @State private var detail: Goal?
     @State private var deleting: Goal?
     @State private var showsArchive = false
 
-    private var loans: [Account] { showsLoans ? allAccounts.live.filter { $0.isLoan && !$0.isClosed } : [] }
+    private var loans: [Account] { loansOnly ? allAccounts.live.filter { $0.isLoan && !$0.isClosed } : [] }
 
     /// Goals still being worked on: nearest date first, then ones with no date.
     private var activeGoals: [Goal] {
@@ -68,13 +68,11 @@ struct GoalsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                if goals.isEmpty && loans.isEmpty {
+                if loansOnly {
+                    if loans.isEmpty { emptyLoans } else { loansSection }
+                } else if goals.isEmpty && kind == .save {
                     empty
                 } else {
-                    if showsLoans { loansSection }
-
-                    if showsLoans { sectionHeader("Loan Payoff Goals").padding(.top, 10) }
-
                     if goals.isEmpty {
                         ReportCard(title: "No \(kind == .save ? "Savings" : "Loan Payoff") Goals Yet") {
                             Text("Use New \(kind == .save ? "Savings Goal" : "Loan Payoff Goal") at the top of this page to make one.")
@@ -171,21 +169,25 @@ struct GoalsView: View {
     }
 
     private var empty: some View {
-        ReportCard(title: kind == .save ? "No Savings Goals Yet" : "No Loans or Payoff Goals Yet") {
+        ReportCard(title: "No Savings Goals Yet") {
             VStack(alignment: .leading, spacing: 10) {
-                if kind == .save {
-                    Text("Planning is where you set goals and watch them get closer. Save toward something, like an emergency fund, a trip or a down payment. Give each goal a target and a date.")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Text("Follow a savings or checking account and the goal keeps up on its own as the balance changes. Or add progress yourself whenever you put money aside. Each goal shows how far along you are and whether you are on pace to reach it by your date.")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Text("Use New Savings Goal at the top of this page to make your first one.")
-                        .font(.callout).foregroundStyle(.secondary)
-                } else {
-                    Text("This is where your loans and your plans to pay them down live. Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Text("Use New Loan Payoff Goal at the top of this page to aim at paying a loan or card down, or off, by a date. Follow the loan or card and the goal keeps up on its own as you pay.")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
+                Text("Planning is where you set goals and watch them get closer. Save toward something, like an emergency fund, a trip or a down payment. Give each goal a target and a date.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text("Follow a savings or checking account and the goal keeps up on its own as the balance changes. Or add progress yourself whenever you put money aside. Each goal shows how far along you are and whether you are on pace to reach it by your date.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text("Use New Savings Goal at the top of this page to make your first one.")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var emptyLoans: some View {
+        ReportCard(title: "No Loans Yet") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("This is where your loans live. Add a mortgage or loan in Settings ▸ Accounts, with its original amount, payment and maturity date, and it appears here with how much is paid off and when it will be done.")
+                    .font(.callout).foregroundStyle(.secondary)
+                Text("To aim at paying a loan or card down by a date, use the Payoff Goals tab.")
+                    .font(.callout).foregroundStyle(.secondary)
             }
         }
     }
@@ -205,7 +207,6 @@ struct GoalsView: View {
         let monthly = list.reduce(Decimal(0)) { $0 + $1.loanProgress.monthlyPayment }
         let paidOff = list.filter { $0.loanProgress.isPaidOff }.count
         if !list.isEmpty {
-            sectionHeader("Loans")
             StatGrid(fillsRow: true) {
                 StatTile(title: "Still Owed") {
                     Text(owed, format: .appCurrency)
