@@ -1243,7 +1243,7 @@ enum SharedHardeningTest {
                 }
                 let outlook = MonthOutlook(month: today, income: [line("i1", "Paycheque", 3000)], bills: [line("b1", "Rent", 1300), line("b2", "Power", 90)],
                                            budgets: [], otherIncome: 0, otherSpending: 0)
-                let plan: [MonthWarPlanView.PlanItem] = [
+                let plan: [WarPlanItem] = [
                     .init(title: "paycheque", date: today, amount: 3000, isIncome: true, origin: nil),
                     .init(title: "Rent", date: today, amount: 1200, isIncome: false, origin: nil),
                     .init(title: "Concert", date: today, amount: 80, isIncome: false, origin: nil)]

@@ -1,62 +1,26 @@
 import SwiftUI
 import SwiftData
 
-/// The Month Outlook's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
+/// The Monthly War Plan's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
 /// budgets from the outlook as ordinary lines, and sees what is left after each one and how much is extra so far.
-/// Nothing is fixed: every line can be changed or removed. It is kept on this Mac, a month at a time.
+/// Nothing is fixed: every line can be changed or removed. What it starts with, the buffer and the accounts counted are in
+/// the page's Settings. The plan is only a what-if sheet: it never changes accounts, transactions, bills or budgets.
 struct MonthWarPlanView: View {
     let outlook: MonthOutlook
-
-    /// One line of the plan. Money out and money in are both stored as a positive amount.
-    struct PlanItem: Codable, Identifiable, Equatable {
-        var id = UUID()
-        var title: String
-        var date: Date
-        var amount: Decimal
-        var isIncome: Bool
-        /// Where the line came from, for its icon: "bill", "budget", "income" or nil for one typed in.
-        var origin: String?
-
-        var symbol: String {
-            switch origin {
-            case "bill": "calendar"
-            case "budget": "chart.pie"
-            case "income": "banknote"
-            default: isIncome ? "arrow.down.circle" : "arrow.up.circle"
-            }
-        }
-    }
-
-    private struct Stored: Codable {
-        var start: Decimal = 0
-        /// An account whose balance is the starting amount, as `MonthOutlook.accountKey`. Nil when a number is typed.
-        var startAccount: String?
-        /// Money to keep out of reach: the plan counts only what is above it as spare.
-        var buffer: Decimal?
-        var items: [PlanItem] = []
-    }
+    @Binding var plan: WarPlanData
 
     @Query(sort: \Account.name) private var allAccounts: [Account]
-    @State private var items: [PlanItem] = []
-    @State private var typedStart: Decimal?
-    @State private var startAccount: String?
-    @State private var buffer: Decimal?
-    @State private var draft: PlanItem?
+    @State private var draft: WarPlanItem?
 
-    private static func storageKey(for month: Date) -> String { "warPlan." + OutlookSnapshots.key(for: month) }
-    private var storageKey: String { Self.storageKey(for: outlook.month) }
-
-    /// The lines saved for a month, for the Overview to set against the outlook. Read only.
-    static func savedItems(for month: Date) -> [PlanItem] {
-        guard let data = UserDefaults.standard.data(forKey: storageKey(for: month)),
-              let stored = try? JSONDecoder().decode(Stored.self, from: data) else { return [] }
-        return stored.items
-    }
     private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
-    private var startingAccount: Account? { startAccount.flatMap { key in accounts.first { MonthOutlook.accountKey($0) == key } } }
-    private var opening: Decimal { startingAccount?.balance(asOf: .now) ?? typedStart ?? 0 }
+    private var startingAccount: Account? { plan.startAccount.flatMap { key in accounts.first { MonthOutlook.accountKey($0) == key } } }
+    private var opening: Decimal { plan.opening(accounts: accounts) }
+    private var items: [WarPlanItem] {
+        get { plan.items }
+        nonmutating set { plan.items = newValue }
+    }
 
-    private var sorted: [PlanItem] {
+    private var sorted: [WarPlanItem] {
         items.sorted { ($0.date, $0.isIncome ? 0 : 1, $0.title) < ($1.date, $1.isIncome ? 0 : 1, $1.title) }
     }
 
@@ -65,68 +29,43 @@ struct MonthWarPlanView: View {
         return calendar.date(byAdding: .day, value: -1, to: calendar.date(byAdding: .month, value: 1, to: outlook.month) ?? outlook.month) ?? outlook.month
     }
 
-    private func signed(_ item: PlanItem) -> Decimal { item.isIncome ? item.amount : -item.amount }
+    private func signed(_ item: WarPlanItem) -> Decimal { item.isIncome ? item.amount : -item.amount }
 
     var body: some View {
         let list = sorted
         let extra = list.reduce(Decimal(0)) { $0 + signed($1) }
         let ending = opening + extra
-        let kept = buffer ?? 0
+        let kept = plan.kept
         let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
         let best = bestDay(list, spare: ending - kept)
         return VStack(spacing: 14) {
-                ReportCard(title: "Monthly War Plan") {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack(alignment: .top, spacing: 30) {
-                            figure("Extra This Month", extra, note: "money in less money out, from the lines below")
-                            figure("Left at the End", ending, note: "the starting amount plus the extra")
-                            figure("Above the Buffer", ending - kept, note: "left at the end less your buffer")
-                            bestDayFigure(best, spare: ending - kept)
-                            Spacer()
-                        }
-                        HStack(spacing: 10) {
-                            Text("Starting with")
-                            Menu {
-                                Button("A number I type") { startAccount = nil }
-                                Divider()
-                                ForEach(accounts) { account in
-                                    Button("\(account.name): \(account.balance(asOf: .now).formatted(.appCurrency))") { startAccount = MonthOutlook.accountKey(account) }
-                                }
-                            } label: {
-                                Text(startingAccount.map { "\($0.name)'s balance" } ?? "A number I type")
-                            }
-                            .fixedSize()
-                            if let account = startingAccount {
-                                Text(account.balance(asOf: .now), format: .appCurrency).fontWeight(.semibold)
-                            } else {
-                                CurrencyField("Starting amount", value: $typedStart)
-                                    .labelsHidden()
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: 130)
-                            }
-                            Text("Buffer")
-                            CurrencyField("Buffer", value: $buffer)
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 110)
-                                .help("Money to keep untouched. Left After turns orange when a line takes you under it")
-                            Spacer()
+            ReportCard(title: "Your Plan") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 30) {
+                        figure("Extra This Month", extra, note: "money in less money out")
+                        figure("Left at the End", ending, note: "starting with \(opening.formatted(.appCurrency))")
+                        figure("Above the Buffer", ending - kept, note: "buffer \(kept.formatted(.appCurrency))")
+                        bestDayFigure(best, spare: ending - kept)
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 8) {
+                            Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
+                                .buttonStyle(.borderedProminent)
                             Menu("Pull In…", systemImage: "square.and.arrow.down") {
                                 Button("Paycheques and Income") { pull(incomeLines) }
                                 Button("Bills and Repeating Expenses") { pull(billLines) }
                                 Button("Budgets") { pull(budgetLines) }
                             }
                             .fixedSize()
-                            .help("Copies lines from the Overview into the plan, where you can change or remove them")
-                            Button("Add a Line", systemImage: "plus.circle") { draft = newDraft() }
+                            .help("Copies lines from the Outlook into the plan, where you can change or remove them")
                         }
-                        Text("This sheet starts blank. Add a line for anything you expect, or pull in the paycheques, bills and budgets the Overview already knows, then change or remove whatever you like. This is only a what-if sheet: it never changes your accounts, transactions, bills or budgets, and nothing else in the app reads it.")
-                            .font(.callout).foregroundStyle(.secondary)
                     }
+                    Text("This sheet starts blank. Add a line for anything you expect, or pull in the paycheques, bills and budgets the Outlook already knows, then change or remove whatever you like. What you start with, your buffer and the accounts counted are in Settings, top right. This is only a what-if sheet: it never changes your accounts, transactions, bills or budgets.")
+                        .font(.callout).foregroundStyle(.secondary)
                 }
-                table(list, kept: kept)
-                totalsCard(kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
+            }
+            table(list, kept: kept)
+            totalsCard(kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
         }
         .padding(16)
         .sheet(item: $draft) { item in
@@ -136,12 +75,6 @@ struct MonthWarPlanView: View {
                          },
                          remove: { items.removeAll { $0.id == item.id } })
         }
-        .onAppear(perform: load)
-        .onChange(of: outlook.month) { _, _ in load() }
-        .onChange(of: items) { _, _ in save() }
-        .onChange(of: typedStart) { _, _ in save() }
-        .onChange(of: startAccount) { _, _ in save() }
-        .onChange(of: buffer) { _, _ in save() }
     }
 
     // MARK: Pieces
@@ -160,7 +93,7 @@ struct MonthWarPlanView: View {
 
     /// The earliest day from which the whole spare amount can be taken out and the plan still never drops below the buffer.
     /// That is the day after the last line that leaves less than the month ends with.
-    private func bestDay(_ list: [PlanItem], spare: Decimal) -> Date? {
+    private func bestDay(_ list: [WarPlanItem], spare: Decimal) -> Date? {
         guard spare > 0, !list.isEmpty else { return nil }
         let balances = running(list)
         let ending = balances[balances.count - 1].left
@@ -233,7 +166,7 @@ struct MonthWarPlanView: View {
         left < 0 ? Theme.red : (left < kept ? Color.orange : Color.primary)
     }
 
-    private func table(_ list: [PlanItem], kept: Decimal) -> some View {
+    private func table(_ list: [WarPlanItem], kept: Decimal) -> some View {
         let balances = running(list)
         return VStack(alignment: .leading, spacing: 8) {
             Text("WAR PLAN").font(.caption).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
@@ -296,7 +229,7 @@ struct MonthWarPlanView: View {
         .panelBackground(cornerRadius: 8)
     }
 
-    private func running(_ list: [PlanItem]) -> [(left: Decimal, extra: Decimal)] {
+    private func running(_ list: [WarPlanItem]) -> [(left: Decimal, extra: Decimal)] {
         var left = opening
         var extra: Decimal = 0
         return list.map { item in
@@ -306,64 +239,40 @@ struct MonthWarPlanView: View {
         }
     }
 
-    private func newDraft() -> PlanItem {
+    private func newDraft() -> WarPlanItem {
         let today = Calendar.current.isDate(.now, equalTo: outlook.month, toGranularity: .month)
-        return PlanItem(title: "", date: today ? .now : outlook.month, amount: 0, isIncome: false, origin: nil)
+        return WarPlanItem(title: "", date: today ? .now : outlook.month, amount: 0, isIncome: false, origin: nil)
     }
 
     // MARK: Pulling in
 
-    private var incomeLines: [PlanItem] {
-        outlook.income.map { PlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: true, origin: "income") }
-            + (outlook.otherIncome > 0 ? [PlanItem(title: "Other income so far", date: outlook.month, amount: outlook.otherIncome, isIncome: true, origin: "income")] : [])
+    private var incomeLines: [WarPlanItem] {
+        outlook.income.map { WarPlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: true, origin: "income") }
+            + (outlook.otherIncome > 0 ? [WarPlanItem(title: "Other income so far", date: outlook.month, amount: outlook.otherIncome, isIncome: true, origin: "income")] : [])
     }
 
-    private var billLines: [PlanItem] {
-        (outlook.bills + outlook.budgets.flatMap(\.inside)).map { PlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: false, origin: "bill") }
+    private var billLines: [WarPlanItem] {
+        (outlook.bills + outlook.budgets.flatMap(\.inside)).map { WarPlanItem(title: $0.title, date: $0.date, amount: $0.counted, isIncome: false, origin: "bill") }
     }
 
-    private var budgetLines: [PlanItem] {
-        outlook.budgets.map { PlanItem(title: $0.category.name + " budget", date: monthEnd, amount: $0.counted, isIncome: false, origin: "budget") }
+    private var budgetLines: [WarPlanItem] {
+        outlook.budgets.map { WarPlanItem(title: $0.category.name + " budget", date: monthEnd, amount: $0.counted, isIncome: false, origin: "budget") }
     }
 
     /// Adds the lines that aren't already in the plan with the same name, date and amount.
-    private func pull(_ lines: [PlanItem]) {
+    private func pull(_ lines: [WarPlanItem]) {
         for line in lines where line.amount > 0 && !items.contains(where: { $0.title == line.title && $0.date == line.date && $0.amount == line.amount }) {
             items.append(line)
         }
     }
 
-    // MARK: Keeping
-
-    private func load() {
-        guard let data = UserDefaults.standard.data(forKey: storageKey), let stored = try? JSONDecoder().decode(Stored.self, from: data) else {
-            items = []
-            typedStart = nil
-            startAccount = nil
-            buffer = nil
-            return
-        }
-        items = stored.items
-        typedStart = stored.start == 0 ? nil : stored.start
-        startAccount = stored.startAccount
-        buffer = stored.buffer
-    }
-
-    private func save() {
-        let stored = Stored(start: typedStart ?? 0, startAccount: startAccount, buffer: buffer, items: items)
-        if stored.items.isEmpty && stored.start == 0 && stored.startAccount == nil && (buffer ?? 0) == 0 {
-            UserDefaults.standard.removeObject(forKey: storageKey)
-        } else if let data = try? JSONEncoder().encode(stored) {
-            UserDefaults.standard.set(data, forKey: storageKey)
-        }
-    }
 }
 
 /// Adds or changes one line of the plan.
 private struct PlanItemForm: View {
-    @State var item: MonthWarPlanView.PlanItem
+    @State var item: WarPlanItem
     let isNew: Bool
-    let save: (MonthWarPlanView.PlanItem) -> Void
+    let save: (WarPlanItem) -> Void
     let remove: () -> Void
     @Environment(\.dismiss) private var dismiss
 

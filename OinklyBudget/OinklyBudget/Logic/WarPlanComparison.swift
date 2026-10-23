@@ -35,7 +35,7 @@ struct WarPlanComparison {
 
     private static func normal(_ text: String) -> String { text.trimmingCharacters(in: .whitespaces).lowercased() }
 
-    static func build(items: [MonthWarPlanView.PlanItem], outlook: MonthOutlook) -> WarPlanComparison {
+    static func build(items: [WarPlanItem], outlook: MonthOutlook) -> WarPlanComparison {
         var known: [Known] = []
         for line in outlook.income { known.append(Known(title: line.title, amount: line.counted, isIncome: true)) }
         if outlook.otherIncome > 0 { known.append(Known(title: "Other income so far", amount: outlook.otherIncome, isIncome: true)) }

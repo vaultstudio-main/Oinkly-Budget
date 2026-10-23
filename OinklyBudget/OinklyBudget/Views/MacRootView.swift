@@ -51,7 +51,7 @@ struct MacRootView: View {
                         .tag(SidebarItem.planning)
                     SidebarLabel(title: "Budgets", symbol: "chart.pie", color: .pink)
                         .tag(SidebarItem.budgets)
-                    SidebarLabel(title: "Month Outlook", symbol: "calendar.badge.checkmark", color: .mint)
+                    SidebarLabel(title: "Monthly War Plan", symbol: "calendar.badge.checkmark", color: .mint)
                         .tag(SidebarItem.monthOutlook)
                 }
                 Section("Accounts") {
@@ -154,7 +154,7 @@ struct MacRootView: View {
             // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up, then keeps
             // looking for a while, so a new person who adds their first account in this session is asked too.
             try? await Task.sleep(for: .seconds(8))
-            // Keep what the Month Outlook said for last month, before bills and budgets get edited.
+            // Keep what the Monthly War Plan said for last month, before bills and budgets get edited.
             if !StartupState.isHoldingPlace { OutlookSnapshots.closeLastMonth(in: modelContext) }
             for _ in 0..<60 {
                 if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
@@ -247,7 +247,7 @@ struct MacRootView: View {
         case .bills: "Bills & Recurring"
         case .planning: "Planning"
         case .budgets: "Budgets"
-        case .monthOutlook: "Month Outlook"
+        case .monthOutlook: "Monthly War Plan"
         case .manageAccounts: "Manage Accounts"
         case .transactions: "Transactions"
         case .summary, nil: "Summary"
