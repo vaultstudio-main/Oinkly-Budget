@@ -29,6 +29,7 @@ enum TestData {
         for item in try context.fetch(FetchDescriptor<CustomPaymentMethod>()) { context.delete(item) }
         for item in try context.fetch(FetchDescriptor<Category>()) where item.isCustom { context.delete(item) }
         try context.save()
+        OutlookSettings.forgetData()
         Category.ensureSystemCategories(in: context)
         Account.ensureDefault(in: context)
         SchemaUpgrade.seedTaxFlags(in: context, force: true)

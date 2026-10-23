@@ -28,7 +28,9 @@ struct WarPlanData: Codable, Equatable {
 
     var isEmpty: Bool { items.isEmpty }
 
-    static func key(for month: Date) -> String { "warPlan." + OutlookSnapshots.key(for: month) }
+    static let keyPrefix = "warPlan."
+
+    static func key(for month: Date) -> String { keyPrefix + OutlookSnapshots.key(for: month) }
 
     static func load(for month: Date, defaults: UserDefaults = .standard) -> WarPlanData {
         guard let data = defaults.data(forKey: key(for: month)), let plan = try? JSONDecoder().decode(WarPlanData.self, from: data) else { return WarPlanData() }

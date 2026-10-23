@@ -1483,6 +1483,26 @@ enum SharedHardeningTest {
                 check("S51 deleting the budget leaves no stray pick", ((try? hc.fetch(FetchDescriptor<CashBudgetMark>())) ?? []).isEmpty)
                 check("S51 your own income stays with Income", CategoryGroup.of(ownIncome, picked: ["x": .food]) == .income)
             }
+
+            // S52: erasing all data also erases the War Plans and the Outlook's amounts, which are kept in preferences
+            do {
+                let suiteName = "OinklyHardening-\(UUID().uuidString)"
+                let suite = UserDefaults(suiteName: suiteName)!
+                defer { suite.removePersistentDomain(forName: suiteName) }
+                let plan = WarPlanData(items: [WarPlanItem(title: "S52 rent", date: .now, amount: 900, isIncome: false, origin: nil)])
+                plan.save(for: .now, defaults: suite)
+                plan.save(for: Calendar.current.date(byAdding: .month, value: 1, to: .now)!, defaults: suite)
+                suite.set(250.0, forKey: OutlookSettings.bufferKey)
+                suite.set("Everyday Checking", forKey: OutlookSettings.startAccountKey)
+                suite.set("a|b", forKey: MonthOutlook.excludedKey)
+                suite.set("a|b", forKey: TransactionsSettings.accountsKey)
+                suite.set(12.0, forKey: OutlookSettings.monthKey)
+                check("S52 the plans are there before the erase", !WarPlanData.load(for: .now, defaults: suite).isEmpty)
+                OutlookSettings.forgetData(defaults: suite)
+                check("S52 every month's War Plan is gone", WarPlanData.load(for: .now, defaults: suite).isEmpty && WarPlanData.load(for: Calendar.current.date(byAdding: .month, value: 1, to: .now)!, defaults: suite).isEmpty)
+                check("S52 the buffer, the starting account and the chosen accounts are gone", suite.object(forKey: OutlookSettings.bufferKey) == nil && suite.object(forKey: OutlookSettings.startAccountKey) == nil && suite.object(forKey: MonthOutlook.excludedKey) == nil && suite.object(forKey: TransactionsSettings.accountsKey) == nil)
+                check("S52 the month being shown is only a view and stays", suite.object(forKey: OutlookSettings.monthKey) as? Double == 12.0)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

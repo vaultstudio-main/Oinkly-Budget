@@ -13,6 +13,18 @@ enum OutlookSettings {
     /// The month the page is showing, as a time since the reference date. It is chosen in the Settings window; zero means this month.
     static let monthKey = "outlookMonth"
 
+    /// Forgets everything the Monthly Outlook keeps in preferences about your data: every month's War Plan lines, what a month starts
+    /// with, the buffer, and the accounts picked or left out (they name accounts that are going). Runs whenever all data is erased, so
+    /// a fresh start is really fresh. The month and tab being shown are only a view and stay.
+    static func forgetData(defaults: UserDefaults = .standard) {
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(WarPlanData.keyPrefix) {
+            defaults.removeObject(forKey: key)
+        }
+        for key in [bufferKey, startAmountKey, startAccountKey, MonthOutlook.excludedKey, TransactionsSettings.accountsKey] {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
     /// The month a stored stamp means: the first day of it, or this month when nothing was chosen.
     static func month(from stamp: Double, calendar: Calendar = .current) -> Date {
         stamp == 0 ? MonthFilter.start(of: .now, calendar: calendar) : MonthFilter.start(of: Date(timeIntervalSinceReferenceDate: stamp), calendar: calendar)

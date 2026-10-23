@@ -24,8 +24,8 @@ enum StoreReset {
         } else {
             UserDefaults.standard.removeObject(forKey: budgetsKey)
         }
-        // Every account is going, so a choice of accounts for the Month Outlook has nothing left to refer to.
-        UserDefaults.standard.removeObject(forKey: MonthOutlook.excludedKey)
+        // Every account is going, so the War Plans, the Outlook's starting amounts and its choice of accounts have nothing to refer to.
+        OutlookSettings.forgetData()
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -35,6 +35,8 @@ enum StoreReset {
     static func performIfRequested(for configuration: ModelConfiguration) {
         guard UserDefaults.standard.bool(forKey: key) else { return }
         UserDefaults.standard.removeObject(forKey: key)
+        // Also when the erase was asked for from the command line, which skips the step above.
+        OutlookSettings.forgetData()
         let url = configuration.url
         let folder = url.deletingLastPathComponent()
         let manager = FileManager.default
