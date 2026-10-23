@@ -249,7 +249,7 @@ struct BudgetsView: View {
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(Theme.green.opacity(0.15), in: Capsule())
                         .foregroundStyle(Theme.green)
-                        .help("A cash budget: paid for in cash, so the Monthly War Plan leaves it out")
+                        .help("A cash budget: paid for in cash, so the Monthly Outlook leaves it out")
                 }
             }
             bar(spent: item.spent, limit: item.limit)

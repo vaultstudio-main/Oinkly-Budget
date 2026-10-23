@@ -1,22 +1,19 @@
 import SwiftUI
 import SwiftData
+import Charts
 
-/// The Monthly War Plan: for one calendar month, the plan against what is really happening. The Outlook tab sets what you
-/// planned against what the accounts, bills, repeating entries and budgets now say; the War Plan tab is the sheet you plan on.
-/// Settings, top right, holds the accounts counted, what the month starts with and the buffer, for both tabs.
+/// The Monthly Outlook: for one calendar month, the plan against what is really happening. The Outlook tab sets what you
+/// planned against what the accounts, bills, repeating entries and budgets now say, and shows when the spare money can be
+/// pulled out; the War Plan tab is the sheet you plan on. Settings, in a window of its own, holds the accounts counted, what the
+/// month starts with and the buffer.
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable { case outlook = "Outlook", warPlan = "War Plan" }
 
     @State private var month = MonthFilter.start(of: .now)
     @State private var tab = OutlookTab.outlook
-    @State private var choosingSettings = false
     @State private var plan = WarPlanData()
-    @Query(sort: \Account.name) private var allAccounts: [Account]
+    @Environment(\.openWindow) private var openWindow
     @AppStorage(MonthOutlook.excludedKey) private var excludedStored = ""
-
-    /// Accounts the outlook can count: everything except investments, which hold no bills or budgets.
-    private var countable: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
-    private var leftOut: Int { countable.filter { MonthOutlook.excluded(from: excludedStored).contains(MonthOutlook.accountKey($0)) }.count }
 
     private var range: ClosedRange<Date> {
         let current = MonthFilter.start(of: .now)
@@ -26,7 +23,7 @@ struct MonthOutlookView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PinnedHeader("Monthly War Plan") {
+            PinnedHeader("Monthly Outlook") {
                 HStack {
                     MonthSelector(month: $month, range: range)
                     Picker("View", selection: $tab) {
@@ -37,12 +34,11 @@ struct MonthOutlookView: View {
                     .frame(width: 200)
                     Spacer()
                     Button {
-                        choosingSettings = true
+                        openWindow(id: OutlookSettings.windowID)
                     } label: {
                         Label("Settings", systemImage: "slider.horizontal.3")
                     }
-                    .help("What the month starts with, your buffer, and which accounts are counted")
-                    .popover(isPresented: $choosingSettings, arrowEdge: .bottom) { settings }
+                    .help("Opens a window for what the month starts with, your buffer, and which accounts are counted")
                 }
             }
             OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
@@ -51,81 +47,6 @@ struct MonthOutlookView: View {
         .onAppear { plan = WarPlanData.load(for: month) }
         .onChange(of: month) { _, new in plan = WarPlanData.load(for: new) }
         .onChange(of: plan) { _, new in new.save(for: month) }
-    }
-}
-
-extension MonthOutlookView {
-    /// Settings for both tabs: what the month starts with, the buffer to keep, and the accounts that count.
-    fileprivate var settings: some View {
-        let excluded = MonthOutlook.excluded(from: excludedStored)
-        let startingAccount = plan.startAccount.flatMap { key in countable.first { MonthOutlook.accountKey($0) == key } }
-        return VStack(alignment: .leading, spacing: 14) {
-            Text("Monthly War Plan Settings").font(.headline)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Starting with").font(.subheadline.weight(.semibold))
-                HStack {
-                    Menu {
-                        Button("A number I type") { plan.startAccount = nil }
-                        Divider()
-                        ForEach(countable) { account in
-                            Button("\(account.name): \(account.balance(asOf: .now).formatted(.appCurrency))") { plan.startAccount = MonthOutlook.accountKey(account) }
-                        }
-                    } label: {
-                        Text(startingAccount.map { "\($0.name)'s balance" } ?? "A number I type")
-                    }
-                    .fixedSize()
-                    if let startingAccount {
-                        Spacer()
-                        Text(startingAccount.balance(asOf: .now), format: .appCurrency).fontWeight(.semibold)
-                    } else {
-                        CurrencyField("Starting amount", value: $plan.start)
-                            .labelsHidden()
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-                Text("The money already there when the month begins, from an account's balance now or a number you type. Used by the War Plan and the Above the Buffer card.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Buffer").font(.subheadline.weight(.semibold))
-                CurrencyField("Buffer", value: $plan.buffer)
-                    .labelsHidden()
-                    .multilineTextAlignment(.trailing)
-                Text("Money to keep untouched. Only what is above it counts as spare, and the War Plan warns when a line takes you under it.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Accounts to count").font(.subheadline.weight(.semibold))
-                Text("Only ticked accounts count toward the Outlook: their income, spending and repeating transactions. A bill is left out when the payment linked to it came from an account that is unticked.")
-                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                ForEach(countable) { account in
-                    Toggle(isOn: Binding(
-                        get: { !MonthOutlook.excluded(from: excludedStored).contains(MonthOutlook.accountKey(account)) },
-                        set: { counted in
-                            var keys = MonthOutlook.excluded(from: excludedStored)
-                            if counted { keys.remove(MonthOutlook.accountKey(account)) } else { keys.insert(MonthOutlook.accountKey(account)) }
-                            excludedStored = MonthOutlook.stored(keys)
-                        }
-                    )) {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(account.name)
-                            Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                HStack {
-                    Button("Count All") { excludedStored = "" }.disabled(excluded.isEmpty)
-                    Spacer()
-                }
-            }
-        }
-        .padding(18)
-        .frame(width: 380)
     }
 }
 
@@ -142,6 +63,9 @@ private struct OutlookBody: View {
     @Query private var cashMarks: [CashBudgetMark]
     @Query private var periods: [BudgetPeriod]
     @Query private var allAccounts: [Account]
+    @AppStorage(OutlookSettings.startAccountKey) private var startAccount = ""
+    @AppStorage(OutlookSettings.startAmountKey) private var startAmount = ""
+    @AppStorage(OutlookSettings.bufferKey) private var bufferText = ""
 
     /// The figures kept when this month closed, for a month that is over.
     private var snapshot: OutlookSnapshot? {
@@ -165,6 +89,7 @@ private struct OutlookBody: View {
 
     private var isFuture: Bool { month > MonthFilter.start(of: .now) }
     private var isPast: Bool { month < MonthFilter.start(of: .now) }
+    private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
 
     var body: some View {
         let outlook = MonthOutlook.build(month: month, bills: allBills.live, rules: allRules.live, categories: allCategories.live,
@@ -177,36 +102,34 @@ private struct OutlookBody: View {
             ?? Totals(income: outlook.incomeTotal, bills: outlook.billsTotal, budgets: outlook.budgetsTotal, other: outlook.otherSpending,
                       left: outlook.leftToSave, billDifference: outlook.billDifference, overspend: outlook.budgetOverspend)
         let title = month.formatted(.dateTime.month(.wide).year())
+        let opening = OutlookSettings.opening(accounts: accounts, startAccount: startAccount, startAmount: startAmount)
+        let buffer = OutlookSettings.decimal(bufferText) ?? 0
         if tab == .warPlan {
-            return AnyView(MonthWarPlanView(outlook: outlook, plan: $plan)
-                .statusBarText("Monthly War Plan · \(title) · the plan sheet"))
+            let label = accounts.first { MonthOutlook.accountKey($0) == startAccount }.map { "Starting with \($0.name)'s balance" } ?? "Starting with"
+            return AnyView(MonthWarPlanView(outlook: outlook, plan: $plan, opening: opening, kept: buffer, startLabel: label)
+                .statusBarText("Monthly Outlook · \(title) · the war plan sheet"))
         }
         return AnyView(ScrollView {
             VStack(spacing: 14) {
-                versusCards(outlook, totals: totals)
+                versusCards(outlook, totals: totals, opening: opening, kept: buffer)
+                pullOutCard(outlook, opening: opening, kept: buffer)
                 lineByLine(outlook)
+                spendingCard(outlook)
+                details(outlook)
                 notes(outlook, totals: totals, kept: kept)
-                Text("What is actually happening").font(.title3.weight(.semibold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
-                incomeCard(outlook)
-                billsCard(outlook)
-                budgetsCard(outlook)
             }
             .padding(16)
         }
-        .statusBarText("Monthly War Plan · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
+        .statusBarText("Monthly Outlook · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
     }
 
     // MARK: Plan against outlook
 
-    private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
-
     /// The four big cards: money in, money out, what is left over, and what is above the buffer. Each sets the plan against the outlook.
-    private func versusCards(_ outlook: MonthOutlook, totals: Totals) -> some View {
+    private func versusCards(_ outlook: MonthOutlook, totals: Totals, opening: Decimal, kept: Decimal) -> some View {
         let hasPlan = !plan.items.isEmpty
         let plannedIn = plan.items.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let plannedOut = plan.items.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
-        let opening = plan.opening(accounts: accounts)
-        let kept = plan.kept
         @ViewBuilder func cards() -> some View {
             VersusCard(title: "Money In", symbol: "arrow.down.circle.fill", planned: hasPlan ? plannedIn : nil, actual: totals.income, goodWhenMore: true,
                        note: "\(outlook.income.count) paycheque\(outlook.income.count == 1 ? "" : "s") and other income")
@@ -228,6 +151,96 @@ private struct OutlookBody: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: When the spare money can come out
+
+    /// The earliest safe day to pull the spare money out, from the plan and from what is really happening, with the balance
+    /// through the month for each.
+    private func pullOutCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
+        let hasPlan = !plan.items.isEmpty
+        let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
+        let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
+        let calendar = Calendar.current
+        return ReportCard(title: "When You Can Pull Money Out") {
+            HStack(alignment: .top, spacing: 24) {
+                VStack(alignment: .leading, spacing: 14) {
+                    dayBlock("Planned", pull: hasPlan ? planned : nil)
+                    dayBlock("Outlook", pull: actual)
+                    if let p = planned.best, let a = actual.best, hasPlan {
+                        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
+                        dayChip(days)
+                    }
+                    Text("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(width: 290, alignment: .leading)
+                BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, buffer: kept)
+            }
+        }
+    }
+
+    private func dayBlock(_ title: String, pull: SafePull?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if let pull, let best = pull.best {
+                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 26, weight: .bold))
+                Text("\(pull.spare.formatted(.appCurrency)) can come out from here").font(.caption).foregroundStyle(.secondary)
+            } else if let pull {
+                Text("Not yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.secondary)
+                Text(pull.spare > 0 ? "Nothing is dated yet" : "Nothing is spare at the end of the month").font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text("No plan yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text("Add lines on the War Plan tab").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func dayChip(_ days: Int) -> some View {
+        let words = days == 0 ? "The same day as planned" : "\(abs(days)) day\(abs(days) == 1 ? "" : "s") \(days > 0 ? "later" : "earlier") than planned"
+        let color: Color = days == 0 ? .secondary : (days > 0 ? Theme.red : Theme.green)
+        return Text(words)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(color.opacity(0.18), in: Capsule())
+            .foregroundStyle(color)
+    }
+
+    // MARK: Where the money goes
+
+    /// Each budget, then bills and everything else, as bars: what has been paid or spent, and what is still to come. The faint track behind a budget is its limit.
+    private func spendingCard(_ outlook: MonthOutlook) -> some View {
+        var bars: [SpendBar] = outlook.budgets.map {
+            SpendBar(name: $0.category.name, done: $0.spent, coming: $0.planned, limit: $0.limit)
+        }
+        let paid = outlook.bills.filter { [.paid, .over, .under, .received].contains($0.status) }.reduce(Decimal(0)) { $0 + $1.counted }
+        let billsTotal = outlook.bills.reduce(Decimal(0)) { $0 + $1.counted }
+        if billsTotal > 0 { bars.append(SpendBar(name: "Bills & repeating", done: paid, coming: billsTotal - paid, limit: nil)) }
+        if outlook.otherSpending > 0 { bars.append(SpendBar(name: "Everything else", done: outlook.otherSpending, coming: 0, limit: nil)) }
+        bars.sort { $0.done + $0.coming > $1.done + $1.coming }
+        return ReportCard(title: "Where the Money Goes") {
+            if bars.isEmpty {
+                emptyNote("Nothing is due or spent this month yet.")
+            } else {
+                SpendingChart(bars: bars)
+            }
+        }
+    }
+
+    private func details(_ outlook: MonthOutlook) -> some View {
+        DisclosureGroup {
+            VStack(spacing: 14) {
+                incomeCard(outlook)
+                billsCard(outlook)
+                budgetsCard(outlook)
+            }
+            .padding(.top, 12)
+        } label: {
+            Text("Every paycheque, bill and budget").font(.headline)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .panelBackground(cornerRadius: 8)
     }
 
     /// Each planned line next to the outlook line of the same name. Shown only when there is a plan.
@@ -589,5 +602,97 @@ private struct BudgetOutlookRow: View {
         text += budget.over > 0 ? ", \(budget.over.formatted(.appCurrency)) over" : ", \(budget.remaining.formatted(.appCurrency)) set aside"
         if !budget.inside.isEmpty { text += ". Includes " + budget.inside.map(\.title).joined(separator: ", ") }
         return text
+    }
+}
+
+// MARK: Charts
+
+/// One bar of the Where the Money Goes chart.
+private struct SpendBar: Identifiable {
+    let name: String
+    /// Paid or spent so far.
+    let done: Decimal
+    /// Still to come: bills and repeating expenses not paid yet.
+    let coming: Decimal
+    /// A budget's limit, shown as a mark on its bar.
+    let limit: Decimal?
+    var id: String { name }
+
+    /// The name with how far along it is, shown above its bar.
+    var label: String {
+        let spent = (done + coming).formatted(.appCurrency)
+        guard let limit else { return "\(name)  ·  \(done.formatted(.appCurrency)) paid of \(spent)" }
+        return "\(name)  ·  \((done + coming).formatted(.appCurrency)) of \(limit.formatted(.appCurrency))"
+    }
+}
+
+private func chartValue(_ value: Decimal) -> Double { NSDecimalNumber(decimal: value).doubleValue }
+
+private struct SpendingChart: View {
+    let bars: [SpendBar]
+
+    var body: some View {
+        Chart {
+            ForEach(bars) { bar in
+                // A budget's whole limit as a faint track behind its bar, so you see how much of it is used.
+                if let limit = bar.limit {
+                    RectangleMark(xStart: .value("Start", 0), xEnd: .value("Limit", chartValue(limit)), y: .value("Item", bar.name), height: .ratio(0.5))
+                        .foregroundStyle(Color.primary.opacity(0.12))
+                }
+                BarMark(x: .value("Amount", chartValue(bar.done)), y: .value("Item", bar.name), height: .ratio(0.5))
+                    .foregroundStyle(by: .value("Status", "Paid or spent"))
+                    .annotation(position: .top, alignment: .leading, spacing: 3) { Text(bar.label).font(.caption).foregroundStyle(.secondary) }
+                BarMark(x: .value("Amount", chartValue(bar.coming)), y: .value("Item", bar.name), height: .ratio(0.5))
+                    .foregroundStyle(by: .value("Status", "Still to come"))
+            }
+        }
+        .chartYAxis(.hidden)
+        .chartForegroundStyleScale(["Paid or spent": Color.accentColor, "Still to come": Color.accentColor.opacity(0.35)])
+        .chartXAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
+        .frame(height: max(CGFloat(bars.count) * 50 + 40, 120))
+    }
+}
+
+/// The balance through the month, from the plan and from the outlook, with the buffer as a dashed line and a dot on the safe day.
+private struct BalanceChart: View {
+    let month: Date
+    let planned: SafePull?
+    let actual: SafePull
+    let buffer: Decimal
+
+    private var end: Date {
+        let calendar = Calendar.current
+        return calendar.date(byAdding: .month, value: 1, to: month).flatMap { calendar.date(byAdding: .day, value: -1, to: $0) } ?? month
+    }
+
+    @ChartContentBuilder
+    private func series(_ name: String, _ pull: SafePull) -> some ChartContent {
+        let line = [SafePull.Point(id: -1, date: month, balance: pull.opening)] + pull.points + [SafePull.Point(id: Int.max, date: end, balance: pull.ending)]
+        ForEach(line) { point in
+            LineMark(x: .value("Date", point.date), y: .value("Balance", chartValue(point.balance)), series: .value("Source", name))
+                .foregroundStyle(by: .value("Source", name))
+                .interpolationMethod(.stepEnd)
+        }
+        if let best = pull.best {
+            PointMark(x: .value("Date", best.date), y: .value("Balance", chartValue(best.balance)))
+                .foregroundStyle(by: .value("Source", name))
+                .symbolSize(110)
+        }
+    }
+
+    var body: some View {
+        Chart {
+            if let planned { series("Plan", planned) }
+            series("Outlook", actual)
+            RuleMark(y: .value("Buffer", chartValue(buffer)))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                .foregroundStyle(Color.orange)
+                .annotation(position: .top, alignment: .leading) { Text("Buffer").font(.caption2).foregroundStyle(.orange) }
+        }
+        .chartForegroundStyleScale(["Plan": Color.accentColor, "Outlook": Theme.green])
+        .chartXScale(domain: month...end)
+        .chartXAxis { AxisMarks(values: .stride(by: .day, count: 7)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
+        .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
+        .frame(height: 230)
     }
 }

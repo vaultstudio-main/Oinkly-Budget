@@ -861,7 +861,7 @@ private struct LinkPaymentSheet: View {
         let found = BillLink.candidates(for: bill, due: due, in: nearby)
         VStack(alignment: .leading, spacing: 12) {
             Text("Link a Payment").font(.title2.bold())
-            Text("Choose what paid \(bill.name) due \(due.formatted(.dateTime.month(.abbreviated).day())). The bill then counts at the amount that really came out, so the Monthly War Plan can show when it ran over or under.")
+            Text("Choose what paid \(bill.name) due \(due.formatted(.dateTime.month(.abbreviated).day())). The bill then counts at the amount that really came out, so the Monthly Outlook can show when it ran over or under.")
                 .font(.callout).foregroundStyle(.secondary)
             if found.isEmpty {
                 ContentUnavailableView("Nothing to Link", systemImage: "link",

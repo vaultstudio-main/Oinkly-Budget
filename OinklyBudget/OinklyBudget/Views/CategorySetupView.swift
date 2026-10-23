@@ -56,7 +56,7 @@ struct CategorySetupView: View {
                     Text("a month across \(budgeted.count) budget\(budgeted.count == 1 ? "" : "s")")
                         .font(.callout).foregroundStyle(.secondary)
                 }
-                Text("Monthly War Plan counts these as money set aside each month, so keep only the ones you really want.")
+                Text("Monthly Outlook counts these as money set aside each month, so keep only the ones you really want.")
                     .font(.caption).foregroundStyle(.secondary)
 
                 Spacer(minLength: 0)

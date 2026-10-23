@@ -1255,6 +1255,28 @@ enum SharedHardeningTest {
                 check("S43 an outlook line not planned is listed", row("Power")?.planned == nil && row("Power")?.actual == 90)
                 check("S43 totals compare the plan with the outlook", compare.plannedOut == 1280 && compare.actualOut == 1390 && compare.plannedExtra == 1720 && compare.actualExtra == 1610)
             }
+
+            // S44: the earliest safe day to pull the spare money out
+            do {
+                let calendar = Calendar.current
+                let month = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!
+                func day(_ d: Int) -> Date { calendar.date(byAdding: .day, value: d - 1, to: month)! }
+                let events = [SafePull.Event(date: day(1), amount: 3000), SafePull.Event(date: day(5), amount: -2500),
+                              SafePull.Event(date: day(15), amount: 2000), SafePull.Event(date: day(20), amount: -500)]
+                let pull = SafePull(opening: 0, buffer: 100, events: events)
+                check("S44 the month ends with what the lines add up to", pull.ending == 2000 && pull.spare == 1900)
+                check("S44 the safe day is after the last dip below the ending balance", pull.best?.date == day(15))
+                check("S44 the lowest point is the rent day", pull.lowest?.date == day(5) && pull.lowest?.balance == 500)
+                let early = SafePull(opening: 0, buffer: 0, events: [.init(date: day(2), amount: 1000), .init(date: day(9), amount: -200)])
+                check("S44 with no dip the first day is safe", early.best?.date == day(2))
+                check("S44 nothing spare means no safe day", SafePull(opening: 0, buffer: 5000, events: events).best == nil)
+                check("S44 a month with no lines has no safe day", SafePull(opening: 500, buffer: 0, events: []).best == nil)
+                let sameDay = SafePull(opening: 0, buffer: 0, events: [.init(date: day(3), amount: -50), .init(date: day(3), amount: 100)])
+                check("S44 money in counts before money out on the same day", sameDay.points.first?.balance == 100)
+                let spread = SafePull.spread(100, over: month, calendar: calendar)
+                check("S44 undated spending is spread weekly and adds back up", spread.count == 5 && spread.reduce(Decimal(0)) { $0 + $1.amount } == -100)
+                check("S44 the settings text round trips", OutlookSettings.decimal(OutlookSettings.text(1234.5)) == 1234.5 && OutlookSettings.decimal("") == nil && OutlookSettings.text(0) == "")
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

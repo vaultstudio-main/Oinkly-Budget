@@ -37,8 +37,8 @@ struct FileNewCommands: Commands {
     @FocusedValue(\.registerActions) private var register
 
     private static let pages: [(title: String, key: String)] = [
-        ("Summary", "summary"), ("Transactions", "transactions"), ("Reports", "reports"), ("Liabilities", "liabilities"),
-        ("Investments", "investments"), ("Bills & Recurring", "bills"), ("Planning", "planning"), ("Budgets", "budgets"), ("Monthly War Plan", "outlook"),
+        ("Summary", "summary"), ("Transactions", "transactions"), ("Reports", "reports"), ("Monthly Outlook", "outlook"), ("Liabilities", "liabilities"),
+        ("Investments", "investments"), ("Bills & Recurring", "bills"), ("Planning", "planning"), ("Budgets", "budgets"),
     ]
 
     var body: some Commands {

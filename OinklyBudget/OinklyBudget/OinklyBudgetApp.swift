@@ -172,6 +172,15 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
+        Window("Monthly Outlook Settings", id: OutlookSettings.windowID) {
+            OutlookSettingsView()
+                .appAppearance()
+        }
+        .modelContainer(container)
+        .defaultSize(width: 460, height: 620)
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+
         Window("About Oinkly Budget", id: "about") {
             AboutWindow()
                 .appAppearance()

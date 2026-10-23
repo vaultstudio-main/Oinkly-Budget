@@ -41,6 +41,8 @@ struct MacRootView: View {
                         .tag(SidebarItem.transactions)
                     SidebarLabel(title: "Reports", symbol: "chart.bar.xaxis", color: .indigo)
                         .tag(SidebarItem.reports)
+                    SidebarLabel(title: "Monthly Outlook", symbol: "calendar.badge.checkmark", color: .mint)
+                        .tag(SidebarItem.monthOutlook)
                     SidebarLabel(title: "Liabilities", symbol: "scalemass", color: Theme.red)
                         .tag(SidebarItem.liabilities)
                     SidebarLabel(title: "Investments", symbol: "chart.line.uptrend.xyaxis", color: .purple)
@@ -51,8 +53,6 @@ struct MacRootView: View {
                         .tag(SidebarItem.planning)
                     SidebarLabel(title: "Budgets", symbol: "chart.pie", color: .pink)
                         .tag(SidebarItem.budgets)
-                    SidebarLabel(title: "Monthly War Plan", symbol: "calendar.badge.checkmark", color: .mint)
-                        .tag(SidebarItem.monthOutlook)
                 }
                 Section("Accounts") {
                     // Cash on hand sits at the top by itself, not inside a folder, and the primary checking account
@@ -154,7 +154,7 @@ struct MacRootView: View {
             // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up, then keeps
             // looking for a while, so a new person who adds their first account in this session is asked too.
             try? await Task.sleep(for: .seconds(8))
-            // Keep what the Monthly War Plan said for last month, before bills and budgets get edited.
+            // Keep what the Monthly Outlook said for last month, before bills and budgets get edited.
             if !StartupState.isHoldingPlace { OutlookSnapshots.closeLastMonth(in: modelContext) }
             for _ in 0..<60 {
                 if ShadowCopyManager.shared.shouldAsk(hasData: !accounts.live.addedByUser.isEmpty) {
@@ -247,7 +247,7 @@ struct MacRootView: View {
         case .bills: "Bills & Recurring"
         case .planning: "Planning"
         case .budgets: "Budgets"
-        case .monthOutlook: "Monthly War Plan"
+        case .monthOutlook: "Monthly Outlook"
         case .manageAccounts: "Manage Accounts"
         case .transactions: "Transactions"
         case .summary, nil: "Summary"

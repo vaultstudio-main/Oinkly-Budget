@@ -20,26 +20,13 @@ struct WarPlanItem: Codable, Identifiable, Equatable {
     }
 }
 
-/// Everything about one month's War Plan: its lines, what it starts with and the buffer to keep.
+/// Everything about one month's War Plan: its lines. What a month starts with and the buffer are in `OutlookSettings`.
 /// It is a what-if sheet. It is kept on this Mac, in preferences, a month at a time, and nothing else in the app writes to it
 /// or changes because of it.
 struct WarPlanData: Codable, Equatable {
-    /// A typed starting amount, used when no account is chosen.
-    var start: Decimal?
-    /// An account whose balance is the starting amount, as `MonthOutlook.accountKey`.
-    var startAccount: String?
-    /// Money to keep out of reach: only what is above it counts as spare.
-    var buffer: Decimal?
     var items: [WarPlanItem] = []
 
-    var isEmpty: Bool { items.isEmpty && (start ?? 0) == 0 && startAccount == nil && (buffer ?? 0) == 0 }
-    var kept: Decimal { buffer ?? 0 }
-
-    /// What the month starts with: the chosen account's balance now, otherwise the typed amount.
-    func opening(accounts: [Account], now: Date = .now) -> Decimal {
-        if let key = startAccount, let account = accounts.first(where: { MonthOutlook.accountKey($0) == key }) { return account.balance(asOf: now) }
-        return start ?? 0
-    }
+    var isEmpty: Bool { items.isEmpty }
 
     static func key(for month: Date) -> String { "warPlan." + OutlookSnapshots.key(for: month) }
 

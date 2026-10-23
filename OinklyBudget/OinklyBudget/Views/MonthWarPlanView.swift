@@ -1,20 +1,20 @@
 import SwiftUI
 import SwiftData
 
-/// The Monthly War Plan's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
+/// The Monthly Outlook's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
 /// budgets from the outlook as ordinary lines, and sees what is left after each one and how much is extra so far.
 /// Nothing is fixed: every line can be changed or removed. What it starts with, the buffer and the accounts counted are in
 /// the page's Settings. The plan is only a what-if sheet: it never changes accounts, transactions, bills or budgets.
 struct MonthWarPlanView: View {
     let outlook: MonthOutlook
     @Binding var plan: WarPlanData
+    /// What the month starts with and the buffer, from the Settings window.
+    let opening: Decimal
+    let kept: Decimal
+    let startLabel: String
 
-    @Query(sort: \Account.name) private var allAccounts: [Account]
     @State private var draft: WarPlanItem?
 
-    private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
-    private var startingAccount: Account? { plan.startAccount.flatMap { key in accounts.first { MonthOutlook.accountKey($0) == key } } }
-    private var opening: Decimal { plan.opening(accounts: accounts) }
     private var items: [WarPlanItem] {
         get { plan.items }
         nonmutating set { plan.items = newValue }
@@ -35,10 +35,9 @@ struct MonthWarPlanView: View {
         let list = sorted
         let extra = list.reduce(Decimal(0)) { $0 + signed($1) }
         let ending = opening + extra
-        let kept = plan.kept
         let moneyIn = list.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let moneyOut = list.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
-        let best = bestDay(list, spare: ending - kept)
+        let best = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: list)).best?.date
         return VStack(spacing: 14) {
             ReportCard(title: "Your Plan") {
                 VStack(alignment: .leading, spacing: 12) {
@@ -90,16 +89,6 @@ struct MonthWarPlanView: View {
     }
 
     // MARK: Best day to move the extra
-
-    /// The earliest day from which the whole spare amount can be taken out and the plan still never drops below the buffer.
-    /// That is the day after the last line that leaves less than the month ends with.
-    private func bestDay(_ list: [WarPlanItem], spare: Decimal) -> Date? {
-        guard spare > 0, !list.isEmpty else { return nil }
-        let balances = running(list)
-        let ending = balances[balances.count - 1].left
-        let first = (balances.lastIndex { $0.left < ending } ?? -1) + 1
-        return first < list.count ? list[first].date : nil
-    }
 
     private func bestDayFigure(_ date: Date?, spare: Decimal) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -175,7 +164,7 @@ struct MonthWarPlanView: View {
                 GeometryReader { geo in
                     ScrollView {
                         VStack(spacing: 0) {
-                            tableRow(icon: "flag", date: "Start", title: startingAccount.map { "Starting with \($0.name)'s balance" } ?? "Starting with", left: opening)
+                            tableRow(icon: "flag", date: "Start", title: startLabel, left: opening)
                             ForEach(Array(list.enumerated()), id: \.element.id) { index, item in
                                 Button { draft = item } label: {
                                     tableRow(icon: item.symbol, iconColor: item.isIncome ? Theme.green : .secondary,
