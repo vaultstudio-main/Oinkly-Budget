@@ -56,7 +56,6 @@ struct BillsView: View {
             HStack(alignment: .top, spacing: 0) {
                 ScrollView {
                     VStack(spacing: 14) {
-                        BillAlertBanner()
                         tiles(monthItems)
                         monthCard(monthItems)
                     }
@@ -690,59 +689,6 @@ struct BillEditView: View {
     }
 }
 
-// MARK: Priority alert
-
-/// Lists important bills that are overdue or coming due soon. Shown on the Bills page and the home screen.
-struct BillAlertBanner: View {
-    @Query private var allBills: [Bill]
-
-    var body: some View {
-        let items = Bills.alerts(allBills.live)
-        let overdue = items.filter(\.isOverdue)
-        let upcoming = items.filter { !$0.isOverdue }
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Priority bills", systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
-                    .foregroundStyle(.orange)
-                // Late ones are kept apart from what is coming, so one bill that is both doesn't read as a repeat.
-                if !overdue.isEmpty {
-                    Text("OVERDUE").font(.caption.weight(.semibold)).foregroundStyle(Theme.red).accessibilityAddTraits(.isHeader)
-                    ForEach(overdue) { row($0) }
-                }
-                if !upcoming.isEmpty {
-                    if !overdue.isEmpty {
-                        Text("COMING UP").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                            .padding(.top, 4)
-                            .accessibilityAddTraits(.isHeader)
-                    }
-                    ForEach(upcoming) { row($0) }
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.5), lineWidth: 1))
-        }
-    }
-
-    private func row(_ item: Bills.Occurrence) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(item.bill.name).font(.body.weight(.semibold))
-                Text(when(item))
-                    .font(.caption)
-                    .foregroundStyle(item.isOverdue ? Theme.red : Color.secondary)
-            }
-            Spacer()
-            Text(item.bill.amount, format: .appCurrency).font(.body.weight(.semibold))
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private func when(_ item: Bills.Occurrence) -> String { item.dueText }
-}
-
 extension Bills.Occurrence {
     /// "Due in 3 days · Oct 21", "Due today", "Overdue by 2 days".
     var dueText: String {
@@ -765,25 +711,26 @@ extension Bills {
     }
 }
 
-/// The Summary page's list of important bills that are overdue: the couple that are latest, and a note of how many more there are.
-/// Clicking anywhere on the card opens Bills & Recurring.
+/// The Summary page's list of important bills: the overdue ones first, then what is due in the next 20 days, a few in all with a
+/// note of how many more there are. Clicking anywhere on the card opens Bills & Recurring.
 struct PriorityBillsCard: View {
     @Query private var allBills: [Bill]
 
-    /// How many overdue bills are listed on the card.
-    private let shown = 2
+    /// How many bills are listed on the card.
+    private let shown = 3
 
     var body: some View {
-        let overdue = Bills.prioritySplit(allBills.live, limit: Int.max).overdue
-        let listed = Array(overdue.prefix(shown))
-        let more = overdue.count - listed.count
-        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue.",
-                    headline: overdue.isEmpty ? nil : "\(overdue.count) overdue",
-                    headlineNote: more > 0 ? "\(more) more not shown" : nil) {
-            // A card of one set height: the overdue bills, or a plain note in the same space when there are none.
-            if overdue.isEmpty {
-                ReportEmpty(message: "Nothing is overdue. Mark a bill Important on the Bills page to watch it here.", height: 150,
-                            title: "No overdue bills", clean: true).frame(height: 150)
+        let split = Bills.prioritySplit(allBills.live, limit: Int.max)
+        let all = split.overdue + split.upcoming
+        let listed = Array(all.prefix(shown))
+        let more = all.count - listed.count
+        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
+                    headline: all.isEmpty ? nil : (split.overdue.isEmpty ? "\(all.count) due soon" : "\(split.overdue.count) overdue"),
+                    headlineNote: split.overdue.isEmpty || split.upcoming.isEmpty ? nil : "\(split.upcoming.count) coming up") {
+            // A card of one set height: the bills, or a plain note in the same space when there are none.
+            if all.isEmpty {
+                ReportEmpty(message: "Nothing is overdue or due soon. Mark a bill Important on the Bills page to watch it here.", height: 150,
+                            title: "No priority bills due", clean: true).frame(height: 150)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
                     rows(listed)
