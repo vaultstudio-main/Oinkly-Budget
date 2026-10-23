@@ -90,8 +90,10 @@ struct InvestmentsData {
         data.contributions = months.indices.map { Month(date: months[$0], value: flow[$0]) }
 
         if let snapshot {
+            // Each account's history is worked out once, not again for every month.
+            let histories = accounts.map { ReportMath.history(of: $0, snapshot: snapshot) }
             let history = months.indices.map { index -> TrendPoint in
-                let total = accounts.reduce(0.0) { $0 + ReportMath.history(of: $1, snapshot: snapshot)[index].value }
+                let total = histories.reduce(0.0) { $0 + $1[index].value }
                 return TrendPoint(date: months[index], value: total, projected: false)
             }
             data.history = history + projection(of: history)
@@ -107,6 +109,13 @@ struct InvestmentsData {
     }
 }
 
+/// The seven investment reports all ask for the same numbers, so they are worked out once and reused until something they depend on
+/// changes.
+@MainActor
+enum InvestmentsDataCache {
+    static var cached: (key: Int, data: InvestmentsData)?
+}
+
 /// Builds `InvestmentsData` from the database and hands it to `content`.
 struct WithInvestmentsData<Content: View>: View {
     @Query private var allAccounts: [Account]
@@ -120,7 +129,29 @@ struct WithInvestmentsData<Content: View>: View {
         _yearTransactions = Query(filter: #Predicate<Transaction> { $0.date >= start })
     }
 
+    private var key: Int {
+        var hasher = Hasher()
+        for account in allAccounts where account.isLive && account.type.group == .investments {
+            hasher.combine(account.persistentModelID)
+            hasher.combine(account.balance)
+            hasher.combine(account.isClosed)
+            for holding in account.holdings.live { hasher.combine(holding.marketValue); hasher.combine(holding.costBasis) }
+        }
+        hasher.combine(yearTransactions.count)
+        hasher.combine(yearTransactions.reduce(Decimal(0)) { $0 + $1.amount })
+        hasher.combine(LedgerIndex.shared.latest != nil)
+        return hasher.finalize()
+    }
+
     var body: some View {
-        content(InvestmentsData.make(accounts: allAccounts, transactions: yearTransactions.live, snapshot: LedgerIndex.shared.latest))
+        let key = key
+        let data: InvestmentsData
+        if let cached = InvestmentsDataCache.cached, cached.key == key {
+            data = cached.data
+        } else {
+            data = InvestmentsData.make(accounts: allAccounts, transactions: yearTransactions.live, snapshot: LedgerIndex.shared.latest)
+            InvestmentsDataCache.cached = (key, data)
+        }
+        return content(data)
     }
 }

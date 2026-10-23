@@ -135,7 +135,6 @@ enum ReportSection: String, CaseIterable, Identifiable {
                 ReportItem(title: "Credit Card Use", summary: "Balance against limit for every card, and the projected balance.", symbol: "creditcard", shape: .ring),
                 ReportItem(title: "Loan Balances Ahead", summary: "What each loan will owe after each of the next six payments.", symbol: "calendar.badge.clock", shape: .line),
                 ReportItem(title: "Card Balances Ahead", summary: "What each card will owe after six months of minimum payments.", symbol: "creditcard", shape: .line),
-                ReportItem(title: "Debt Payoff Plan", summary: "How much sooner you'd finish by adding to each payment.", symbol: "arrow.down.circle", shape: .table, isWide: true),
             ]
         case .goals:
             [

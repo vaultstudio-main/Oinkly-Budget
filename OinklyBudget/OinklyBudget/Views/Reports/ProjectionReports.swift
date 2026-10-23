@@ -187,7 +187,7 @@ struct GoalFinishDatesReport: View {
             if goals.isEmpty {
                 ReportEmpty(message: "No goals yet. Set one up in Planning.", height: ReportSize.h(140))
             } else {
-                Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 9) {
+                Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 4) {
                     GridRow {
                         Text("GOAL"); Text("TARGET DATE").gridColumnAlignment(.trailing); Text("AT THIS PACE").gridColumnAlignment(.trailing); Text("DIFFERENCE").gridColumnAlignment(.trailing)
                     }
@@ -208,7 +208,7 @@ struct GoalFinishDatesReport: View {
                                 Text("—").foregroundStyle(.secondary)
                             }
                         }
-                        .font(.callout)
+                        .font(.subheadline)
                     }
                 }
             }

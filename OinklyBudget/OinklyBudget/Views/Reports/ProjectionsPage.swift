@@ -201,6 +201,8 @@ struct ProjectionsPage: View {
             tile("Kept Each Year", has ? years[0].keptInYear : nil, note: has ? "\(ReportFormat.money(average.income - average.spending)) a month" : "No history yet",
                  color: average.income < average.spending ? Theme.red : Theme.green)
         }
+        // The chart and the table side by side, so the area fits without scrolling.
+        HStack(alignment: .top, spacing: 14) {
         ReportPanel(title: "Net Worth, Year by Year", summary: "What you would be worth on December 31 of each of the next ten years, starting with next year.",
                     headline: has && nowWorth != nil ? years.last.map { ReportFormat.money($0.netWorth) } : nil, headlineNote: has ? "at the end of \(thisYear + 10)" : nil) {
             if nowWorth == nil && LedgerIndex.shared.latest == nil {
@@ -224,8 +226,8 @@ struct ProjectionsPage: View {
             }
         }
         ReportPanel(title: "Year by Year", summary: "What is kept in each calendar year, in total from now, and what you would be worth at the end of it.") {
-            ScrollView {
-                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 8) {
+            do {
+                Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 5) {
                     GridRow {
                         Text("YEAR"); Text("KEPT IN THE YEAR").gridColumnAlignment(.trailing); Text("KEPT FROM NOW").gridColumnAlignment(.trailing); Text("NET WORTH AT DEC 31").gridColumnAlignment(.trailing)
                     }
@@ -238,13 +240,14 @@ struct ProjectionsPage: View {
                             Text(has ? ReportFormat.money(entry.saved) : "–")
                             Text(has && nowWorth != nil ? ReportFormat.money(entry.netWorth) : "–").fontWeight(.semibold)
                         }
-                        .font(.callout)
+                        .font(.subheadline)
                         .foregroundStyle(has ? Color.primary : Color.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: 290)
         }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

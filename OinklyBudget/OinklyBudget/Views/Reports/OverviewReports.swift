@@ -26,7 +26,6 @@ struct YearEndSummaryReport: View {
         }
         let topCategory = byCategory.max { $0.value < $1.value }
         let bestMonth = totals.max { $0.income - $0.spending < $1.income - $1.spending }
-        let busiest = totals.max { $0.spending < $1.spending }
         let empty = income == 0 && spending == 0
 
         return ReportPanel(title: "Year-End Summary", summary: "The last twelve months on one page: what came in, what went out, what you kept and how your net worth and debt moved.",
@@ -47,12 +46,6 @@ struct YearEndSummaryReport: View {
                         ReportFigure(label: "Biggest category", value: topCategory?.key ?? "—", note: topCategory.map { ReportFormat.money($0.value) })
                         ReportFigure(label: "Best month", value: bestMonth.map { $0.date.formatted(.dateTime.month(.wide)) } ?? "—",
                                      note: bestMonth.map { "kept \(ReportFormat.money($0.income - $0.spending))" })
-                    }
-                    if let busiest, busiest.spending > 0 {
-                        Text("Your highest-spending month was \(busiest.date.formatted(.dateTime.month(.wide).year())) at \(ReportFormat.money(busiest.spending)).")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }

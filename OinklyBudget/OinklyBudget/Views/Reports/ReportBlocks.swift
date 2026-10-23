@@ -36,7 +36,7 @@ struct ReportPanel<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.headline).accessibilityAddTraits(.isHeader)
@@ -53,12 +53,9 @@ struct ReportPanel<Content: View>: View {
             // Title, what it shows and the headline figure read as one sentence.
             .accessibilityElement(children: .combine)
             if let contentCap {
-                // Whole when it fits, scrolling inside the card when it doesn't.
-                ViewThatFits(in: .vertical) {
-                    content
-                    ScrollView(showsIndicators: false) { content }
-                }
-                .frame(maxHeight: contentCap, alignment: .top)
+                // Built once: as tall as it needs to be up to the cap, and scrolling inside the card past it.
+                ScrollView(showsIndicators: false) { content }
+                    .frame(maxHeight: contentCap, alignment: .top)
             } else {
                 content
             }
@@ -66,7 +63,7 @@ struct ReportPanel<Content: View>: View {
         // Each card is a group VoiceOver can move between, with its chart or figures inside.
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
         .panelBackground(cornerRadius: 12, continuous: true)
     }

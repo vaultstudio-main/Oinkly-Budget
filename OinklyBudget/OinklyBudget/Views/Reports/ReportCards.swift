@@ -20,7 +20,6 @@ enum ReportCards {
         case "Debt & Loans/Ahead or Behind": AnyView(AheadOrBehindReport())
         case "Debt & Loans/Interest Paid": AnyView(InterestPaidReport())
         case "Debt & Loans/Credit Card Use": AnyView(CreditCardUseReport())
-        case "Debt & Loans/Debt Payoff Plan": AnyView(DebtPayoffPlanReport())
 
         case "Savings & Goals/Goal Progress": AnyView(GoalProgressReport())
         case "Savings & Goals/On Track or Behind": AnyView(GoalStatusReport())

@@ -244,6 +244,8 @@ private struct ScreenshotRun {
             do { try TestData.load(into: context); context.saveNow() } catch { NSLog("SHOT: test data failed: \(error.localizedDescription)") }
             NSLog("SHOT: test data loaded")
         }
+        // `-screenshotNoTour YES` stops here, with the test data loaded, so the app can be looked at by hand.
+        if UserDefaults.standard.bool(forKey: "screenshotNoTour") { return }
         // The start-up window runs its checks and then opens the main window.
         var found: NSWindow?
         var tick = 0

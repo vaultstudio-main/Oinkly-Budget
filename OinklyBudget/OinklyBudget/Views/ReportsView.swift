@@ -38,7 +38,8 @@ struct ReportsView: View {
                     // Still taller than the room under the title and tabs: shrink the charts a step and measure again, then, with the
                     // charts as small as they go, let the cards' own content scroll.
                     guard section != .projections, height > viewport + 2 else { return }
-                    if scale > ReportSize.smallest { scale = max(scale - 0.05, ReportSize.smallest) } else if !capped { capped = true }
+                    // Few, large steps, because every step builds the whole tab again: 1, then 0.7, then the smallest, then capped.
+                    if scale > 0.7 { scale = 0.7 } else if scale > ReportSize.smallest { scale = ReportSize.smallest } else if !capped { capped = true }
                 }
                 // Made again at each step, so the size is measured again and the loop carries on until the tab fits.
                 .id("\(scale)|\(capped)")
@@ -90,7 +91,7 @@ struct ReportsView: View {
     private func card(_ item: ReportItem, cap: CGFloat?) -> some View {
         let minimum: CGFloat = ReportSize.h(item.isWide ? 330 : 290)
         if let kind = item.trend {
-            TrendChartCard(kind: kind, height: ReportSize.h(item.isWide ? 220 : 190)).environment(\.reportCardMinHeight, minimum)
+            TrendChartCard(kind: kind, height: ReportSize.h(item.isWide ? 170 : 150)).environment(\.reportCardMinHeight, minimum)
         } else if let built = ReportCards.view(section: section, title: item.title) {
             built.environment(\.reportCardMinHeight, minimum).environment(\.reportShape, item.shape).environment(\.reportContentCap, cap)
         } else {
@@ -100,12 +101,13 @@ struct ReportsView: View {
 
     private func grid(_ items: [ReportItem]) -> some View {
         // Three across when the page is wide enough.
-        let columns = pageWidth >= 1000 ? section.columns : 2
+        // Four across on a very wide page, so a tab needs fewer rows.
+        let columns = pageWidth >= 1000 ? (pageWidth >= 1200 && section != .health ? 4 : section.columns) : 2
         ReportSize.scale = scale
         // Each row's share of the room, less what a card spends on its title and margins.
         let rowCount = rows(of: items, columns: columns).count
-        let share = max((viewport - 32 - CGFloat(max(rowCount - 1, 0)) * 14) / CGFloat(max(rowCount, 1)), 260)
-        let cap: CGFloat? = capped ? share - 96 : nil
+        let share = max((viewport - 32 - CGFloat(max(rowCount - 1, 0)) * 14) / CGFloat(max(rowCount, 1)), 190)
+        let cap: CGFloat? = capped ? share - 84 : nil
         return VStack(spacing: 14) {
             ForEach(Array(rows(of: items, columns: columns).enumerated()), id: \.offset) { _, row in
                 SpanRowLayout(columns: columns, spacing: 14) {
