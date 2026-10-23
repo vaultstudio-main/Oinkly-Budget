@@ -765,45 +765,39 @@ extension Bills {
     }
 }
 
-/// The Summary page's list of important bills: what is overdue under a red heading, and what is due in the next 20 days below it.
+/// The Summary page's list of important bills that are overdue: the couple that are latest, and a note of how many more there are.
+/// Clicking anywhere on the card opens Bills & Recurring.
 struct PriorityBillsCard: View {
     @Query private var allBills: [Bill]
 
+    /// How many overdue bills are listed on the card.
+    private let shown = 2
+
     var body: some View {
-        let split = Bills.prioritySplit(allBills.live)
-        let count = split.overdue.count + split.upcoming.count
-        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue or due in the next 20 days.",
-                    headline: count == 0 ? nil : (split.overdue.isEmpty ? "\(count) bill\(count == 1 ? "" : "s")" : "\(split.overdue.count) overdue"),
-                    headlineNote: split.overdue.isEmpty || split.upcoming.isEmpty ? nil : "\(split.upcoming.count) coming up") {
-            // A card of one set height: a list that scrolls when there is more, a plain note in the same space when there is none.
-            if count == 0 {
-                ReportEmpty(message: "No priority bills due soon. Mark a bill Important on the Bills page to see it here.", height: 150,
-                            title: "Nothing due soon", clean: true).frame(height: 150)
+        let overdue = Bills.prioritySplit(allBills.live, limit: Int.max).overdue
+        let listed = Array(overdue.prefix(shown))
+        let more = overdue.count - listed.count
+        ReportPanel(title: "Priority Bills", summary: "Your important bills that are overdue.",
+                    headline: overdue.isEmpty ? nil : "\(overdue.count) overdue",
+                    headlineNote: more > 0 ? "\(more) more not shown" : nil) {
+            // A card of one set height: the overdue bills, or a plain note in the same space when there are none.
+            if overdue.isEmpty {
+                ReportEmpty(message: "Nothing is overdue. Mark a bill Important on the Bills page to watch it here.", height: 150,
+                            title: "No overdue bills", clean: true).frame(height: 150)
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        if !split.overdue.isEmpty {
-                            sectionTitle("Overdue", color: Theme.red)
-                            rows(split.overdue)
-                        }
-                        if !split.upcoming.isEmpty {
-                            // The heading only helps when something late is listed above it.
-                            if !split.overdue.isEmpty { sectionTitle("Coming up", color: .secondary).padding(.top, 10) }
-                            rows(split.upcoming)
-                        }
+                VStack(alignment: .leading, spacing: 0) {
+                    rows(listed)
+                    Spacer(minLength: 0)
+                    if more > 0 {
+                        Text("and \(more) more on Bills & Recurring").font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                .frame(height: 150)
+                .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150, alignment: .topLeading)
             }
         }
-    }
-
-    private func sectionTitle(_ text: String, color: Color) -> some View {
-        Text(text.uppercased())
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.bottom, 2)
-            .accessibilityAddTraits(.isHeader)
+        .contentShape(Rectangle())
+        .onTapGesture { NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["page": "bills"]) }
+        .help("Open Bills & Recurring")
     }
 
     private func rows(_ items: [Bills.Occurrence]) -> some View {
