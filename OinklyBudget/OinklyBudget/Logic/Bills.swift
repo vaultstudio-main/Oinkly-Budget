@@ -220,6 +220,8 @@ enum BillPayment {
         guard !source.supportsHoldings, !(debt?.supportsHoldings ?? false) else { return nil }
         // An extra payment is toward a balance, so there has to be one.
         if isExtra && debt == nil { return nil }
+        // A card is never taken past its credit limit.
+        if source.wouldExceedLimit(adding: -abs(amount)) { return nil }
         let day = calendar.startOfDay(for: date)
         let out: Transaction
         let check = paymentChoice?.isCheck == true ? checkNumber : ""

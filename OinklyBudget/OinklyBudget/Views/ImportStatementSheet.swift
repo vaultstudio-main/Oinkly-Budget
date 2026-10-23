@@ -251,6 +251,7 @@ struct ImportStatementSheet: View {
             Label("Imported \(result.added.formatted()) transaction\(result.added == 1 ? "" : "s")", systemImage: "checkmark.circle.fill")
                 .font(.title2.bold()).foregroundStyle(Theme.green)
             if result.duplicatesSkipped > 0 { Text("Skipped \(result.duplicatesSkipped.formatted()) already in Oinkly Budget.") }
+            if result.overLimit > 0 { Text("\(result.overLimit.formatted()) would have taken a card over its credit limit and were left out.") }
             if parsed.problems.count > 0 { Text("\(parsed.problems.count.formatted()) rows couldn't be read and were left out.") }
             if result.uncategorized > 0 { Text("\(result.uncategorized.formatted()) had a category that didn't match yours, so they have none.") }
             Text("Wrong? Undo removes everything this import added.").foregroundStyle(.secondary)

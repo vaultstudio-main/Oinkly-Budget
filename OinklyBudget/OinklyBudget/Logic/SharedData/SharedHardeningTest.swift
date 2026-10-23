@@ -1429,6 +1429,27 @@ enum SharedHardeningTest {
                 check("S49 a status and a receipt together", names(RegisterFilter(states: [.unreconciled], withoutReceipt: true)) == "B")
                 check("S49 the page says what it is showing", RegisterFilter(states: [.pending, .unreconciled], withReceipt: true).summary == "Pending, Unreconciled · With Receipt" && RegisterFilter().summary == "")
             }
+
+            // S50: a credit card never owes more than its limit, though owing exactly the limit is allowed
+            do {
+                let calendar = Calendar.current
+                let today = calendar.startOfDay(for: .now)
+                let gc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let card = Account(name: "S50 card", type: .creditCard, openingBalance: -900)
+                card.creditLimit = 1_000
+                let bank = Account(name: "S50 bank", type: .checking, openingBalance: 5_000)
+                gc.insert(card); gc.insert(bank)
+                try gc.save()
+                check("S50 a charge up to the limit is allowed", card.wouldExceedLimit(adding: -100) == false)
+                check("S50 a charge past the limit is refused", card.wouldExceedLimit(adding: -100.01) == true)
+                check("S50 a payment is never refused", card.wouldExceedLimit(adding: 500) == false)
+                check("S50 a bank account has no limit", bank.wouldExceedLimit(adding: -100_000) == false)
+                check("S50 paying a bill from a card past its limit is refused", BillPayment.record(from: card, debt: nil, bill: Bill(name: "S50 power", amount: 200, frequency: .monthly, dueDate: today), amount: 200, date: today, in: gc) == nil)
+                check("S50 and within it is recorded", BillPayment.record(from: card, debt: nil, bill: Bill(name: "S50 water", amount: 100, frequency: .monthly, dueDate: today), amount: 100, date: today, in: gc) != nil)
+                let rule = RecurringTransaction(payee: "S50 sub", account: card, category: nil, amount: -50, frequency: .monthly, startDate: today)
+                gc.insert(rule)
+                check("S50 a repeating charge past the limit makes no entry", Recurring.makeEntry(for: rule, on: today, in: gc) == nil)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }

@@ -76,7 +76,7 @@ struct CreditCardChargeView: View {
                     }
                 }
                 if exceedsLimit, let card {
-                    Label("This would reach the credit limit on \(card.name).", systemImage: "exclamationmark.triangle.fill")
+                    Label("This would go over the credit limit on \(card.name).", systemImage: "exclamationmark.triangle.fill")
                         .font(.footnote)
                         .foregroundStyle(.orange)
                 }

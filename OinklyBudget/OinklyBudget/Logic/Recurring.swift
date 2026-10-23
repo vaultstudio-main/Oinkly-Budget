@@ -67,7 +67,8 @@ enum Recurring {
     @MainActor
     @discardableResult
     static func makeEntry(for rule: RecurringTransaction, on day: Date, in context: ModelContext, calendar: Calendar = .current) -> Transaction? {
-        guard rule.isLive, let account = rule.account, account.isLive, !hasEntry(rule, on: day, calendar: calendar) else { return nil }
+        guard rule.isLive, let account = rule.account, account.isLive, !hasEntry(rule, on: day, calendar: calendar),
+              !account.wouldExceedLimit(adding: rule.amount) else { return nil }
         let entry = Transaction(account: account, date: day, payee: rule.payee,
                                 category: rule.category?.isLive == true ? rule.category : nil,
                                 memo: rule.memo, amount: rule.amount)

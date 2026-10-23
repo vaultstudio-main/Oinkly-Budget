@@ -51,9 +51,11 @@ struct BillPayWindow: View {
     }
 
     private var canPay: Bool {
-        guard source?.isLive == true, let amount, amount > 0 else { return false }
+        guard source?.isLive == true, let amount, amount > 0, !exceedsLimit else { return false }
         return resolved.debt != nil || resolved.bill != nil
     }
+
+    private var exceedsLimit: Bool { (amount ?? 0) > 0 && source?.wouldExceedLimit(adding: -(amount ?? 0)) == true }
 
     var body: some View {
         content

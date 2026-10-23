@@ -171,6 +171,10 @@ struct AccountEditView: View {
                         if type.group == .creditCards {
                             amountRow("Credit limit", $creditLimit)
                             amountRow("Current balance on card", $cardBalance)
+                            if let limitProblem {
+                                Label(limitProblem, systemImage: "exclamationmark.triangle.fill")
+                                    .font(.footnote).foregroundStyle(.orange)
+                            }
                             amountRow("Minimum payment", $monthlyPayment)
                             Toggle("Set a payment due date", isOn: $hasDueDate.animation())
                             if hasDueDate {
@@ -268,7 +272,7 @@ struct AccountEditView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: save)
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || limitProblem != nil)
                 }
             }
         }
@@ -298,6 +302,20 @@ struct AccountEditView: View {
                 .font(.footnote)
                 .foregroundStyle(.orange)
         }
+    }
+
+    /// A card can't owe more than its credit limit, from the starting balance or once the limit is lowered.
+    private var limitProblem: String? {
+        guard type.group == .creditCards, creditLimit > 0 else { return nil }
+        // A card already over its limit can still have its notes or name changed.
+        if let account, account.creditLimit == abs(creditLimit), account.openingBalance == -abs(cardBalance) { return nil }
+        let limit = abs(creditLimit)
+        if abs(cardBalance) > limit { return "The balance can't be more than the credit limit." }
+        if let account, account.isCreditCard {
+            let owed = -(account.balance - account.openingBalance - abs(cardBalance))
+            if owed > limit { return "With its transactions this card owes \(owed.formatted(.appCurrency)), more than this limit." }
+        }
+        return nil
     }
 
     private func save() {

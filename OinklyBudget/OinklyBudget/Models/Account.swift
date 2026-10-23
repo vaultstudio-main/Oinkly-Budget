@@ -324,10 +324,11 @@ final class Account {
     /// For a card with a limit set: what is left to spend. Never negative.
     var availableCredit: Decimal { max(creditLimit + balance, 0) }
 
-    /// True when a card has a limit and adding `change` (negative for a charge) would take what you owe to the limit or
-    /// past it. Payments and deposits never count, so a card already over its limit can still be paid down.
+    /// True when a card has a limit and adding `change` (negative for a charge) would take what you owe past the limit.
+    /// Owing exactly the limit is the most a card can hold. Payments and deposits never count, so a card already over its
+    /// limit can still be paid down.
     func wouldExceedLimit(adding change: Decimal) -> Bool {
-        isCreditCard && creditLimit > 0 && change < 0 && -(balance + change) >= creditLimit
+        isCreditCard && creditLimit > 0 && change < 0 && -(balance + change) > creditLimit
     }
 
     /// What to say when a charge is refused.

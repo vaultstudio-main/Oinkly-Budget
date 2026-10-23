@@ -25,7 +25,9 @@ struct AtmWithdrawalView: View {
     /// Always the built-in Cash on Hand.
     private var cash: Account? { allAccounts.live.first(where: \.isDefault) }
 
-    private var canSave: Bool { source?.isLive == true && cash?.isLive == true && (amount ?? 0) > 0 }
+    private var canSave: Bool { source?.isLive == true && cash?.isLive == true && (amount ?? 0) > 0 && !exceedsLimit }
+
+    private var exceedsLimit: Bool { (amount ?? 0) > 0 && source?.wouldExceedLimit(adding: -(amount ?? 0)) == true }
 
     var body: some View {
         content
@@ -62,6 +64,10 @@ struct AtmWithdrawalView: View {
 
             Section {
                 Text(summary).font(.callout).foregroundStyle(.secondary)
+                if exceedsLimit, let source {
+                    Label("This would go over the credit limit on \(source.name).", systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
                 if let confirmation {
                     Label(confirmation, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
                 }

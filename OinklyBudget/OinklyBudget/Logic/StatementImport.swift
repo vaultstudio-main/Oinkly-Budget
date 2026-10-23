@@ -443,6 +443,7 @@ enum StatementImporter {
     struct ImportResult {
         var added = 0
         var duplicatesSkipped = 0
+        var overLimit = 0
         var uncategorized = 0
         var ids: [PersistentIdentifier] = []
     }
@@ -459,6 +460,8 @@ enum StatementImporter {
         for item in planned {
             guard let account = item.account, let date = item.row.date, let amount = item.row.amount else { continue }
             if skipDuplicates && item.isDuplicate { result.duplicatesSkipped += 1; continue }
+            // A charge that would take a card past its credit limit is left out.
+            if account.wouldExceedLimit(adding: amount) { result.overLimit += 1; continue }
             let payee = tidyPayees ? tidy(item.row.payee) : item.row.payee
             var category = item.row.categoryName.isEmpty ? nil : categoriesByName[item.row.categoryName.lowercased()]
             if category == nil && !item.row.categoryName.isEmpty { result.uncategorized += 1 }

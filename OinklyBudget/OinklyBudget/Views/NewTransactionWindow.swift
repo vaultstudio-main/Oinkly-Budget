@@ -141,7 +141,7 @@ struct NewTransactionWindow: View {
                     }
                     CurrencyField("Amount", value: $amount)
                     if exceedsLimit, let account {
-                        Label("This would reach the credit limit on \(account.name).", systemImage: "exclamationmark.triangle.fill")
+                        Label("This would go over the credit limit on \(account.name).", systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote)
                             .foregroundStyle(.orange)
                     }

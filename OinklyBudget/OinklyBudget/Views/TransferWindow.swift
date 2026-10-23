@@ -24,7 +24,12 @@ struct TransferWindow: View {
     private var canTransfer: Bool {
         guard let source, source.isLive, let destination, destination.isLive, source != destination,
               let amount, amount > 0 else { return false }
-        return true
+        return !source.wouldExceedLimit(adding: -amount)
+    }
+
+    private var exceedsLimit: Bool {
+        guard let source, source.isLive, let amount, amount > 0 else { return false }
+        return source.wouldExceedLimit(adding: -amount)
     }
 
     var body: some View {
@@ -74,6 +79,10 @@ struct TransferWindow: View {
 
             Section {
                 Text(summary).font(.callout).foregroundStyle(.secondary)
+                if exceedsLimit, let source {
+                    Label("This would go over the credit limit on \(source.name).", systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote).foregroundStyle(.orange)
+                }
                 if let confirmation {
                     Label(confirmation, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green)
                 }

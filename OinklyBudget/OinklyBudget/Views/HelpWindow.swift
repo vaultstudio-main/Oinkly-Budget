@@ -135,7 +135,7 @@ enum HelpContent {
                 "Credit cards keep a card number (up to 19 digits), a credit limit, an APR, a minimum payment and a payment due date.",
                 "## Charging a card",
                 "Choose File ▸ New Credit Card Charge… (⌥⌘N). Pick the card, enter the amount, payee and category. Available credit shows as you type.",
-                "• A charge that would reach or pass the credit limit is refused with \"Exceeds Credit Limit\".",
+                "• A card can owe up to its credit limit and no more. Anything that would take it past the limit is refused: a charge, a transfer or ATM withdrawal from the card, a bill paid from it, or a statement row on import. Repeating charges and bill entries that would go over are not made. A starting balance can't be more than the limit.",
                 "• The method is always Credit Card, and you can attach a receipt.",
                 "• Credit cards don't appear in New Transaction. Charges go through this form.",
                 "## Paying a card",

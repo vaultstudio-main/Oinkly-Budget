@@ -14,7 +14,8 @@ enum BillEntries {
     @discardableResult
     static func makeEntry(for bill: Bill, on due: Date, in account: Account, state: ReconcileState, context: ModelContext, calendar: Calendar = .current) -> Transaction? {
         let day = calendar.startOfDay(for: due)
-        guard bill.isLive, account.isLive, BillLink.payments(of: bill, on: day, calendar: calendar).isEmpty else { return nil }
+        guard bill.isLive, account.isLive, BillLink.payments(of: bill, on: day, calendar: calendar).isEmpty,
+              !account.wouldExceedLimit(adding: -abs(bill.amount)) else { return nil }
         let entry = Transaction(account: account, date: day, payee: bill.name,
                                 category: bill.category?.isLive == true ? bill.category : nil, memo: "", amount: -abs(bill.amount))
         entry.state = state
