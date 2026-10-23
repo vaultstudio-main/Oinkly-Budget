@@ -42,7 +42,9 @@ struct MonthWarPlanView: View {
             ReportCard(title: "Your Plan") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 30) {
-                        figure("Extra This Month", extra, note: "money in less money out")
+                        figure("Total Income", moneyIn, note: "\(list.filter(\.isIncome).count) line\(list.filter(\.isIncome).count == 1 ? "" : "s") coming in", color: Theme.green)
+                        figure("Total Outgoing", moneyOut, note: "\(list.filter { !$0.isIncome }.count) line\(list.filter { !$0.isIncome }.count == 1 ? "" : "s") going out", color: .primary)
+                        figure("Extra This Month", extra, note: "income less outgoing")
                         figure("Left at the End", ending, note: "starting with \(opening.formatted(.appCurrency))")
                         safeFigure(safe, hasLines: !list.isEmpty)
                         Spacer()
@@ -58,12 +60,11 @@ struct MonthWarPlanView: View {
                             .help("Copies lines from the Outlook into the plan, where you can change or remove them")
                         }
                     }
-                    Text("This sheet starts blank. Add a line for anything you expect, or pull in the paycheques, bills and budgets the Outlook already knows, then change or remove whatever you like. What you start with, your buffer and the accounts counted are in Settings, top right. This is only a what-if sheet: it never changes your accounts, transactions, bills or budgets.")
+                    Text("A blank sheet: add a line for anything you expect, or pull in what the Outlook already knows, then change or remove whatever you like. Starting amount, buffer and accounts are in Settings. It never changes your accounts, transactions, bills or budgets.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
             table(list, kept: kept)
-            totalsCard(kept: kept, extra: extra, ending: ending, moneyIn: moneyIn, moneyOut: moneyOut)
         }
         .padding(16)
         .sheet(item: $draft) { item in
@@ -77,12 +78,13 @@ struct MonthWarPlanView: View {
 
     // MARK: Pieces
 
-    private func figure(_ title: String, _ amount: Decimal, note: String) -> some View {
+    /// A figure for the Your Plan card, coloured by its sign unless a colour is given.
+    private func figure(_ title: String, _ amount: Decimal, note: String, color: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title.uppercased()).font(.caption).foregroundStyle(.secondary)
             Text(amount, format: .appCurrency)
                 .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(amount < 0 ? Theme.red : Theme.green)
+                .foregroundStyle(color ?? (amount < 0 ? Theme.red : Theme.green))
             Text(note).font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -196,27 +198,6 @@ struct MonthWarPlanView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .panelBackground(cornerRadius: 8)
-    }
-
-    /// Its own card under the table: the totals, the buffer zone and what is really spare.
-    private func totalsCard(kept: Decimal, extra: Decimal, ending: Decimal, moneyIn: Decimal, moneyOut: Decimal) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("TOTALS").font(.caption).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
-            VStack(spacing: 0) {
-                tableRow(icon: "sum", title: "Totals", moneyIn: moneyIn, moneyOut: moneyOut, left: ending, extra: extra,
-                         leftColor: leftColor(ending, kept: kept), bold: true)
-                tableRow(icon: "shield", iconColor: .orange, title: "Buffer zone: kept untouched", left: kept)
-                    .background(Color.orange.opacity(0.08))
-                tableRow(icon: "checkmark.circle", iconColor: ending - kept < 0 ? Theme.red : Theme.green, title: "Above the buffer: what is really spare",
-                         left: ending - kept, leftColor: ending - kept < 0 ? Theme.red : Theme.green, bold: true)
-                    .background(Color.primary.opacity(0.06))
-            }
-            .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color.primary.opacity(0.2), lineWidth: 1) }
-            .clipShape(RoundedRectangle(cornerRadius: 4))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
         .panelBackground(cornerRadius: 8)
     }
 
