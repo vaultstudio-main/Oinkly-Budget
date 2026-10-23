@@ -89,7 +89,7 @@ private struct OutlookBody: View {
 
     private var isFuture: Bool { month > MonthFilter.start(of: .now) }
     private var isPast: Bool { month < MonthFilter.start(of: .now) }
-    private var accounts: [Account] { allAccounts.live.filter { !$0.supportsHoldings } }
+    private var accounts: [Account] { allAccounts.live.filter(MonthOutlook.isEligible) }
 
     var body: some View {
         let outlook = MonthOutlook.build(month: month, bills: allBills.live, rules: allRules.live, categories: allCategories.live,
@@ -114,8 +114,8 @@ private struct OutlookBody: View {
                 versusCards(outlook, totals: totals, opening: opening, kept: buffer)
                 pullOutCard(outlook, opening: opening, kept: buffer)
                 lineByLine(outlook)
-                spendingCard(outlook)
-                details(outlook)
+                planChart(outlook)
+                improveCard(outlook, opening: opening, kept: buffer)
                 notes(outlook, totals: totals, kept: kept)
             }
             .padding(16)
@@ -206,41 +206,70 @@ private struct OutlookBody: View {
             .foregroundStyle(color)
     }
 
-    // MARK: Where the money goes
+    // MARK: Plan against outlook, as a chart
 
-    /// Each budget, then bills and everything else, as bars: what has been paid or spent, and what is still to come. The faint track behind a budget is its limit.
-    private func spendingCard(_ outlook: MonthOutlook) -> some View {
-        var bars: [SpendBar] = outlook.budgets.map {
-            SpendBar(name: $0.category.name, done: $0.spent, coming: $0.planned, limit: $0.limit)
-        }
-        let paid = outlook.bills.filter { [.paid, .over, .under, .received].contains($0.status) }.reduce(Decimal(0)) { $0 + $1.counted }
-        let billsTotal = outlook.bills.reduce(Decimal(0)) { $0 + $1.counted }
-        if billsTotal > 0 { bars.append(SpendBar(name: "Bills & repeating", done: paid, coming: billsTotal - paid, limit: nil)) }
-        if outlook.otherSpending > 0 { bars.append(SpendBar(name: "Everything else", done: outlook.otherSpending, coming: 0, limit: nil)) }
-        bars.sort { $0.done + $0.coming > $1.done + $1.coming }
-        return ReportCard(title: "Where the Money Goes") {
-            if bars.isEmpty {
-                emptyNote("Nothing is due or spent this month yet.")
-            } else {
-                SpendingChart(bars: bars)
+    /// Each planned line as a pair of bars: what was planned and what the outlook now says. Shown only when there is a plan.
+    @ViewBuilder
+    private func planChart(_ outlook: MonthOutlook) -> some View {
+        if !plan.items.isEmpty {
+            let rows = WarPlanComparison.build(items: plan.items, outlook: outlook).rows
+                .filter { ($0.planned ?? 0) > 0 || ($0.actual ?? 0) > 0 }
+                .sorted { max($0.planned ?? 0, $0.actual ?? 0) > max($1.planned ?? 0, $1.actual ?? 0) }
+            ReportCard(title: "Plan vs. Outlook") {
+                VStack(alignment: .leading, spacing: 8) {
+                    PlanVsOutlookChart(rows: Array(rows.prefix(12)))
+                    if rows.count > 12 {
+                        Text("The 12 biggest of \(rows.count) lines are shown. The full list is above.").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
         }
     }
 
-    private func details(_ outlook: MonthOutlook) -> some View {
-        DisclosureGroup {
-            VStack(spacing: 14) {
-                incomeCard(outlook)
-                billsCard(outlook)
-                budgetsCard(outlook)
+    // MARK: What to improve
+
+    /// A short report on what could be better this month.
+    private func improveCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
+        let hasPlan = !plan.items.isEmpty
+        let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
+        let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
+        let items = OutlookAdvice.make(outlook: outlook, compare: hasPlan ? WarPlanComparison.build(items: plan.items, outlook: outlook) : nil,
+                                       plannedPull: hasPlan ? planned : nil, actualPull: actual, buffer: kept,
+                                       startingSet: !startAccount.isEmpty || OutlookSettings.decimal(startAmount) != nil)
+        return ReportCard(title: "What to Improve") {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(items) { item in
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: symbol(item.level)).foregroundStyle(color(item.level)).frame(width: 22).padding(.top, 1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).fontWeight(.semibold)
+                            Text(item.detail).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 8)
+                    if item.id != items.last?.id { Divider() }
+                }
             }
-            .padding(.top, 12)
-        } label: {
-            Text("Every paycheque, bill and budget").font(.headline)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .panelBackground(cornerRadius: 8)
+    }
+
+    private func symbol(_ level: OutlookAdvice.Level) -> String {
+        switch level {
+        case .problem: "exclamationmark.triangle.fill"
+        case .watch: "eye.fill"
+        case .tip: "lightbulb.fill"
+        case .good: "checkmark.seal.fill"
+        }
+    }
+
+    private func color(_ level: OutlookAdvice.Level) -> Color {
+        switch level {
+        case .problem: Theme.red
+        case .watch: .orange
+        case .tip: .accentColor
+        case .good: Theme.green
+        }
     }
 
     /// Each planned line next to the outlook line of the same name. Shown only when there is a plan.
@@ -248,12 +277,12 @@ private struct OutlookBody: View {
     private func lineByLine(_ outlook: MonthOutlook) -> some View {
         if !plan.items.isEmpty {
             let compare = WarPlanComparison.build(items: plan.items, outlook: outlook)
-            ReportCard(title: "Plan vs. Outlook, Line by Line") {
+            ReportCard(title: "Line by Line") {
                 VStack(alignment: .leading, spacing: 10) {
                     Grid(alignment: .trailing, horizontalSpacing: 24, verticalSpacing: 0) {
                         GridRow {
-                            Text("").gridColumnAlignment(.center)
-                            Text("ITEM").gridColumnAlignment(.leading)
+                            Text("").frame(width: 24)
+                            Text("ITEM").frame(maxWidth: .infinity, alignment: .leading).gridColumnAlignment(.leading)
                             Text("PLANNED").frame(minWidth: 110, alignment: .trailing)
                             Text("OUTLOOK").frame(minWidth: 110, alignment: .trailing)
                             Text("DIFFERENCE").frame(minWidth: 130, alignment: .trailing)
@@ -263,12 +292,13 @@ private struct OutlookBody: View {
                         Divider().gridCellColumns(5)
                         ForEach(compare.rows) { row in
                             GridRow {
-                                Image(systemName: statusSymbol(row)).foregroundStyle(statusColor(row)).gridColumnAlignment(.center)
+                                Image(systemName: statusSymbol(row)).foregroundStyle(statusColor(row)).frame(width: 24)
                                 HStack(spacing: 6) {
                                     Text(row.title)
                                     if row.planned == nil { Text("not in plan").font(.caption2).foregroundStyle(.secondary) }
                                     if row.actual == nil { Text("not in outlook yet").font(.caption2).foregroundStyle(.secondary) }
                                 }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                                 .gridColumnAlignment(.leading)
                                 Text(row.planned.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.planned == nil ? .tertiary : .primary)
                                 Text(row.actual.map { $0.formatted(.appCurrency) } ?? "–").foregroundStyle(row.actual == nil ? .tertiary : .primary)
@@ -340,68 +370,6 @@ private struct OutlookBody: View {
         return basis + " Paid bills count at what came out when their payment is linked; the rest count at what is expected."
     }
 
-    // MARK: What is actually happening
-
-    private func incomeCard(_ outlook: MonthOutlook) -> some View {
-        ReportCard(title: "Paycheques & Income") {
-            VStack(spacing: 0) {
-                if outlook.income.isEmpty && outlook.otherIncome == 0 {
-                    emptyNote("No repeating income this month. Add a paycheque in Bills & Recurring ▸ Recurring, with a positive amount.")
-                }
-                ForEach(outlook.income) { line in
-                    OutlookRow(line: line, isIncome: true)
-                    Divider()
-                }
-                if outlook.otherIncome != 0 {
-                    plainRow("Other income", note: "Came in with no repeating entry behind it", amount: outlook.otherIncome, color: Theme.green)
-                }
-            }
-        }
-    }
-
-    private func billsCard(_ outlook: MonthOutlook) -> some View {
-        ReportCard(title: "Bills & Repeating Expenses") {
-            VStack(spacing: 0) {
-                if outlook.bills.isEmpty { emptyNote("Nothing due this month outside a budget.") }
-                ForEach(outlook.bills) { line in
-                    OutlookRow(line: line, isIncome: false)
-                    if line.id != outlook.bills.last?.id { Divider() }
-                }
-            }
-        }
-    }
-
-    private func budgetsCard(_ outlook: MonthOutlook) -> some View {
-        ReportCard(title: "Budgets") {
-            VStack(spacing: 0) {
-                if outlook.budgets.isEmpty { emptyNote("No budgets are set. Set one in Settings ▸ Categories.") }
-                ForEach(outlook.budgets) { budget in
-                    BudgetOutlookRow(budget: budget)
-                    if budget.id != outlook.budgets.last?.id { Divider() }
-                }
-                if outlook.otherSpending > 0 {
-                    Divider()
-                    plainRow("Everything else", note: "Spent with no bill and no budget", amount: outlook.otherSpending, color: .primary)
-                }
-            }
-        }
-    }
-
-    private func emptyNote(_ text: String) -> some View {
-        Text(text).font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
-    }
-
-    private func plainRow(_ title: String, note: String, amount: Decimal, color: Color) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                Text(note).font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Text(amount, format: .appCurrency).font(.body.weight(.semibold)).foregroundStyle(color)
-        }
-        .padding(.vertical, 8)
-    }
 }
 
 /// One of the big cards: what the outlook says, what was planned, and how far apart they are, with a bar showing how much of the plan is reached.
@@ -490,166 +458,34 @@ private struct VersusCard: View {
     }
 }
 
-/// One bill, repeating transaction or paycheque.
-private struct OutlookRow: View {
-    let line: MonthOutlook.Line
-    let isIncome: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: symbol).foregroundStyle(color).frame(width: 22)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(line.title).lineLimit(1)
-                Text(subtitle).font(.caption).foregroundStyle(line.status == .overdue ? Theme.red : Color.secondary)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(line.counted, format: .appCurrency)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(isIncome ? Theme.green : Color.primary)
-                if line.actual != nil, line.difference != 0 {
-                    Text("\(line.difference > 0 ? "+" : "−")\(abs(line.difference).formatted(.appCurrency)) vs \(line.expected.formatted(.appCurrency))")
-                        .font(.caption)
-                        .foregroundStyle((line.difference > 0) == isIncome ? Theme.green : Theme.red)
-                }
-            }
-        }
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(spoken)
-    }
-
-    /// What VoiceOver reads for the whole row: name, date, state, and the amount with how far it was from expected.
-    private var spoken: String {
-        var text = "\(line.title), \(subtitle), \(line.counted.formatted(.appCurrency))"
-        if line.actual != nil, line.difference != 0 {
-            text += ", \(abs(line.difference).formatted(.appCurrency)) \(line.difference > 0 ? "more" : "less") than the expected \(line.expected.formatted(.appCurrency))"
-        }
-        return text
-    }
-
-    private var symbol: String {
-        switch line.status {
-        case .paid, .received, .over, .under: "checkmark.circle.fill"
-        case .overdue: "exclamationmark.circle"
-        case .expected: "circle.dotted"
-        }
-    }
-
-    private var color: Color {
-        switch line.status {
-        case .paid, .received, .over, .under: Theme.green
-        case .overdue: Theme.red
-        case .expected: .secondary
-        }
-    }
-
-    private var subtitle: String {
-        let day = line.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
-        let state: String
-        switch line.status {
-        case .expected: state = "Expected"
-        case .overdue: state = "Overdue"
-        case .paid: state = "Paid, amount as expected"
-        case .over: state = "Paid, more than expected"
-        case .under: state = "Paid, less than expected"
-        case .received: state = isIncome ? "Added to your account" : "Added"
-        }
-        return "\(day) · \(state)"
-    }
-}
-
-/// One budget with its progress and the bills counted inside it.
-private struct BudgetOutlookRow: View {
-    let budget: MonthOutlook.BudgetLine
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                CategoryBadge(category: budget.category, size: 26)
-                Text(budget.category.name).font(.body.weight(.medium)).lineLimit(1)
-                Spacer()
-                Text(budget.counted, format: .appCurrency).font(.body.weight(.semibold))
-            }
-            ProgressView(value: Budget.progress(spent: budget.spent + budget.planned, limit: budget.limit))
-                .tint(budget.over > 0 ? Theme.red : Theme.green)
-            HStack(spacing: 12) {
-                Text("Limit \(budget.limit.formatted(.appCurrency))")
-                Text("Spent \(budget.spent.formatted(.appCurrency))")
-                if budget.planned > 0 { Text("Still to come \(budget.planned.formatted(.appCurrency))") }
-                Spacer()
-                if budget.over > 0 {
-                    Text("\(budget.over.formatted(.appCurrency)) over").foregroundStyle(Theme.red)
-                } else {
-                    Text("\(budget.remaining.formatted(.appCurrency)) set aside")
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            if !budget.inside.isEmpty {
-                Text("Includes " + budget.inside.map(\.title).joined(separator: ", "))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-            }
-        }
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(spoken)
-    }
-
-    private var spoken: String {
-        var text = "\(budget.category.name) budget, counts as \(budget.counted.formatted(.appCurrency)). Limit \(budget.limit.formatted(.appCurrency)), spent \(budget.spent.formatted(.appCurrency))"
-        if budget.planned > 0 { text += ", still to come \(budget.planned.formatted(.appCurrency))" }
-        text += budget.over > 0 ? ", \(budget.over.formatted(.appCurrency)) over" : ", \(budget.remaining.formatted(.appCurrency)) set aside"
-        if !budget.inside.isEmpty { text += ". Includes " + budget.inside.map(\.title).joined(separator: ", ") }
-        return text
-    }
-}
-
 // MARK: Charts
-
-/// One bar of the Where the Money Goes chart.
-private struct SpendBar: Identifiable {
-    let name: String
-    /// Paid or spent so far.
-    let done: Decimal
-    /// Still to come: bills and repeating expenses not paid yet.
-    let coming: Decimal
-    /// A budget's limit, shown as a mark on its bar.
-    let limit: Decimal?
-    var id: String { name }
-
-    /// The name with how far along it is, shown above its bar.
-    var label: String {
-        let spent = (done + coming).formatted(.appCurrency)
-        guard let limit else { return "\(name)  ·  \(done.formatted(.appCurrency)) paid of \(spent)" }
-        return "\(name)  ·  \((done + coming).formatted(.appCurrency)) of \(limit.formatted(.appCurrency))"
-    }
-}
 
 private func chartValue(_ value: Decimal) -> Double { NSDecimalNumber(decimal: value).doubleValue }
 
-private struct SpendingChart: View {
-    let bars: [SpendBar]
+/// Planned and outlook amounts side by side for each line.
+private struct PlanVsOutlookChart: View {
+    let rows: [WarPlanComparison.Row]
 
     var body: some View {
         Chart {
-            ForEach(bars) { bar in
-                // A budget's whole limit as a faint track behind its bar, so you see how much of it is used.
-                if let limit = bar.limit {
-                    RectangleMark(xStart: .value("Start", 0), xEnd: .value("Limit", chartValue(limit)), y: .value("Item", bar.name), height: .ratio(0.5))
-                        .foregroundStyle(Color.primary.opacity(0.12))
-                }
-                BarMark(x: .value("Amount", chartValue(bar.done)), y: .value("Item", bar.name), height: .ratio(0.5))
-                    .foregroundStyle(by: .value("Status", "Paid or spent"))
-                    .annotation(position: .top, alignment: .leading, spacing: 3) { Text(bar.label).font(.caption).foregroundStyle(.secondary) }
-                BarMark(x: .value("Amount", chartValue(bar.coming)), y: .value("Item", bar.name), height: .ratio(0.5))
-                    .foregroundStyle(by: .value("Status", "Still to come"))
+            ForEach(rows) { row in
+                BarMark(x: .value("Amount", chartValue(row.planned ?? 0)), y: .value("Item", row.title))
+                    .position(by: .value("Source", "Planned"))
+                    .foregroundStyle(by: .value("Source", "Planned"))
+                    .annotation(position: .trailing, spacing: 4) { label(row.planned) }
+                BarMark(x: .value("Amount", chartValue(row.actual ?? 0)), y: .value("Item", row.title))
+                    .position(by: .value("Source", "Outlook"))
+                    .foregroundStyle(by: .value("Source", "Outlook"))
+                    .annotation(position: .trailing, spacing: 4) { label(row.actual) }
             }
         }
-        .chartYAxis(.hidden)
-        .chartForegroundStyleScale(["Paid or spent": Color.accentColor, "Still to come": Color.accentColor.opacity(0.35)])
+        .chartForegroundStyleScale(["Planned": Color.accentColor, "Outlook": Theme.green])
         .chartXAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }
-        .frame(height: max(CGFloat(bars.count) * 50 + 40, 120))
+        .frame(height: max(CGFloat(rows.count) * 56 + 50, 140))
+    }
+
+    private func label(_ amount: Decimal?) -> some View {
+        Text(amount.map { ReportFormat.compact(chartValue($0)) } ?? "none").font(.caption2).foregroundStyle(.secondary)
     }
 }
 

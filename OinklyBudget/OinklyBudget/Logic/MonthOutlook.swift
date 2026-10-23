@@ -6,7 +6,7 @@ import SwiftData
 /// It is built from what is already in the app. Income and repeating expenses come from Recurring, bills from Bills,
 /// and each budget counts at the larger of its limit and what has actually been spent in it. A bill that was paid
 /// counts at the amount that really came out when its payment is linked, so a bill that ran over or under changes the
-/// result. Spending that belongs to no bill and no budget is added as it happens.
+/// result. Spending that belongs to no bill and no budget is added as it happens. Only checking, savings and cash accounts count.
 struct MonthOutlook {
     /// Where a line stands.
     enum Status {
@@ -84,6 +84,9 @@ struct MonthOutlook {
 
     static func accountKey(_ account: Account) -> String { "\(account.type.rawValue)|\(account.name)" }
 
+    /// Only checking, savings and cash accounts can count: nothing owed and nothing invested is part of the outlook.
+    static func isEligible(_ account: Account) -> Bool { account.type.group == .checkingSavings }
+
     /// The keys of the accounts left out, stored as one line each.
     static func excluded(from stored: String) -> Set<String> {
         Set(stored.split(separator: "\n").map(String.init))
@@ -106,7 +109,7 @@ struct MonthOutlook {
         month: Date, bills: [Bill], rules: [RecurringTransaction], categories: [Category], monthTransactions: [Transaction],
         excludedAccounts: Set<String> = [], cashBudgetKeys: Set<String> = [], weeklyAmounts: [String: Decimal] = [:], now: Date = .now, calendar: Calendar = .current
     ) -> MonthOutlook {
-        func counts(_ account: Account?) -> Bool { account.map { !excludedAccounts.contains(accountKey($0)) } ?? true }
+        func counts(_ account: Account?) -> Bool { account.map { isEligible($0) && !excludedAccounts.contains(accountKey($0)) } ?? true }
         let interval = calendar.dateInterval(of: .month, for: month) ?? DateInterval(start: month, duration: 86400 * 30)
         let start = interval.start
         let last = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end

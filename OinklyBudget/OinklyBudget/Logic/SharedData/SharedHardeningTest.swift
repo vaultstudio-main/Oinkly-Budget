@@ -1277,6 +1277,41 @@ enum SharedHardeningTest {
                 check("S44 undated spending is spread weekly and adds back up", spread.count == 5 && spread.reduce(Decimal(0)) { $0 + $1.amount } == -100)
                 check("S44 the settings text round trips", OutlookSettings.decimal(OutlookSettings.text(1234.5)) == 1234.5 && OutlookSettings.decimal("") == nil && OutlookSettings.text(0) == "")
             }
+
+            // S45: only checking, savings and cash accounts count; and the report on what to improve
+            do {
+                let mc = ModelContext(try ModelContainer(for: Schema(versionedSchema: OinklyBudgetSchemaV9.self), configurations: ModelConfiguration(isStoredInMemoryOnly: true)))
+                let bank = Account(name: "S45 bank", type: .checking, openingBalance: 0)
+                let card = Account(name: "S45 card", type: .creditCard, openingBalance: 0)
+                let broker = Account(name: "S45 broker", type: .brokerage, openingBalance: 0)
+                let cash = Account(name: "S45 cash", type: .cash, openingBalance: 0)
+                let saver = Account(name: "S45 saver", type: .savings, openingBalance: 0)
+                for account in [bank, card, broker, cash, saver] { mc.insert(account) }
+                check("S45 checking, savings and cash can count", [bank, cash, saver].allSatisfy(MonthOutlook.isEligible))
+                check("S45 cards and investments never count", [card, broker].allSatisfy { !MonthOutlook.isEligible($0) })
+
+                let today = Date.now
+                func line(_ title: String, _ amount: Decimal, _ status: MonthOutlook.Status = .expected) -> MonthOutlook.Line {
+                    MonthOutlook.Line(id: title, title: title, date: today, kind: "Bill", expected: amount, actual: nil, status: status)
+                }
+                let late = MonthOutlook(month: today, income: [line("Pay", 1000)], bills: [line("Rent", 1500, .overdue)], budgets: [], otherIncome: 0, otherSpending: 0)
+                let pull = SafePull(opening: 0, buffer: 100, events: SafePull.events(outlook: late))
+                let advice = OutlookAdvice.make(outlook: late, compare: nil, plannedPull: nil, actualPull: pull, buffer: 100, startingSet: false)
+                check("S45 an overdue bill is the first thing it says", advice.first?.id == "overdue" && advice.first?.level == .problem)
+                check("S45 a month that ends short says so", advice.contains { $0.id == "short" })
+                check("S45 with no plan it suggests making one", advice.contains { $0.id == "no-plan" })
+                check("S45 with no starting amount it suggests setting one", advice.contains { $0.id == "no-start" })
+
+                let fine = MonthOutlook(month: today, income: [line("Pay", 3000, .received)], bills: [line("Rent", 1000, .paid)], budgets: [], otherIncome: 0, otherSpending: 0)
+                let fineEvents = SafePull.events(outlook: fine)
+                let fineAdvice = OutlookAdvice.make(outlook: fine, compare: WarPlanComparison.build(items: [
+                    WarPlanItem(title: "Pay", date: today, amount: 3000, isIncome: true, origin: nil),
+                    WarPlanItem(title: "Rent", date: today, amount: 1000, isIncome: false, origin: nil)], outlook: fine),
+                    plannedPull: SafePull(opening: 500, buffer: 100, events: fineEvents), actualPull: SafePull(opening: 500, buffer: 100, events: fineEvents),
+                    buffer: 100, startingSet: true)
+                check("S45 a month on plan and above the buffer is on track", fineAdvice.first?.id == "on-track" && fineAdvice.first?.level == .good)
+                check("S45 the report is never longer than asked", OutlookAdvice.make(outlook: late, compare: nil, plannedPull: nil, actualPull: pull, buffer: 0, startingSet: false, limit: 2).count == 2)
+            }
         } catch {
             check("no error", false, error.localizedDescription)
         }
