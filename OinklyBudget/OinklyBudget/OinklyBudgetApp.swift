@@ -162,7 +162,7 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("Set Budgets", id: BudgetSetupWindow.id) {
+        Window("Budget Settings", id: BudgetSetupWindow.id) {
             BudgetSetupWindow()
                 .savesChangesImmediately()
                 .appAppearance()

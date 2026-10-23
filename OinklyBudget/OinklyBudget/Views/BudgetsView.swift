@@ -4,7 +4,7 @@ import SwiftData
 /// Progress on every budget. The Monthly tab shows the budgets set as a monthly amount, a month at a time; the Weekly tab shows the
 /// ones set as a weekly amount, a week at a time, with the monthly maximum they add up to. A cash budget is marked as one on its
 /// card, whichever tab it is on. Click a budget to change its amount. Budgets you have hidden, or made yourself, are set in
-/// Settings ▸ Categories or the Set Budgets window.
+/// Settings ▸ Categories or the Budget Settings window.
 struct BudgetsView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.modelContext) private var modelContext
@@ -18,23 +18,15 @@ struct BudgetsView: View {
     }
 
     @State private var tab = Tab.monthly
-    @State private var month = MonthFilter.start(of: .now)
-    @State private var week = BudgetsView.weekStart(of: .now)
+    @AppStorage(BudgetsSettings.monthKey) private var monthStamp = 0.0
+    @AppStorage(BudgetsSettings.weekKey) private var weekStamp = 0.0
+    /// How far the page starts from the left edge of the window, so the month can sit in the middle of the whole window.
+    @State private var leftInset: CGFloat = 0
     @State private var editing: Category?
 
-    private static func weekStart(of date: Date) -> Date {
-        Calendar.current.dateInterval(of: .weekOfYear, for: date)?.start ?? Calendar.current.startOfDay(for: date)
-    }
-
-    private var monthRange: ClosedRange<Date> {
-        let current = MonthFilter.start(of: .now)
-        return (Calendar.current.date(byAdding: .month, value: -24, to: current) ?? current)...current
-    }
-
-    private var weekRange: ClosedRange<Date> {
-        let current = Self.weekStart(of: .now)
-        return (Calendar.current.date(byAdding: .weekOfYear, value: -104, to: current) ?? current)...current
-    }
+    /// The month and the week being shown. They are chosen in the Settings window.
+    private var month: Date { BudgetsSettings.month(from: monthStamp) }
+    private var week: Date { BudgetsSettings.week(from: weekStamp) }
 
     /// Live transactions dated from `start` up to (not including) `end`.
     private func transactions(from start: Date, to end: Date) -> [Transaction] {
@@ -76,13 +68,15 @@ struct BudgetsView: View {
                     .pickerStyle(.segmented)
                     .labelsHidden()
                     .frame(width: 180)
-                    if tab == .monthly {
-                        MonthSelector(month: $month, range: monthRange)
-                    } else {
-                        WeekSelector(week: $week, range: weekRange)
-                    }
                     Spacer()
                     setBudgetsButton
+                }
+                // The month or week is only shown here, centred across the whole window; it is chosen in Settings.
+                .overlay {
+                    Text(tab == .monthly ? month.formatted(.dateTime.month(.wide).year()) : BudgetsSettings.weekLabel(week))
+                        .font(.title3.weight(.semibold))
+                        .offset(x: -leftInset / 2)
+                        .contentTransition(.numericText())
                 }
             }
             ScrollView {
@@ -97,6 +91,15 @@ struct BudgetsView: View {
             }
         }
         .background(Theme.background)
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: { leftInset = $0 }
+        .onAppear {
+            // Each start of the app begins on this month and this week, whatever was chosen last time.
+            if !BudgetsSettings.resetThisLaunch {
+                monthStamp = 0
+                weekStamp = 0
+                BudgetsSettings.resetThisLaunch = true
+            }
+        }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
             if let action = note.userInfo?["action"] as? String, action.hasPrefix("budgetsTab:") {
@@ -127,7 +130,7 @@ struct BudgetsView: View {
                   color: budgeted - spent < 0 ? Theme.red : Theme.green)
         }
         if shown.isEmpty {
-            Text("No monthly budgets are set. Choose Set Budgets above.")
+            Text("No monthly budgets are set. Open Settings above.")
                 .foregroundStyle(.secondary)
                 .padding(.top, 30)
         } else {
@@ -194,14 +197,14 @@ struct BudgetsView: View {
         .foregroundStyle(.secondary)
     }
 
-    /// In the page's top bar: opens the Set Budgets window, where budgets are set, shown or hidden, and made.
+    /// In the page's top bar: opens the Budget Settings window, where the month and week are chosen and budgets are set, shown or hidden, and made.
     private var setBudgetsButton: some View {
         Button {
             openWindow(id: BudgetSetupWindow.id)
         } label: {
-            Label("Set Budgets…", systemImage: "slider.horizontal.3")
+            Label("Settings", systemImage: "slider.horizontal.3")
         }
-        .help("Opens the Set Budgets window, where you can set a budget on any category, show or hide it here, and add budgets of your own. The same list is in Settings ▸ Categories")
+        .help("Opens the Budget Settings window: choose the month and week, set a budget on any category, show or hide it here, and add budgets of your own. The same list is in Settings ▸ Categories")
     }
 
     private func grid(_ items: [Shown]) -> some View {
@@ -287,13 +290,7 @@ struct WeekSelector: View {
     private var interval: DateInterval { calendar.dateInterval(of: .weekOfYear, for: week) ?? DateInterval(start: week, duration: 7 * 86_400) }
     private var isCurrent: Bool { calendar.isDate(week, equalTo: .now, toGranularity: .weekOfYear) }
 
-    private var label: String {
-        let last = calendar.date(byAdding: .day, value: -1, to: interval.end) ?? interval.end
-        let first = interval.start.formatted(.dateTime.month(.abbreviated).day())
-        let end = calendar.isDate(interval.start, equalTo: last, toGranularity: .month)
-            ? last.formatted(.dateTime.day()) : last.formatted(.dateTime.month(.abbreviated).day())
-        return "\(first) – \(end), \(last.formatted(.dateTime.year()))"
-    }
+    private var label: String { BudgetsSettings.weekLabel(week) }
 
     var body: some View {
         HStack(spacing: 8) {
