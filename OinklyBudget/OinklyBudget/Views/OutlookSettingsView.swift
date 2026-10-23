@@ -83,35 +83,50 @@ struct OutlookSettingsView: View {
         }
     }
 
-    /// The checking, savings and cash accounts, grouped, each with a tick box.
+    /// The smaller tabs for the accounts: every one, then checking, savings and cash on their own.
+    private enum AccountTab: String, CaseIterable, Identifiable {
+        case all = "All", checking = "Checking", savings = "Savings", cash = "Cash", other = "Other"
+        var id: Self { self }
+
+        func includes(_ account: Account) -> Bool {
+            switch self {
+            case .all: true
+            case .checking: account.type == .checking
+            case .savings: account.type == .savings
+            case .cash: account.type == .cash
+            case .other: ![.checking, .savings, .cash].contains(account.type)
+            }
+        }
+    }
+
+    @State private var accountTab = AccountTab.all
+
+    /// The checking, savings and cash accounts, a tab for each kind with a tick box on every account, three to a row.
     private var accountsSection: some View {
-        let groups: [(title: String, accounts: [Account])] = [
-            ("Checking", countable.filter { $0.type == .checking }),
-            ("Savings", countable.filter { $0.type == .savings }),
-            ("Cash", countable.filter { $0.type == .cash }),
-            ("Other cash accounts", countable.filter { ![.checking, .savings, .cash].contains($0.type) }),
-        ].filter { !$0.accounts.isEmpty }
+        let tabs = AccountTab.allCases.filter { $0 == .all || countable.contains(where: $0.includes) }
+        let shown = countable.filter(accountTab.includes)
         return SettingsSection(title: "Accounts to count",
                                note: "Tick the checking, savings and cash accounts the Outlook counts: their income, spending and repeating transactions. Credit cards, loans, investments and property never count. A bill is left out when the payment linked to it came from an account that is unticked.") {
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(groups, id: \.title) { group in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(group.title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                        // Three to a row, so even a long list of accounts stays short.
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16, alignment: .topLeading), count: 3), alignment: .leading, spacing: 10) {
-                            ForEach(group.accounts) { account in
-                                Toggle(isOn: toggle(for: account)) {
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(account.name).lineLimit(1)
-                                        Text(account.typeTitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                                    }
+            VStack(alignment: .leading, spacing: 12) {
+                FolderTabs(tabs: tabs, selection: $accountTab, title: { tab in
+                    tab == .all ? "All (\(countable.count))" : "\(tab.rawValue) (\(countable.filter(tab.includes).count))"
+                }, leading: 0)
+                if countable.isEmpty {
+                    Text("You have no checking, savings or cash accounts yet.").font(.callout).foregroundStyle(.secondary)
+                } else {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16, alignment: .topLeading), count: 3), alignment: .leading, spacing: 10) {
+                        ForEach(shown) { account in
+                            Toggle(isOn: toggle(for: account)) {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(account.name).lineLimit(1)
+                                    Text(account.typeTitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                                 }
-                                .toggleStyle(.checkbox)
                             }
+                            .toggleStyle(.checkbox)
                         }
                     }
+                    .padding(.top, 4)
                 }
-                if countable.isEmpty { Text("You have no checking, savings or cash accounts yet.").font(.callout).foregroundStyle(.secondary) }
             }
         }
     }
@@ -134,6 +149,7 @@ struct OutlookSettingsView: View {
             Spacer()
             Text("\(counted) of \(countable.count) counted").font(.caption).foregroundStyle(.secondary)
         }
+        .background(Theme.background)
     }
 
     private var warPlanSettings: some View {
