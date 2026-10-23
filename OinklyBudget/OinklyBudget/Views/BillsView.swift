@@ -62,14 +62,13 @@ struct BillsView: View {
                     .padding(16)
                 }
                 Divider()
-                ScrollView {
-                    VStack(spacing: 14) {
-                        MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
-                        addBillButton
-                        allBillsCard
-                    }
-                    .padding(16)
+                // The calendar and the button stay put, and the All Bills card takes the rest of the column, down to the bottom.
+                VStack(spacing: 14) {
+                    MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
+                    addBillButton
+                    allBillsCard
                 }
+                .padding(16)
                 .frame(width: 360)
             }
             }
@@ -153,19 +152,23 @@ struct BillsView: View {
             Bills.dates(of: bill, from: today, through: calendar.date(byAdding: .year, value: 2, to: today) ?? today).first ?? bill.dueDate
         }
         let sorted = bills.sorted { next($0) < next($1) }
-        return ReportCard(title: "All Bills") {
+        return ReportCard(title: "All Bills", fillsHeight: true) {
             if sorted.isEmpty {
                 Text("No bills yet. Use Add a Bill above.")
                     .font(.callout).foregroundStyle(.secondary)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(sorted) { bill in
-                        BillSetupRow(bill: bill, onEdit: { sheet = .edit(bill) }, onDelete: delete)
-                        if bill.id != sorted.last?.id { Divider() }
+                // More bills than fit scroll inside the card.
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(sorted) { bill in
+                            BillSetupRow(bill: bill, onEdit: { sheet = .edit(bill) }, onDelete: delete)
+                            if bill.id != sorted.last?.id { Divider() }
+                        }
                     }
                 }
             }
         }
+        .frame(minHeight: 200)
     }
 
     private func monthCard(_ items: [Bills.Occurrence]) -> some View {

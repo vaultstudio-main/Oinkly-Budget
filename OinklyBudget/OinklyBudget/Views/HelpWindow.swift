@@ -307,7 +307,7 @@ enum HelpContent {
                 "• The tiles show what comes in and goes out this month from repeating transactions, what is next, and how many rules there are.",
                 "• The month's list shows each date. A date waiting for you is added by ticking its circle. An entry a rule made starts as pending and is ticked to confirm it: it goes straight to Reconciled, whether it is a paycheque or a payment. Tick it again to take that back to pending.",
                 "• The calendar has a dot on each date. Click a day to see only that day.",
-                "• All Rules lists every rule with the day it comes out and the amount. From there you can edit, skip the next date, pause, resume or delete. Deleting a rule leaves the transactions it already made.",
+                "• All Recurring, at the bottom of the right-hand column, lists every rule with the day it comes out and the amount, and scrolls when there are more than fit. From there you can edit, skip the next date, pause, resume or delete. Deleting a rule leaves the transactions it already made.",
                 "## Where else they show",
                 "• In the menu bar pop-up, marked Repeating, and in the number beside the pig.",
                 "• In reminders: a notification on the morning of each date, with no amount in it.",

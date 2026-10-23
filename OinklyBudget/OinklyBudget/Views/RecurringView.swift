@@ -39,14 +39,13 @@ struct RecurringView: View {
                 .padding(16)
             }
             Divider()
-            ScrollView {
-                VStack(spacing: 14) {
-                    MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
-                    addButton
-                    rulesCard
-                }
-                .padding(16)
+            // The calendar and the button stay put, and the All Recurring card takes the rest of the column, down to the bottom.
+            VStack(spacing: 14) {
+                MonthCalendar(month: $month, selectedDay: $selectedDay, marks: monthItems.map { CalendarMark(date: $0.date, color: dotColor($0)) })
+                addButton
+                rulesCard
             }
+            .padding(16)
             .frame(width: 360)
         }
         #if DEBUG
@@ -165,21 +164,25 @@ struct RecurringView: View {
     /// Every rule that is set up, with the day it comes out and the amount, for editing, pausing, resuming and deleting.
     /// Paused and finished ones only show here. The month's list on the left is where entries are checked off.
     private var rulesCard: some View {
-        ReportCard(title: "All Rules") {
+        ReportCard(title: "All Recurring", fillsHeight: true) {
             if rules.isEmpty {
                 ContentUnavailableView("No Recurring Transactions", systemImage: "arrow.triangle.2.circlepath",
                                        description: Text("Add one for a paycheque, rent or anything else that repeats. You can also right-click a transaction in a register and choose Make Recurring."))
                     .frame(height: 200)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(rules.enumerated()), id: \.element.persistentModelID) { index, rule in
-                        if index > 0 { Divider() }
-                        RuleRow(rule: rule, onEdit: { editing = .edit(rule) }, onDelete: { deleting = rule })
-                            .padding(.vertical, 8)
+                // More rules than fit scroll inside the card.
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(Array(rules.enumerated()), id: \.element.persistentModelID) { index, rule in
+                            if index > 0 { Divider() }
+                            RuleRow(rule: rule, onEdit: { editing = .edit(rule) }, onDelete: { deleting = rule })
+                                .padding(.vertical, 8)
+                        }
                     }
                 }
             }
         }
+        .frame(minHeight: 200)
     }
 }
 
