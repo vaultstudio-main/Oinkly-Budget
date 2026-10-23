@@ -241,8 +241,9 @@ enum HelpContent {
                 "• The CSV uses the layout Import CSV reads, so a file you export can be imported again.",
                 "• One transaction can be saved as a PDF from its detail window.",
                 "## Settings",
-                "Settings ▸ General ▸ PDFs sets the default paper size (Automatic follows your region, US Letter or A4) and the style (plain black and grey, or with color accents). The Export sheet starts from them, and you can still change them for one export.",
-                "The Summary and Reports pages have no Print PDF button. PDFs are for accounts and transactions.",
+                "• Settings, top right, opens a window of its own, so the page stays open behind it. It shows the settings for the tab you are on.",
+                "• On the Outlook tab it is only which accounts count: pick from your checking, savings and cash accounts, with Select All and Select None. Credit cards, loans, investments and property never count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
+                "• On the War Plan tab it has everything: Starting with is the money already there when the month begins, from an account's balance now or a number you type. Buffer is money to keep untouched. They apply to every month. It also has the same account list, and Reset Settings clears the starting amount and buffer and counts every account again.",
             ]),
 
             Topic(title: "Autofill & Clean Up", symbol: "wand.and.sparkles", lines: [

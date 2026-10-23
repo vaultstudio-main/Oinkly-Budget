@@ -8,6 +8,8 @@ enum OutlookSettings {
     static let startAccountKey = "outlookStartAccount"
     /// The window's id, for opening it from the page.
     static let windowID = "outlook-settings"
+    /// Which tab of the page the Settings window is for, so it shows that tab's settings: "outlook" or "warPlan".
+    static let tabKey = "outlookSettingsTab"
 
     /// The settings are stored as text, so an empty field is "not set" rather than zero.
     static func decimal(_ text: String) -> Decimal? {

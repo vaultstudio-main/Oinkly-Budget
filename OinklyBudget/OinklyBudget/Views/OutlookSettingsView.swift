@@ -10,6 +10,7 @@ struct OutlookSettingsView: View {
     @AppStorage(OutlookSettings.startAmountKey) private var startAmount = ""
     @AppStorage(OutlookSettings.bufferKey) private var bufferText = ""
     @AppStorage(MonthOutlook.excludedKey) private var excludedStored = ""
+    @AppStorage(OutlookSettings.tabKey) private var tab = "outlook"
 
     private var countable: [Account] { allAccounts.live.filter(MonthOutlook.isEligible) }
     private var chosen: Account? { countable.first { MonthOutlook.accountKey($0) == startAccount } }
@@ -27,9 +28,73 @@ struct OutlookSettingsView: View {
     }
 
     var body: some View {
+        if tab == "warPlan" { warPlanSettings } else { outlookSettings }
+    }
+
+    // MARK: Outlook tab: which accounts count
+
+    /// The Outlook's settings are only which accounts it counts, picked from the checking, savings and cash accounts.
+    private var outlookSettings: some View {
+        let groups: [(title: String, accounts: [Account])] = [
+            ("Checking", countable.filter { $0.type == .checking }),
+            ("Savings", countable.filter { $0.type == .savings }),
+            ("Cash", countable.filter { $0.type == .cash }),
+            ("Other cash accounts", countable.filter { ![.checking, .savings, .cash].contains($0.type) }),
+        ].filter { !$0.accounts.isEmpty }
+        let excluded = MonthOutlook.excluded(from: excludedStored)
+        let counted = countable.filter { !excluded.contains(MonthOutlook.accountKey($0)) }.count
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Outlook Settings").font(.headline)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Accounts to count").font(.subheadline.weight(.semibold))
+                    note("Pick the checking, savings and cash accounts the Outlook counts: their income, spending and repeating transactions. Credit cards, loans, investments and property never count. A bill is left out when the payment linked to it came from an account that is unticked.")
+                }
+                HStack {
+                    Button("Select All") { excludedStored = "" }.disabled(excluded.isEmpty)
+                    Button("Select None") { excludedStored = MonthOutlook.stored(Set(countable.map(MonthOutlook.accountKey))) }.disabled(counted == 0)
+                    Spacer()
+                    Text("\(counted) of \(countable.count) counted").font(.caption).foregroundStyle(.secondary)
+                }
+                ForEach(groups, id: \.title) { group in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(group.title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        ForEach(group.accounts) { account in
+                            accountToggle(account)
+                        }
+                    }
+                    Divider()
+                }
+                if countable.isEmpty { note("You have no checking, savings or cash accounts yet.") }
+                note("What the month starts with and your buffer are in the War Plan tab's settings.")
+            }
+            .padding(20)
+        }
+        .frame(minWidth: 400, minHeight: 460)
+    }
+
+    private func accountToggle(_ account: Account) -> some View {
+        Toggle(isOn: Binding(
+            get: { !MonthOutlook.excluded(from: excludedStored).contains(MonthOutlook.accountKey(account)) },
+            set: { counted in
+                var keys = MonthOutlook.excluded(from: excludedStored)
+                if counted { keys.remove(MonthOutlook.accountKey(account)) } else { keys.insert(MonthOutlook.accountKey(account)) }
+                excludedStored = MonthOutlook.stored(keys)
+            }
+        )) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(account.name)
+                Text(account.typeTitle).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: War Plan tab: everything
+
+    private var warPlanSettings: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Monthly Outlook Settings").font(.headline)
+                Text("War Plan Settings").font(.headline)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Starting with").font(.subheadline.weight(.semibold))

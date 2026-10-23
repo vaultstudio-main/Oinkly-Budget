@@ -38,13 +38,17 @@ struct MonthOutlookView: View {
                     } label: {
                         Label("Settings", systemImage: "slider.horizontal.3")
                     }
-                    .help("Opens a window for what the month starts with, your buffer, and which accounts are counted")
+                    .help("Opens this tab's settings in a window: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
                 }
             }
             OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
         }
         .background(Theme.background)
-        .onAppear { plan = WarPlanData.load(for: month) }
+        .onAppear {
+            plan = WarPlanData.load(for: month)
+            UserDefaults.standard.set(tab == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey)
+        }
+        .onChange(of: tab) { _, new in UserDefaults.standard.set(new == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey) }
         .onChange(of: month) { _, new in plan = WarPlanData.load(for: new) }
         .onChange(of: plan) { _, new in new.save(for: month) }
     }
