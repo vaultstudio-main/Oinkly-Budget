@@ -10,6 +10,18 @@ struct PlanMatchView: View {
     @Query private var transactions: [Transaction]
     @State private var plan = WarPlanData()
     @State private var search = ""
+    /// Every account, or one kind of them: checking and savings, credit cards, loans, investments or assets.
+    @State private var kind = KindTab.all
+
+    private enum KindTab: Hashable, Identifiable {
+        case all
+        case group(AccountGroup)
+        var id: Self { self }
+        func includes(_ transaction: Transaction) -> Bool {
+            if case .group(let group) = self { return transaction.account?.type.group == group }
+            return true
+        }
+    }
 
     init(month: Date) {
         self.month = month
@@ -23,7 +35,7 @@ struct PlanMatchView: View {
     /// The transactions that match the search: by payee, account, memo, category or amount.
     private var shown: [Transaction] {
         let words = search.lowercased().split(separator: " ").map(String.init)
-        return transactions.live.filter { !$0.isOpeningDeposit }.filter { transaction in
+        return transactions.live.filter { !$0.isOpeningDeposit }.filter { kind.includes($0) }.filter { transaction in
             guard !words.isEmpty else { return true }
             let text = [transaction.payee, transaction.account?.name ?? "", transaction.memo, transaction.category?.name ?? "",
                         "\(abs(transaction.amount))"].joined(separator: " ").lowercased()
@@ -58,6 +70,11 @@ struct PlanMatchView: View {
             Text("Match Transactions").font(.headline)
             Text("Search every account for \(month.formatted(.dateTime.month(.wide).year())) and tag a transaction to the plan line it turned out to be. The line shows as matched on the sheet. Nothing in the transaction changes.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            FolderTabs(tabs: [KindTab.all] + AccountGroup.setupOrder.map { KindTab.group($0) }, selection: $kind, title: { tab in
+                let count = transactions.live.filter { !$0.isOpeningDeposit && tab.includes($0) }.count
+                if case .group(let group) = tab { return "\(group.title) (\(count))" }
+                return "All Accounts (\(count))"
+            }, leading: 0)
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search payee, account, memo or amount", text: $search).textFieldStyle(.plain)
