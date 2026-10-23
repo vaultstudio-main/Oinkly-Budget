@@ -86,7 +86,7 @@ enum HelpContent {
 
         Group(title: "Accounts", topics: [
             Topic(title: "Adding & Managing Accounts", symbol: "building.columns", lines: [
-                "Click Manage Accounts at the bottom of the side panel (or use Oinkly Budget ▸ Settings ▸ Accounts) to add, edit or delete an account. It opens a window of its own with every account sorted under its category (Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets), each showing its type, bank or lender and balance. Click an account to edit it.",
+                "Click Manage Accounts at the bottom of the side panel (or use Oinkly Budget ▸ Settings ▸ Accounts) to add, edit or delete an account. It opens a window of its own with a tab for each kind of account (Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets), each account showing its type, bank or lender and balance. Click an account to edit it. Add Account at the bottom adds to the tab you are on.",
                 "## What each kind keeps",
                 "• Checking, savings and the like: institution, account number and an opening balance. Checking accounts can also keep three routing numbers: ACH, wire (which can include letters) and digital.",
                 "• Credit cards: card number, credit limit, APR, minimum payment, payment due date and the balance you owe.",

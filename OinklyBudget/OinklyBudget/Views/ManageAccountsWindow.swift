@@ -1,8 +1,9 @@
 import SwiftUI
 import SwiftData
 
-/// Every account in one window of its own, sorted into its category: Checking & Savings, Credit Cards, Mortgages & Loans,
-/// Investments and Assets. Each row says what the account is, who it is with and what it holds. Clicking a row edits it.
+/// Every account in one window of its own, on a tab for each kind: Checking & Savings, Credit Cards, Mortgages & Loans,
+/// Investments and Assets. Each row says what the account is, who it is with and what it holds. Clicking a row edits it, and
+/// Add Account adds to the tab you are on.
 struct ManageAccountsWindow: View {
     static let id = "manage-accounts"
 
@@ -10,6 +11,7 @@ struct ManageAccountsWindow: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Account.name) private var allAccounts: [Account]
 
+    @State private var tab = AccountGroup.checkingSavings
     @State private var isAdding = false
     @State private var editing: Account?
     @State private var pendingDelete: Account?
@@ -21,33 +23,34 @@ struct ManageAccountsWindow: View {
     }
 
     var body: some View {
-        SettingsWindowLayout(title: "Manage Accounts") {
-            if accounts.isEmpty {
-                Text("No accounts yet. Use Add Account to make the first one.").foregroundStyle(.secondary)
-            }
-            ForEach(AccountGroup.setupOrder) { group in
-                let list = members(of: group)
-                if !list.isEmpty {
-                    SettingsSection(title: group.title, note: summary(of: list, in: group)) {
+        VStack(spacing: 0) {
+            FolderTabs(tabs: AccountGroup.setupOrder, selection: $tab, title: { "\($0.title) (\(members(of: $0).count))" }, leading: 20)
+                .padding(.top, 12)
+            SettingsWindowLayout(title: tab.title) {
+                let list = members(of: tab)
+                SettingsSection(title: summary(of: list, in: tab), note: nil) {
+                    if list.isEmpty {
+                        Text(emptyMessage).font(.callout).foregroundStyle(.secondary)
+                    } else {
                         VStack(spacing: 0) {
                             ForEach(Array(list.enumerated()), id: \.element.persistentModelID) { index, account in
                                 if index > 0 { Divider() }
-                                row(account, in: group)
+                                row(account, in: tab)
                             }
                         }
                     }
-                    Divider()
                 }
+                Text("Click an account to edit it. Deleting an account also deletes all of its transactions, and can't be undone. Cash on Hand is built in and stays.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } footer: {
+                Button { isAdding = true } label: { Label("Add \(singular(tab))", systemImage: "plus.circle.fill") }
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            Text("Click an account to edit it. Deleting an account also deletes all of its transactions, and can't be undone. Cash on Hand is built in and stays.")
-                .font(.caption).foregroundStyle(.secondary)
-        } footer: {
-            Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") }
-            Spacer()
-            Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
         }
-        .frame(minWidth: 560, minHeight: 520)
-        .sheet(isPresented: $isAdding) { AccountEditView(account: nil) }
+        .background(Theme.background)
+        .frame(minWidth: 760, minHeight: 520)
+        .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: tab.accountTypes.first ?? .checking) }
         .sheet(item: $editing) { AccountEditView(account: $0) }
         .confirmationDialog(
             "Delete this account?",
@@ -59,6 +62,27 @@ struct ManageAccountsWindow: View {
             Button("Cancel", role: .cancel) {}
         } message: { account in
             Text("This also deletes its \(account.transactions.count) transaction\(account.transactions.count == 1 ? "" : "s"). This can't be undone.")
+        }
+    }
+
+    /// What one account of a tab is called, for the Add button.
+    private func singular(_ group: AccountGroup) -> String {
+        switch group {
+        case .checkingSavings: "Checking or Savings Account"
+        case .creditCards: "Credit Card"
+        case .loans: "Loan"
+        case .investments: "Investment Account"
+        case .assets: "Asset"
+        }
+    }
+
+    private var emptyMessage: String {
+        switch tab {
+        case .checkingSavings: "No checking or savings accounts yet. Use the button below to add one."
+        case .creditCards: "No credit cards yet. Use the button below to add one, with its limit and payment due date."
+        case .loans: "No loans yet. Use the button below to add one. Every loan needs a monthly payment and a due date."
+        case .investments: "No investment accounts yet. Use the button below to add one."
+        case .assets: "No assets yet. Add property, a vehicle or anything else you own."
         }
     }
 
