@@ -25,7 +25,7 @@ struct TransactionDetailWindow: View {
                                        description: Text("It may have been deleted."))
             }
         }
-        .frame(minWidth: 980, minHeight: 640)
+        .frame(minWidth: 1040, minHeight: 740)
         .background(Theme.background)
     }
 
