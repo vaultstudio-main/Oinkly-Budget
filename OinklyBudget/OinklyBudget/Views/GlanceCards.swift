@@ -184,7 +184,7 @@ struct LiabilitiesGlance: View {
                 }
                 if let fraction = report.payoffFraction {
                     ProgressView(value: fraction).tint(Theme.green)
-                    Text("\(percent(fraction)) of borrowed loans paid off").font(.caption).foregroundStyle(.secondary)
+                    Text("\(percent(fraction)) of loans and card limits paid off").font(.caption).foregroundStyle(.secondary)
                 }
                 VStack(spacing: 5) {
                     if let ratio = report.debtToAssets {

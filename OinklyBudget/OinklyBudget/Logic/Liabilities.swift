@@ -17,9 +17,9 @@ enum Liabilities {
         /// A card's limit, 0 when it has none set.
         var creditLimit: Decimal = 0
 
-        /// A card with a limit shows how much of the limit is free: full at a zero balance, empty when maxed out, the loan bar in reverse.
+        /// A card with a limit is worked out like a loan, with the limit as the amount borrowed: whatever is not owed of it counts as paid off.
         var hasLimitBar: Bool { !isLoan && creditLimit > 0 }
-        var limitFraction: Double { min(max(1 - NSDecimalNumber(decimal: owed / creditLimit).doubleValue, 0), 1) }
+        var limitFraction: Double { min(max(NSDecimalNumber(decimal: (creditLimit - owed) / creditLimit).doubleValue, 0), 1) }
 
         /// Positive when you paid it down, negative when you borrowed more.
         var paidDown: Decimal? { startOwed.map { $0 - owed } }
@@ -60,7 +60,7 @@ enum Liabilities {
         var paidOff: Int { lines.filter(\.isPaidOff).count }
         var netWorth: Decimal { totalAssets - totalOwed }
 
-        /// 0...1 over the loans that have an original amount. Nil when none do.
+        /// 0...1 over the loans that have an original amount and the cards that have a limit. Nil when none do.
         var payoffFraction: Double? {
             originalBorrowed > 0 ? min(max((paidSoFar / originalBorrowed).doubleValue, 0), 1) : nil
         }
@@ -117,6 +117,10 @@ enum Liabilities {
                 if isLoan && progress.hasOriginal {
                     report.originalBorrowed += progress.original
                     report.paidSoFar += progress.paidOff
+                } else if line.hasLimitBar {
+                    // A card counts like a loan: its limit is what could be owed, and what is not owed of it is paid off.
+                    report.originalBorrowed += line.creditLimit
+                    report.paidSoFar += min(max(line.creditLimit - owed, 0), line.creditLimit)
                 }
                 if owed > 0 {
                     report.monthlyPayments += progress.monthlyPayment

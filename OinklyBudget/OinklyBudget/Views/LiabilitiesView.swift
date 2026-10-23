@@ -100,7 +100,7 @@ struct LiabilitiesView: View {
                     .foregroundStyle(Theme.green)
             } note: {
                 Text(report.payoffFraction == nil
-                     ? "set loan amounts to track"
+                     ? "set loan amounts or card limits to track"
                      : "\(report.paidSoFar.formatted(.appCurrency)) of \(report.originalBorrowed.formatted(.appCurrency))")
             }
             StatTile(title: "Monthly Payments") {
@@ -251,9 +251,9 @@ struct LiabilitiesView: View {
             } else if line.hasLimitBar {
                 ProgressView(value: line.limitFraction).tint(Theme.green)
                 HStack {
-                    Text("\(line.limitFraction.formatted(.percent.precision(.fractionLength(0)))) of the limit is free")
+                    Text("\(line.limitFraction.formatted(.percent.precision(.fractionLength(0)))) paid off")
                     Spacer()
-                    Text("\(max(line.creditLimit - line.owed, 0).formatted(.appCurrency)) available of \(line.creditLimit.formatted(.appCurrency))")
+                    Text("\(max(line.creditLimit - line.owed, 0).formatted(.appCurrency)) of \(line.creditLimit.formatted(.appCurrency))")
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
