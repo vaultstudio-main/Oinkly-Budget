@@ -9,23 +9,24 @@ import Charts
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable { case outlook = "Outlook", warPlan = "War Plan" }
 
-    @State private var month = MonthFilter.start(of: .now)
+    @AppStorage(OutlookSettings.monthKey) private var monthStamp = 0.0
     @State private var tab = OutlookTab.outlook
     @State private var plan = WarPlanData()
     @Environment(\.openWindow) private var openWindow
     @AppStorage(MonthOutlook.excludedKey) private var excludedStored = ""
 
-    private var range: ClosedRange<Date> {
-        let current = MonthFilter.start(of: .now)
-        let calendar = Calendar.current
-        return (calendar.date(byAdding: .month, value: -24, to: current) ?? current)...(calendar.date(byAdding: .month, value: 12, to: current) ?? current)
-    }
+    /// The month being shown. It is chosen in the Settings window.
+    private var month: Date { OutlookSettings.month(from: monthStamp) }
 
     var body: some View {
         VStack(spacing: 0) {
             PinnedHeader("Monthly Outlook") {
                 HStack {
-                    MonthSelector(month: $month, range: range)
+                    // The month is only shown here; it is chosen in Settings.
+                    Text("\(tab == .warPlan ? "War Plan" : "Outlook") for \(month.formatted(.dateTime.month(.wide).year()))")
+                        .font(.headline)
+                        .frame(minWidth: 200, alignment: .leading)
+                        .contentTransition(.numericText())
                     Picker("View", selection: $tab) {
                         ForEach(OutlookTab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
@@ -38,13 +39,15 @@ struct MonthOutlookView: View {
                     } label: {
                         Label("Settings", systemImage: "slider.horizontal.3")
                     }
-                    .help("Opens this tab's settings in a window: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
+                    .help("Opens this tab's settings in a window, where you choose the month: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
                 }
             }
             OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
         }
         .background(Theme.background)
         .onAppear {
+            // Each start of the app begins on this month, whatever was chosen last time.
+            if !OutlookSettings.monthResetThisLaunch { monthStamp = 0; OutlookSettings.monthResetThisLaunch = true }
             plan = WarPlanData.load(for: month)
             UserDefaults.standard.set(tab == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey)
         }

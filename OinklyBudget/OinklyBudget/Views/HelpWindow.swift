@@ -241,7 +241,7 @@ enum HelpContent {
                 "• The CSV uses the layout Import CSV reads, so a file you export can be imported again.",
                 "• One transaction can be saved as a PDF from its detail window.",
                 "## Settings",
-                "• Settings, top right, opens a window of its own, so the page stays open behind it. It shows the settings for the tab you are on.",
+                "• Settings, top right, opens a window of its own, so the page stays open behind it. It shows the settings for the tab you are on, and both start with Month: step through months with the arrows there and the page follows. Each start of the app begins on this month.",
                 "• On the Outlook tab it is only which accounts count: pick from your checking, savings and cash accounts, with Select All and Select None. Credit cards, loans, investments and property never count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
                 "• On the War Plan tab it has everything: Starting with is the money already there when the month begins, from an account's balance now or a number you type. Buffer is money to keep untouched. They apply to every month. It also has the same account list, and Reset Settings clears the starting amount and buffer and counts every account again.",
             ]),
@@ -278,7 +278,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Monthly Outlook", symbol: "calendar.badge.checkmark", lines: [
-                "The Monthly Outlook sets what you planned for one calendar month against what is really happening. Step through months with the arrows at the top. It has two tabs: Outlook and War Plan.",
+                "The Monthly Outlook sets what you planned for one calendar month against what is really happening. The top of the page shows which month it is showing, for the Outlook and for the War Plan. You choose the month in Settings. It has two tabs: Outlook and War Plan.",
                 "## Outlook",
                 "• Safe to Move to Savings sits under the four cards. It shows how much of the month's money is safe to move to savings, and from which day, worked out from what is really happening and from your War Plan, plus the tightest point of the month. The amount is what the month ends with less your buffer; the day is the earliest from which all of it can come out and the balance still never drops under the buffer.",
                 "• Four cards show Money In, Money Out, Left Over and Above the Buffer. Each shows what the outlook says now, what you planned, a bar for how much of the plan is reached, and how far apart they are.",

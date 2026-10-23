@@ -10,6 +10,23 @@ enum OutlookSettings {
     static let windowID = "outlook-settings"
     /// Which tab of the page the Settings window is for, so it shows that tab's settings: "outlook" or "warPlan".
     static let tabKey = "outlookSettingsTab"
+    /// The month the page is showing, as a time since the reference date. It is chosen in the Settings window; zero means this month.
+    static let monthKey = "outlookMonth"
+
+    /// The month a stored stamp means: the first day of it, or this month when nothing was chosen.
+    static func month(from stamp: Double, calendar: Calendar = .current) -> Date {
+        stamp == 0 ? MonthFilter.start(of: .now, calendar: calendar) : MonthFilter.start(of: Date(timeIntervalSinceReferenceDate: stamp), calendar: calendar)
+    }
+
+    /// The months that can be chosen: two years back and one year ahead.
+    static var monthRange: ClosedRange<Date> {
+        let current = MonthFilter.start(of: .now)
+        let calendar = Calendar.current
+        return (calendar.date(byAdding: .month, value: -24, to: current) ?? current)...(calendar.date(byAdding: .month, value: 12, to: current) ?? current)
+    }
+
+    /// Each start of the app begins on this month, whatever was chosen last time.
+    static var monthResetThisLaunch = false
 
     /// The settings are stored as text, so an empty field is "not set" rather than zero.
     static func decimal(_ text: String) -> Decimal? {

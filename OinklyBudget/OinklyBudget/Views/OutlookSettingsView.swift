@@ -23,6 +23,21 @@ struct OutlookSettingsView: View {
         Binding(get: { OutlookSettings.decimal(bufferText) }, set: { bufferText = OutlookSettings.text($0) })
     }
 
+    @AppStorage(OutlookSettings.monthKey) private var monthStamp = 0.0
+
+    private var monthBinding: Binding<Date> {
+        Binding(get: { OutlookSettings.month(from: monthStamp) }, set: { monthStamp = $0.timeIntervalSinceReferenceDate })
+    }
+
+    /// Which month the page shows, for both tabs. The page itself only displays it.
+    private var monthPicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Month").font(.subheadline.weight(.semibold))
+            MonthSelector(month: monthBinding, range: OutlookSettings.monthRange)
+            note("The month the Outlook and the War Plan are showing. Each start of the app begins on this month.")
+        }
+    }
+
     private func note(_ text: String) -> some View {
         Text(text).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
     }
@@ -46,6 +61,8 @@ struct OutlookSettingsView: View {
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Outlook Settings").font(.headline)
+                monthPicker
+                Divider()
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Accounts to count").font(.subheadline.weight(.semibold))
                     note("Pick the checking, savings and cash accounts the Outlook counts: their income, spending and repeating transactions. Credit cards, loans, investments and property never count. A bill is left out when the payment linked to it came from an account that is unticked.")
@@ -95,6 +112,8 @@ struct OutlookSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("War Plan Settings").font(.headline)
+                monthPicker
+                Divider()
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Starting with").font(.subheadline.weight(.semibold))
