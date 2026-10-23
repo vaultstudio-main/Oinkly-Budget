@@ -57,7 +57,7 @@ enum HelpContent {
                 "Go to any of them with ⌘1 to ⌘9, or use the Go menu.",
                 "## Accounts",
                 "Cash on Hand sits at the top by itself, with your Primary Checking account under it if you chose one. The rest are grouped in folders by type: Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets. Click an account to open its register. The side panel shows each account's name and type, never its balance, so nothing private is on show until you open it.",
-                "Manage Accounts is pinned at the bottom of the panel.",
+                "Manage Accounts is pinned at the bottom of the panel, in a bar that matches the status bar. Clicking it opens a window of its own.",
                 "## The bar at the bottom",
                 "The bar along the bottom of every page says what you are looking at. On the right, one dot tells you your data is safe: green Backup Copy Database · Copied 5 min. ago when everything is saved and your backup copy is up to date, yellow while something is being written, orange when the backup copy needs a look (it says Not set up until you set one up), red if saving or copying keeps failing. Click it to open the settings.",
             ]),
@@ -86,7 +86,7 @@ enum HelpContent {
 
         Group(title: "Accounts", topics: [
             Topic(title: "Adding & Managing Accounts", symbol: "building.columns", lines: [
-                "Choose Manage Accounts at the bottom of the side panel (or Oinkly Budget ▸ Settings ▸ Accounts) to add, edit or delete an account.",
+                "Click Manage Accounts at the bottom of the side panel (or use Oinkly Budget ▸ Settings ▸ Accounts) to add, edit or delete an account. It opens a window of its own with every account sorted under its category (Checking & Savings, Credit Cards, Mortgages & Loans, Investments and Assets), each showing its type, bank or lender and balance. Click an account to edit it.",
                 "## What each kind keeps",
                 "• Checking, savings and the like: institution, account number and an opening balance. Checking accounts can also keep three routing numbers: ACH, wire (which can include letters) and digital.",
                 "• Credit cards: card number, credit limit, APR, minimum payment, payment due date and the balance you owe.",
@@ -572,7 +572,7 @@ enum HelpContent {
         "Finding Your Way": [Shot(asset: "Help-sidebar", caption: "The side panel: Overview, Cash on Hand and account folders.")],
         "The Status Bar": [Shot(asset: "Help-status-bar", caption: "The bar at the bottom of every page, with the saved dot on the right.")],
         "Adding & Managing Accounts": [Shot(asset: "Help-manage-accounts", caption: "Settings ▸ Accounts."),
-                                       Shot(asset: "Help-manage-accounts-page", caption: "The Manage Accounts page."),
+                                       Shot(asset: "Help-manage-accounts-page", caption: "The Manage Accounts window."),
                                        Shot(asset: "Help-edit-account", caption: "Edit Details for a checking account, with its routing numbers.")],
         "Opening Balances": [Shot(asset: "Help-opening-balance-edit", caption: "The opening balance field in Edit Details.")],
         "Account Details & Goal Section": [Shot(asset: "Help-card-details", caption: "A card's page with limit, available credit, APR and a Goal section."),

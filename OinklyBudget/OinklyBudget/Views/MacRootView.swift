@@ -10,7 +10,6 @@ private enum SidebarItem: Hashable {
     case planning
     case budgets
     case monthOutlook
-    case manageAccounts
     case transactions
     case account(Account.ID)
 }
@@ -24,6 +23,7 @@ struct MacRootView: View {
     @State private var editingAccount: Account?
     @State private var askingForShadowCopy = false
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
 
     private var selectedAccountID: Account.ID? {
         if case .account(let id) = selection { id } else { nil }
@@ -78,24 +78,24 @@ struct MacRootView: View {
             .background(Theme.sidebar)
             // Always visible at the bottom of the side panel, however long the account list gets.
             .safeAreaInset(edge: .bottom, spacing: 0) {
+                // The same height, type size and bar material as the status bar along the bottom of the page.
                 VStack(spacing: 0) {
                     EdgeLine()
                     Button {
-                        selection = .manageAccounts
+                        openWindow(id: ManageAccountsWindow.id)
                     } label: {
                         Label("Manage Accounts", systemImage: "gearshape.2")
-                            .font(.callout.weight(.medium))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(selection == .manageAccounts ? Color.accentColor.opacity(0.2) : Color.clear,
-                                        in: RoundedRectangle(cornerRadius: 8))
+                            .frame(height: 24)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .padding(8)
+                    .background(.bar)
+                    .help("Open the window that adds, edits and deletes accounts")
                 }
-                .background(Theme.sidebar)
             }
             .frame(width: 300)
 
@@ -127,7 +127,7 @@ struct MacRootView: View {
             case "outlook": selection = .monthOutlook
             case "liabilities": selection = .liabilities
             case "investments": selection = .investments
-            case "manageAccounts": selection = .manageAccounts
+            case "manageAccounts": openWindow(id: ManageAccountsWindow.id)
             default: break
             }
         }
@@ -192,12 +192,6 @@ struct MacRootView: View {
             BudgetsView()
         case .monthOutlook:
             MonthOutlookView()
-        case .manageAccounts:
-            VStack(alignment: .leading, spacing: 0) {
-                PinnedHeader("Manage Accounts")
-                AccountsSettingsView()
-            }
-            .background(Theme.background)
         case .transactions:
             TransactionsView()
         case .summary, nil:
@@ -248,7 +242,6 @@ struct MacRootView: View {
         case .planning: "Planning"
         case .budgets: "Budgets"
         case .monthOutlook: "Monthly Outlook"
-        case .manageAccounts: "Manage Accounts"
         case .transactions: "Transactions"
         case .summary, nil: "Summary"
         }
