@@ -532,122 +532,168 @@ struct BillEditView: View {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && (amount ?? 0) != 0
     }
 
+    /// One wide window with everything on it, so nothing scrolls: the bill and its notes, how and when it is paid and reminded, then
+    /// the picture on the side.
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    FormTextField("Name", text: $name)
-                    CurrencyField("Amount", value: $amount)
-                    Picker("Repeats", selection: $frequency) {
-                        ForEach(BillFrequency.allCases) { Text($0.title).tag($0) }
-                    }
-                    DatePicker(frequency == .once ? "Due date" : "First due", selection: $dueDate, displayedComponents: .date)
-                    if bill?.loan == nil {
-                        Picker("Category", selection: $category) {
-                            CategoryOptions(categories: allCategories.live, only: .expense, keeping: category)
-                        }
-                    }
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if bill?.loan == nil {
-                            Text("Pay this bill with Pay a Bill and it is recorded under this category, so it shows in your reports and budgets.")
-                        }
-                        if frequency != .once {
-                            Text("Repeats from this date, so a bill first due on the 15th falls on the 15th every time.")
-                        }
-                    }
+        VStack(spacing: 0) {
+            HStack {
+                Text(bill == nil ? "New Bill" : "Edit Bill").font(.headline)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
+                Form {
+                    billSection
+                    notesSection
                 }
-                Section {
-                    Picker("Payment method", selection: $paymentChoice) { PaymentTypeOptions(keeping: paymentChoice) }
-                } footer: {
-                    Text("Optional. How this bill is usually paid, such as Auto Pay or Check. It is used for the pending entry the bill makes, when you tick the bill off, and as the starting choice in Pay a Bill.")
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                Divider()
+                Form {
+                    payingSection
+                    remindingSection
                 }
-                if bill?.loan == nil {
-                    Section {
-                        Picker("Pays from", selection: $paysFrom) {
-                            Text("None").tag(Account?.none)
-                            ForEach(payingAccounts) { Text($0.name).tag(Optional($0)) }
-                        }
-                    } footer: {
-                        Text("Optional. Pick an account and this bill adds a pending entry to it on each due date. Tick the bill off to mark it paid and reconcile that entry, or pay it with Pay a Bill. With None, ticking only marks the bill paid.")
-                    }
-                }
-                Section {
-                    Toggle("Important bill", isOn: $isImportant)
-                } footer: {
-                    Text("Important bills are listed in the sidebar and raise a priority alert as the due date gets close.")
-                }
-                Section {
-                    Toggle("Remind me", isOn: $remindersOn)
-                    if remindersOn {
-                        Stepper("\(remindDays) day\(remindDays == 1 ? "" : "s") before", value: $remindDays, in: 0...30)
-                    }
-                } footer: {
-                    Text("Choose how many days ahead you want to be reminded. Reminders are planned for 9 AM.")
-                }
-                if photoData == nil && inheritedPhoto == nil {
-                    Section("Picture Colour") {
-                        ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)
-                    }
-                }
-                Section("Photo") {
-                    AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: artworkTheme)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 160)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    if photoData == nil, inheritedPhoto != nil, let loan = bill?.loan {
-                        Text("Using the photo from \(loan.name). Choose a different one to replace it for this bill.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    }
-                    PhotosPicker(selection: $pickedPhoto, matching: .images) {
-                        Label(photoData == nil && inheritedPhoto == nil ? "Add Photo" : "Change Photo", systemImage: "photo")
-                    }
-                    if photoData != nil {
-                        Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }
-                    }
-                }
-                Section("Notes") {
-                    FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
-                        .lineLimit(1...4)
-                }
-                if bill != nil {
-                    Section {
+                .formStyle(.grouped)
+                .scrollDisabled(true)
+                Divider()
+                Form { pictureSections }
+                    .formStyle(.grouped)
+                    .scrollDisabled(true)
+            }
+            VStack(spacing: 0) {
+                Divider()
+                HStack(spacing: 10) {
+                    if bill != nil {
                         Button("Delete Bill", role: .destructive) { confirmingDelete = true }
                     }
+                    Spacer()
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                    Button("Save", action: save).keyboardShortcut(.defaultAction).disabled(!canSave)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
-            .formStyle(.grouped)
-            .onChange(of: pickedPhoto) { _, item in
-                guard let item else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        photoData = AccountPhoto.compress(data)
-                    }
+            .background(.bar)
+        }
+        .background(Theme.background)
+        .onChange(of: pickedPhoto) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    photoData = AccountPhoto.compress(data)
                 }
-            }
-            .navigationTitle(bill == nil ? "New Bill" : "Edit Bill")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save", action: save).disabled(!canSave)
-                }
-            }
-            .confirmationDialog("Delete this bill?", isPresented: $confirmingDelete, titleVisibility: .visible) {
-                Button("Delete Bill", role: .destructive) {
-                    if let bill { modelContext.delete(bill) }
-                    modelContext.saveNow()
-                    dismiss()
-                }
-            } message: {
-                Text("This removes every due date of the bill. Transactions you recorded are not affected.")
             }
         }
-        .macSheetFrame(minHeight: 620)
+        .confirmationDialog("Delete this bill?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete Bill", role: .destructive) {
+                if let bill { modelContext.delete(bill) }
+                modelContext.saveNow()
+                dismiss()
+            }
+        } message: {
+            Text("This removes every due date of the bill. Transactions you recorded are not affected.")
+        }
+        .frame(width: 1100, height: 680)
         .onAppear {
             if let bill {
                 paysFrom = BillPaySources.account(for: bill, in: modelContext)
                 paymentChoice = BillMethods.choice(for: bill, in: modelContext)
+            }
+        }
+    }
+
+    // MARK: Columns
+
+    @ViewBuilder
+    private var billSection: some View {
+        Section("Bill") {
+            FormTextField("Name", text: $name)
+            CurrencyField("Amount", value: $amount)
+            Picker("Repeats", selection: $frequency) {
+                ForEach(BillFrequency.allCases) { Text($0.title).tag($0) }
+            }
+            DatePicker(frequency == .once ? "Due date" : "First due", selection: $dueDate, displayedComponents: .date)
+            if bill?.loan == nil {
+                Picker("Category", selection: $category) {
+                    CategoryOptions(categories: allCategories.live, only: .expense, keeping: category)
+                }
+            }
+            if frequency != .once {
+                Text("Repeats from this date, so a bill first due on the 15th falls on the 15th every time.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            if bill?.loan == nil {
+                Text("Pay this bill with Pay a Bill and it is recorded under this category, so it shows in your reports and budgets.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notesSection: some View {
+        Section("Notes") {
+            FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
+                .lineLimit(3...5)
+        }
+    }
+
+    @ViewBuilder
+    private var payingSection: some View {
+        Section("How It Is Paid") {
+            Picker("Payment method", selection: $paymentChoice) { PaymentTypeOptions(keeping: paymentChoice) }
+            Text("Optional. How it is usually paid, such as Auto Pay or Check. The pending entry, the tick and Pay a Bill all start with it.")
+                .font(.footnote).foregroundStyle(.secondary)
+            if bill?.loan == nil {
+                Picker("Pays from", selection: $paysFrom) {
+                    Text("None").tag(Account?.none)
+                    ForEach(payingAccounts) { Text($0.name).tag(Optional($0)) }
+                }
+                Text("Optional. Pick an account and the bill adds a pending entry to it on each due date. With None, ticking only marks the bill paid.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var remindingSection: some View {
+        Section("Reminders") {
+            Toggle("Important bill", isOn: $isImportant)
+            Text("Important bills are listed in the sidebar and raise a priority alert as the due date gets close.")
+                .font(.footnote).foregroundStyle(.secondary)
+            Toggle("Remind me", isOn: $remindersOn)
+            if remindersOn {
+                Stepper("\(remindDays) day\(remindDays == 1 ? "" : "s") before", value: $remindDays, in: 0...30)
+                Text("Reminders are planned for 9 AM.").font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var pictureSections: some View {
+        Section("Photo") {
+            AccountPicture(data: photoData ?? inheritedPhoto, type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: artworkTheme)
+                .frame(maxWidth: .infinity)
+                .frame(height: 110)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            if photoData == nil, inheritedPhoto != nil, let loan = bill?.loan {
+                Text("Using the photo from \(loan.name). Choose a different one to replace it for this bill.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            HStack {
+                PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                    Label(photoData == nil && inheritedPhoto == nil ? "Add Photo" : "Change Photo", systemImage: "photo")
+                }
+                if photoData != nil {
+                    Spacer()
+                    Button("Remove Photo", role: .destructive) { photoData = nil; pickedPhoto = nil }
+                }
+            }
+        }
+        if photoData == nil && inheritedPhoto == nil {
+            Section("Picture Colour") {
+                ArtworkThemePicker(type: bill?.loan?.isLive == true ? bill?.loan?.type : nil, theme: $artworkTheme)
             }
         }
     }
