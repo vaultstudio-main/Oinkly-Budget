@@ -12,13 +12,18 @@ struct TransactionsView: View {
     private var accounts: [Account] { allAccounts.live }
 
     @AppStorage(TransactionsSettings.monthKey) private var monthStamp = 0.0
-    @AppStorage(TransactionsSettings.accountKey) private var accountKey = ""
+    @AppStorage(TransactionsSettings.accountsKey) private var accountsStored = ""
+    /// How far the page starts from the left edge of the window, so the month can sit in the middle of the whole window.
+    @State private var leftInset: CGFloat = 0
     @Environment(\.openWindow) private var openWindow
     @State private var search = ""
 
     /// The month being shown, and the account if one was chosen. Both are chosen in the Settings window.
     private var month: Date { TransactionsSettings.month(from: monthStamp) }
-    private var chosenAccount: Account? { accounts.first { MonthOutlook.accountKey($0) == accountKey } }
+    private var chosenAccounts: [Account] {
+        let keys = TransactionsSettings.keys(from: accountsStored)
+        return accounts.filter { keys.contains(MonthOutlook.accountKey($0)) }
+    }
 
     private var heading: String { search.isEmpty ? "" : "Results for “\(search)”" }
 
@@ -33,8 +38,10 @@ struct TransactionsView: View {
                         } else {
                             Text(heading).font(.title3.weight(.semibold)).foregroundStyle(.secondary)
                         }
-                        Text(chosenAccount?.name ?? "All Accounts").font(.caption).foregroundStyle(.secondary)
+                        Text(TransactionsSettings.label(for: chosenAccounts.map(\.name))).font(.caption).foregroundStyle(.secondary)
                     }
+                    // Pulled left by half the sidebar, so it sits under the window's title, not in the middle of the page.
+                    .offset(x: -leftInset / 2)
                     HStack(alignment: .firstTextBaseline) {
                         Text("Transactions").font(.largeTitle.bold())
                         Spacer()
@@ -55,18 +62,20 @@ struct TransactionsView: View {
             .padding(.top, 14)
             .padding(.bottom, 12)
             .pinnedHeaderStyle()
-            TransactionsTable(month: month, accountID: chosenAccount?.id, accountName: chosenAccount?.name ?? "All accounts", search: search)
+            TransactionsTable(month: month, accountKeys: Set(chosenAccounts.map(MonthOutlook.accountKey)),
+                              accountName: TransactionsSettings.label(for: chosenAccounts.map(\.name)), search: search)
                 .padding(16)
         }
         .onAppear {
             // Each start of the app begins on this month and every account, whatever was chosen last time.
             if !TransactionsSettings.resetThisLaunch {
                 monthStamp = 0
-                accountKey = ""
+                accountsStored = ""
                 TransactionsSettings.resetThisLaunch = true
             }
         }
         .background(Theme.background)
+        .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minX } action: { leftInset = $0 }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
             if let action = note.userInfo?["action"] as? String, action.hasPrefix("search:") { search = String(action.dropFirst("search:".count)) }
@@ -104,31 +113,26 @@ private struct TransactionsTable: View {
     private let periodLabel: String
     private let accountName: String
 
-    init(month: Date, accountID: Account.ID?, accountName: String, search: String) {
+    /// The accounts to show; empty means every account. The database is asked for the month or the search, and the accounts are
+    /// picked from what comes back.
+    private let accountKeys: Set<String>
+
+    init(month: Date, accountKeys: Set<String>, accountName: String, search: String) {
         self.accountName = accountName
+        self.accountKeys = accountKeys
         let text = search.trimmingCharacters(in: .whitespaces)
         isSearching = !text.isEmpty
         periodLabel = text.isEmpty ? month.formatted(.dateTime.month(.wide).year()) : "Search results"
         let start = month
         let end = Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month
         let predicate: Predicate<Transaction>
-        switch (text.isEmpty, accountID) {
-        case (true, nil):
+        if text.isEmpty {
             predicate = #Predicate<Transaction> { $0.date >= start && $0.date < end }
-        case (true, let id?):
-            predicate = #Predicate<Transaction> { $0.date >= start && $0.date < end && $0.account?.persistentModelID == id }
-        case (false, nil):
+        } else {
             predicate = #Predicate<Transaction> {
                 $0.payee.localizedStandardContains(text) || $0.memo.localizedStandardContains(text)
                     || ($0.category?.name.localizedStandardContains(text) ?? false)
                     || ($0.account?.name.localizedStandardContains(text) ?? false)
-            }
-        case (false, let id?):
-            predicate = #Predicate<Transaction> {
-                $0.account?.persistentModelID == id
-                    && ($0.payee.localizedStandardContains(text) || $0.memo.localizedStandardContains(text)
-                        || ($0.category?.name.localizedStandardContains(text) ?? false)
-                        || ($0.account?.name.localizedStandardContains(text) ?? false))
             }
         }
         _rows = Query(filter: predicate, sort: [SortDescriptor(\Transaction.date, order: .reverse)])
@@ -152,7 +156,10 @@ private struct TransactionsTable: View {
     }
 
     var body: some View {
-        let list = rows.filter { $0.isLive && $0.account?.isLive == true }
+        let list = rows.filter {
+            $0.isLive && $0.account?.isLive == true
+                && (accountKeys.isEmpty || $0.account.map { accountKeys.contains(MonthOutlook.accountKey($0)) } == true)
+        }
         let sums = totals(list)
         VStack(spacing: 12) {
             Table(list) {

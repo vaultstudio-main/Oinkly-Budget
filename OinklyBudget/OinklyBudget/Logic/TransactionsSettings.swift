@@ -6,12 +6,25 @@ import SwiftData
 enum TransactionsSettings {
     /// The month, as a time since the reference date. Zero means this month.
     static let monthKey = "transactionsMonth"
-    /// The account, as `MonthOutlook.accountKey`. Empty means every account.
-    static let accountKey = "transactionsAccount"
+    /// The accounts to show, as `MonthOutlook.accountKey`s, one on each line. None means every account.
+    static let accountsKey = "transactionsAccounts"
     static let windowID = "transactions-settings"
 
     /// Each start of the app begins on this month and every account, whatever was chosen last time.
     static var resetThisLaunch = false
+
+    static func keys(from stored: String) -> Set<String> { Set(stored.split(separator: "\n").map(String.init)) }
+
+    static func stored(_ keys: Set<String>) -> String { keys.sorted().joined(separator: "\n") }
+
+    /// What the page says it is showing: every account, the names of one or two, or how many.
+    static func label(for names: [String]) -> String {
+        switch names.count {
+        case 0: "All Accounts"
+        case 1, 2: names.joined(separator: ", ")
+        default: "\(names.count) Accounts"
+        }
+    }
 
     /// The month a stored stamp means: the first day of it, or this month when nothing was chosen.
     static func month(from stamp: Double, calendar: Calendar = .current) -> Date {
