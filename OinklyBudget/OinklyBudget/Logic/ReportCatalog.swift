@@ -59,7 +59,7 @@ enum ReportSection: String, CaseIterable, Identifiable {
     var blurb: String {
         switch self {
         case .overview: "Income, spending and the year at a glance."
-        case .projections: "Where the next quarter, the next year and the long run are heading, at your recent pace."
+        case .projections: "This quarter, this year and the next ten years, at your recent pace."
         case .spending: "Where the money goes, by category, payee, card and cash."
         case .income: "Where the money comes from and how steady it is."
         case .cashFlow: "Money in and out, month by month, and what's coming."

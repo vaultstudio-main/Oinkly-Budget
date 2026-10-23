@@ -38,24 +38,34 @@ struct ReconciliationStatusReport: View {
             } else if total == 0 {
                 ReportEmpty(message: "No transactions yet.", height: 170, title: "Nothing yet", clean: true, symbol: "tray")
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Transactions", slice.count), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(slice.color)
-                            .cornerRadius(3)
-                    }
-                    .frame(width: 130, height: 130)
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(slices) { slice in
+                // The figures, in plain rows: how many, what share, and a thin bar for the share.
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(slices) { slice in
+                        VStack(alignment: .leading, spacing: 5) {
                             HStack(spacing: 8) {
                                 Circle().fill(slice.color).frame(width: 9, height: 9)
-                                Text(slice.name)
+                                Text(slice.name).font(.callout.weight(.medium))
                                 Spacer()
-                                Text("\(slice.count)").foregroundStyle(.secondary)
+                                Text(slice.count.formatted()).font(.callout.weight(.semibold))
+                                Text(ReportFormat.percent(Double(slice.count) / Double(total) * 100))
+                                    .font(.callout).foregroundStyle(.secondary).frame(width: 56, alignment: .trailing)
                             }
-                            .font(.callout)
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.primary.opacity(0.10))
+                                    Capsule().fill(slice.color).frame(width: max(geo.size.width * Double(slice.count) / Double(total), 3))
+                                }
+                            }
+                            .frame(height: 6)
                         }
                     }
+                    Divider()
+                    HStack {
+                        Text("Transactions in all").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(total.formatted()).fontWeight(.semibold)
+                    }
+                    .font(.callout)
                 }
             }
         }

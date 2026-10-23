@@ -18,8 +18,19 @@ struct ReportsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // The title and the tabs stay at the top while the reports scroll below them.
-            PinnedHeader("Reports") { sectionPicker }
+            // The title and the tabs stay at the top while the reports scroll below them. The tabs are like those on file folders.
+            VStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    PageTitle("Reports")
+                    Text(section.blurb).font(.callout).foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                FolderTabs(tabs: ReportSection.allCases, selection: $section) { $0.rawValue }
+            }
+            .background(Theme.background)
             ScrollView {
                 VStack(spacing: 14) {
                     if section == .projections { ProjectionsPage() } else { grid(section.reports) }
@@ -39,32 +50,6 @@ struct ReportsView: View {
     }
 
     // MARK: Sections
-
-    private var sectionPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Plain tabs with an underline under the one you are on, spaced evenly, instead of a crowd of buttons.
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 22) {
-                    ForEach(ReportSection.allCases) { item in
-                        let selected = section == item
-                        Button { section = item } label: {
-                            VStack(spacing: 5) {
-                                Text(item.rawValue)
-                                    .font(.callout.weight(selected ? .semibold : .regular))
-                                    .foregroundStyle(selected ? Color.primary : Color.secondary)
-                                Capsule().fill(selected ? Color.accentColor : Color.clear).frame(height: 2.5)
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected ? .isSelected : [])
-                    }
-                }
-                .padding(.horizontal, 2)
-            }
-            Text(section.blurb).font(.callout).foregroundStyle(.secondary)
-        }
-    }
 
     /// Reports laid out in rows: wide ones alone, the rest packed `columns` across. Any card left over stretches to
     /// fill its row, so no space is wasted.

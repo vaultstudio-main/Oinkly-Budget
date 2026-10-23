@@ -1349,8 +1349,30 @@ enum SharedHardeningTest {
                 check("S47 the savings rate is what is kept of what comes in", abs((quarter.savingsRate ?? 0) - 26.666) < 0.01)
                 let year = Projection.make(history: history, netWorthNow: 0, bills: [], months: 12)
                 check("S47 a year is twelve months", year.months.count == 12 && year.totalSaved == 9600)
-                let long = Projection.years(10, monthlyIncome: average.income, monthlySpending: average.spending, netWorthNow: 5_000)
-                check("S47 the long range runs year by year", long.count == 10 && long[0].saved == 9600 && long[4].netWorth == 5_000 + 9600 * 5 && long[9].netWorth == 5_000 + 9600 * 10)
+                // A fixed day part way through May, so the month in progress is half done.
+                let may = DateComponents(year: 2026, month: 5, day: 16, hour: 12)
+                let now = calendar.date(from: may)!
+                let mayStart = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!
+                let fixed: [(date: Date, income: Double, spending: Double)] = (0..<12).map { index in
+                    let date = calendar.date(byAdding: .month, value: index - 11, to: mayStart)!
+                    return index == 11 ? (date, 1000, 500) : (date, 3000, 2200)
+                }
+                let worth: [(date: Date, value: Double)] = (1...4).map { (calendar.date(from: DateComponents(year: 2026, month: $0, day: 1))!, Double($0) * 1000) }
+                let year2026 = Projection.calendarYear(of: now)
+                let yearPlan = Projection.period(history: fixed, netWorthHistory: worth, netWorthNow: 4500, bills: [], from: year2026.start, through: year2026.end, now: now)
+                check("S47 a calendar year is January to December", yearPlan.months.count == 12 && yearPlan.months.first?.kind == .actual && yearPlan.months[4].kind == .current && yearPlan.months[5].kind == .projected)
+                check("S47 the months that have happened are as they were", yearPlan.months[0].income == 3000 && yearPlan.months[0].spending == 2200 && yearPlan.months[3].incomeSoFar == 3000)
+                check("S47 this month is what has happened plus the rest at the average", yearPlan.months[4].incomeSoFar == 1000 && abs(yearPlan.months[4].income - 2500) < 0.5 && abs(yearPlan.months[4].spending - 1600) < 0.5)
+                check("S47 the year's income adds up", abs(yearPlan.totalIncome - 35_500) < 0.5)
+                check("S47 net worth is what was, today, then where it is heading", yearPlan.netWorth.filter { !$0.projected }.count == 5 && yearPlan.netWorth.filter { !$0.projected }.last?.value == 4500
+                      && abs((yearPlan.netWorth.last?.value ?? 0) - 10_500) < 0.5)
+                let q = Projection.calendarQuarter(of: now)
+                let quarter2 = Projection.period(history: fixed, netWorthHistory: worth, netWorthNow: 4500, bills: [], from: q.start, through: q.end, now: now)
+                check("S47 the quarter is April to June", calendar.component(.month, from: q.start) == 4 && calendar.component(.month, from: q.end) == 6 && quarter2.months.count == 3)
+                let december = calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 12))!
+                let long = Projection.years(10, monthlyIncome: average.income, monthlySpending: average.spending, netWorthNow: 5_000, now: december)
+                check("S47 the long range starts with next year and runs ten calendar years", long.count == 10 && long.first?.year == 2027 && long.last?.year == 2036)
+                check("S47 and each year adds a year's saving to what is kept", long[0].keptInYear == 9600 && abs(long[0].netWorth - (5_000 + 9600)) < 20 && abs(long[9].netWorth - (5_000 + 9600 * 10)) < 20)
                 check("S47 with no history there is nothing to project", !Projection.make(history: [], netWorthNow: 0, bills: [], months: 3).hasData)
             }
         } catch {
