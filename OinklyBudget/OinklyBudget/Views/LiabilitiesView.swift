@@ -248,6 +248,15 @@ struct LiabilitiesView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            } else if line.hasLimitBar {
+                ProgressView(value: line.limitFraction).tint(Theme.green)
+                HStack {
+                    Text("\(line.limitFraction.formatted(.percent.precision(.fractionLength(0)))) of the limit is free")
+                    Spacer()
+                    Text("\(max(line.creditLimit - line.owed, 0).formatted(.appCurrency)) available of \(line.creditLimit.formatted(.appCurrency))")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
             } else if line.isLoan && !line.isPaidOff {
                 Text("Add the original loan amount in Settings ▸ Accounts to track payoff.")
                     .font(.caption)

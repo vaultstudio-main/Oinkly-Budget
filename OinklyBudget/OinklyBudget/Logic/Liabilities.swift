@@ -14,6 +14,12 @@ enum Liabilities {
         let progress: LoanProgress
         /// What was owed when the period began. Nil when there is no period.
         var startOwed: Decimal?
+        /// A card's limit, 0 when it has none set.
+        var creditLimit: Decimal = 0
+
+        /// A card with a limit shows how much of the limit is free: full at a zero balance, empty when maxed out, the loan bar in reverse.
+        var hasLimitBar: Bool { !isLoan && creditLimit > 0 }
+        var limitFraction: Double { min(max(1 - NSDecimalNumber(decimal: owed / creditLimit).doubleValue, 0), 1) }
 
         /// Positive when you paid it down, negative when you borrowed more.
         var paidDown: Decimal? { startOwed.map { $0 - owed } }
@@ -97,6 +103,7 @@ enum Liabilities {
                     isLoan: isLoan,
                     progress: progress
                 )
+                line.creditLimit = isLoan ? 0 : account.creditLimit
                 if let before {
                     let startOwed = max(-account.balance(asOf: before), 0)
                     line.startOwed = startOwed
