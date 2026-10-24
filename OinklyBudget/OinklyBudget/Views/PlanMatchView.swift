@@ -112,7 +112,7 @@ struct PlanMatchView: View {
             Text("Match Transactions").font(.headline)
             Text("Search every account for \(month.formatted(.dateTime.month(.wide).year())) and tag a transaction to the plan line it turned out to be. The line shows as matched on the sheet. Nothing in the transaction changes.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            FolderTabs(tabs: [KindTab.all] + AccountGroup.setupOrder.map { KindTab.group($0) }, selection: $kind, title: { tab in
+            FolderTabs(tabs: [KindTab.all] + AccountGroup.setupOrder.filter { group in transactions.live.contains { !$0.isOpeningDeposit && $0.account?.type.group == group } }.map { KindTab.group($0) }, selection: $kind, title: { tab in
                 let count = transactions.live.filter { !$0.isOpeningDeposit && tab.includes($0) }.count
                 if case .group(let group) = tab { return "\(group.title) (\(count))" }
                 return "All Accounts (\(count))"
@@ -122,12 +122,17 @@ struct PlanMatchView: View {
                 if case .group(let group) = kind { return account.type.group == group }
                 return true
             }
-            FolderTabs(tabs: [AccountTab(key: nil, name: "Every account")] + accounts.map { AccountTab(key: MonthOutlook.accountKey($0), name: $0.name) },
-                       selection: Binding(get: { AccountTab(key: accountKey, name: "") }, set: { accountKey = $0.key }),
-                       title: { tab in
-                let count = transactions.live.filter { !$0.isOpeningDeposit && kind.includes($0) && (tab.key == nil || $0.account.map(MonthOutlook.accountKey) == tab.key) }.count
-                return "\(tab.name) (\(count))"
-            }, leading: 0)
+            // Only accounts with something this month get a tab, and the tabs wrap onto more rows instead of running off the window.
+            let counts = Dictionary(grouping: transactions.live.filter { !$0.isOpeningDeposit && kind.includes($0) }, by: { $0.account.map(MonthOutlook.accountKey) ?? "" })
+                .mapValues(\.count)
+            let busy = accounts.filter { (counts[MonthOutlook.accountKey($0)] ?? 0) > 0 }
+            WrapLayout(spacing: 6) {
+                chip("Every account", count: counts.values.reduce(0, +), selected: accountKey == nil) { accountKey = nil }
+                ForEach(busy) { account in
+                    let key = MonthOutlook.accountKey(account)
+                    chip(account.name, count: counts[key] ?? 0, selected: accountKey == key) { accountKey = key }
+                }
+            }
             .onChange(of: kind) { _, _ in accountKey = nil }
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -152,6 +157,17 @@ struct PlanMatchView: View {
             let loaded = WarPlanData.load(for: month)
             if loaded != plan { plan = loaded }
         }
+    }
+
+    private func chip(_ name: String, count: Int, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text("\(name) (\(count))")
+                .font(.callout)
+                .padding(.horizontal, 10).padding(.vertical, 4)
+                .background(selected ? Color.accentColor : Color.primary.opacity(0.10), in: Capsule())
+                .foregroundStyle(selected ? Color.white : Color.primary)
+        }
+        .buttonStyle(.plain)
     }
 
     private func row(_ transaction: Transaction) -> some View {
@@ -199,5 +215,47 @@ struct PlanMatchView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// Lays its children out left to right and wraps them onto new rows when a row is full.
+struct WrapLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: rows.last.map { $0.y + $0.height } ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for row in arrange(width: bounds.width, subviews: subviews) {
+            for item in row.items {
+                subviews[item.index].place(at: CGPoint(x: bounds.minX + item.x, y: bounds.minY + row.y), proposal: .unspecified)
+            }
+        }
+    }
+
+    private struct Row {
+        var items: [(index: Int, x: CGFloat)] = []
+        var y: CGFloat = 0
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
+        var rows: [Row] = [Row()]
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if let last = rows.last, !last.items.isEmpty, last.width + spacing + size.width > width {
+                rows.append(Row(y: last.y + last.height + spacing))
+            }
+            var row = rows.removeLast()
+            let x = row.items.isEmpty ? 0 : row.width + spacing
+            row.items.append((index, x))
+            row.width = x + size.width
+            row.height = max(row.height, size.height)
+            rows.append(row)
+        }
+        return rows
     }
 }
