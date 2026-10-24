@@ -1,7 +1,21 @@
 import SwiftUI
 import SwiftData
 
-/// The War Plan settings' second tab: every transaction in the month, from every account, to search and tag to a line of the plan.
+/// The window the Link Transactions button on the Monthly Outlook opens, for whichever month the page is showing.
+struct PlanMatchWindow: View {
+    static let id = "plan-match"
+
+    @AppStorage(OutlookSettings.monthKey) private var monthStamp = 0.0
+
+    var body: some View {
+        PlanMatchView(month: OutlookSettings.month(from: monthStamp))
+            .id(monthStamp)
+            .frame(minWidth: 760, minHeight: 520)
+            .background(Theme.background)
+    }
+}
+
+/// Every transaction in the month, from every account, to search and tag to a line of the plan.
 /// A tag only remembers which transaction a line turned out to be, so the sheet can show the line as matched. It never changes the
 /// transaction, the account or the plan's amounts.
 struct PlanMatchView: View {

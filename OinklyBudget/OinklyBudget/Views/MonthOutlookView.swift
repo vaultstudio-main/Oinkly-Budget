@@ -28,6 +28,16 @@ struct MonthOutlookView: View {
         return Text("\(which) for \(when)").font(.headline).contentTransition(.numericText())
     }
 
+    /// Opens the window where real transactions are tagged to the plan's lines.
+    private var linkButton: some View {
+        Button {
+            openWindow(id: PlanMatchWindow.id)
+        } label: {
+            Label("Link Transactions", systemImage: "link")
+        }
+        .help("Opens a window with every transaction of the month, from every account, to tag to a line of the War Plan. The Outlook then shows what really happened next to the plan")
+    }
+
     private var settingsButton: some View {
         Button {
             openWindow(id: OutlookSettings.windowID)
@@ -42,7 +52,10 @@ struct MonthOutlookView: View {
             FolderTabbedHeader(title: "Monthly Outlook", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
                 monthLine
             } centre: { EmptyView() } trailing: {
-                settingsButton
+                HStack(spacing: 8) {
+                    linkButton
+                    settingsButton
+                }
             }
             OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
         }
@@ -178,19 +191,29 @@ private struct OutlookBody: View {
         let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
         let calendar = Calendar.current
         let advice = adviceItems(outlook, opening: opening, kept: kept)
+        let real = SafePull(opening: opening, buffer: kept, events: realEvents())
+        let hasReal = !isFuture && !real.points.isEmpty
+        // Real money is only known up to today, or to the end of a month that is over.
+        let realEnd = isPast ? (Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month) ?? month) : Calendar.current.startOfDay(for: .now)
+        let linked = plan.items.filter { item in item.transactionStamp.map { stamp in transactions.contains { $0.isLive && $0.createdAt.timeIntervalSinceReferenceDate == stamp } } ?? false }.count
         return ReportCard(title: "When You Can Pull Money Out") {
             HStack(alignment: .top, spacing: 40) {
                 VStack(alignment: .leading, spacing: 18) {
                     dayBlock("Planned", pull: hasPlan ? planned : nil)
+                    if hasPlan {
+                        Text("\(linked) of \(plan.items.count) plan line\(plan.items.count == 1 ? "" : "s") linked to real transactions")
+                            .font(.caption).foregroundStyle(.secondary).padding(.top, -14)
+                    }
                     dayBlock("Outlook", pull: actual)
                     if let p = planned.best, let a = actual.best, hasPlan {
                         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
                         dayChip(days)
                     }
+                    actualBlock(real, hasReal: hasReal, on: realEnd, against: actual, plan: hasPlan ? planned : nil, buffer: kept)
                     tightest(actual, buffer: kept)
                 }
-                .frame(width: 280, alignment: .leading)
-                BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, buffer: kept)
+                .frame(width: 300, alignment: .leading)
+                BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, real: hasReal ? real : nil, realEnd: realEnd, buffer: kept)
             }
             // Roomy: it takes whatever height the rest of the page leaves, between a floor and a ceiling.
             .padding(.horizontal, 12)
@@ -198,6 +221,48 @@ private struct OutlookBody: View {
             .frame(height: pullOutHeight(advice: advice), alignment: .top)
         }
         .help("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
+    }
+
+    /// The money that really moved through the counted accounts this month, up to today.
+    private func realEvents() -> [SafePull.Event] {
+        let counted = Set(accounts.map(MonthOutlook.accountKey)).subtracting(excluded)
+        let today = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now)) ?? .now
+        return transactions.live
+            .filter { !$0.isOpeningDeposit && $0.date < today && ($0.account.map { counted.contains(MonthOutlook.accountKey($0)) } ?? false) }
+            .map { SafePull.Event(date: $0.date, amount: $0.amount) }
+    }
+
+    /// What the counted accounts really hold now, set against the Outlook and the plan for the same day, and against the buffer.
+    private func actualBlock(_ real: SafePull, hasReal: Bool, on day: Date, against outlook: SafePull, plan: SafePull?, buffer: Decimal) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text((isPast ? "ACTUAL AT THE END" : "ACTUAL SO FAR")).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            if hasReal {
+                Text(real.ending, format: .appCurrency)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(real.ending < buffer ? Theme.red : Color.primary)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+                Text(real.ending >= buffer ? "\((real.ending - buffer).formatted(.appCurrency)) above the buffer" : "\((buffer - real.ending).formatted(.appCurrency)) under the buffer")
+                    .font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    differenceChip(real.ending - outlook.balance(on: day), against: "the Outlook")
+                    if let plan { differenceChip(real.ending - plan.balance(on: day), against: "the plan") }
+                }
+            } else {
+                Text(isFuture ? "Not yet" : "–").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text(isFuture ? "This month hasn't started" : "No real transactions yet").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func differenceChip(_ difference: Decimal, against: String) -> some View {
+        let color: Color = difference == 0 ? .secondary : (difference > 0 ? Theme.green : Theme.red)
+        let words = difference == 0 ? "On \(against)" : "\(abs(difference).formatted(.appCurrency)) \(difference > 0 ? "ahead of" : "behind") \(against)"
+        return Text(words)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 7).padding(.vertical, 2)
+            .background(color.opacity(0.18), in: Capsule())
+            .foregroundStyle(color)
+            .lineLimit(1)
     }
 
     /// The lowest the balance gets this month, so you can see how close it comes to the buffer.
@@ -266,7 +331,7 @@ private struct OutlookBody: View {
     private func pullOutHeight(advice: [OutlookAdvice.Item]) -> CGFloat {
         let chrome: CGFloat = 12 * 2 + Self.versusHeight + 10 + 62 + 10 + 62
         let room = viewport - chrome - adviceHeight(advice)
-        return min(max(room, Self.pullOutHeight), 460)
+        return min(max(room, Self.pullOutHeight), 520)
     }
 
     /// A list, one under another, each with its detail in full.
@@ -313,7 +378,7 @@ private struct OutlookBody: View {
     /// Every card on the page has a place that is always there, with a set height: when there is more than fits it scrolls inside,
     /// and when there is less it sits at the top of its place. The page never jumps about as a plan or a month changes.
     /// The least the pull-out card's chart area takes.
-    private static let pullOutHeight: CGFloat = 220
+    private static let pullOutHeight: CGFloat = 430
     private static let versusHeight: CGFloat = 126
 
     /// Under the cards, only for a month that has closed: when its figures were kept, and what they would be now.
@@ -431,6 +496,9 @@ private struct BalanceChart: View {
     let month: Date
     let planned: SafePull?
     let actual: SafePull
+    /// What really happened, up to `realEnd`. Nil when nothing has.
+    var real: SafePull?
+    var realEnd = Date.now
     let buffer: Decimal
 
     private var end: Date {
@@ -439,14 +507,15 @@ private struct BalanceChart: View {
     }
 
     @ChartContentBuilder
-    private func series(_ name: String, _ pull: SafePull) -> some ChartContent {
-        let line = [SafePull.Point(id: -1, date: month, balance: pull.opening)] + pull.points + [SafePull.Point(id: Int.max, date: end, balance: pull.ending)]
+    private func series(_ name: String, _ pull: SafePull, to stop: Date? = nil) -> some ChartContent {
+        let last = stop ?? end
+        let line = [SafePull.Point(id: -1, date: month, balance: pull.opening)] + pull.points.filter { $0.date <= last } + [SafePull.Point(id: Int.max, date: last, balance: stop == nil ? pull.ending : pull.balance(on: last))]
         ForEach(line) { point in
             LineMark(x: .value("Date", point.date), y: .value("Balance", chartValue(point.balance)), series: .value("Source", name))
                 .foregroundStyle(by: .value("Source", name))
                 .interpolationMethod(.stepEnd)
         }
-        if let best = pull.best {
+        if stop == nil, let best = pull.best {
             PointMark(x: .value("Date", best.date), y: .value("Balance", chartValue(best.balance)))
                 .foregroundStyle(by: .value("Source", name))
                 .symbolSize(110)
@@ -457,12 +526,13 @@ private struct BalanceChart: View {
         Chart {
             if let planned { series("Plan", planned) }
             series("Outlook", actual)
+            if let real { series("Actual", real, to: min(realEnd, end)) }
             RuleMark(y: .value("Buffer", chartValue(buffer)))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
                 .foregroundStyle(Color.orange)
                 .annotation(position: .top, alignment: .leading) { Text("Buffer").font(.caption2).foregroundStyle(.orange) }
         }
-        .chartForegroundStyleScale(["Plan": Color.accentColor, "Outlook": Theme.green])
+        .chartForegroundStyleScale(["Plan": Color.accentColor, "Outlook": Theme.green, "Actual": Color.purple])
         .chartXScale(domain: month...end)
         .chartXAxis { AxisMarks(values: .stride(by: .day, count: 7)) { _ in AxisGridLine(); AxisValueLabel(format: .dateTime.month(.abbreviated).day()) } }
         .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(ReportFormat.compact(n)) } } } }

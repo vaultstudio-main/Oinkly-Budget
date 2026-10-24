@@ -152,31 +152,7 @@ struct OutlookSettingsView: View {
         .background(Theme.background)
     }
 
-    /// The War Plan's tabs in the settings window: the settings themselves, and a search of every account to tag transactions to the plan.
-    private enum WarTab: String, CaseIterable, Identifiable {
-        case settings = "Settings", match = "Match Transactions"
-        var id: Self { self }
-    }
-
-    @State private var warTab = WarTab.settings
-
     private var warPlanSettings: some View {
-        VStack(spacing: 0) {
-            FolderTabs(tabs: WarTab.allCases, selection: $warTab, title: { $0.rawValue }, leading: 20)
-                .padding(.top, 10)
-            if warTab == .settings {
-                warPlanSettingsTab
-            } else {
-                PlanMatchView(month: OutlookSettings.month(from: monthStamp))
-            }
-        }
-        .frame(minWidth: 520, minHeight: 360)
-        .background(Theme.background)
-        // The settings are small; matching transactions wants room for every account, so the window grows for that tab.
-        .background(WindowSizer(size: warTab == .match ? CGSize(width: 1000, height: 720) : CGSize(width: 620, height: 480)))
-    }
-
-    private var warPlanSettingsTab: some View {
         SettingsWindowLayout(title: "War Plan Settings") {
             monthSection
             Divider()

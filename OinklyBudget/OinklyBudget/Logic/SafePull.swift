@@ -55,6 +55,12 @@ struct SafePull {
         return points[first]
     }
 
+    /// What the balance is at the close of a day: the last point on or before it, or the opening balance before any.
+    func balance(on date: Date, calendar: Calendar = .current) -> Decimal {
+        let day = calendar.startOfDay(for: date)
+        return points.last { $0.date <= day }?.balance ?? opening
+    }
+
     /// The lowest the balance gets, and when.
     var lowest: Point? { points.min { $0.balance < $1.balance } }
 
