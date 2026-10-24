@@ -23,17 +23,9 @@ struct ReportsView: View {
         _yearTransactions = Query(filter: #Predicate<Transaction> { $0.date >= yearStart })
     }
 
-    /// The page flows with the window like a web page. On a window wider than `designWidth` everything (text, padding, charts) grows
-    /// with it, up to `largest` times, so a big screen shows the same page larger instead of the same page lost in empty space. Below that
-    /// size nothing is scaled: the columns drop away and, past the last, the page scrolls.
-    private static let designWidth: CGFloat = 1500
-    private static let largest: CGFloat = 1.5
-    /// The width a card aims to be, so the number of columns follows the width of the window.
+    /// The width a card aims to be, so the number of columns follows the width of the window. Every page is scaled up on a very wide window
+    /// (see `FluidPage`), so this is the width the page is laid out in.
     private static let cardWidth: CGFloat = 360
-
-    private var contentScale: CGFloat { min(max(pageWidth / Self.designWidth, 1), Self.largest) }
-    /// The width the page is laid out in: the window's, divided by the scale it is drawn at.
-    private var layoutWidth: CGFloat { pageWidth / contentScale }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,13 +41,11 @@ struct ReportsView: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                     // Still taller than the room under the title and tabs: shrink the charts once, to the smallest size, and measure again.
                     // Past that the page scrolls, so no card ever hides any of what it shows.
-                    guard section != .projections, height * contentScale > viewport + 2, scale > ReportSize.smallest else { return }
+                    guard section != .projections, height > viewport + 2, scale > ReportSize.smallest else { return }
                     scale = ReportSize.smallest
                 }
                 // Made again at each step, so the size is measured again and the loop carries on until the tab fits.
                 .id(scale)
-                .scaleEffect(contentScale, anchor: .topLeading)
-                .modifier(FluidScale(scale: contentScale))
             }            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                 if abs(viewport - height) > 1 { refit() }
                 viewport = height
@@ -127,7 +117,7 @@ struct ReportsView: View {
         // Three across when the page is wide enough.
         // Four across on a very wide page, so a tab needs fewer rows.
         // One more column for each card's width the page has, from two up to six, so any window size lays out well.
-        let columns = max(2, min(section == .health ? 3 : 6, Int(layoutWidth / Self.cardWidth)))
+        let columns = max(2, min(section == .health ? 3 : 6, Int(pageWidth / Self.cardWidth)))
         ReportSize.scale = scale
         return VStack(spacing: 14) {
             ForEach(Array(rows(of: items, columns: columns).enumerated()), id: \.offset) { _, row in
@@ -164,34 +154,6 @@ struct ReportCard<Content: View>: View {
 
     var body: some View {
         Panel(title: title, fillsHeight: fillsHeight) { content }
-    }
-}
-
-// MARK: Scaling with the window
-
-/// Lays its one child out in the window's width divided by `scale`, and takes up the room it needs once drawn `scale` times larger. The child
-/// is drawn larger with `scaleEffect`, which on its own changes how a view looks but not the room it takes.
-private struct FluidScale: ViewModifier {
-    let scale: CGFloat
-
-    func body(content: Content) -> some View {
-        FluidScaleLayout(scale: scale) { content }
-    }
-}
-
-private struct FluidScaleLayout: Layout {
-    let scale: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        guard let child = subviews.first else { return .zero }
-        let inner = proposal.width.map { $0 / scale }
-        let size = child.sizeThatFits(ProposedViewSize(width: inner, height: nil))
-        return CGSize(width: proposal.width ?? size.width * scale, height: size.height * scale)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard let child = subviews.first else { return }
-        child.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(width: bounds.width / scale, height: nil))
     }
 }
 

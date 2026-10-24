@@ -196,38 +196,49 @@ private struct OutlookBody: View {
         // Real money is only known up to today, or to the end of a month that is over.
         let realEnd = isPast ? (Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month) ?? month) : Calendar.current.startOfDay(for: .now)
         let linked = plan.items.filter { item in item.transactionStamp.map { stamp in transactions.contains { $0.isLive && $0.createdAt.timeIntervalSinceReferenceDate == stamp } } ?? false }.count
-        return ReportCard(title: "When You Can Pull Money Out") {
-            HStack(alignment: .top, spacing: 40) {
-                // Two blocks to a row, so the figures take little height and the chart gets the room.
-                Grid(alignment: .topLeading, horizontalSpacing: 24, verticalSpacing: 12) {
-                    GridRow(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            dayBlock("Planned", pull: hasPlan ? planned : nil)
-                            if hasPlan {
-                                Text("\(linked) of \(plan.items.count) line\(plan.items.count == 1 ? "" : "s") linked")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            dayBlock("Outlook", pull: actual)
-                            if let p = planned.best, let a = actual.best, hasPlan {
-                                let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
-                                dayChip(days)
-                            }
-                        }
-                    }
-                    GridRow(alignment: .top) {
-                        actualBlock(real, hasReal: hasReal, on: realEnd, against: actual, plan: hasPlan ? planned : nil, buffer: kept)
-                        tightest(actual, buffer: kept)
+        // Two blocks to a row, so the figures take little height and the chart gets the room.
+        let figures = Grid(alignment: .topLeading, horizontalSpacing: 24, verticalSpacing: 12) {
+            GridRow(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    dayBlock("Planned", pull: hasPlan ? planned : nil)
+                    if hasPlan {
+                        Text("\(linked) of \(plan.items.count) line\(plan.items.count == 1 ? "" : "s") linked")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                .frame(width: 440, alignment: .topLeading)
-                BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, real: hasReal ? real : nil, realEnd: realEnd, buffer: kept)
+                VStack(alignment: .leading, spacing: 4) {
+                    dayBlock("Outlook", pull: actual)
+                    if let p = planned.best, let a = actual.best, hasPlan {
+                        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
+                        dayChip(days)
+                    }
+                }
             }
-            // Roomy: it takes whatever height the rest of the page leaves, between a floor and a ceiling.
-            .padding(.horizontal, 12)
-            .padding(.vertical, 14)
-            .frame(height: pullOutHeight(advice: advice), alignment: .top)
+            GridRow(alignment: .top) {
+                actualBlock(real, hasReal: hasReal, on: realEnd, against: actual, plan: hasPlan ? planned : nil, buffer: kept)
+                tightest(actual, buffer: kept)
+            }
+        }
+        let chart = BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, real: hasReal ? real : nil, realEnd: realEnd, buffer: kept)
+        return ReportCard(title: "When You Can Pull Money Out") {
+            // The figures beside the chart when the window is wide enough for both, and above it when it is not.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 40) {
+                    figures.frame(width: 440, alignment: .topLeading)
+                    chart.frame(minWidth: 380)
+                }
+                // Roomy: it takes whatever height the rest of the page leaves, between a floor and a ceiling.
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
+                .frame(height: pullOutHeight(advice: advice), alignment: .top)
+
+                VStack(alignment: .leading, spacing: 16) {
+                    figures.frame(maxWidth: .infinity, alignment: .topLeading)
+                    chart
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 14)
+            }
         }
         .help("The first day the whole spare amount, what the month ends with less your buffer, can come out and the balance still never drops under the buffer. The outlook spreads budget spending through the month a week at a time.")
     }

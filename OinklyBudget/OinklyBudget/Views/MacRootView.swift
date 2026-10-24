@@ -101,7 +101,7 @@ struct MacRootView: View {
 
             EdgeLine(vertical: true)
 
-            StatusBarHost(fallback: pageName, page: detailPage)
+            StatusBarHost(fallback: pageName, page: FluidPage { detailPage })
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 1000, minHeight: 600)
