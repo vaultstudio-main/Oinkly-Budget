@@ -1,5 +1,7 @@
 # Oinkly Budget
 
+![Oinkly Budget: your money, kept personal. Free and open source, for Mac.](Documents/social-preview.png)
+
 **Your money, kept personal.** A free, open-source personal finance app for the Mac.
 
 Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
