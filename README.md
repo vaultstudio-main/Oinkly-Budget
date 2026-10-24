@@ -4,7 +4,7 @@
 
 Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
 
-> **Current version: 1.0 (build 6).** Open source from this release on, under the GNU General Public License v3.
+> **Current version: 1.0.1.** A small fix to the first open-source release, 1.0 (build 6). Free and open source under the GNU General Public License v3.
 
 ---
 
@@ -19,6 +19,17 @@ Oinkly Budget is released as free software under the **[GNU General Public Licen
 - It stays free for everyone, and nobody can close it up and sell it as their own.
 
 The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Documents/](Documents/). If you want to know what is coming and why, start there.
+
+### Latest update: 1.0.1
+
+Version 1.0.1 is a small bug-fix release. I accidentally forgot to let the app scale properly to different screen sizes, so it looked cramped or lost in empty space on some Macs, with some tabs running off the edge of the window. This update fixes that:
+
+- Pages now flow with the window and scale up on large screens, such as a 27-inch 4K or 5K display.
+- Tabs shrink and then wrap onto a second row, so every tab is always on screen.
+- The editor pop-ups shrink to fit smaller screens, such as a 14-inch MacBook, and scroll so Save can always be reached.
+- The Monthly Outlook's pull-out card stacks its figures above the chart when the window is narrow.
+
+Nothing else changed: your data stays on your Mac, and your data is kept as it is when you update from 1.0. Download it from the [Releases page](https://github.com/vaultstudio-main/Oinkly-Budget/releases).
 
 ### Updates
 
