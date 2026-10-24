@@ -366,7 +366,12 @@ struct AccountPicture: View {
     var body: some View {
         Group {
             if let image = AccountPhoto.image(from: data) {
-                image.resizable().scaledToFill()
+                // The whole photo is shown, whatever its shape, so nothing is cut off. What is left over around it is filled with a soft,
+                // blurred copy of the same photo, so a tall or wide picture still fills the little frame without bars.
+                Color.clear
+                    .overlay { image.resizable().scaledToFill().blur(radius: 16).scaleEffect(1.15) }
+                    .overlay { image.resizable().scaledToFit() }
+                    .clipped()
             } else if let type {
                 AccountArtwork(type: type, theme: chosenTheme)
             } else {
