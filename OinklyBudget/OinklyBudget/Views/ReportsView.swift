@@ -12,8 +12,8 @@ struct ReportsView: View {
     @State private var viewport: CGFloat = 700
     /// How much the charts are shrunk, so the tab fits: lowered a step at a time while the tab is taller than the room.
     @State private var scale: CGFloat = 1
-    /// How tall the laid-out page is before it is scaled, so the scrolling room can be set to what it takes once scaled.
-    @State private var contentHeight: CGFloat = 0
+    /// The pending step that sizes the charts to fit again once the window has stopped moving.
+    @State private var refitTask: Task<Void, Never>?
     /// The last thirteen months, shared with the reports through the environment.
     @Query private var yearTransactions: [Transaction]
 
@@ -46,9 +46,7 @@ struct ReportsView: View {
                     if section == .projections { ProjectionsPage() } else { grid(section.reports) }
                 }
                 .padding(16)
-                .frame(width: layoutWidth)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                    contentHeight = height
                     // Still taller than the room under the title and tabs: shrink the charts once, to the smallest size, and measure again.
                     // Past that the page scrolls, so no card ever hides any of what it shows.
                     guard section != .projections, height * contentScale > viewport + 2, scale > ReportSize.smallest else { return }
@@ -57,9 +55,9 @@ struct ReportsView: View {
                 // Made again at each step, so the size is measured again and the loop carries on until the tab fits.
                 .id(scale)
                 .scaleEffect(contentScale, anchor: .topLeading)
-                .frame(width: pageWidth, height: contentHeight * contentScale, alignment: .topLeading)
+                .modifier(FluidScale(scale: contentScale))
             }            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                if abs(viewport - height) > 1 { scale = 1 }
+                if abs(viewport - height) > 1 { refit() }
                 viewport = height
             }
         }
@@ -72,7 +70,18 @@ struct ReportsView: View {
         .environment(\.reportInputs, ReportInputs(year: yearTransactions.live))
         .background(Theme.background)
         .onChange(of: section) { _, _ in scale = 1 }
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { pageWidth = $0.width; if abs(pageHeight - $0.height) > 1 { scale = 1 }; pageHeight = $0.height }
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { pageWidth = $0.width; if abs(pageHeight - $0.height) > 1 { refit() }; pageHeight = $0.height }
+    }
+
+    /// Sizes the charts to fit the room again, but only once the window has stopped changing size for a moment. Dragging the window edge
+    /// changes the size many times a second, and building every card again for each of those would make the page freeze.
+    private func refit() {
+        refitTask?.cancel()
+        refitTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            scale = 1
+        }
     }
 
     // MARK: Sections
@@ -155,6 +164,34 @@ struct ReportCard<Content: View>: View {
 
     var body: some View {
         Panel(title: title, fillsHeight: fillsHeight) { content }
+    }
+}
+
+// MARK: Scaling with the window
+
+/// Lays its one child out in the window's width divided by `scale`, and takes up the room it needs once drawn `scale` times larger. The child
+/// is drawn larger with `scaleEffect`, which on its own changes how a view looks but not the room it takes.
+private struct FluidScale: ViewModifier {
+    let scale: CGFloat
+
+    func body(content: Content) -> some View {
+        FluidScaleLayout(scale: scale) { content }
+    }
+}
+
+private struct FluidScaleLayout: Layout {
+    let scale: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let child = subviews.first else { return .zero }
+        let inner = proposal.width.map { $0 / scale }
+        let size = child.sizeThatFits(ProposedViewSize(width: inner, height: nil))
+        return CGSize(width: proposal.width ?? size.width * scale, height: size.height * scale)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard let child = subviews.first else { return }
+        child.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(width: bounds.width / scale, height: nil))
     }
 }
 
