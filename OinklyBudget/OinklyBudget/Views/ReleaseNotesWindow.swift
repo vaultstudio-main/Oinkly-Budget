@@ -11,6 +11,11 @@ enum ReleaseNotes {
 
     static let releases: [Release] = [
         Release(version: "1.0", title: "First release", sections: [
+            ("Open source", [
+                "Oinkly Budget is free and open source, released under the GNU General Public License, version 3. You can read the code, use it, change it and share it, and anything built from it stays open under the same license.",
+                "The source code is public, and the roadmap, the plans for future releases and the other planning notes are kept in its Docs-Roadmap folder, so you can see what is coming and why.",
+                "Nothing about how the app treats your money changes: your data stays on your Mac, with no account, no sign-in and nothing sent anywhere.",
+            ]),
             ("Why it's different", [
                 "Your money stays yours. Everything is kept on your own Mac, with no account to create and no sign-in. Nothing is sent anywhere.",
                 "Paying a bill is one step that does everything: it comes out of your account, comes off what you owe, ticks the bill off, and files under the right category.",

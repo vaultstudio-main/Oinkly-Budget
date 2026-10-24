@@ -4,12 +4,18 @@ A Mac personal-finance app: accounts of every kind, registers, bills and repeati
 
 Version 1.0 (build 5) is the first public release.
 
+## Open source
+
+Oinkly Budget is free and open source, released under the **GNU General Public License, version 3**. The full text is in [LICENSE](LICENSE). You may use, study, change and share it; anything you distribute that is built from it must stay open under the same license.
+
+The roadmap, the plans for future releases and all other planning notes live in [Docs-Roadmap/](Docs-Roadmap/).
+
 ## Where things are
 
 | Folder | What is in it |
 |---|---|
 | `OinklyBudget/` | The Xcode project (OinklyBudget.xcodeproj, scheme OinklyBudget): the app, the widget extension and the shared code |
-| `docs/` | The release plan, feature list, release notes, App Store text, screenshot notes, data safety plan and the 1.1 plan |
+| `Docs-Roadmap/` | The roadmap, plans for future releases, and the other planning notes (see [Docs-Roadmap/README.md](Docs-Roadmap/README.md)) |
 | `scripts/` | `make-help-images.py`, which turns the app's own screenshots into Help, website and App Store pictures (website pictures go to `docs/website-images`; the website itself lives outside this repository) |
 
 Never run git inside `OinklyBudget/OinklyBudget`: it holds a stray nested repository.

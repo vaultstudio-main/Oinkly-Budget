@@ -8,21 +8,26 @@ enum AboutInfo {
 
     /// A short paragraph about the app.
     static var summary: String {
-        "Oinkly Budget is a personal finance app that keeps accounts, budgets, bills and investments in your control."
+        "Oinkly Budget is a free, open-source personal finance app that keeps accounts, budgets, bills and investments in your control."
     }
 
     /// Lines near the bottom, such as who made it. Remove a line to hide it.
     static let credits: [String] = [
         "Vault Studio",
         "Made by Donald Stibich",
+        "Free and open source, under the GNU General Public License v3",
     ]
 
     /// The studio's website, shown as a link under the credits.
     static let website = URL(string: "https://vaultstudio.dev")!
     static let websiteTitle = "vaultstudio.dev"
 
+    /// Where the source code, the roadmap and the plans for future releases can be read.
+    static let sourceURL = URL(string: "https://vaultstudio.dev")!
+    static let sourceTitle = "Source code and roadmap"
+
     /// Small print at the very bottom.
-    static let copyright = "© 2026 Vault Studio. All rights reserved."
+    static let copyright = "© 2026 Vault Studio. Free software: you can redistribute it and change it under the terms of the GNU General Public License, version 3."
 }
 
 /// OinklyBudget ▸ About OinklyBudget. The text lives in `AboutInfo` above.
@@ -61,9 +66,17 @@ struct AboutWindow: View {
             }
             .help("Open the Vault Studio website")
 
+            Link(destination: AboutInfo.sourceURL) {
+                Label(AboutInfo.sourceTitle, systemImage: "chevron.left.forwardslash.chevron.right")
+                    .font(.callout)
+            }
+            .help("Oinkly Budget is open source. Read the code, the roadmap and the plans for future releases")
+
             Text(AboutInfo.copyright)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 4)
         }
         .padding(28)
