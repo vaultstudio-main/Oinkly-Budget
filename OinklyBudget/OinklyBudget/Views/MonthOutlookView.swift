@@ -198,21 +198,30 @@ private struct OutlookBody: View {
         let linked = plan.items.filter { item in item.transactionStamp.map { stamp in transactions.contains { $0.isLive && $0.createdAt.timeIntervalSinceReferenceDate == stamp } } ?? false }.count
         return ReportCard(title: "When You Can Pull Money Out") {
             HStack(alignment: .top, spacing: 40) {
-                VStack(alignment: .leading, spacing: 18) {
-                    dayBlock("Planned", pull: hasPlan ? planned : nil)
-                    if hasPlan {
-                        Text("\(linked) of \(plan.items.count) plan line\(plan.items.count == 1 ? "" : "s") linked to real transactions")
-                            .font(.caption).foregroundStyle(.secondary).padding(.top, -14)
+                // Two blocks to a row, so the figures take little height and the chart gets the room.
+                Grid(alignment: .topLeading, horizontalSpacing: 24, verticalSpacing: 12) {
+                    GridRow(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            dayBlock("Planned", pull: hasPlan ? planned : nil)
+                            if hasPlan {
+                                Text("\(linked) of \(plan.items.count) line\(plan.items.count == 1 ? "" : "s") linked")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 4) {
+                            dayBlock("Outlook", pull: actual)
+                            if let p = planned.best, let a = actual.best, hasPlan {
+                                let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
+                                dayChip(days)
+                            }
+                        }
                     }
-                    dayBlock("Outlook", pull: actual)
-                    if let p = planned.best, let a = actual.best, hasPlan {
-                        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: p.date), to: calendar.startOfDay(for: a.date)).day ?? 0
-                        dayChip(days)
+                    GridRow(alignment: .top) {
+                        actualBlock(real, hasReal: hasReal, on: realEnd, against: actual, plan: hasPlan ? planned : nil, buffer: kept)
+                        tightest(actual, buffer: kept)
                     }
-                    actualBlock(real, hasReal: hasReal, on: realEnd, against: actual, plan: hasPlan ? planned : nil, buffer: kept)
-                    tightest(actual, buffer: kept)
                 }
-                .frame(width: 300, alignment: .leading)
+                .frame(width: 440, alignment: .topLeading)
                 BalanceChart(month: month, planned: hasPlan ? planned : nil, actual: actual, real: hasReal ? real : nil, realEnd: realEnd, buffer: kept)
             }
             // Roomy: it takes whatever height the rest of the page leaves, between a floor and a ceiling.
@@ -238,7 +247,7 @@ private struct OutlookBody: View {
             Text((isPast ? "ACTUAL AT THE END" : "ACTUAL SO FAR")).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if hasReal {
                 Text(real.ending, format: .appCurrency)
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(real.ending < buffer ? Theme.red : Color.primary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Text(real.ending >= buffer ? "\((real.ending - buffer).formatted(.appCurrency)) above the buffer" : "\((buffer - real.ending).formatted(.appCurrency)) under the buffer")
@@ -248,7 +257,7 @@ private struct OutlookBody: View {
                     if let plan { differenceChip(real.ending - plan.balance(on: day), against: "the plan") }
                 }
             } else {
-                Text(isFuture ? "Not yet" : "–").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text(isFuture ? "Not yet" : "–").font(.system(size: 18, weight: .bold)).foregroundStyle(.tertiary)
                 Text(isFuture ? "This month hasn't started" : "No real transactions yet").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -271,13 +280,13 @@ private struct OutlookBody: View {
             Text("TIGHTEST POINT").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if let low = pull.lowest {
                 Text(low.balance, format: .appCurrency)
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(low.balance < buffer ? Theme.red : Color.primary)
                     .lineLimit(1).minimumScaleFactor(0.7)
                 Text("On \(low.date.formatted(.dateTime.month(.abbreviated).day())), buffer \(buffer.formatted(.appCurrency))")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("–").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text("–").font(.system(size: 18, weight: .bold)).foregroundStyle(.tertiary)
                 Text("Nothing is dated yet").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -287,13 +296,13 @@ private struct OutlookBody: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title.uppercased()).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             if let pull, let best = pull.best {
-                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 26, weight: .bold))
+                Text(best.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())).font(.system(size: 18, weight: .bold))
                 Text("\(pull.spare.formatted(.appCurrency)) can come out from here").font(.caption).foregroundStyle(.secondary)
             } else if let pull {
-                Text("Not yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.secondary)
+                Text("Not yet").font(.system(size: 18, weight: .bold)).foregroundStyle(.secondary)
                 Text(pull.spare > 0 ? "Nothing is dated yet" : "Nothing is spare at the end of the month").font(.caption).foregroundStyle(.secondary)
             } else {
-                Text("No plan yet").font(.system(size: 26, weight: .bold)).foregroundStyle(.tertiary)
+                Text("No plan yet").font(.system(size: 18, weight: .bold)).foregroundStyle(.tertiary)
                 Text("Add lines on the War Plan tab").font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -378,7 +387,7 @@ private struct OutlookBody: View {
     /// Every card on the page has a place that is always there, with a set height: when there is more than fits it scrolls inside,
     /// and when there is less it sits at the top of its place. The page never jumps about as a plan or a month changes.
     /// The least the pull-out card's chart area takes.
-    private static let pullOutHeight: CGFloat = 430
+    private static let pullOutHeight: CGFloat = 270
     private static let versusHeight: CGFloat = 126
 
     /// Under the cards, only for a month that has closed: when its figures were kept, and what they would be now.
