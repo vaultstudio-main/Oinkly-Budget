@@ -4,8 +4,6 @@
 
 Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
 
-Made by [Vault Studio](https://vaultstudio.dev).
-
 > **Current version: 1.0 (build 6).** Open source from this release on, under the GNU General Public License v3.
 
 ---
@@ -99,7 +97,5 @@ Please keep to what the app stands for: your money stays on your Mac, mistakes a
 ---
 
 ## License
-
-Copyright © 2026 Vault Studio.
 
 Oinkly Budget is free software: you can redistribute it and change it under the terms of the [GNU General Public License](LICENSE) as published by the Free Software Foundation, version 3 of the License. It is distributed in the hope that it will be useful, but **without any warranty**, without even the implied warranty of merchantability or fitness for a particular purpose. See the license for details, or read it at <https://www.gnu.org/licenses/gpl-3.0.html>.
