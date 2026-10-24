@@ -12,13 +12,15 @@ Made by [Vault Studio](https://vaultstudio.dev).
 
 ## Now open source
 
+The source code is on GitHub: <https://github.com/vaultstudio-main/Oinkly-Budget>.
+
 Oinkly Budget is released as free software under the **[GNU General Public License, version 3](LICENSE)**. In plain terms:
 
 - You can read all of the code, run it, change it and share it.
 - If you share a changed version, it has to stay open under the same license.
 - It stays free for everyone, and nobody can close it up and sell it as their own.
 
-The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Docs-Roadmap/](Docs-Roadmap/). If you want to know what is coming and why, start there.
+The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Documents/](Documents/). If you want to know what is coming and why, start there.
 
 ### Updates
 
@@ -81,7 +83,7 @@ Debug builds add a few things that release builds leave out: a **Testing** menu 
 | Folder | What is in it |
 |---|---|
 | `OinklyBudget/` | The Xcode project: the app, the widget extension and the shared code |
-| `Docs-Roadmap/` | The roadmap, plans for future releases and other planning notes |
+| `Documents/` | Where the plan files go: the roadmap, plans for future releases and other planning notes (see [Documents/README.md](Documents/README.md)) |
 | `LICENSE` | The GNU General Public License, version 3 |
 
 Inside `OinklyBudget/OinklyBudget/`: `Models/` holds the data (SwiftData, currently schema V9, with a migration plan carrying every earlier version forward), `Logic/` holds the rules and calculations, and `Views/` holds the screens.
@@ -90,7 +92,7 @@ Inside `OinklyBudget/OinklyBudget/`: `Models/` holds the data (SwiftData, curren
 
 ## Contributing
 
-Ideas, bug reports and fixes are welcome. Before starting on something big, have a look at [Docs-Roadmap/](Docs-Roadmap/) to see whether it is already planned, and open an issue to talk it through. Anything you contribute is shared under the same GPL v3 license as the rest of the project.
+Ideas, bug reports and fixes are welcome. Before starting on something big, have a look at [Documents/](Documents/) to see whether it is already planned, and open an issue to talk it through. Anything you contribute is shared under the same GPL v3 license as the rest of the project.
 
 Please keep to what the app stands for: your money stays on your Mac, mistakes are hard to make, and changes to people's data are deliberate and reversible.
 

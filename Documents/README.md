@@ -1,6 +1,6 @@
-# Docs and Roadmap
+# Documents
 
-Oinkly Budget is open source (GNU GPL v3, see [../LICENSE](../LICENSE)). This folder is where the project plans in the open.
+Oinkly Budget is open source (GNU GPL v3, see [../LICENSE](../LICENSE)). This folder is where the plan files go: the project plans in the open here.
 
 Put here:
 

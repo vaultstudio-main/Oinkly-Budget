@@ -22,6 +22,10 @@ enum AboutInfo {
     static let website = URL(string: "https://vaultstudio.dev")!
     static let websiteTitle = "vaultstudio.dev"
 
+    /// The public source code, with the plans and roadmap in its Documents folder.
+    static let sourceURL = URL(string: "https://github.com/vaultstudio-main/Oinkly-Budget")!
+    static let sourceTitle = "Source code on GitHub"
+
     /// The license the app is released under, read on the GNU website.
     static let licenseURL = URL(string: "https://www.gnu.org/licenses/gpl-3.0.html")!
     static let licenseTitle = "GNU General Public License v3"
@@ -65,6 +69,12 @@ struct AboutWindow: View {
                     .font(.callout)
             }
             .help("Open the Vault Studio website")
+
+            Link(destination: AboutInfo.sourceURL) {
+                Label(AboutInfo.sourceTitle, systemImage: "chevron.left.forwardslash.chevron.right")
+                    .font(.callout)
+            }
+            .help("Oinkly Budget is open source. Read the code and the plans for future releases on GitHub")
 
             Link(destination: AboutInfo.licenseURL) {
                 Label(AboutInfo.licenseTitle, systemImage: "doc.text")
