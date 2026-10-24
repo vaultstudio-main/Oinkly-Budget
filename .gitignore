@@ -7,6 +7,8 @@ build/
 # Kept on this Mac only, not published
 website-vaultstudio/
 scripts/
+dmg-assets*/
+dmg-build/
 
 # Built apps and disk images go on GitHub Releases, never into the repository
 *.dmg
