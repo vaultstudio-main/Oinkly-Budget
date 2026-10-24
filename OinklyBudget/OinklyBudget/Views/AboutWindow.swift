@@ -13,7 +13,7 @@ enum AboutInfo {
 
     /// Lines near the bottom, such as who made it. Remove a line to hide it.
     static let credits: [String] = [
-        "Vault Studio",
+        "Vault Studio, an open-source developer",
         "Made by Donald Stibich",
         "Free and open source, under the GNU General Public License v3",
     ]
