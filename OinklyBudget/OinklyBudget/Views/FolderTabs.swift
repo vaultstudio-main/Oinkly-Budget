@@ -11,25 +11,43 @@ struct FolderTabs<Tab: Hashable & Identifiable>: View {
 
     private let shape = UnevenRoundedRectangle(topLeadingRadius: 9, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 9, style: .continuous)
 
+    /// The tabs follow the width they have, like a web page. All on one row at full size when there is room; then smaller, still on one
+    /// row; and when even that is too wide, wrapped onto more rows so every tab is always on screen and none has to be scrolled to.
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .bottom, spacing: 3) {
-                ForEach(tabs) { tab in tabButton(tab) }
-            }
-            .padding(.leading, leading)
-            .padding(.trailing, 16)
+        ViewThatFits(in: .horizontal) {
+            row(compact: false)
+            row(compact: true)
+            wrapped
         }
         // The line along the bottom, behind the tabs, so the raised one can cover it.
         .background(alignment: .bottom) { EdgeLine() }
     }
 
-    private func tabButton(_ tab: Tab) -> some View {
+    private func row(compact: Bool) -> some View {
+        HStack(alignment: .bottom, spacing: 3) {
+            ForEach(tabs) { tab in tabButton(tab, compact: compact) }
+        }
+        .padding(.leading, leading)
+        .padding(.trailing, 16)
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var wrapped: some View {
+        WrapLayout(spacing: 3) {
+            ForEach(tabs) { tab in tabButton(tab, compact: true) }
+        }
+        .padding(.leading, leading)
+        .padding(.trailing, 16)
+    }
+
+    private func tabButton(_ tab: Tab, compact: Bool) -> some View {
         let selected = tab == selection
         return Button { selection = tab } label: {
             Text(title(tab))
-                .font(.callout.weight(selected ? .semibold : .regular))
+                .font((compact ? Font.caption : Font.callout).weight(selected ? .semibold : .regular))
                 .foregroundStyle(selected ? Color.primary : Color.secondary)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, compact ? 9 : 14)
                 .padding(.top, selected ? 8 : 6)
                 .padding(.bottom, selected ? 9 : 6)
                 .background(selected ? Theme.background : Theme.panel, in: shape)
