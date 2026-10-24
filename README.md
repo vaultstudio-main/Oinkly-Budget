@@ -1,54 +1,103 @@
 # Oinkly Budget
 
-A Mac personal-finance app: accounts of every kind, registers, bills and repeating transactions, budgets, goals, investments and liabilities, reports, reconcile, receipts, CSV import and export, and `.pig` backups. No bank linking, no accounts, no network. Made by Vault Studio.
+**Your money, kept personal.** A free, open-source personal finance app for the Mac.
 
-Version 1.0 (build 5) is the first public release.
+Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
 
-## Open source
+Made by [Vault Studio](https://vaultstudio.dev).
 
-Oinkly Budget is free and open source, released under the **GNU General Public License, version 3**. The full text is in [LICENSE](LICENSE). You may use, study, change and share it; anything you distribute that is built from it must stay open under the same license.
+> **Current version: 1.0 (build 6).** Open source from this release on, under the GNU General Public License v3.
 
-The roadmap, the plans for future releases and all other planning notes live in [Docs-Roadmap/](Docs-Roadmap/).
+---
+
+## Now open source
+
+Oinkly Budget is released as free software under the **[GNU General Public License, version 3](LICENSE)**. In plain terms:
+
+- You can read all of the code, run it, change it and share it.
+- If you share a changed version, it has to stay open under the same license.
+- It stays free for everyone, and nobody can close it up and sell it as their own.
+
+The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Docs-Roadmap/](Docs-Roadmap/). If you want to know what is coming and why, start there.
+
+### Updates
+
+Oinkly Budget is a small, independent project. The aim is to keep improving it with regular, careful updates, and builds will keep coming as time allows. There is no fixed schedule, so please don't expect a release every week, but the project is active and will keep moving. Each release is listed in the app under **Help ▸ Release Notes**.
+
+---
+
+## What it does
+
+**Accounts of every kind.** Checking, savings, cash, credit cards, loans, mortgages, investments and assets. Cash on Hand is built in, every bank account starts with a real opening deposit so the register and the balance always agree, and credit limits are enforced: a charge that would reach a card's limit is stopped before it is saved.
+
+**Transactions you can trust.** A register for every account and one page with all of them together. Split a payment across categories, tag it, attach a receipt photo or a PDF bill, and fill in repeat payees automatically. Reconcile against your statement. Clean Up finds and fixes look-alike payees in bulk, with Undo.
+
+**Bills and recurring transactions.** A bills calendar with reminders, one-step payments that come out of the account, come off what you owe and tick the bill off, and repeating transactions (paycheques, rent and so on) that wait for you to confirm them.
+
+**Budgets that match how you spend.** Monthly and weekly budgets by category, grouped into folders, with cash budgets and tax-related categories. Icons and colours for every category, bill and goal.
+
+**Planning.** Savings goals and loan-payoff goals tied to real accounts, so progress follows the balance by itself. A **Monthly Outlook** that sets your plan against what is really happening, with a War Plan sheet to plan a month line by line, link real transactions to it, and see when spare money can safely come out.
+
+**Reports and overviews.** A Summary page, Liabilities with payoff progress for loans and credit cards, Investments, and reports with projections for net worth, cash flow, debt, goals, budgets, spending, income and bills.
+
+**Import, export and backup.** Import any bank's CSV (formats can be saved), export CSV and PDF, and save everything to one `.pig` backup file that restores whole. A safety copy of your data is made before an upgrade first opens it, and an optional backup folder keeps a second copy up to date by itself.
+
+**Menu bar and widget.** An Upcoming Transactions list (bills, repeating transactions, reminders) in the menu bar and as a widget, without amounts.
+
+The full list, release by release, is in **Help ▸ Release Notes** inside the app.
+
+---
+
+## Privacy
+
+- No network access, no analytics, no accounts, nothing sent anywhere.
+- Your data is stored in a local database on your Mac.
+- The app does no encryption of its own: the data file is plain, so rely on your Mac's own protection (FileVault and your login) for that.
+- Reminders, saved import formats and picture colours are stored with your data, so a backup carries them.
+
+---
+
+## Requirements
+
+- A Mac running **macOS 15 or later**.
+- To build it yourself: **Xcode** (recent version) on a Mac.
+
+---
+
+## Building from source
+
+1. Clone this repository.
+2. Open `OinklyBudget/OinklyBudget.xcodeproj` in Xcode.
+3. Choose the **OinklyBudget** scheme and **My Mac**, then Run (⌘R).
+
+The project has the app and a widget extension, and shared code in `OinklyBudget/Shared`. You will need to choose your own signing team (and bundle identifier if you plan to distribute your own build) in the project settings.
+
+Debug builds add a few things that release builds leave out: a **Testing** menu item that fills the app with made-up test data or wipes it, and launch tests for data safety (run the app with `-sharedHardeningTest YES` to run them). Do not point a debug build at data you care about.
+
+---
 
 ## Where things are
 
 | Folder | What is in it |
 |---|---|
-| `OinklyBudget/` | The Xcode project (OinklyBudget.xcodeproj, scheme OinklyBudget): the app, the widget extension and the shared code |
-| `Docs-Roadmap/` | The roadmap, plans for future releases, and the other planning notes (see [Docs-Roadmap/README.md](Docs-Roadmap/README.md)) |
-| `scripts/` | `make-help-images.py`, which turns the app's own screenshots into Help, website and App Store pictures (website pictures go to `docs/website-images`; the website itself lives outside this repository) |
+| `OinklyBudget/` | The Xcode project: the app, the widget extension and the shared code |
+| `Docs-Roadmap/` | The roadmap, plans for future releases and other planning notes |
+| `LICENSE` | The GNU General Public License, version 3 |
 
-Never run git inside `OinklyBudget/OinklyBudget`: it holds a stray nested repository.
+Inside `OinklyBudget/OinklyBudget/`: `Models/` holds the data (SwiftData, currently schema V9, with a migration plan carrying every earlier version forward), `Logic/` holds the rules and calculations, and `Views/` holds the screens.
 
-## Branches and tags
+---
 
-| Name | What it is |
-|---|---|
-| `main` | The 1.0 release. All current work is here. |
-| `app-review-original-1.0` (tag), `legacy-1.0-original` (branch) | The build first sent to App Review |
-| `check-printing` | Check printing, dropped from 1.0 and kept for later |
-| `checkpoint` | An older snapshot, not in use |
+## Contributing
 
-## What 1.0 has
+Ideas, bug reports and fixes are welcome. Before starting on something big, have a look at [Docs-Roadmap/](Docs-Roadmap/) to see whether it is already planned, and open an issue to talk it through. Anything you contribute is shared under the same GPL v3 license as the rest of the project.
 
-The full list, with how each feature works, is in [docs/feature-master-list-1.0.md](docs/feature-master-list-1.0.md). In short:
+Please keep to what the app stands for: your money stays on your Mac, mistakes are hard to make, and changes to people's data are deliberate and reversible.
 
-- **Money:** accounts (checking, savings, cash, cards, loans, investments), split transactions, tags, categories and budgets, reconcile, receipts and PDF bills.
-- **Bills and recurring:** a bills calendar with reminders and one-step payments, repeating transactions that wait for you to confirm them, and your own reminders.
-- **Menu bar and widget:** one Upcoming Transactions list (bills, repeating transactions, reminders), with no amounts.
-- **Planning and reports:** goals tied to accounts, a Budgets page, reports with six-month projections, Liabilities and Investments pages.
-- **Data:** Print PDF and Export CSV on account pages, Import Statement for any bank's CSV (formats can be saved), `.pig` backups that include reminders and saved import formats, and a safety copy before the first open.
-- **No encryption:** the data file is plain. The app uses no encryption of its own.
-- **Help:** a topic for every feature, with pictures taken by the app itself.
+---
 
-## Data safety
+## License
 
-The database is `OinklyBudgetSchemaV4` (a migration plan carries V1, V2 and V3 files forward). Reminders, saved CSV import formats and picture colours are stored in the database, so backups carry them. See [docs/data-integrity-plan.md](docs/data-integrity-plan.md) for the protections and tests. Debug-only launch tests live in the source under `Logic/SharedData/`.
+Copyright © 2026 Vault Studio.
 
-## Release
-
-Steps left for the owner are in [docs/1.0-release-plan-final.md](docs/1.0-release-plan-final.md): export compliance "none", App Store text and screenshots, website upload, swapping build 5 into review, TestFlight and release.
-
-## After 1.0
-
-The 1.1 plan is [docs/1.1-plan.md](docs/1.1-plan.md): automatic transfer between computers, search by tag, default account artwork, and menu clean-up.
+Oinkly Budget is free software: you can redistribute it and change it under the terms of the [GNU General Public License](LICENSE) as published by the Free Software Foundation, version 3 of the License. It is distributed in the hope that it will be useful, but **without any warranty**, without even the implied warranty of merchantability or fitness for a particular purpose. See the license for details, or read it at <https://www.gnu.org/licenses/gpl-3.0.html>.
