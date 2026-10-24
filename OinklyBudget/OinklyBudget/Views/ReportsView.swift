@@ -12,6 +12,8 @@ struct ReportsView: View {
     @State private var viewport: CGFloat = 700
     /// How much the charts are shrunk, so the tab fits: lowered a step at a time while the tab is taller than the room.
     @State private var scale: CGFloat = 1
+    /// How tall the laid-out page is before it is scaled, so the scrolling room can be set to what it takes once scaled.
+    @State private var contentHeight: CGFloat = 0
     /// The last thirteen months, shared with the reports through the environment.
     @Query private var yearTransactions: [Transaction]
 
@@ -20,6 +22,18 @@ struct ReportsView: View {
         let yearStart = Calendar.current.date(byAdding: .month, value: -13, to: thisMonth) ?? thisMonth
         _yearTransactions = Query(filter: #Predicate<Transaction> { $0.date >= yearStart })
     }
+
+    /// The page flows with the window like a web page. On a window wider than `designWidth` everything (text, padding, charts) grows
+    /// with it, up to `largest` times, so a big screen shows the same page larger instead of the same page lost in empty space. Below that
+    /// size nothing is scaled: the columns drop away and, past the last, the page scrolls.
+    private static let designWidth: CGFloat = 1500
+    private static let largest: CGFloat = 1.5
+    /// The width a card aims to be, so the number of columns follows the width of the window.
+    private static let cardWidth: CGFloat = 360
+
+    private var contentScale: CGFloat { min(max(pageWidth / Self.designWidth, 1), Self.largest) }
+    /// The width the page is laid out in: the window's, divided by the scale it is drawn at.
+    private var layoutWidth: CGFloat { pageWidth / contentScale }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -32,14 +46,18 @@ struct ReportsView: View {
                     if section == .projections { ProjectionsPage() } else { grid(section.reports) }
                 }
                 .padding(16)
+                .frame(width: layoutWidth)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    contentHeight = height
                     // Still taller than the room under the title and tabs: shrink the charts once, to the smallest size, and measure again.
                     // Past that the page scrolls, so no card ever hides any of what it shows.
-                    guard section != .projections, height > viewport + 2, scale > ReportSize.smallest else { return }
+                    guard section != .projections, height * contentScale > viewport + 2, scale > ReportSize.smallest else { return }
                     scale = ReportSize.smallest
                 }
                 // Made again at each step, so the size is measured again and the loop carries on until the tab fits.
                 .id(scale)
+                .scaleEffect(contentScale, anchor: .topLeading)
+                .frame(width: pageWidth, height: contentHeight * contentScale, alignment: .topLeading)
             }            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                 if abs(viewport - height) > 1 { scale = 1 }
                 viewport = height
@@ -99,7 +117,8 @@ struct ReportsView: View {
     private func grid(_ items: [ReportItem]) -> some View {
         // Three across when the page is wide enough.
         // Four across on a very wide page, so a tab needs fewer rows.
-        let columns = pageWidth >= 1000 ? (pageWidth >= 1200 && section != .health ? 4 : section.columns) : 2
+        // One more column for each card's width the page has, from two up to six, so any window size lays out well.
+        let columns = max(2, min(section == .health ? 3 : 6, Int(layoutWidth / Self.cardWidth)))
         ReportSize.scale = scale
         return VStack(spacing: 14) {
             ForEach(Array(rows(of: items, columns: columns).enumerated()), id: \.offset) { _, row in
