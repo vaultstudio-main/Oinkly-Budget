@@ -29,7 +29,7 @@ Version 1.0.1 is a small bug-fix release. I accidentally forgot to let the app s
 - The editor pop-ups shrink to fit smaller screens, such as a 14-inch MacBook, and scroll so Save can always be reached.
 - The Monthly Outlook's pull-out card stacks its figures above the chart when the window is narrow.
 
-Nothing else changed: your data stays on your Mac, and your data is kept as it is when you update from 1.0. Download it from the [Releases page](https://github.com/vaultstudio-main/Oinkly-Budget/releases).
+Nothing else changed: your data stays on your Mac, and your data is kept as it is when you update from 1.0. Download it from the [1.0.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.0.1).
 
 ### Updates
 
@@ -39,7 +39,7 @@ Oinkly Budget is a small, independent project. The aim is to keep improving it w
 
 ## Download
 
-Ready-to-run builds are published as `.dmg` files on the project's **[Releases page](https://github.com/vaultstudio-main/Oinkly-Budget/releases)**. Open the newest release, download the `.dmg`, open it and drag Oinkly Budget to your Applications folder. How releases are published is in [Documents/publishing-releases.md](Documents/publishing-releases.md).
+Ready-to-run builds are published as `.dmg` files on the project's **[1.0.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.0.1)**. Download the `.dmg`, open it and drag Oinkly Budget to your Applications folder.
 
 If you would rather build it yourself, see [Building from source](#building-from-source).
 
