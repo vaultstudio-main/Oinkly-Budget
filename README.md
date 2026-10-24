@@ -26,6 +26,14 @@ Oinkly Budget is a small, independent project. The aim is to keep improving it w
 
 ---
 
+## Download
+
+Ready-to-run builds are published as `.dmg` files on the project's **[Releases page](https://github.com/vaultstudio-main/Oinkly-Budget/releases)**. Open the newest release, download the `.dmg`, open it and drag Oinkly Budget to your Applications folder. How releases are published is in [Documents/publishing-releases.md](Documents/publishing-releases.md).
+
+If you would rather build it yourself, see [Building from source](#building-from-source).
+
+---
+
 ## What it does
 
 **Accounts of every kind.** Checking, savings, cash, credit cards, loans, mortgages, investments and assets. Cash on Hand is built in, every bank account starts with a real opening deposit so the register and the balance always agree, and credit limits are enforced: a charge that would reach a card's limit is stopped before it is saved.
