@@ -121,7 +121,7 @@ struct ReceiptPicker: View {
             if let data, Receipt.isPDF(data) {
                 PDFPreview(data: data, height: viewingHeight)
             } else if let data, let image = AccountPhoto.image(from: data) {
-                image.resizable().scaledToFit().padding(4)
+                FittedPhoto(image: image)
             } else {
                 VStack(spacing: 6) {
                     Image(systemName: markedNone ? "nosign" : "doc.text.viewfinder").font(.system(size: 26, weight: .light)).foregroundStyle(.tertiary)

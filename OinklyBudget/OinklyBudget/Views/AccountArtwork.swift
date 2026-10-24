@@ -366,12 +366,7 @@ struct AccountPicture: View {
     var body: some View {
         Group {
             if let image = AccountPhoto.image(from: data) {
-                // The whole photo is shown, whatever its shape, so nothing is cut off. What is left over around it is filled with a soft,
-                // blurred copy of the same photo, so a tall or wide picture still fills the little frame without bars.
-                Color.clear
-                    .overlay { image.resizable().scaledToFill().blur(radius: 16).scaleEffect(1.15) }
-                    .overlay { image.resizable().scaledToFit() }
-                    .clipped()
+                FittedPhoto(image: image)
             } else if let type {
                 AccountArtwork(type: type, theme: chosenTheme)
             } else {
@@ -380,6 +375,19 @@ struct AccountPicture: View {
         }
         // A decoration. The account's name and type are read from the text beside it.
         .accessibilityHidden(true)
+    }
+}
+
+/// A photo shown whole in whatever frame it is given, whatever its shape, so nothing is cut off. What is left over around it is filled with
+/// a soft, blurred copy of the same photo, so a tall or wide picture still fills the frame without bars.
+struct FittedPhoto: View {
+    let image: Image
+
+    var body: some View {
+        Color.clear
+            .overlay { image.resizable().scaledToFill().blur(radius: 16).scaleEffect(1.15) }
+            .overlay { image.resizable().scaledToFit() }
+            .clipped()
     }
 }
 

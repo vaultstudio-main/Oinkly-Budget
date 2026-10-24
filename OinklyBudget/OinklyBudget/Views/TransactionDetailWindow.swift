@@ -116,7 +116,7 @@ struct TransactionDetailWindow: View {
                     if Receipt.isPDF(data) {
                         PDFPreview(data: data, height: 520)
                     } else if let image = AccountPhoto.image(from: data) {
-                        image.resizable().scaledToFit().padding(4)
+                        FittedPhoto(image: image)
                     }
                 } else {
                     VStack(spacing: 6) {
