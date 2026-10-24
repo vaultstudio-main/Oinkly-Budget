@@ -76,7 +76,7 @@ enum OutlookAdvice {
             let unplanned = compare.rows.filter { $0.planned == nil && ($0.actual ?? 0) > 0 }
             if !unplanned.isEmpty {
                 items.append(Item(id: "unplanned", level: .tip, title: "In the outlook but not in your plan: \(names(unplanned.map(\.title)))",
-                                  detail: "Use Pull In on the War Plan tab to add them, so the plan covers the whole month."))
+                                  detail: "Use Pull In on the Monthly War Plan tab to add them, so the plan covers the whole month."))
             }
             // Safe day moved.
             if let planned = plannedPull?.best, let actual = actualPull.best {
@@ -91,7 +91,7 @@ enum OutlookAdvice {
             }
         } else {
             items.append(Item(id: "no-plan", level: .tip, title: "Make a plan for this month",
-                              detail: "On the War Plan tab, Pull In your paycheques, bills and budgets, then change them to what you intend. The cards and charts will then show where you are against it."))
+                              detail: "On the Monthly War Plan tab, Pull In your paycheques, bills and budgets, then change them to what you intend. The cards and charts will then show where you are against it."))
         }
 
         // Missing basics.

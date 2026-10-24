@@ -213,38 +213,13 @@ enum ReportMath {
     }
 
     /// Pays every debt its monthly payment each month, plus `extra` on the one with the highest rate (the "avalanche"
-    /// order). When a debt is paid off, its payment rolls onto the next.
+    /// order). When a debt is paid off, its payment rolls onto the next, and keeps rolling to the rest. This uses the same
+    /// arithmetic as the Debt War Plan, so the two always agree.
     static func payoff(_ debts: [PayoffDebt], extra: Double, limit: Int = 600) -> PayoffResult {
-        var list = debts.filter { $0.owed > 0.005 }
-        guard !list.isEmpty else { return PayoffResult(months: 0, interest: 0, finishes: true) }
-        var interest = 0.0
-        var months = 0
-        var rolled = 0.0
-        while !list.isEmpty && months < limit {
-            months += 1
-            // Interest first.
-            for index in list.indices {
-                let charge = list[index].owed * list[index].rate / 1200
-                list[index].owed += charge
-                interest += charge
-            }
-            var budget = extra + rolled
-            rolled = 0
-            for index in list.indices {
-                let pay = min(list[index].payment, list[index].owed)
-                list[index].owed -= pay
-            }
-            // The extra, and anything freed up by finished debts, goes to the highest rate still owing.
-            list.sort { $0.rate > $1.rate }
-            for index in list.indices where budget > 0 && list[index].owed > 0 {
-                let pay = min(budget, list[index].owed)
-                list[index].owed -= pay
-                budget -= pay
-            }
-            let finished = list.filter { $0.owed <= 0.005 }
-            rolled = finished.reduce(0) { $0 + $1.payment }
-            list.removeAll { $0.owed <= 0.005 }
+        let list = debts.enumerated().map {
+            DebtWarPlan.Debt(id: "\($0.offset)", name: "", kind: "", symbol: "", owed: $0.element.owed, rate: $0.element.rate, payment: $0.element.payment)
         }
-        return PayoffResult(months: months, interest: interest, finishes: list.isEmpty)
+        let result = DebtWarPlan.simulate(list, extra: extra, strategy: .avalanche, limit: limit)
+        return PayoffResult(months: result.months, interest: result.interest, finishes: result.finishes)
     }
 }

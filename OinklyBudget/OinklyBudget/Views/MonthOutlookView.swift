@@ -8,7 +8,7 @@ import Charts
 /// month starts with and the buffer.
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable, Identifiable {
-        case outlook = "Outlook", warPlan = "War Plan"
+        case outlook = "Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan"
         var id: Self { self }
     }
 
@@ -23,9 +23,14 @@ struct MonthOutlookView: View {
 
     /// Which month the page is showing. It is only shown here; it is chosen in Settings.
     private var monthLine: some View {
-        let which = tab == .warPlan ? "War Plan" : "Outlook"
         let when = month.formatted(.dateTime.month(.wide).year())
-        return Text("\(which) for \(when)").font(.headline).contentTransition(.numericText())
+        // The debt plan is not about one month, so it has no month to name.
+        let text: String = switch tab {
+        case .outlook: "Outlook for \(when)"
+        case .warPlan: "Monthly War Plan for \(when)"
+        case .debtWarPlan: "Pay your debts off faster"
+        }
+        return Text(text).font(.headline).contentTransition(.numericText())
     }
 
     /// Opens the window where real transactions are tagged to the plan's lines.
@@ -35,7 +40,7 @@ struct MonthOutlookView: View {
         } label: {
             Label("Link Transactions", systemImage: "link")
         }
-        .help("Opens a window with every transaction of the month, from every account, to tag to a line of the War Plan. The Outlook then shows what really happened next to the plan")
+        .help("Opens a window with every transaction of the month, from every account, to tag to a line of the Monthly War Plan. The Outlook then shows what really happened next to the plan")
     }
 
     private var settingsButton: some View {
@@ -44,7 +49,7 @@ struct MonthOutlookView: View {
         } label: {
             Label("Settings", systemImage: "slider.horizontal.3")
         }
-        .help("Opens this tab's settings in a window, where you choose the month: which accounts the Outlook counts, or what the War Plan starts with and your buffer")
+        .help("Opens this tab's settings in a window, where you choose the month: which accounts the Outlook counts, or what the Monthly War Plan starts with and your buffer")
     }
 
     var body: some View {
@@ -52,12 +57,18 @@ struct MonthOutlookView: View {
             FolderTabbedHeader(title: "Monthly Outlook", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
                 monthLine
             } centre: { EmptyView() } trailing: {
-                HStack(spacing: 8) {
-                    linkButton
-                    settingsButton
+                if tab != .debtWarPlan {
+                    HStack(spacing: 8) {
+                        linkButton
+                        settingsButton
+                    }
                 }
             }
-            OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
+            if tab == .debtWarPlan {
+                DebtWarPlanView().statusBarText("Monthly Outlook · the debt war plan")
+            } else {
+                OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
+            }
         }
         .background(Theme.background)
         .onAppear {
@@ -314,7 +325,7 @@ private struct OutlookBody: View {
                 Text(pull.spare > 0 ? "Nothing is dated yet" : "Nothing is spare at the end of the month").font(.caption).foregroundStyle(.secondary)
             } else {
                 Text("No plan yet").font(.system(size: 18, weight: .bold)).foregroundStyle(.tertiary)
-                Text("Add lines on the War Plan tab").font(.caption).foregroundStyle(.secondary)
+                Text("Add lines on the Monthly War Plan tab").font(.caption).foregroundStyle(.secondary)
             }
         }
     }

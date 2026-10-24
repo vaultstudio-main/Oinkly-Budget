@@ -142,7 +142,7 @@ struct OutlookSettingsView: View {
             monthSection
             Divider()
             accountsSection
-            Text("What the month starts with and your buffer are in the War Plan tab's settings.").font(.caption).foregroundStyle(.secondary)
+            Text("What the month starts with and your buffer are in the Monthly War Plan tab's settings.").font(.caption).foregroundStyle(.secondary)
         } footer: {
             Button("Select All") { excludedStored = "" }.disabled(excluded.isEmpty)
             Button("Select None") { excludedStored = MonthOutlook.stored(Set(countable.map(MonthOutlook.accountKey))) }.disabled(counted == 0)
@@ -153,7 +153,7 @@ struct OutlookSettingsView: View {
     }
 
     private var warPlanSettings: some View {
-        SettingsWindowLayout(title: "War Plan Settings") {
+        SettingsWindowLayout(title: "Monthly War Plan Settings") {
             monthSection
             Divider()
             startingSection

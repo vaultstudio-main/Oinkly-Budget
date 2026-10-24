@@ -141,7 +141,7 @@ struct PlanMatchView: View {
             .padding(8)
             .background(Theme.panel, in: RoundedRectangle(cornerRadius: 8))
             if plan.items.isEmpty {
-                Text("This month's plan has no lines yet. Add some on the War Plan tab, then come back to match them.")
+                Text("This month's plan has no lines yet. Add some on the Monthly War Plan tab, then come back to match them.")
                     .font(.callout).foregroundStyle(.secondary).padding(.top, 8)
             }
             List(shown) { transaction in
