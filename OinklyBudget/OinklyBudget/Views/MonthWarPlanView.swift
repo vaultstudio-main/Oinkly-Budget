@@ -388,6 +388,6 @@ private struct PlanItemForm: View {
             .background(.bar)
         }
         .background(Theme.background)
-        .frame(width: 900, height: 560)
+        .screenFitted(width: 900, height: 560)
     }
 }

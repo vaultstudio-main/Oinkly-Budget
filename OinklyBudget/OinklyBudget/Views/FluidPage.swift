@@ -43,3 +43,37 @@ private struct FluidScaleLayout: Layout {
         child.place(at: bounds.origin, anchor: .topLeading, proposal: ProposedViewSize(width: bounds.width / scale, height: bounds.height / scale))
     }
 }
+
+/// A pop-up that keeps its own size on any screen it fits, and on a smaller one is cut down to fit and scrolls instead. A 14-inch MacBook
+/// has less room than the 27-inch screen the editors were drawn on, and a pop-up taller or wider than the screen would have its Save
+/// button off screen with no way to reach it.
+private struct ScreenFitted<Content: View>: View {
+    let width: CGFloat
+    let height: CGFloat
+    @ViewBuilder let content: Content
+
+    /// What a pop-up can have of the screen: its usable area, less the title bar and a margin around it.
+    private var limit: CGSize {
+        let visible = NSScreen.main?.visibleFrame.size ?? CGSize(width: 1440, height: 900)
+        return CGSize(width: visible.width - 48, height: visible.height - 96)
+    }
+
+    var body: some View {
+        let fitted = CGSize(width: min(width, limit.width), height: min(height, limit.height))
+        if fitted.width < width || fitted.height < height {
+            ScrollView([.horizontal, .vertical]) {
+                content.frame(width: width, height: height)
+            }
+            .frame(width: fitted.width, height: fitted.height)
+        } else {
+            content.frame(width: width, height: height)
+        }
+    }
+}
+
+extension View {
+    /// `frame(width:height:)` for a pop-up, that cuts the pop-up down to fit a smaller screen and lets it scroll there.
+    func screenFitted(width: CGFloat, height: CGFloat) -> some View {
+        ScreenFitted(width: width, height: height) { self }
+    }
+}

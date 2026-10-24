@@ -593,7 +593,7 @@ struct BillEditView: View {
         } message: {
             Text("This removes every due date of the bill. Transactions you recorded are not affected.")
         }
-        .frame(width: 1100, height: 680)
+        .screenFitted(width: 1100, height: 680)
         .onAppear {
             if let bill {
                 paysFrom = BillPaySources.account(for: bill, in: modelContext)

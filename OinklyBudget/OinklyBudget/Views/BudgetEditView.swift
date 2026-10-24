@@ -105,7 +105,7 @@ struct BudgetEditView: View {
             .background(.bar)
         }
         .background(Theme.background)
-        .frame(width: 880, height: 540)
+        .screenFitted(width: 880, height: 540)
     }
 
     private func save() {
@@ -243,7 +243,7 @@ struct CustomBudgetEditView: View {
             .background(.bar)
         }
         .background(Theme.background)
-        .frame(width: 880, height: 600)
+        .screenFitted(width: 880, height: 600)
         .confirmationDialog("Delete this category?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete Category", role: .destructive) {
                 if let category { modelContext.delete(category) }

@@ -646,7 +646,7 @@ struct EditTransactionSheet: View {
             }
             .padding(16)
         }
-        .frame(width: 1000, height: 700 + (isSplitting ? CGFloat(max(parts.count, 2)) * 70 + 40 : 0))
+        .screenFitted(width: 1000, height: 700 + (isSplitting ? CGFloat(max(parts.count, 2)) * 70 + 40 : 0))
         .background(Theme.background)
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }

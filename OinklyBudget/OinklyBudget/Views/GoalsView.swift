@@ -647,7 +647,7 @@ struct GoalEditView: View {
         } message: {
             Text("The goal and the progress you recorded on it are removed. Your accounts aren't affected.")
         }
-        .frame(width: 1180, height: 640)
+        .screenFitted(width: 1180, height: 640)
     }
 
     // MARK: Columns

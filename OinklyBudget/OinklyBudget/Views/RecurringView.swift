@@ -515,7 +515,7 @@ struct RecurringRuleEditor: View {
             }
             .background(.bar)
         }
-        .frame(width: 1200, height: 440)
+        .screenFitted(width: 1200, height: 440)
         .background(Theme.background)
         .onChange(of: isPayment) { _, new in
             if let category, category.isIncome == new { self.category = nil }

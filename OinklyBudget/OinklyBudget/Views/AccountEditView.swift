@@ -134,7 +134,7 @@ struct AccountEditView: View {
                 }
             }
         }
-        .frame(width: 1180, height: 680)
+        .screenFitted(width: 1180, height: 680)
     }
 
     // MARK: Columns
