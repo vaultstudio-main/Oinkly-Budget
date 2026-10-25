@@ -216,13 +216,7 @@ struct InvestmentsView: View {
     // MARK: Allocation
 
     private func allocation(_ report: Investments.Report) -> some View {
-        Chart(report.lines.filter { $0.end > 0 }) { line in
-            SectorMark(angle: .value("Value", line.end.doubleValue), innerRadius: .ratio(0.6), angularInset: 1.5)
-                .foregroundStyle(by: .value("Account", line.name))
-                .cornerRadius(3)
-        }
-        .chartLegend(position: .bottom, alignment: .leading, spacing: 8)
-        .frame(height: 240)
+        ShareBarChart(bars: ShareBarChart.money(report.lines.filter { $0.end > 0 }.map { ($0.name, $0.end.doubleValue, nil) }, limit: 10))
     }
 
     // MARK: List

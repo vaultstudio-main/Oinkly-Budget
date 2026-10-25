@@ -201,15 +201,6 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("Link Transactions", id: PlanMatchWindow.id) {
-            PlanMatchWindow()
-                .appAppearance()
-        }
-        .modelContainer(container)
-        .defaultSize(width: 1000, height: 720)
-        .defaultLaunchBehavior(.suppressed)
-        .restorationBehavior(.disabled)
-
         Window("Transactions Settings", id: TransactionsSettings.windowID) {
             TransactionsSettingsView()
                 .appAppearance()

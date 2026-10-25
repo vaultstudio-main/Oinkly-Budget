@@ -176,26 +176,7 @@ struct PaymentMethodReport: View {
             if slices.isEmpty {
                 ReportEmpty(message: "No spending in this period.", height: ReportSize.h(170))
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Spent", slice.value), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(by: .value("Method", slice.name))
-                            .cornerRadius(3)
-                    }
-                    .chartLegend(.hidden)
-                    .frame(width: 130, height: 130)
-                    VStack(spacing: 7) {
-                        ForEach(slices.prefix(6)) { slice in
-                            HStack {
-                                Text(slice.name).lineLimit(1)
-                                Spacer()
-                                Text(ReportFormat.money(slice.value))
-                                Text((slice.value / max(total, 1)).formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(.secondary).frame(width: 36, alignment: .trailing)
-                            }
-                            .font(.callout)
-                        }
-                    }
-                }
+                ShareBarChart(bars: ShareBarChart.money(slices.map { ($0.name, $0.value, nil) }, limit: 6))
             }
         }
     }

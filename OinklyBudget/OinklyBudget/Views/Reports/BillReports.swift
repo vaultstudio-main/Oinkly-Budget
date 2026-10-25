@@ -78,25 +78,7 @@ struct BillsPaidVsDueReport: View {
             if slices.isEmpty {
                 ReportEmpty(message: "No bills in this window.", height: ReportSize.h(170))
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Bills", slice.count), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(slice.color)
-                            .cornerRadius(3)
-                    }
-                    .frame(width: 120, height: 120)
-                    VStack(alignment: .leading, spacing: 7) {
-                        ForEach(slices) { slice in
-                            HStack(spacing: 8) {
-                                Circle().fill(slice.color).frame(width: 9, height: 9)
-                                Text(slice.name)
-                                Spacer()
-                                Text("\(slice.count)").foregroundStyle(.secondary)
-                            }
-                            .font(.callout)
-                        }
-                    }
-                }
+                ShareBarChart(bars: slices.map { ShareBar(name: $0.name, value: Double($0.count), label: "\($0.count)", color: $0.color) })
                 if !overdue.isEmpty {
                     Divider()
                     ForEach(overdue.prefix(3)) { item in
@@ -190,26 +172,7 @@ struct BillsByCategoryReport: View {
             if slices.isEmpty {
                 ReportEmpty(message: "No bills yet.", height: ReportSize.h(170))
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Amount", slice.value), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(by: .value("Category", slice.name))
-                            .cornerRadius(3)
-                    }
-                    .chartLegend(.hidden)
-                    .frame(width: 130, height: 130)
-                    VStack(spacing: 7) {
-                        ForEach(slices.prefix(6)) { slice in
-                            HStack {
-                                Text(slice.name).lineLimit(1)
-                                Spacer()
-                                Text(ReportFormat.money(slice.value))
-                                Text((slice.value / max(total, 1)).formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(.secondary).frame(width: 36, alignment: .trailing)
-                            }
-                            .font(.callout)
-                        }
-                    }
-                }
+                ShareBarChart(bars: ShareBarChart.money(slices.map { ($0.name, $0.value, nil) }, limit: 6))
             }
         }
     }

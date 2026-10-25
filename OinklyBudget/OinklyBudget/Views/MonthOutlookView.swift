@@ -8,7 +8,7 @@ import Charts
 /// month starts with and the buffer.
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable, Identifiable {
-        case outlook = "Monthly Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan", savingsWarPlan = "Savings War Plan"
+        case outlook = "Strategy Plan", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan", savingsWarPlan = "Savings War Plan"
         var id: Self { self }
     }
 
@@ -26,22 +26,12 @@ struct MonthOutlookView: View {
         let when = month.formatted(.dateTime.month(.wide).year())
         // The debt plan is not about one month, so it has no month to name.
         let text: String = switch tab {
-        case .outlook: "Monthly Outlook for \(when)"
+        case .outlook: "Strategy Plan for \(when)"
         case .warPlan: "Monthly War Plan for \(when)"
         case .debtWarPlan: "Pay your debts off faster"
         case .savingsWarPlan: "Save up faster"
         }
         return Text(text).font(.headline).contentTransition(.numericText())
-    }
-
-    /// Opens the window where real transactions are tagged to the plan's lines.
-    private var linkButton: some View {
-        Button {
-            openWindow(id: PlanMatchWindow.id)
-        } label: {
-            Label("Link Transactions", systemImage: "link")
-        }
-        .help("Opens a window with every transaction of the month, from every account, to tag to a line of the Monthly War Plan. The Outlook then shows what really happened next to the plan")
     }
 
     private var settingsButton: some View {
@@ -59,10 +49,7 @@ struct MonthOutlookView: View {
                 monthLine
             } centre: { EmptyView() } trailing: {
                 if tab == .outlook || tab == .warPlan {
-                    HStack(spacing: 8) {
-                        linkButton
-                        settingsButton
-                    }
+                    settingsButton
                 }
             }
             if tab == .debtWarPlan {
@@ -108,8 +95,6 @@ private struct OutlookBody: View {
     @AppStorage(OutlookSettings.startAccountKey) private var startAccount = ""
     @AppStorage(OutlookSettings.startAmountKey) private var startAmount = ""
     @AppStorage(OutlookSettings.bufferKey) private var bufferText = ""
-    /// Whether the extra money the Debt and Savings War Plans set aside is counted in this page's figures.
-    @AppStorage("outlookCountsWarPlans") private var countsWarPlans = true
     /// The room the page has, so the pull-out card can take what the rest leaves.
     @State private var viewport: CGFloat = 700
     @State private var pageWidth: CGFloat = 900
@@ -165,6 +150,7 @@ private struct OutlookBody: View {
         return AnyView(ScrollView {
             VStack(spacing: 10) {
                 versusCards(outlook, totals: totals, opening: opening, kept: buffer, warExtra: warExtra)
+                flowCard(totals, warExtra: warExtra)
                 warPlansCard(warPlans, warExtra: warExtra, leftBefore: totals.left + warExtra)
                 pullOutCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
                 improveCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
@@ -206,9 +192,9 @@ private struct OutlookBody: View {
     // MARK: The war plans
 
     /// What the Debt and Savings War Plans set aside in this month: their extra each month, and the one-time amounts only in the month that
-    /// is now. Nothing for a month that has closed, whose figures are kept, or when the switch is off.
+    /// is now. Nothing for a month that has closed, whose figures are kept,.
     private func warPlansExtra(_ summary: WarPlanSummary.Summary) -> Decimal {
-        guard countsWarPlans, !isPast, snapshot == nil else { return 0 }
+        guard !isPast, snapshot == nil else { return 0 }
         let thisMonth = month == MonthFilter.start(of: .now)
         return Decimal(summary.monthlyExtra + (thisMonth ? summary.oneTimeNow : 0))
     }
@@ -235,13 +221,14 @@ private struct OutlookBody: View {
                             Text(detail(summary, warExtra: warExtra)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 12)
-                        Toggle("Count in this month", isOn: $countsWarPlans).toggleStyle(.switch).controlSize(.small).fixedSize()
-                            .disabled(!summary.isActive || isPast)
-                            .help("When on, the extra money your Debt and Savings War Plans set aside is part of Money Out, Left Over, Above the Buffer and the chart below. Closed months keep their figures.")
                     }
                     ViewThatFits(in: .horizontal) {
                         HStack(alignment: .top, spacing: 14) { debtStats(debt); savingsStats(savings) }
                         VStack(alignment: .leading, spacing: 14) { debtStats(debt); savingsStats(savings) }
+                    }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 14) { debtChart(debt); savingsChart(savings) }
+                        VStack(alignment: .leading, spacing: 14) { debtChart(debt); savingsChart(savings) }
                     }
                 }
             }
@@ -250,10 +237,7 @@ private struct OutlookBody: View {
 
     private func headline(_ summary: WarPlanSummary.Summary, warExtra: Decimal, leftBefore: Decimal) -> String {
         guard summary.isActive else { return "Your war plans have no extra money in them yet." }
-        guard warExtra > 0 else {
-            return isPast ? "This month has closed, so its figures are kept as they were."
-                          : "Your war plans would set aside \(ReportFormat.money(summary.monthlyExtra)) a month, but they are not counted here."
-        }
+        guard warExtra > 0 else { return "This month has closed, so its figures are kept as they were." }
         var line = "Your war plans set aside \(warExtra.formatted(.appCurrency)) this month, and it is counted in the figures above."
         if leftBefore <= 0 {
             line += " There was nothing left over to cover it."
@@ -310,6 +294,80 @@ private struct OutlookBody: View {
         }
     }
 
+    // MARK: Graphs
+
+    private struct Slice: Identifiable {
+        let name: String
+        let amount: Double
+        let color: Color
+        var id: String { name }
+    }
+
+    /// Where the month's money goes: what came in, and what it went to, with the war plans' share and what is left.
+    @ViewBuilder
+    private func flowCard(_ totals: Totals, warExtra: Decimal) -> some View {
+        let income = totals.income
+        let slices = [
+            Slice(name: "Bills", amount: totals.bills.doubleValue, color: .orange),
+            Slice(name: "Budgets", amount: totals.budgets.doubleValue, color: .blue),
+            Slice(name: "Other spending", amount: totals.other.doubleValue, color: .purple),
+            Slice(name: "War plans", amount: warExtra.doubleValue, color: Theme.red),
+            Slice(name: "Left over", amount: max(totals.left.doubleValue, 0), color: Theme.green)
+        ].filter { $0.amount > 0 }
+        if totals.income > 0 || !slices.isEmpty {
+            ReportCard(title: "Where the Month's Money Goes") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(income.formatted(.appCurrency)) came in this month. Here is where it goes.").font(.callout).foregroundStyle(.secondary)
+                    ShareBarChart(bars: ShareBarChart.money(slices.map { ($0.name, $0.amount, $0.color) }, limit: 6))
+                }
+            }
+        }
+    }
+
+    private func monthDate(_ months: Int) -> Date { Calendar.current.date(byAdding: .month, value: months, to: .now) ?? .now }
+
+    /// What is owed over time on current payments and with the extra.
+    private func debtChart(_ debt: WarPlanSummary.Debt) -> some View {
+        statsBlock(title: "What You Owe Over Time", symbol: "chart.line.downtrend.xyaxis", color: Theme.red, empty: debt.debts.isEmpty ? "No debt to pay off." : nil) {
+            Chart {
+                ForEach(Array(debt.base.balances.enumerated()), id: \.offset) { month, owed in
+                    LineMark(x: .value("Date", monthDate(month)), y: .value("Owed", owed), series: .value("Plan", "Current payments"))
+                        .foregroundStyle(by: .value("Plan", "Current payments")).interpolationMethod(.monotone)
+                }
+                if debt.hasExtra {
+                    ForEach(Array(debt.plan.balances.enumerated()), id: \.offset) { month, owed in
+                        LineMark(x: .value("Date", monthDate(month)), y: .value("Owed", owed), series: .value("Plan", "With the war plan"))
+                            .foregroundStyle(by: .value("Plan", "With the war plan")).interpolationMethod(.monotone)
+                    }
+                }
+            }
+            .chartForegroundStyleScale(["Current payments": Color.secondary, "With the war plan": Theme.green])
+            .chartLegend(position: .bottom)
+            .frame(height: 170)
+        }
+    }
+
+    /// Everything saved over time on its own deposits and with the extra.
+    private func savingsChart(_ savings: WarPlanSummary.Savings) -> some View {
+        statsBlock(title: "What You Save Over Time", symbol: "chart.line.uptrend.xyaxis", color: Theme.green, empty: savings.accounts.isEmpty ? "No savings accounts." : nil) {
+            Chart {
+                ForEach(Array(savings.base.totals.enumerated()), id: \.offset) { month, saved in
+                    LineMark(x: .value("Date", monthDate(month)), y: .value("Saved", saved), series: .value("Plan", "Own deposits"))
+                        .foregroundStyle(by: .value("Plan", "Own deposits")).interpolationMethod(.monotone)
+                }
+                if savings.hasExtra {
+                    ForEach(Array(savings.plan.totals.enumerated()), id: \.offset) { month, saved in
+                        LineMark(x: .value("Date", monthDate(month)), y: .value("Saved", saved), series: .value("Plan", "With the war plan"))
+                            .foregroundStyle(by: .value("Plan", "With the war plan")).interpolationMethod(.monotone)
+                    }
+                }
+            }
+            .chartForegroundStyleScale(["Own deposits": Color.secondary, "With the war plan": Theme.green])
+            .chartLegend(position: .bottom)
+            .frame(height: 170)
+        }
+    }
+
     private func statsBlock<Content: View>(title: String, symbol: String, color: Color, empty: String?, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(color)
@@ -356,16 +414,11 @@ private struct OutlookBody: View {
         let hasReal = !isFuture && !real.points.isEmpty
         // Real money is only known up to today, or to the end of a month that is over.
         let realEnd = isPast ? (Calendar.current.date(byAdding: .day, value: -1, to: Calendar.current.date(byAdding: .month, value: 1, to: month) ?? month) ?? month) : Calendar.current.startOfDay(for: .now)
-        let linked = plan.items.filter { item in item.transactionStamp.map { stamp in transactions.contains { $0.isLive && $0.createdAt.timeIntervalSinceReferenceDate == stamp } } ?? false }.count
         // Two blocks to a row, so the figures take little height and the chart gets the room.
         let figures = Grid(alignment: .topLeading, horizontalSpacing: 24, verticalSpacing: 12) {
             GridRow(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     dayBlock("Planned", pull: hasPlan ? planned : nil)
-                    if hasPlan {
-                        Text("\(linked) of \(plan.items.count) line\(plan.items.count == 1 ? "" : "s") linked")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     dayBlock("Outlook", pull: actual)

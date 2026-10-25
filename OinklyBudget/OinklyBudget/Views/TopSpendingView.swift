@@ -15,7 +15,7 @@ enum ChartPalette {
     static let other = Color.gray
 }
 
-/// Donut chart and ranked list of the top spending categories over the last three months.
+/// Total and ranked list of the top spending categories over the last three months.
 /// Until there are enough expenses to say anything useful, it shows a clearly labeled placeholder.
 struct TopSpendingView: View {
     let transactions: [Transaction]
@@ -61,7 +61,7 @@ struct TopSpendingView: View {
             ReportEmpty(message: income
                         ? "Your biggest income categories show up here once you've entered a few deposits with a category."
                         : "Your biggest spending categories show up here once you've entered a few expenses with a category.",
-                        height: SummaryCardSize.spending, title: "Not enough yet", clean: true, symbol: "chart.pie").frame(height: SummaryCardSize.spending)
+                        height: SummaryCardSize.spending, title: "Not enough yet", clean: true, symbol: "chart.bar").frame(height: SummaryCardSize.spending)
         }
     }
 
@@ -69,20 +69,12 @@ struct TopSpendingView: View {
 
     private var donut: some View {
         let grand = totals.reduce(Decimal(0)) { $0 + $1.total }
-        return Chart(slices) { slice in
-            SectorMark(angle: .value(income ? "Earned" : "Spent", slice.value), innerRadius: .ratio(0.64), angularInset: 2)
-                .cornerRadius(4)
-                .foregroundStyle(slice.color)
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(income ? "EARNED" : "SPENT").font(.caption2).foregroundStyle(.secondary)
+            Text(grand, format: .appCurrency).font(.title2.bold())
+            Text("last \(months) months").font(.caption2).foregroundStyle(.secondary)
         }
-        .chartLegend(.hidden)
-        .frame(width: 210, height: 210)
-        .overlay {
-            VStack(spacing: 2) {
-                Text(income ? "EARNED" : "SPENT").font(.caption2).foregroundStyle(.secondary)
-                Text(grand, format: .appCurrency).font(.title3.bold())
-                Text("last \(months) months").font(.caption2).foregroundStyle(.secondary)
-            }
-        }
+        .frame(width: 150, alignment: .leading)
     }
 
     // MARK: Details

@@ -16,8 +16,12 @@ struct WarPlanItem: Codable, Identifiable, Equatable {
     var iconSymbol: String?
     var iconTheme: Int?
     var notes: String?
-    /// The real transaction this line turned out to be, by its creation time, once one is tagged to it in the settings.
+    /// Kept so plans saved when lines could be linked to real transactions still open. Nothing sets it any more.
     var transactionStamp: Double?
+    /// Who the money goes to or comes from, picked from the payees already in the register.
+    var payee: String?
+    /// "debt" or "savings" when this line counts towards the Debt War Plan or the Savings War Plan, else nil.
+    var warPlan: String?
 
     var symbol: String {
         switch origin {

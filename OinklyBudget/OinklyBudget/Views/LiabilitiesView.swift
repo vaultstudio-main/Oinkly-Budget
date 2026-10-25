@@ -196,13 +196,7 @@ struct LiabilitiesView: View {
     private func breakdown(_ report: Liabilities.Report) -> some View {
         let owing = report.lines.filter { !$0.isPaidOff }
         return VStack(alignment: .leading, spacing: 12) {
-            Chart(owing) { line in
-                SectorMark(angle: .value("Owed", line.owed.doubleValue), innerRadius: .ratio(0.6), angularInset: 1.5)
-                    .foregroundStyle(by: .value("Account", line.name))
-                    .cornerRadius(3)
-            }
-            .chartLegend(position: .bottom, alignment: .leading, spacing: 8)
-            .frame(height: 240)
+            ShareBarChart(bars: ShareBarChart.money(owing.map { ($0.name, $0.owed.doubleValue, nil) }, limit: 10))
             Divider()
             row("Mortgages & loans", report.loanOwed)
             row("Credit cards", report.cardOwed)

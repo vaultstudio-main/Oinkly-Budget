@@ -89,23 +89,10 @@ struct NetWorthByTypeReport: View {
                 if owned.isEmpty && cards <= 0 && loans <= 0 {
                     ReportEmpty(message: "Add accounts and transactions to see where your net worth sits.", height: ReportSize.h(190))
                 } else {
-                    HStack(alignment: .center, spacing: 20) {
-                        Chart(owned) { slice in
-                            SectorMark(angle: .value("Amount", slice.value), innerRadius: .ratio(0.62), angularInset: 1.5)
-                                .foregroundStyle(by: .value("Type", slice.group.title))
-                                .cornerRadius(3)
-                        }
-                        .chartForegroundStyleScale(Self.colors)
-                        .chartLegend(.hidden)
-                        .frame(width: 150, height: 150)
-                        VStack(spacing: 8) {
-                            ForEach(owned) { slice in
-                                row(color: Self.colors.first { $0.key == slice.group.title }?.value ?? .gray, name: slice.group.title,
-                                    amount: slice.value, share: totalOwned > 0 ? slice.value / totalOwned : 0)
-                            }
-                            if cards > 0 { row(color: .orange, name: "Credit Cards owed", amount: -cards, share: nil) }
-                            if loans > 0 { row(color: Theme.red, name: "Mortgages & Loans owed", amount: -loans, share: nil) }
-                        }
+                    VStack(alignment: .leading, spacing: 10) {
+                        ShareBarChart(bars: ShareBarChart.money(owned.map { slice in (slice.group.title, slice.value, Self.colors.first { $0.key == slice.group.title }?.value) }))
+                        if cards > 0 { row(color: .orange, name: "Credit Cards owed", amount: -cards, share: nil) }
+                        if loans > 0 { row(color: Theme.red, name: "Mortgages & Loans owed", amount: -loans, share: nil) }
                     }
                     .frame(minHeight: 170)
                 }

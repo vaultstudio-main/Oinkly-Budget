@@ -74,21 +74,9 @@ struct DebtWarPlanView: View {
 
     private func controls(debts: [DebtWarPlan.Debt]) -> some View {
         ReportPanel(title: "Pay It Down Faster", summary: "Add extra money and choose where it goes first. Everything below follows as you type.") {
-            VStack(alignment: .leading, spacing: 14) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
-                    VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
-                }
-                HStack(spacing: 8) {
-                    Text("Quick amounts").font(.caption).foregroundStyle(.secondary)
-                    ForEach(Self.quickAmounts, id: \.self) { amount in
-                        Button("+\(ReportFormat.money(amount))") { extraBinding.wrappedValue = Decimal(amount) }
-                            .buttonStyle(.bordered).controlSize(.small)
-                    }
-                    Button("Clear") { extraText = ""; lumpText = "" }
-                        .buttonStyle(.borderless).controlSize(.small).disabled(extra == 0 && lump == 0)
-                    Spacer(minLength: 0)
-                }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
+                VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
             }
         }
     }
@@ -98,6 +86,7 @@ struct DebtWarPlanView: View {
             HStack {
                 Text("Extra each month").frame(width: 150, alignment: .leading)
                 CurrencyField("Extra each month", value: extraBinding).labelsHidden().frame(width: 140).multilineTextAlignment(.trailing)
+                quickMenu
             }
             HStack {
                 Text("One-time extra now").frame(width: 150, alignment: .leading)
@@ -105,6 +94,21 @@ struct DebtWarPlanView: View {
             }
         }
         .help("The extra each month is paid on top of your payments every month. The one-time amount is paid once, today, such as a bonus or a tax refund.")
+    }
+
+    /// The usual amounts and Clear, in a menu beside the box, so they take no row of their own.
+    private var quickMenu: some View {
+        Menu {
+            ForEach(Self.quickAmounts, id: \.self) { amount in
+                Button("+\(ReportFormat.money(amount))") { extraBinding.wrappedValue = Decimal(amount) }
+            }
+            Divider()
+            Button("Clear Both Amounts") { extraText = ""; lumpText = "" }.disabled(extra == 0 && lump == 0)
+        } label: {
+            Label("Quick", systemImage: "bolt.fill")
+        }
+        .menuStyle(.borderlessButton).fixedSize()
+        .help("Quick amounts for the extra each month, and Clear")
     }
 
     private func strategyPicker(debts: [DebtWarPlan.Debt]) -> some View {

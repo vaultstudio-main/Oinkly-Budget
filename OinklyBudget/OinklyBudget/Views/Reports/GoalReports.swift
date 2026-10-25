@@ -85,25 +85,7 @@ struct GoalStatusReport: View {
             if goals.isEmpty && reached == 0 {
                 ReportEmpty(message: "No goals yet.", height: ReportSize.h(170))
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Goals", slice.count), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(slice.color)
-                            .cornerRadius(3)
-                    }
-                    .frame(width: 120, height: 120)
-                    VStack(alignment: .leading, spacing: 6) {
-                        ForEach(slices) { slice in
-                            HStack(spacing: 8) {
-                                Circle().fill(slice.color).frame(width: 9, height: 9)
-                                Text(slice.name)
-                                Spacer()
-                                Text("\(slice.count)").foregroundStyle(.secondary)
-                            }
-                            .font(.callout)
-                        }
-                    }
-                }
+                ShareBarChart(bars: slices.map { ShareBar(name: $0.name, value: Double($0.count), label: "\($0.count)", color: $0.color) })
                 if !behind.isEmpty {
                     Divider()
                     VStack(alignment: .leading, spacing: 6) {

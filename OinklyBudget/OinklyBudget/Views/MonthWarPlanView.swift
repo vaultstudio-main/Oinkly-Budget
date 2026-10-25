@@ -14,7 +14,6 @@ struct MonthWarPlanView: View {
     let startLabel: String
 
     @Query(sort: \Category.name) private var allCategories: [Category]
-    @Query private var monthTransactions: [Transaction]
     @State private var draft: WarPlanItem?
 
     init(outlook: MonthOutlook, plan: Binding<WarPlanData>, opening: Decimal, kept: Decimal, startLabel: String) {
@@ -23,15 +22,6 @@ struct MonthWarPlanView: View {
         self.opening = opening
         self.kept = kept
         self.startLabel = startLabel
-        let start = outlook.month
-        let end = Calendar.current.date(byAdding: .month, value: 1, to: start) ?? start
-        _monthTransactions = Query(filter: #Predicate<Transaction> { $0.date >= start && $0.date < end })
-    }
-
-    /// The transaction tagged to a line, when there is one and it still exists.
-    private func matched(_ item: WarPlanItem) -> Transaction? {
-        guard let stamp = item.transactionStamp else { return nil }
-        return monthTransactions.live.first { $0.createdAt.timeIntervalSinceReferenceDate == stamp }
     }
 
     private var items: [WarPlanItem] {
@@ -91,6 +81,17 @@ struct MonthWarPlanView: View {
                             Text(safe.points.max { $0.balance < $1.balance }.map { "on \($0.date.formatted(.dateTime.month(.abbreviated).day()))" } ?? "add lines to find it")
                         }
                         safeTile(safe, hasLines: !list.isEmpty)
+                        let toDebt = list.filter { $0.warPlan == "debt" }.reduce(Decimal(0)) { $0 + $1.amount }
+                        let toSavings = list.filter { $0.warPlan == "savings" }.reduce(Decimal(0)) { $0 + $1.amount }
+                        if toDebt > 0 || toSavings > 0 {
+                            StatTile(title: "Set Aside") {
+                                Text(toDebt + toSavings, format: .appCurrency).foregroundStyle(Theme.green)
+                            } note: {
+                                Text([toDebt > 0 ? "\(toDebt.formatted(.appCurrency)) to debts" : nil, toSavings > 0 ? "\(toSavings.formatted(.appCurrency)) to savings" : nil]
+                                    .compactMap { $0 }.joined(separator: ", "))
+                            }
+                            .help("Lines ticked as counting towards your Debt War Plan or Savings War Plan")
+                        }
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 }
@@ -148,7 +149,7 @@ struct MonthWarPlanView: View {
     /// A whole row of the table; blank for the empty rows that fill the rest of the page.
     private func tableRow(icon: String? = nil, iconColor: Color = .secondary, artwork: (symbol: String, theme: Int)? = nil, date: String = "", title: String = "",
                           moneyIn: Decimal? = nil, moneyOut: Decimal? = nil, left: Decimal? = nil, extra: Decimal? = nil,
-                          leftColor: Color = .primary, bold: Bool = false, matched: Transaction? = nil) -> some View {
+                          leftColor: Color = .primary, bold: Bool = false, planned: String? = nil) -> some View {
         HStack(spacing: 0) {
             cell(Self.widths.icon, .center) {
                 if let artwork {
@@ -163,9 +164,9 @@ struct MonthWarPlanView: View {
             cell(nil) {
                 HStack(spacing: 6) {
                     Text(title).fontWeight(bold ? .semibold : .regular)
-                    if let matched {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.green)
-                            .help("Matched: \(matched.payee) on \(matched.date.formatted(.dateTime.month(.abbreviated).day())), \(matched.amount.formatted(.appCurrency)), \(matched.account?.name ?? "")")
+                    if let planned {
+                        Image(systemName: planned == "debt" ? "scope" : "banknote.fill").foregroundStyle(planned == "debt" ? Theme.red : Theme.green)
+                            .help(planned == "debt" ? "Counts towards your Debt War Plan" : "Counts towards your Savings War Plan")
                     }
                 }
             }
@@ -213,7 +214,7 @@ struct MonthWarPlanView: View {
                                              date: item.date.formatted(.dateTime.weekday(.abbreviated).day()), title: item.title,
                                              moneyIn: item.isIncome ? item.amount : nil, moneyOut: item.isIncome ? nil : item.amount,
                                              left: balances[index].left, extra: balances[index].extra,
-                                             leftColor: leftColor(balances[index].left, kept: kept), matched: matched(item))
+                                             leftColor: leftColor(balances[index].left, kept: kept), planned: item.warPlan)
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
@@ -300,7 +301,46 @@ private struct PlanItemForm: View {
     private var iconSymbol: Binding<String?> { Binding(get: { item.iconSymbol }, set: { item.iconSymbol = $0 }) }
     private var iconTheme: Binding<Int> { Binding(get: { item.iconTheme ?? 0 }, set: { item.iconTheme = $0 == 0 ? nil : $0 }) }
     private var categoryKey: Binding<String?> { Binding(get: { item.categoryKey }, set: { item.categoryKey = $0 }) }
-    private var notes: Binding<String> { Binding(get: { item.notes ?? "" }, set: { item.notes = $0.isEmpty ? nil : $0 }) }
+    private var payee: Binding<String> { Binding(get: { item.payee ?? "" }, set: { item.payee = $0.isEmpty ? nil : $0 }) }
+    @Query(PlanItemForm.recentDescriptor) private var recent: [Transaction]
+
+    /// The latest transactions, which are the payees worth suggesting.
+    private static var recentDescriptor: FetchDescriptor<Transaction> {
+        var descriptor = FetchDescriptor<Transaction>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        descriptor.fetchLimit = 3000
+        return descriptor
+    }
+
+    /// What the person has typed in the Payee box that is not yet a whole payee, so suggestions are worth showing.
+    private var typed: String { (item.payee ?? "").trimmingCharacters(in: .whitespaces) }
+
+    /// Payees already in the register that match what is typed, the ones used most first, each with the category it was last given.
+    private var suggestions: [(name: String, category: Category?)] {
+        guard !typed.isEmpty else { return [] }
+        var counts: [String: (count: Int, category: Category?)] = [:]
+        for transaction in recent.live where transaction.amount != 0 && (transaction.amount > 0) == item.isIncome && !transaction.isOpeningDeposit {
+            let name = transaction.payee.trimmingCharacters(in: .whitespaces)
+            guard !name.isEmpty, name.localizedCaseInsensitiveContains(typed) else { continue }
+            let old = counts[name]
+            counts[name] = ((old?.count ?? 0) + 1, old?.category ?? transaction.category)
+        }
+        return counts.filter { $0.key.caseInsensitiveCompare(typed) != .orderedSame }
+            .sorted { ($1.value.count, $0.key) < ($0.value.count, $1.key) }
+            .prefix(3).map { ($0.key, $0.value.category) }
+    }
+
+    /// Takes a suggested payee. A blank name becomes the payee, and a line with no category takes the one that payee last had.
+    private func use(_ suggestion: (name: String, category: Category?)) {
+        item.payee = suggestion.name
+        if item.title.trimmingCharacters(in: .whitespaces).isEmpty { item.title = suggestion.name }
+        if item.categoryKey == nil, let category = suggestion.category, category.isIncome == item.isIncome {
+            item.categoryKey = category.systemKey ?? category.name
+        }
+    }
+
+    private func counts(_ kind: String) -> Binding<Bool> {
+        Binding(get: { item.warPlan == kind }, set: { item.warPlan = $0 ? kind : (item.warPlan == kind ? nil : item.warPlan) })
+    }
 
     /// The icons that fit: the category's own list, or the general ones for a line with no category.
     private var fitting: [String] {
@@ -326,8 +366,9 @@ private struct PlanItemForm: View {
                         }
                         .pickerStyle(.segmented)
                         .onChange(of: item.isIncome) { _, _ in
-                            // A category of the other kind no longer fits.
+                            // A category of the other kind no longer fits, and money coming in can't count towards a plan.
                             item.categoryKey = nil
+                            item.warPlan = nil
                             item.iconSymbol = nil
                         }
                         TextField("What is it", text: $item.title)
@@ -342,13 +383,31 @@ private struct PlanItemForm: View {
                         }
                         .onChange(of: item.categoryKey) { _, _ in item.iconSymbol = nil }
                     }
-                    Section("Notes") {
-                        TextField("Anything to remember about it", text: notes, axis: .vertical)
-                            .lineLimit(3...5)
+                    Section("Payee") {
+                        TextField("Who it goes to or comes from", text: payee)
+                        ForEach(suggestions, id: \.name) { suggestion in
+                            Button { use(suggestion) } label: {
+                                HStack {
+                                    Label(suggestion.name, systemImage: "person.crop.circle")
+                                    Spacer()
+                                    if let category = suggestion.category { Text(category.name).font(.caption).foregroundStyle(.secondary) }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help("Use this payee from your register")
+                        }
+                    }
+                    if !item.isIncome {
+                        Section("Counts Towards") {
+                            Toggle("My Debt War Plan", isOn: counts("debt")).toggleStyle(.checkbox)
+                            Toggle("My Savings War Plan", isOn: counts("savings")).toggleStyle(.checkbox)
+                            Text("Tick one when this is money going to a debt or savings.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .formStyle(.grouped)
-                .scrollDisabled(true)
                 Divider()
                 Form {
                     Section("Icon") {
@@ -388,6 +447,6 @@ private struct PlanItemForm: View {
             .background(.bar)
         }
         .background(Theme.background)
-        .screenFitted(width: 900, height: 560)
+        .screenFitted(width: 900, height: 700)
     }
 }

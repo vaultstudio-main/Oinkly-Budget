@@ -94,28 +94,9 @@ struct InvestmentAllocationCard: View {
         ReportPanel(title: "Allocation", summary: byHolding.isEmpty ? "How your investments are split between accounts." : "How your investments are spread across your holdings.",
                     headline: slices.first.map { "\(Int($0.value / max(total, 1) * 100))% \($0.name)" }, headlineNote: slices.isEmpty ? nil : "largest position") {
             if slices.isEmpty {
-                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: ReportSize.h(150), shape: .ring)
+                ReportEmpty(message: "Nothing invested yet. Holdings and balances show here.", height: ReportSize.h(150), shape: .bars)
             } else {
-                HStack(spacing: 18) {
-                    Chart(slices) { slice in
-                        SectorMark(angle: .value("Value", slice.value), innerRadius: .ratio(0.6), angularInset: 1.5)
-                            .foregroundStyle(by: .value("Holding", slice.name))
-                            .cornerRadius(3)
-                    }
-                    .chartLegend(.hidden)
-                    .frame(width: 140, height: 140)
-                    VStack(spacing: 7) {
-                        ForEach(slices.prefix(7)) { slice in
-                            HStack {
-                                Text(slice.name).lineLimit(1)
-                                Spacer()
-                                Text(ReportFormat.money(slice.value))
-                                Text((slice.value / max(total, 1)).formatted(.percent.precision(.fractionLength(0)))).foregroundStyle(.secondary).frame(width: 36, alignment: .trailing)
-                            }
-                            .font(.callout)
-                        }
-                    }
-                }
+                ShareBarChart(bars: ShareBarChart.money(slices.map { ($0.name, $0.value, nil) }, limit: 7))
             }
         }
     }
