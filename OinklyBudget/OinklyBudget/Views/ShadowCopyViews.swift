@@ -147,7 +147,6 @@ struct ShadowCopySection: View {
                 set: { wantsOn in
                     if wantsOn { chooseSaveLocation() } else { DefaultSaveFolder.clear(); saveName = nil }
                 }))
-                .toggleStyle(.checkbox)
             if let saveName {
                 LabeledContent("Save Location") {
                     HStack(spacing: 10) {
@@ -167,7 +166,7 @@ struct ShadowCopySection: View {
         } header: {
             Text("Backup Copy and Save Location")
         } footer: {
-            Text("With a save location, statements, reports and backups are saved straight into that folder with no save window, named by Oinkly Budget, and the folder opens in Finder. Choosing one also keeps a Backup Copy of your whole database in it, a second copy that is kept up to date on its own, in Oinkly Budget's own file format and not encrypted. Untick it to be asked where to save each time. Turn the switch off to keep the save location without the copy.")
+            Text("With a save location, statements, reports and backups are saved straight into that folder with no save window, named by Oinkly Budget, and the folder opens in Finder. Choosing one also keeps a Backup Copy of your whole database in it, a second copy that is kept up to date on its own, in Oinkly Budget's own file format and not encrypted. Turn it off to be asked where to save each time. Turn the Backup Copy switch off to keep the save location without the copy.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
