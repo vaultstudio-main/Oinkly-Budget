@@ -8,7 +8,7 @@ import Charts
 /// month starts with and the buffer.
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable, Identifiable {
-        case outlook = "Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan"
+        case outlook = "Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan", savingsWarPlan = "Savings War Plan"
         var id: Self { self }
     }
 
@@ -29,6 +29,7 @@ struct MonthOutlookView: View {
         case .outlook: "Outlook for \(when)"
         case .warPlan: "Monthly War Plan for \(when)"
         case .debtWarPlan: "Pay your debts off faster"
+        case .savingsWarPlan: "Save up faster"
         }
         return Text(text).font(.headline).contentTransition(.numericText())
     }
@@ -57,7 +58,7 @@ struct MonthOutlookView: View {
             FolderTabbedHeader(title: "Monthly Outlook", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
                 monthLine
             } centre: { EmptyView() } trailing: {
-                if tab != .debtWarPlan {
+                if tab == .outlook || tab == .warPlan {
                     HStack(spacing: 8) {
                         linkButton
                         settingsButton
@@ -66,6 +67,8 @@ struct MonthOutlookView: View {
             }
             if tab == .debtWarPlan {
                 DebtWarPlanView().statusBarText("Monthly Outlook · the debt war plan")
+            } else if tab == .savingsWarPlan {
+                SavingsWarPlanView().statusBarText("Monthly Outlook · the savings war plan")
             } else {
                 OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
             }
