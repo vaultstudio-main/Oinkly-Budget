@@ -128,8 +128,9 @@ struct ShadowSetupSheet: View {
 
 // MARK: Settings
 
-/// Settings ▸ Data & Backup ▸ Backup Copy: a switch, and when it is on, whether it is up to date, where it is kept and
-/// when it was last copied. Turning it off asks whether to delete its folder too.
+/// Settings ▸ Data & Backup ▸ Backup Copy and Save Location: the folder save windows open in, a switch for keeping a Backup Copy of the
+/// data there, and when it is on, whether it is up to date, where it is kept and when it was last copied. Choosing a save location turns
+/// the Backup Copy on. Turning it off asks whether to delete its folder too.
 struct ShadowCopySection: View {
     /// What Settings scrolls to when the status in the bottom bar is clicked.
     static let scrollID = "shadowCopySection"
@@ -137,19 +138,32 @@ struct ShadowCopySection: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     @State private var restoring = false
     @State private var confirmingOff = false
+    @State private var saveName = DefaultSaveFolder.displayName
 
     var body: some View {
         Section {
-            Toggle("Keep a Backup Copy", isOn: Binding(
+            LabeledContent("Save Location") {
+                HStack(spacing: 10) {
+                    Label(saveName ?? "Where you last saved", systemImage: saveName == nil ? "clock" : "folder")
+                        .foregroundStyle(saveName == nil ? .secondary : .primary).lineLimit(1)
+                    Button("Choose…") { chooseSaveLocation() }
+                    if saveName != nil {
+                        Button("Reset") { DefaultSaveFolder.clear(); saveName = nil }
+                    }
+                }
+            }
+            Toggle("Keep a Backup Copy of my data", isOn: Binding(
                 get: { manager.isOn },
                 set: { wantsOn in
-                    if wantsOn { manager.chooseFolder() } else { confirmingOff = true }
+                    if !wantsOn { confirmingOff = true }
+                    else if let folder = DefaultSaveFolder.url { manager.setUp(in: folder) }
+                    else { manager.chooseFolder(); saveName = DefaultSaveFolder.displayName }
                 }))
             if manager.isOn { details }
         } header: {
-            Text("Backup Copy")
+            Text("Backup Copy and Save Location")
         } footer: {
-            Text("A second copy of your data in a folder you choose, kept up to date on its own. It is in Oinkly Budget's own file format and is not encrypted.")
+            Text("The save location is the folder save windows open in for statements, reports and backups. Choosing one also keeps a Backup Copy of your whole database in it, a second copy that is kept up to date on its own, in Oinkly Budget's own file format and not encrypted. Turn the switch off to keep the save location without the copy.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
@@ -161,6 +175,13 @@ struct ShadowCopySection: View {
         } message: {
             Text("Do you also want to delete the “\(ShadowFolder.folderName)” folder? It holds your latest copy and its older versions. Deleting moves it to the Trash.")
         }
+    }
+
+    /// Asks for the save location. The Backup Copy starts there too, unless one is already kept somewhere else.
+    private func chooseSaveLocation() {
+        guard DefaultSaveFolder.choose() else { return }
+        saveName = DefaultSaveFolder.displayName
+        if !manager.isOn, let folder = DefaultSaveFolder.url { manager.setUp(in: folder) }
     }
 
     @ViewBuilder

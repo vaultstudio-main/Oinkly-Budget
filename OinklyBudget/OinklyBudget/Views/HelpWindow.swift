@@ -242,7 +242,6 @@ enum HelpContent {
                 "## The Export sheet",
                 "Choose the account (or all accounts), the period (a month, a year, or from a date) and the paper size, then a save panel asks where to put the file.",
                 "• Every PDF has a letterhead across the top of its first page: a picture, a name and a thin line. By default it is the Oinkly Budget pig and name. In Settings ▸ General ▸ Letterhead you can switch to your own logo, name and a line of details, such as an address or phone number, which suits a small business, or turn it off. The logo is kept on this Mac only and is not part of backups.",
-                "• Where Files Are Saved, below it, picks the folder that save windows open in for statements, reports and backups. Choose… sets it and Reset goes back to the last place you saved. You can still pick another folder each time.",
                 "• The PDF is a statement with a running balance and repeating headers. To print it, open it in Preview and print from there.",
                 "• The CSV uses the layout Import CSV reads, so a file you export can be imported again.",
                 "• One transaction can be saved as a PDF from its detail window.",
@@ -442,7 +441,8 @@ enum HelpContent {
             Topic(title: "Backup Copy", symbol: "shield.lefthalf.filled", lines: [
                 "A backup copy is a second copy of your data in a folder you choose, such as Documents or iCloud Drive. Oinkly Budget keeps it up to date on its own, so there is always a spare if something goes wrong.",
                 "## Setting it up",
-                "• After you have added some data, Oinkly Budget offers to set one up. Or go to Settings ▸ Data & Backup ▸ Backup Copy and turn on Keep a Backup Copy, then choose a folder.",
+                "• After you have added some data, Oinkly Budget offers to set one up. Or go to Settings ▸ Data & Backup ▸ Backup Copy and Save Location and turn on Keep a Backup Copy of my data, then choose a folder.",
+                "• The same folder is your Save Location: statement, report and backup save windows open in it. Press Choose… beside Save Location and the Backup Copy turns on there by itself. Reset goes back to macOS opening where you last saved, and turning the switch off keeps the save location without the copy.",
                 "• A folder called Oinkly Budget Backup Copy is made inside the folder you chose. Please don't edit or move the files in it.",
                 "• The files are in Oinkly Budget's own format (.pigdata), so only Oinkly Budget can read them. Double-click one to restore from it. A single file brings back your data, and receipts and photos come back when you restore from Settings.",
                 "• When you turn on sharing, you are asked to choose a backup copy folder too. It keeps the peace between your edits and the other person's, and is kept up to date each time the shared data is saved.",

@@ -333,8 +333,16 @@ final class ShadowCopyManager {
         panel.directoryURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
         panel.message = "Choose where to keep your backup copy. A folder called “\(ShadowFolder.folderName)” is made inside it."
         panel.prompt = "Choose"
-        guard panel.runModal() == .OK, let url = panel.url,
-              let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        // The folder the copy is kept in is also where save windows open, unless a save location was already chosen.
+        if DefaultSaveFolder.url == nil { DefaultSaveFolder.remember(url) }
+        setUp(in: url)
+    }
+
+    /// Keeps the backup copy inside `url` and starts copying. Used when the person picks the folder, and when a save location is chosen and
+    /// the backup copy is not on yet.
+    func setUp(in url: URL) {
+        guard let data = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else { return }
         UserDefaults.standard.set(data, forKey: Self.bookmarkKey)
         isOn = true
         folderPath = url.path
