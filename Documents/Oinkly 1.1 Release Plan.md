@@ -14,11 +14,12 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [x] When the target debt is paid off, its payment rolls over to the next debt.
 - [x] Bonus: the new **Savings War Plan** tab has the same Laser Focus Annihilation mode for savings accounts.
 
-## Feature 2: Receipt Verification
+## Feature 2: Receipt Verification ✅ Done (first version)
 
-- Scan a receipt with Apple's Vision framework while entering a transaction.
-- The scan checks the entered info against the receipt and suggests corrections if they don't match.
-- Receipt learning is stored only in a database on the device, to save users time on data entry.
+- [x] Scan a receipt with Apple's Vision framework while entering a transaction (new transaction, credit card charge, cash transaction and edit). PDFs with text are read directly.
+- [x] The scan checks the entered total, date and payee against the receipt and suggests corrections if they don't match. Nothing changes until the Use button is pressed.
+- [x] Receipt learning stays on the device: the app remembers which payee goes with which store, in a small file on this Mac (not in the database, so it is not in backups). Erase All Data forgets it.
+- [ ] Later: fill in a blank transaction from a receipt automatically, learn categories as well as payees, and check receipts from the register's Add Receipt link and from Pay a Bill.
 
 ## Feature 3: PDF Letterhead
 

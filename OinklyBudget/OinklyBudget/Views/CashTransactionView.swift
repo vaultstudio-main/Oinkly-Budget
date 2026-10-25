@@ -19,6 +19,7 @@ struct CashTransactionView: View {
     @State private var memo = ""
     @State private var state: ReconcileState = .reconciled
     @State private var receipt: Data?
+    @State private var receiptCheck = ReceiptCheckState()
     @State private var noReceipt = false
     @State private var confirmation: String?
 
@@ -100,7 +101,8 @@ struct CashTransactionView: View {
                     Form { fields }
                         .formStyle(.grouped)
                     Divider()
-                    ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt)
+                    ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt,
+                                  checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
                 }
                 HStack {
                     Spacer()
@@ -126,6 +128,7 @@ struct CashTransactionView: View {
     }
 
     private func save() {
+        receiptCheck.learn(payee: payee, receipt: receipt)
         guard let cash, cash.isLive, let amount, amount > 0 else { return }
         let signed = isPayment ? -amount : amount
         PayeeMemory.record(name: payee, category: category, amount: signed, in: modelContext)

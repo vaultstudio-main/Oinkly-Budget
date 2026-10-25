@@ -206,6 +206,8 @@ enum HelpContent {
                 "• Pay a Bill has a Receipt or Bill section, so you can attach the PDF as you pay.",
                 "• ATM withdrawals and payments to cards never have a receipt.",
                 "• Receipts and photos are the only files the app keeps.",
+                "• Receipt checking: when a receipt is attached in a new transaction, a credit card charge, a cash transaction or an edit, the app reads it on this Mac and shows what it found: the total, the date and the store. If any of these differs from what you typed, it suggests the correction, and nothing changes until you press Use.",
+                "• The app learns which payee goes with which store, so the next receipt from the same place suggests it. That is kept in a small file on this Mac only, outside the database, and is not in backups. Erase All Data forgets it. The receipt is read with Apple's text recognition, which works on this Mac. Nothing is sent anywhere.",
             ]),
 
             Topic(title: "Transfers", symbol: "arrow.left.arrow.right", lines: [

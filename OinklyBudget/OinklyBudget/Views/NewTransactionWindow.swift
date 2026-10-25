@@ -40,6 +40,7 @@ struct NewTransactionWindow: View {
 
     @State private var limitMessage: String?
     @State private var receipt: Data?
+    @State private var receiptCheck = ReceiptCheckState()
     @State private var noReceipt = false
 
     /// The change this would make to the chosen account's balance. A payment is a charge on a card.
@@ -196,7 +197,8 @@ struct NewTransactionWindow: View {
             }
             .formStyle(.grouped)
             Divider()
-            ReceiptColumn(supported: account?.supportsReceipts == true, data: $receipt, noReceipt: $noReceipt)
+            ReceiptColumn(supported: account?.supportsReceipts == true, data: $receipt, noReceipt: $noReceipt,
+                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
             }
 
             HStack {
@@ -235,6 +237,7 @@ struct NewTransactionWindow: View {
     }
 
     private func save(keepOpen: Bool) {
+        receiptCheck.learn(payee: payee, receipt: receipt)
         guard let amount, let account else { return }
         if account.wouldExceedLimit(adding: accountChange) {
             limitMessage = account.limitMessage

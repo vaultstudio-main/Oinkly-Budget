@@ -26,6 +26,8 @@ enum StoreReset {
         }
         // Every account is going, so the War Plans, the Outlook's starting amounts and its choice of accounts have nothing to refer to.
         OutlookSettings.forgetData()
+        // The stores and payees that receipts taught this Mac go with the data they came from.
+        ReceiptMemory.forgetAll()
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -37,6 +39,7 @@ enum StoreReset {
         UserDefaults.standard.removeObject(forKey: key)
         // Also when the erase was asked for from the command line, which skips the step above.
         OutlookSettings.forgetData()
+        ReceiptMemory.forgetAll()
         let url = configuration.url
         let folder = url.deletingLastPathComponent()
         let manager = FileManager.default

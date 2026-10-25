@@ -144,12 +144,15 @@ struct ReceiptColumn: View {
     var title = "Receipt"
     @Binding var data: Data?
     var noReceipt: Binding<Bool>?
+    /// Pass the fields being typed, and the receipt is read and checked against them.
+    var checking: ReceiptChecking?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(.headline)
             if supported {
-                ReceiptPicker(data: $data, noReceipt: noReceipt, viewingHeight: 430)
+                ReceiptPicker(data: $data, noReceipt: noReceipt, viewingHeight: checking == nil ? 430 : 340)
+                if let checking { ReceiptCheckView(data: data, checking: checking) }
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "nosign").font(.system(size: 26, weight: .light)).foregroundStyle(.tertiary)

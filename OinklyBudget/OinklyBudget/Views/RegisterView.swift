@@ -431,6 +431,7 @@ struct EditTransactionSheet: View {
     @State private var state: ReconcileState
     @State private var investmentType: InvestmentType
     @State private var receipt: Data?
+    @State private var receiptCheck = ReceiptCheckState()
     @State private var noReceipt: Bool
     @State private var limitMessage: String?
     @State private var isSplitting: Bool
@@ -630,7 +631,8 @@ struct EditTransactionSheet: View {
             .formStyle(.grouped)
             Divider()
             // The receipt beside the form, as in a new transaction, so neither has to scroll.
-            ReceiptColumn(supported: showsReceipt, data: $receipt, noReceipt: $noReceipt)
+            ReceiptColumn(supported: showsReceipt, data: $receipt, noReceipt: $noReceipt,
+                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
             }
 
             if let limitMessage {
@@ -675,6 +677,7 @@ struct EditTransactionSheet: View {
     }
 
     private func save() {
+        receiptCheck.learn(payee: payee, receipt: receipt)
         guard transaction.isLive else { dismiss(); return }
         if !amountIsLocked, selectedAccount.wouldExceedLimit(adding: accountChange) {
             limitMessage = selectedAccount.limitMessage

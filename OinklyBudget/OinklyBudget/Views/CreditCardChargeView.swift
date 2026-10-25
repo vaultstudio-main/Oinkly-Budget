@@ -21,6 +21,7 @@ struct CreditCardChargeView: View {
     @State private var memo = ""
     @State private var state: ReconcileState = .unreconciled
     @State private var receipt: Data?
+    @State private var receiptCheck = ReceiptCheckState()
     @State private var noReceipt = false
     @State private var limitMessage: String?
     @State private var confirmation: String?
@@ -122,7 +123,8 @@ struct CreditCardChargeView: View {
                 Form { fields }
                     .formStyle(.grouped)
                 Divider()
-                ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt)
+                ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt,
+                              checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
             }
             HStack {
                 Spacer()
@@ -149,6 +151,7 @@ struct CreditCardChargeView: View {
     }
 
     private func save() {
+        receiptCheck.learn(payee: payee, receipt: receipt)
         guard let card, card.isLive, charge > 0 else { return }
         if card.wouldExceedLimit(adding: -charge) {
             limitMessage = card.limitMessage
