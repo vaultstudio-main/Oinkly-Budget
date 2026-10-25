@@ -19,7 +19,7 @@ enum ReleaseNotes {
             ]),
             ("Debt War Plan", [
                 "Laser Focus Annihilation joins Highest interest first and Smallest balance first: pick one debt and every extra dollar goes to it until it is gone, then its payment rolls on to the next.",
-                "A Quick menu beside the extra amount fills in the usual amounts. The box also shows the debt-free date, time saved and interest saved for several extra amounts, and the extra each month it takes to be debt-free in 1, 2, 3, 5 or 10 years, with a Use button for each.",
+                "The box shows the debt-free date, time saved and interest saved for several extra amounts, and the extra each month it takes to be debt-free in 1, 2, 3, 5 or 10 years, with a Use button for each.",
                 "Payments freed by a paid-off debt now roll onto the next one in every payoff calculation, the reports included.",
             ]),
             ("Savings War Plan", [

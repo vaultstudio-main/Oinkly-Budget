@@ -13,7 +13,6 @@ struct DebtWarPlanView: View {
     /// The debt Laser Focus Annihilation goes after. When it is not one of the debts any more (paid off, deleted), the smallest takes its place.
     @AppStorage("debtWarPlanTarget") private var targetID = ""
 
-    private static let quickAmounts: [Double] = [50, 100, 250, 500, 1000]
 
     private var extraBinding: Binding<Decimal?> {
         Binding(get: { OutlookSettings.decimal(extraText) }, set: { extraText = OutlookSettings.text($0) })
@@ -93,7 +92,6 @@ struct DebtWarPlanView: View {
             HStack {
                 Text("Extra each month").frame(width: 150, alignment: .leading)
                 CurrencyField("Extra each month", value: extraBinding).labelsHidden().frame(width: 140).multilineTextAlignment(.trailing)
-                quickMenu
             }
             HStack {
                 Text("One-time extra now").frame(width: 150, alignment: .leading)
@@ -101,21 +99,6 @@ struct DebtWarPlanView: View {
             }
         }
         .help("The extra each month is paid on top of your payments every month. The one-time amount is paid once, today, such as a bonus or a tax refund.")
-    }
-
-    /// The usual amounts and Clear, in a menu beside the box, so they take no row of their own.
-    private var quickMenu: some View {
-        Menu {
-            ForEach(Self.quickAmounts, id: \.self) { amount in
-                Button("+\(ReportFormat.money(amount))") { extraBinding.wrappedValue = Decimal(amount) }
-            }
-            Divider()
-            Button("Clear Both Amounts") { extraText = ""; lumpText = "" }.disabled(extra == 0 && lump == 0)
-        } label: {
-            Label("Quick", systemImage: "bolt.fill")
-        }
-        .menuStyle(.borderlessButton).fixedSize()
-        .help("Quick amounts for the extra each month, and Clear")
     }
 
     private func strategyPicker(debts: [DebtWarPlan.Debt]) -> some View {
