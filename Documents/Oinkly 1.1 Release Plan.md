@@ -26,11 +26,10 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [x] Printed and exported PDFs get a letterhead generated automatically, with an image, across the top of the first page.
 - [x] Decided: both. By default it is the Oinkly Budget pig and name. Settings ▸ General ▸ Letterhead can switch to your own logo, name and a line of details (for small businesses), or turn it off. The logo is kept on the Mac only, outside backups.
 
-## Maybe: Paycheck Stub Tracking
+## ~~Maybe: Paycheck Stub Tracking~~ Cut
 
-- Might be cut from 1.1.
-- Scan stubs or enter them by hand to keep a running record of pay and withholding.
-- Tracking only, with no tax estimates or refund calculations, so it isn't a regulated tax service.
+- Cut from 1.1.
+- The idea was: scan stubs or enter them by hand to keep a running record of pay and withholding, tracking only, with no tax estimates or refund calculations, so it isn't a regulated tax service.
 
 ## General
 
