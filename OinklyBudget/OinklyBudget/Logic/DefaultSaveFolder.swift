@@ -6,7 +6,8 @@ import AppKit
 @MainActor
 enum DefaultSaveFolder {
     private static let bookmarkKey = "defaultSaveFolderBookmark"
-    private static let nameKey = "defaultSaveFolderName"
+    /// The folder's name as kept in preferences, so Settings can follow a choice made anywhere, such as the first-time prompt.
+    static let nameKey = "defaultSaveFolderName"
 
     /// The chosen folder, when there is one and it still exists.
     static var url: URL? {

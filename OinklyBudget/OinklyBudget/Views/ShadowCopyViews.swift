@@ -140,14 +140,16 @@ struct ShadowCopySection: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     @State private var restoring = false
     @State private var confirmingOff = false
-    @State private var saveName = DefaultSaveFolder.displayName
+    /// Follows the saved choice, so this switch is right even when the folder was chosen in the first-time prompt while Settings was open.
+    @AppStorage(DefaultSaveFolder.nameKey) private var storedSaveName = ""
+    private var saveName: String? { storedSaveName.isEmpty ? nil : storedSaveName }
 
     var body: some View {
         Section {
             Toggle("Use a default save location", isOn: Binding(
                 get: { saveName != nil },
                 set: { wantsOn in
-                    if wantsOn { chooseSaveLocation() } else { DefaultSaveFolder.clear(); saveName = nil }
+                    if wantsOn { chooseSaveLocation() } else { DefaultSaveFolder.clear() }
                 }))
             if let saveName {
                 LabeledContent("Save Location") {
@@ -185,7 +187,6 @@ struct ShadowCopySection: View {
     /// Asks for the save location. The Backup Copy starts there too, unless one is already kept somewhere else.
     private func chooseSaveLocation() {
         guard DefaultSaveFolder.choose() else { return }
-        saveName = DefaultSaveFolder.displayName
         if !manager.isOn, let folder = DefaultSaveFolder.url { manager.setUp(in: folder) }
     }
 
