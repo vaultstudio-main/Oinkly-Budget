@@ -21,6 +21,15 @@ enum LetterheadMode: String, CaseIterable, Identifiable {
 
 /// The letterhead for a PDF: a picture, a name and a line of details, chosen in Settings and worked out once when the PDF is made.
 enum Letterhead {
+    /// The biggest logo a letterhead keeps, in pixels: a standard letterhead logo, about 2 inches wide and 0.65 inch tall at 300 dpi. A bigger
+    /// picture is reduced to fit, keeping its shape. It is drawn on the page no larger than that.
+    static let logoBox = CGSize(width: 600, height: 200)
+    /// How long the name and the line of details can be, so each stays on one line of the letterhead.
+    static let maxNameLength = 40
+    static let maxDetailsLength = 90
+    /// A picture file bigger than this is turned away, so a huge one is never opened.
+    static let maxFileBytes = 25_000_000
+
     struct Resolved {
         var image: NSImage?
         var name: String
@@ -53,11 +62,12 @@ enum Letterhead {
 
     static func customLogo() -> NSImage? { NSImage(contentsOf: logoURL) }
 
-    /// Saves a picture as the logo, scaled to at most 600 pixels so it stays small. False when the file isn't a picture.
+    /// Saves a picture as the logo, reduced to fit the standard logo size (never enlarged) so it stays small. False when the file isn't a
+    /// picture or is too big to open.
     @discardableResult
-    static func saveLogo(from data: Data, maxPixelSize: CGFloat = 600) -> Bool {
-        guard let image = NSImage(data: data), image.size.width > 0, image.size.height > 0 else { return false }
-        let scale = min(maxPixelSize / max(image.size.width, image.size.height), 1)
+    static func saveLogo(from data: Data, box: CGSize = logoBox) -> Bool {
+        guard data.count <= maxFileBytes, let image = NSImage(data: data), image.size.width > 0, image.size.height > 0 else { return false }
+        let scale = min(box.width / image.size.width, box.height / image.size.height, 1)
         let size = NSSize(width: (image.size.width * scale).rounded(), height: (image.size.height * scale).rounded())
         guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height), bitsPerSample: 8,
                                             samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return false }

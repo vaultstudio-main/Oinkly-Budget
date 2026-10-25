@@ -1,4 +1,5 @@
 #if DEBUG
+import AppKit
 import Foundation
 import SQLite3
 import SwiftData
@@ -679,6 +680,25 @@ enum SharedHardeningTest {
             check("S27b a shared problem shows", sharedWords(.saved, upToDate27, .problem("x")) == "Shared · Problem")
             check("S27b a database problem still comes first", sharedWords(.problem("x"), upToDate27, .problem("y")) == "Database · Problem")
             check("S27b a backup copy that needs attention is not hidden by shared being fine", sharedWords(.saved, .notSetUp, .saved) == "Backup Copy Database · Not set up")
+
+            // S27c: a letterhead logo is reduced to the standard size and never enlarged
+            if Letterhead.customLogo() == nil {
+                func pngData(_ width: Int, _ height: Int) -> Data {
+                    let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true,
+                                                  isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+                    return bitmap.representation(using: .png, properties: [:]) ?? Data()
+                }
+                func savedSize(_ width: Int, _ height: Int) -> (w: Int, h: Int)? {
+                    guard Letterhead.saveLogo(from: pngData(width, height)), let rep = Letterhead.customLogo()?.representations.first else { return nil }
+                    return (rep.pixelsWide, rep.pixelsHigh)
+                }
+                let big = savedSize(4000, 3000), wide = savedSize(2400, 300), small = savedSize(300, 100)
+                Letterhead.removeLogo()
+                check("S27c a big square-ish logo is reduced to fit 600 by 200", big.map { $0.w <= 600 && $0.h <= 200 && $0.h == 200 } ?? false)
+                check("S27c a wide logo is reduced to 600 wide, keeping its shape", wide.map { $0.w == 600 && $0.h == 75 } ?? false)
+                check("S27c a small logo is not enlarged", small.map { $0.w == 300 && $0.h == 100 } ?? false)
+                check("S27c a file that isn't a picture is refused", !Letterhead.saveLogo(from: Data("hello".utf8)))
+            }
 
             // S28: the sealed file format, and the backup copy's receipts
             let sealedPlain = root.appendingPathComponent("sealed/plain.store")

@@ -46,7 +46,7 @@ private struct LetterheadSettingsSection: View {
         } header: {
             Text("Letterhead")
         } footer: {
-            Text("A picture and name at the top of the first page of statements, reports and other PDFs. Your own logo and name suit a small business. The logo is kept on this Mac only.")
+            Text("A picture and name at the top of the first page of statements, reports and other PDFs. Your own logo and name suit a small business. A logo is fitted into the standard letterhead size, about 2 inches wide and 0.65 inch tall, so a bigger picture is reduced to fit. The name can be up to \(Letterhead.maxNameLength) characters and the details up to \(Letterhead.maxDetailsLength). The logo is kept on this Mac only.")
         }
         .fileImporter(isPresented: $choosingLogo, allowedContentTypes: [.image]) { result in
             switch result {
@@ -57,7 +57,7 @@ private struct LetterheadSettingsSection: View {
                     problem = nil
                     settings.logoChanged()
                 } else {
-                    problem = "That file couldn't be read as a picture."
+                    problem = "That file couldn't be read as a picture, or it is over 25 MB."
                 }
             case .failure(let error):
                 problem = error.localizedDescription

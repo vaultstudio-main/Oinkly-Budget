@@ -100,13 +100,13 @@ final class AppSettings {
     }
 
     func setLetterheadName(_ value: String) {
-        letterheadName = value
-        UserDefaults.standard.set(value, forKey: Key.letterheadName)
+        letterheadName = String(value.prefix(Letterhead.maxNameLength))
+        UserDefaults.standard.set(letterheadName, forKey: Key.letterheadName)
     }
 
     func setLetterheadDetails(_ value: String) {
-        letterheadDetails = value
-        UserDefaults.standard.set(value, forKey: Key.letterheadDetails)
+        letterheadDetails = String(value.prefix(Letterhead.maxDetailsLength))
+        UserDefaults.standard.set(letterheadDetails, forKey: Key.letterheadDetails)
     }
 
     func logoChanged() { letterheadLogoVersion += 1 }
