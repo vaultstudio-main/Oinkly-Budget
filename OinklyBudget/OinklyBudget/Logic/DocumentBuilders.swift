@@ -178,20 +178,26 @@ enum DocumentBuilders {
     }
 }
 
-/// Asks where to save, draws the document as a PDF and shows it in Finder.
+/// Draws the document as a PDF and saves it: straight into the default save location when there is one, else after asking where. Shows it in Finder.
 @MainActor
 enum PDFSaver {
     static func save(_ document: ExportDocument, suggestedName: String) {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.pdf]
         let cleaned = suggestedName.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
-        panel.nameFieldStringValue = cleaned + ".pdf"
-        DefaultSaveFolder.apply(to: panel)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        let data = DocumentPDF.render(document, paper: .preferred)
-        do {
+        func write(to url: URL) throws {
+            let data = DocumentPDF.render(document, paper: .preferred)
             guard !data.isEmpty else { throw CocoaError(.fileWriteUnknown) }
             try data.write(to: url, options: .atomic)
+        }
+        do {
+            if let url = try DefaultSaveFolder.save(named: cleaned + ".pdf", write) {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+                return
+            }
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [.pdf]
+            panel.nameFieldStringValue = cleaned + ".pdf"
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try write(to: url)
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } catch {
             let alert = NSAlert()

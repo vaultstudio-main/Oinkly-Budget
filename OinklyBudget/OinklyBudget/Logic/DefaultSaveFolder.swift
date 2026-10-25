@@ -48,8 +48,22 @@ enum DefaultSaveFolder {
         return true
     }
 
-    /// Points a save window at the chosen folder, when there is one.
-    static func apply(to panel: NSSavePanel) {
-        if let folder = url { panel.directoryURL = folder }
+    /// Writes a file straight into the chosen folder, with no save window, and returns where it went. Nil when no folder is chosen (or it
+    /// can't be found), so the caller asks with a save window as before. A name that is already taken gets " 2", " 3" and so on, so
+    /// nothing is ever replaced.
+    static func save(named name: String, _ write: (URL) throws -> Void) throws -> URL? {
+        guard let folder = url else { return nil }
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        let clean = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        let base = (clean as NSString).deletingPathExtension, ext = (clean as NSString).pathExtension
+        var target = folder.appendingPathComponent(clean)
+        var count = 2
+        while FileManager.default.fileExists(atPath: target.path) {
+            target = folder.appendingPathComponent(ext.isEmpty ? "\(base) \(count)" : "\(base) \(count).\(ext)")
+            count += 1
+        }
+        try write(target)
+        return target
     }
 }

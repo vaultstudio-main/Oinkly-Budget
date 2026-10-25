@@ -33,7 +33,7 @@ enum ReleaseNotes {
                 "Printed and exported PDFs get a letterhead across the top of the first page: by default the Oinkly Budget pig and name, or your own logo, name and a line of details, or none. It is chosen in Settings ▸ General ▸ Letterhead. Your logo stays on this Mac, outside backups.",
             ]),
             ("Saving files", [
-                "Settings ▸ Data & Backup ▸ Backup Copy and Save Location lets you choose the folder that save windows open in for statements, reports and backups, and choosing one also turns on a Backup Copy of your database there. You can still pick another folder each time. Reset goes back to macOS opening where you last saved.",
+                "Settings ▸ Data & Backup ▸ Backup Copy and Save Location has a tick box, Use a default save location. Tick it and choose a folder, and statements, reports and backups are saved straight into it with no save window, and a Backup Copy of your database starts there too. Untick it to be asked each time. Erase Everything forgets the choice.",
             ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",

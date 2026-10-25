@@ -334,8 +334,6 @@ final class ShadowCopyManager {
         panel.message = "Choose where to keep your backup copy. A folder called “\(ShadowFolder.folderName)” is made inside it."
         panel.prompt = "Choose"
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        // The folder the copy is kept in is also where save windows open, unless a save location was already chosen.
-        if DefaultSaveFolder.url == nil { DefaultSaveFolder.remember(url) }
         setUp(in: url)
     }
 

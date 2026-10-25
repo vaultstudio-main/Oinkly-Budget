@@ -28,6 +28,8 @@ enum StoreReset {
         OutlookSettings.forgetData()
         // The stores and payees that receipts taught this Mac go with the data they came from.
         ReceiptMemory.forgetAll()
+        // So does the folder files were being saved to.
+        DefaultSaveFolder.clear()
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -40,6 +42,7 @@ enum StoreReset {
         // Also when the erase was asked for from the command line, which skips the step above.
         OutlookSettings.forgetData()
         ReceiptMemory.forgetAll()
+        DefaultSaveFolder.clear()
         let url = configuration.url
         let folder = url.deletingLastPathComponent()
         let manager = FileManager.default

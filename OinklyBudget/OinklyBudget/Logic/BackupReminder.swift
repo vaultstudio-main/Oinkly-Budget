@@ -25,20 +25,27 @@ enum BackupExporter {
         case failed(String)
     }
 
-    /// Asks where to save, then writes the backup. Nil when the save panel was cancelled.
+    /// Writes the backup into the default save location when there is one, else asks where to save. Nil when the save panel was cancelled.
     static func exportWithPanel(from context: ModelContext) -> Outcome? {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [DataBackup.fileType]
-        panel.nameFieldStringValue = "Oinkly Budget Backup \(stamp()).\(DataBackup.fileExtension)"
-        panel.message = "Save a backup of everything in Oinkly Budget."
-        DefaultSaveFolder.apply(to: panel)
-        guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        do {
+        let name = "Oinkly Budget Backup \(stamp()).\(DataBackup.fileExtension)"
+        var summary = ""
+        func write(to url: URL) throws {
             let file = try DataBackup.make(from: context)
-            let bytes = try DataBackup.encode(file)
-            try bytes.write(to: url, options: .atomic)
+            try DataBackup.encode(file).write(to: url, options: .atomic)
+            summary = file.summary
             UserDefaults.standard.set(Date.now.timeIntervalSinceReferenceDate, forKey: lastBackupKey)
-            return .saved(summary: file.summary, fileName: url.lastPathComponent)
+        }
+        do {
+            if let url = try DefaultSaveFolder.save(named: name, write) {
+                return .saved(summary: summary, fileName: url.lastPathComponent)
+            }
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [DataBackup.fileType]
+            panel.nameFieldStringValue = name
+            panel.message = "Save a backup of everything in Oinkly Budget."
+            guard panel.runModal() == .OK, let url = panel.url else { return nil }
+            try write(to: url)
+            return .saved(summary: summary, fileName: url.lastPathComponent)
         } catch {
             return .failed(error.localizedDescription)
         }

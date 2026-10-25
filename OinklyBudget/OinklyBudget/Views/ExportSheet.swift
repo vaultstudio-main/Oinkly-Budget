@@ -174,14 +174,9 @@ struct ExportSheet: View {
         errorMessage = nil
         let chosen = chosenAccount
         let period = period
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [kind == .pdf ? .pdf : .commaSeparatedText]
-        panel.nameFieldStringValue = fileName(chosen, period)
-        DefaultSaveFolder.apply(to: panel)
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        let statement = StatementBuilder.make(account: chosen, period: period, in: modelContext)
-        do {
+        let name = fileName(chosen, period)
+        func write(to url: URL) throws {
+            let statement = StatementBuilder.make(account: chosen, period: period, in: modelContext)
             switch kind {
             case .pdf:
                 let data = StatementPDF.render(statement, paper: paper)
@@ -190,6 +185,19 @@ struct ExportSheet: View {
             case .csv:
                 try TransactionCSV.text(for: statement.transactions).write(to: url, atomically: true, encoding: .utf8)
             }
+        }
+        do {
+            // Straight into the default save location when there is one, else ask where.
+            if let url = try DefaultSaveFolder.save(named: name, write) {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+                dismiss()
+                return
+            }
+            let panel = NSSavePanel()
+            panel.allowedContentTypes = [kind == .pdf ? .pdf : .commaSeparatedText]
+            panel.nameFieldStringValue = name
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            try write(to: url)
             NSWorkspace.shared.activateFileViewerSelecting([url])
             dismiss()
         } catch {

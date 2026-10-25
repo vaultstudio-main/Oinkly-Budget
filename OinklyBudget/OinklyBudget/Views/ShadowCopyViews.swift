@@ -142,13 +142,17 @@ struct ShadowCopySection: View {
 
     var body: some View {
         Section {
-            LabeledContent("Save Location") {
-                HStack(spacing: 10) {
-                    Label(saveName ?? "Where you last saved", systemImage: saveName == nil ? "clock" : "folder")
-                        .foregroundStyle(saveName == nil ? .secondary : .primary).lineLimit(1)
-                    Button("Choose…") { chooseSaveLocation() }
-                    if saveName != nil {
-                        Button("Reset") { DefaultSaveFolder.clear(); saveName = nil }
+            Toggle("Use a default save location", isOn: Binding(
+                get: { saveName != nil },
+                set: { wantsOn in
+                    if wantsOn { chooseSaveLocation() } else { DefaultSaveFolder.clear(); saveName = nil }
+                }))
+                .toggleStyle(.checkbox)
+            if let saveName {
+                LabeledContent("Save Location") {
+                    HStack(spacing: 10) {
+                        Label(saveName, systemImage: "folder").lineLimit(1)
+                        Button("Change…") { chooseSaveLocation() }
                     }
                 }
             }
@@ -157,13 +161,13 @@ struct ShadowCopySection: View {
                 set: { wantsOn in
                     if !wantsOn { confirmingOff = true }
                     else if let folder = DefaultSaveFolder.url { manager.setUp(in: folder) }
-                    else { manager.chooseFolder(); saveName = DefaultSaveFolder.displayName }
+                    else { manager.chooseFolder() }
                 }))
             if manager.isOn { details }
         } header: {
             Text("Backup Copy and Save Location")
         } footer: {
-            Text("The save location is the folder save windows open in for statements, reports and backups. Choosing one also keeps a Backup Copy of your whole database in it, a second copy that is kept up to date on its own, in Oinkly Budget's own file format and not encrypted. Turn the switch off to keep the save location without the copy.")
+            Text("With a save location, statements, reports and backups are saved straight into that folder with no save window, named by Oinkly Budget, and the folder opens in Finder. Choosing one also keeps a Backup Copy of your whole database in it, a second copy that is kept up to date on its own, in Oinkly Budget's own file format and not encrypted. Untick it to be asked where to save each time. Turn the switch off to keep the save location without the copy.")
         }
         .id(Self.scrollID)
         .task { await manager.reloadDetails() }
