@@ -97,7 +97,7 @@ The full list, release by release, is in **Help ▸ Release Notes** inside the a
 
 The project has the app and a widget extension, and shared code in `OinklyBudget/Shared`. You will need to choose your own signing team (and bundle identifier if you plan to distribute your own build) in the project settings.
 
-Debug builds add a few things that release builds leave out: a **Testing** menu item that fills the app with made-up test data or wipes it, and launch tests for data safety (run the app with `-sharedHardeningTest YES` to run them). Do not point a debug build at data you care about.
+Debug builds add a few things that release builds leave out: a **Testing** menu item that fills the app with made-up test data or wipes it, and launch tests for data safety (run the app with `-sharedHardeningTest YES` to run them). A debug build has its own bundle ID (`dev.vaultstudio.oinklybudget.debug`), name and data, so running it from Xcode never touches the copy of Oinkly Budget you use. It starts empty, so use the Testing menu or restore a backup into it.
 
 ---
 

@@ -4,6 +4,30 @@ import UniformTypeIdentifiers
 import SwiftData
 
 // MARK: General
+/// Settings ▸ General ▸ Where Files Are Saved: the folder statements, reports and backups are offered to be saved in.
+private struct DefaultSaveFolderSection: View {
+    @State private var name = DefaultSaveFolder.displayName
+
+    var body: some View {
+        Section {
+            LabeledContent("Save Folder") {
+                HStack(spacing: 10) {
+                    Label(name ?? "Where you last saved", systemImage: name == nil ? "clock" : "folder")
+                        .foregroundStyle(name == nil ? .secondary : .primary).lineLimit(1)
+                    Button("Choose…") { if DefaultSaveFolder.choose() { name = DefaultSaveFolder.displayName } }
+                    if name != nil {
+                        Button("Reset") { DefaultSaveFolder.clear(); name = nil }
+                    }
+                }
+            }
+        } header: {
+            Text("Where Files Are Saved")
+        } footer: {
+            Text("The folder that save windows open in for statements, reports and backups. You can still pick another folder each time. Nothing is saved until you press Save.")
+        }
+    }
+}
+
 /// Settings ▸ General ▸ Letterhead: what goes at the top of the first page of every printed or exported PDF.
 private struct LetterheadSettingsSection: View {
     private let settings = AppSettings.shared
@@ -115,6 +139,7 @@ struct GeneralSettingsView: View {
             }
 
             LetterheadSettingsSection()
+            DefaultSaveFolderSection()
 
             if !ScreenshotMode.isOn {
                 Section {

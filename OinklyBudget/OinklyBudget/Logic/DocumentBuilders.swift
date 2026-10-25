@@ -186,6 +186,7 @@ enum PDFSaver {
         panel.allowedContentTypes = [.pdf]
         let cleaned = suggestedName.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         panel.nameFieldStringValue = cleaned + ".pdf"
+        DefaultSaveFolder.apply(to: panel)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let data = DocumentPDF.render(document, paper: .preferred)
         do {

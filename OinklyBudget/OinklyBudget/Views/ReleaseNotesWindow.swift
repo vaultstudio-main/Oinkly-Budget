@@ -32,6 +32,9 @@ enum ReleaseNotes {
             ("PDF Letterhead", [
                 "Printed and exported PDFs get a letterhead across the top of the first page: by default the Oinkly Budget pig and name, or your own logo, name and a line of details, or none. It is chosen in Settings ▸ General ▸ Letterhead. Your logo stays on this Mac, outside backups.",
             ]),
+            ("Saving files", [
+                "Settings ▸ General ▸ Where Files Are Saved lets you choose the folder that save windows open in for statements, reports and backups. You can still pick another folder each time. Reset goes back to macOS opening where you last saved.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),

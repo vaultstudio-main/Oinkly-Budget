@@ -177,6 +177,7 @@ struct ExportSheet: View {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [kind == .pdf ? .pdf : .commaSeparatedText]
         panel.nameFieldStringValue = fileName(chosen, period)
+        DefaultSaveFolder.apply(to: panel)
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         let statement = StatementBuilder.make(account: chosen, period: period, in: modelContext)

@@ -40,7 +40,12 @@ nonisolated struct WidgetSnapshot: Codable, Sendable, Equatable {
 
     /// The App Group shared by the app and its widgets. It starts with the team ID, which macOS accepts without
     /// registering it separately.
+    /// A Debug build (the one Xcode runs) has its own group, bundle ID and data, so it never touches the copy of the app you use.
+    #if DEBUG
+    static let groupID = "LVKJ422Q3M.dev.vaultstudio.oinklybudget.debug"
+    #else
     static let groupID = "LVKJ422Q3M.dev.vaultstudio.oinklybudget"
+    #endif
     static let scheme = "oinklybudget"
     private static let fileName = "widget-snapshot.json"
 
