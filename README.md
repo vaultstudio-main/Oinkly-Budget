@@ -6,7 +6,7 @@
 
 Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
 
-> **Current version: 1.0.1.** A small fix to the first open-source release, 1.0 (build 6). Free and open source under the GNU General Public License v3.
+> **Current version: 1.1, "Laser Focused, You Idiot"** in the source here. The newest download is still 1.0.1 until a 1.1 build is published. Free and open source under the GNU General Public License v3.
 
 ---
 
@@ -22,7 +22,11 @@ Oinkly Budget is released as free software under the **[GNU General Public Licen
 
 The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Documents/](Documents/). If you want to know what is coming and why, start there.
 
-### Latest update: 1.0.1
+### Coming in 1.1: Laser Focused, You Idiot
+
+The source is already at 1.1. It adds a Savings War Plan, Laser Focus Annihilation for debts and savings, a reworked Planning War Room with a Strategy Plan tab and many new charts (and no circle graphs), Receipt Verification, and a PDF Letterhead. The full list is in **Help ▸ Release Notes**. Builds are published in stages, so the download below stays at 1.0.1 until then.
+
+### Latest download: 1.0.1
 
 Version 1.0.1 is a small bug-fix release. I accidentally forgot to let the app scale properly to different screen sizes, so it looked cramped or lost in empty space on some Macs, with some tabs running off the edge of the window. This update fixes that:
 

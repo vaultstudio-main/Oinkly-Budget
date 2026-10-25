@@ -10,6 +10,40 @@ enum ReleaseNotes {
     }
 
     static let releases: [Release] = [
+        Release(version: "1.1", title: "Laser Focused, You Idiot", sections: [
+            ("Planning War Room", [
+                "The Monthly Outlook page is now the Planning War Room, with four tabs: Strategy Plan, Monthly War Plan, Debt War Plan and Savings War Plan.",
+                "The Strategy Plan counts the extra money your Debt and Savings War Plans set aside in Money Out, Left Over and Above the Buffer, and in the chart. A card says so. Closed months keep the figures they had.",
+                "The Strategy Plan pulls in more from both plans: where the month's money goes, what you owe and what you save over time, a net position over time, when each debt is paid off, how each savings account grows, and what it would take to be debt-free.",
+                "On the Monthly War Plan, Add a Line takes a payee, with suggestions from your register and the category each last had. A line can count towards your Debt or Savings War Plan, and the sheet adds those up. Link Transactions is gone.",
+            ]),
+            ("Debt War Plan", [
+                "Laser Focus Annihilation joins Highest interest first and Smallest balance first: pick one debt and every extra dollar goes to it until it is gone, then its payment rolls on to the next.",
+                "A Quick menu beside the extra amount fills in the usual amounts. The box also shows the debt-free date, time saved and interest saved for several extra amounts, and the extra each month it takes to be debt-free in 1, 2, 3 or 5 years, with a Use button for each.",
+                "Payments freed by a paid-off debt now roll onto the next one in every payoff calculation, the reports included.",
+            ]),
+            ("Savings War Plan", [
+                "A new tab for saving up. Every savings account is grown month by month with its own rate and deposits. Add an extra amount, a one-time deposit or a total goal, pick where the extra goes, or point Laser Focus Annihilation at one account, and see when each account reaches its target.",
+            ]),
+            ("Receipt Verification", [
+                "Scan a receipt while entering a transaction, or attach a PDF with text. The app reads it on this Mac and suggests corrections to the total, date and payee. Nothing changes until you press Use.",
+                "It remembers which payee goes with which store, in a small file on this Mac that is not in backups. Erase All Data forgets it.",
+            ]),
+            ("PDF Letterhead", [
+                "Printed and exported PDFs get a letterhead across the top of the first page: by default the Oinkly Budget pig and name, or your own logo, name and a line of details, or none. It is chosen in Settings ▸ General ▸ Letterhead. Your logo stays on this Mac, outside backups.",
+            ]),
+            ("Charts", [
+                "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
+            ]),
+        ]),
+        Release(version: "1.0.1", title: "Fits every screen", sections: [
+            ("Fixes", [
+                "Pages flow with the window and scale up on large screens, such as a 27-inch 4K or 5K display.",
+                "Tabs shrink and then wrap onto a second row, so every tab is always on screen.",
+                "The editor pop-ups shrink to fit smaller screens, such as a 14-inch MacBook, and scroll so Save can always be reached.",
+                "The pull-out card stacks its figures above the chart when the window is narrow.",
+            ]),
+        ]),
         Release(version: "1.0", title: "First release", sections: [
             ("Open source", [
                 "Oinkly Budget is free and open source, released under the GNU General Public License, version 3. You can read the code, use it, change it and share it, and anything built from it stays open under the same license.",
