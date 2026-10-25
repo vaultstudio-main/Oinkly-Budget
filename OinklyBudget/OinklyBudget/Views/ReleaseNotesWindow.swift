@@ -38,6 +38,9 @@ enum ReleaseNotes {
             ("Status bar", [
                 "The two dots at the bottom of the window are now one. While you share your data it says Backup Copy & Shared when this Mac, the backup copy and the shared data are all saved, and it shows whichever needs attention first.",
             ]),
+            ("Menu bar", [
+                "The menu bar pop-up shows your upcoming bills and no longer has an Open Oinkly Budget button. Click the app in the Dock to open the window.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),

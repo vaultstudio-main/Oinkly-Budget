@@ -484,8 +484,7 @@ enum HelpContent {
                 "• Tick a bill to mark it paid. A repeating transaction that waits for you has a plus button to add it now.",
                 "• The top shows how many bills are left to pay this month, their total, and the next one due, or how many are overdue.",
                 "• Closing the main window leaves the app running so the pig stays. Click the app in the Dock to open the window again, and press ⌘Q to quit.",
-                "• Settings ▸ General ▸ Background turns the menu bar item on or off and starts the app when you log in. At login it starts quietly in the menu bar with no window; click the item and choose Open Oinkly Budget when you want the window. If something needs your attention at start-up, the window opens by itself. With the menu bar item off, the window opens at login instead.",
-                "• The pop-up has an Open Oinkly Budget button at the bottom, which opens the window (or brings it forward).",
+                "• Settings ▸ General ▸ Background turns the menu bar item on or off and starts the app when you log in. At login it starts quietly in the menu bar with no window; click the app in the Dock when you want the window. If something needs your attention at start-up, the window opens by itself. With the menu bar item off, the window opens at login instead.",
             ]),
 
             Topic(title: "Reminders", symbol: "bell", lines: [

@@ -36,7 +36,6 @@ struct MenuBarLabel: View {
 /// marked as one or the other, with the date and how many days away it is. Works with no window open.
 struct MenuBarBills: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.openWindow) private var openWindow
     @Query private var allBills: [Bill]
     @Query private var allRules: [RecurringTransaction]
     @State private var contentHeight: CGFloat = 400
@@ -127,21 +126,6 @@ struct MenuBarBills: View {
                     ForEach(lines) { row($0) }
                 }
             }
-
-            Button {
-                NSApp.activate(ignoringOtherApps: true)
-                if let window = NSApp.windows.first(where: { $0.title == "Oinkly Budget" }) {
-                    window.makeKeyAndOrderFront(nil)
-                } else {
-                    openWindow(id: "main")
-                }
-            } label: {
-                Label("Open Oinkly Budget", systemImage: "arrow.up.forward.app")
-                    .font(.system(size: 14, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
         }
         .padding(18)
         .frame(width: 400)
@@ -272,7 +256,7 @@ struct BackgroundSettingsSection: View {
         } header: {
             Text("Background")
         } footer: {
-            Text("The menu bar item shows your upcoming bills. Closing the window leaves Oinkly Budget running so the item stays; open the window again from the menu bar item or the Dock, and quit with ⌘Q. With opening at login on, it starts quietly in the menu bar with no window; click the item and choose Open Oinkly Budget when you want the window. If the menu bar item is off, it opens its window at login instead.")
+            Text("The menu bar item shows your upcoming bills. Closing the window leaves Oinkly Budget running so the item stays; open the window again from the Dock, and quit with ⌘Q. With opening at login on, it starts quietly in the menu bar with no window; click the app in the Dock when you want the window. If the menu bar item is off, it opens its window at login instead.")
         }
     }
 
