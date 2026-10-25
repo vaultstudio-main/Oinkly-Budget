@@ -310,6 +310,7 @@ enum HelpContent {
                 "## Savings War Plan",
                 "• The Savings War Plan is a calculator for saving up. It lists every Savings, Money Market, CD and Health Savings account. For each one, type its yearly rate (APY), what you add to it each month, and the balance it should reach. A target from a saving goal that follows the account is filled in for you.",
                 "• Add Extra each month, a One-time deposit now, or a Total goal for all the accounts together, and see when each account reaches its target and when everything reaches the goal, how much sooner that is, and the interest earned, against saving only what you save now. With no target and no goal it shows five years ahead.",
+                "• Under the amounts, If you save more each month shows what you would have saved in five years for $100 to $1,500 extra, and To reach your goals sooner shows the extra each month it takes to reach your targets and goal in 1, 2, 3, 5 or 10 years. Use puts an amount in the Extra box. The Strategy Plan shows the same as What It Would Take to Save More.",
                 "• Pick where the extra goes first: Spread evenly, Highest rate first, or Laser Focus Annihilation, which sends every extra dollar to one account you pick, with a Target menu beside the buttons, until it reaches its target, and then rolls on to the rest.",
                 "• It is a what-if. It never changes an account. The amounts, rates and targets are remembered on this Mac.",
                 "## Settings",

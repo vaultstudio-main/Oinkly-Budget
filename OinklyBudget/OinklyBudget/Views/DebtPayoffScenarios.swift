@@ -58,7 +58,7 @@ struct DebtPayoffScenarios: View {
                             Text("still not debt-free in 50 years").foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 0)
-                        if let use { Button("Use") { use(amount) }.buttonStyle(.borderless).controlSize(.small) }
+                        if let use { Button("Use") { use(amount) }.buttonStyle(.bordered).controlSize(.small) }
                     }
                     .font(.callout)
                 }
@@ -75,7 +75,7 @@ struct DebtPayoffScenarios: View {
                             Text("not possible with these debts").foregroundStyle(.secondary)
                         }
                         Spacer(minLength: 0)
-                        if let use, let needed = extraNeeded(within: years * 12) { Button("Use") { use(needed) }.buttonStyle(.borderless).controlSize(.small) }
+                        if let use, let needed = extraNeeded(within: years * 12) { Button("Use") { use(needed) }.buttonStyle(.bordered).controlSize(.small) }
                     }
                     .font(.callout)
                 }

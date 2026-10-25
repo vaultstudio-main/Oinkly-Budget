@@ -55,7 +55,7 @@ struct SavingsWarPlanView: View {
                                     title: "No savings accounts", clean: true).frame(height: 160)
                     }
                 } else {
-                    controls(accounts: accounts)
+                    controls(accounts: accounts, target: target)
                     tiles(accounts: accounts, base: base, plan: plan)
                     chart(base: base, plan: plan)
                     table(accounts: accounts, base: base, plan: plan, target: target)
@@ -67,13 +67,15 @@ struct SavingsWarPlanView: View {
 
     // MARK: The calculator
 
-    private func controls(accounts: [SavingsWarPlan.Account]) -> some View {
+    private func controls(accounts: [SavingsWarPlan.Account], target: String?) -> some View {
         ReportPanel(title: "Save Up Faster", summary: "Add extra money and a goal, and choose where the extra goes first. Everything below follows as you type.") {
             VStack(alignment: .leading, spacing: 14) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(accounts: accounts) }
                     VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(accounts: accounts) }
                 }
+                Divider()
+                SavingsPayoffScenarios(accounts: accounts, goal: goal, strategy: strategy, laserTarget: target, lump: lump) { extraText = OutlookSettings.text(Decimal($0)) }
                 Divider()
                 Text("This is a what-if. It grows each account at the rate you give it, adds your monthly deposit and any extra, and compounds the interest each month. It assumes no withdrawals and that rates stay the same. It never changes any account.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

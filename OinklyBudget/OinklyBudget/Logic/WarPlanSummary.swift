@@ -72,6 +72,8 @@ enum WarPlanSummary {
         var lump: Double
         var goal: Double?
         var strategy: SavingsWarPlan.Strategy
+        /// The account Laser Focus Annihilation is aimed at, when that is the strategy.
+        var target: String?
         var base: SavingsWarPlan.Result
         var plan: SavingsWarPlan.Result
         var totalSaved: Double { accounts.reduce(0) { $0 + $1.balance } }
@@ -109,7 +111,7 @@ enum WarPlanSummary {
         let savingsExtra = amount("savingsWarPlanExtra", defaults), savingsLump = amount("savingsWarPlanLump", defaults)
         let goalValue = amount("savingsWarPlanGoal", defaults)
         let goal: Double? = goalValue > 0 ? goalValue : nil
-        let savings = Savings(accounts: saved, extra: savingsExtra, lump: savingsLump, goal: goal, strategy: savingsStrategy,
+        let savings = Savings(accounts: saved, extra: savingsExtra, lump: savingsLump, goal: goal, strategy: savingsStrategy, target: savingsTarget,
                               base: SavingsWarPlan.simulate(saved, extra: 0, goal: goal, strategy: savingsStrategy, laserTarget: savingsTarget),
                               plan: SavingsWarPlan.simulate(saved, extra: savingsExtra, lump: savingsLump, goal: goal, strategy: savingsStrategy, laserTarget: savingsTarget))
         return Summary(debt: debt, savings: savings)

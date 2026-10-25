@@ -16,6 +16,12 @@ struct StrategyPlanCards: View {
                     DebtPayoffScenarios(debts: summary.debt.debts, strategy: summary.debt.strategy, target: summary.debt.target, lump: summary.debt.lump)
                 }
             }
+            if !summary.savings.accounts.isEmpty {
+                ReportCard(title: "What It Would Take to Save More") {
+                    SavingsPayoffScenarios(accounts: summary.savings.accounts, goal: summary.savings.goal, strategy: summary.savings.strategy,
+                                           laserTarget: summary.savings.target, lump: summary.savings.lump)
+                }
+            }
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 10) { debtCard; savingsCard }
                 VStack(spacing: 10) { debtCard; savingsCard }
