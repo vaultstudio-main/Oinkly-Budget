@@ -152,6 +152,7 @@ private struct OutlookBody: View {
                 versusCards(outlook, totals: totals, opening: opening, kept: buffer, warExtra: warExtra)
                 flowCard(totals, warExtra: warExtra)
                 warPlansCard(warPlans, warExtra: warExtra, leftBefore: totals.left + warExtra)
+                StrategyPlanCards(summary: warPlans)
                 pullOutCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
                 improveCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
                 notes(outlook, totals: totals, kept: kept)

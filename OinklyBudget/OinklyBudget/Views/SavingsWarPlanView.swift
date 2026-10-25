@@ -59,8 +59,6 @@ struct SavingsWarPlanView: View {
                     tiles(accounts: accounts, base: base, plan: plan)
                     chart(base: base, plan: plan)
                     table(accounts: accounts, base: base, plan: plan, target: target)
-                    Text("This is a what-if. It grows each account at the rate you give it, adds your monthly deposit and any extra, and compounds the interest each month. It assumes no withdrawals and that rates stay the same. It never changes any account.")
-                        .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding(16)
@@ -76,27 +74,39 @@ struct SavingsWarPlanView: View {
                     HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(accounts: accounts) }
                     VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(accounts: accounts) }
                 }
-                HStack(spacing: 8) {
-                    Text("Quick amounts").font(.caption).foregroundStyle(.secondary)
-                    ForEach(Self.quickAmounts, id: \.self) { amount in
-                        Button("+\(ReportFormat.money(amount))") { extraText = OutlookSettings.text(Decimal(amount)) }
-                            .buttonStyle(.bordered).controlSize(.small)
-                    }
-                    Button("Clear") { extraText = ""; lumpText = ""; goalText = "" }
-                        .buttonStyle(.borderless).controlSize(.small).disabled(extra == 0 && lump == 0 && goal == nil)
-                    Spacer(minLength: 0)
-                }
+                Divider()
+                Text("This is a what-if. It grows each account at the rate you give it, adds your monthly deposit and any extra, and compounds the interest each month. It assumes no withdrawals and that rates stay the same. It never changes any account.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
     private var amountFields: some View {
         VStack(alignment: .leading, spacing: 10) {
-            field("Extra each month", text: $extraText)
+            HStack(spacing: 0) {
+                field("Extra each month", text: $extraText)
+                quickMenu
+            }
             field("One-time deposit now", text: $lumpText)
             field("Total goal (optional)", text: $goalText)
         }
         .help("The extra each month is saved on top of each account's own deposit. The one-time deposit is saved once, today. The total goal is how much you want saved across all of these accounts, and the plan runs until you reach it.")
+    }
+
+    /// The usual amounts and Clear, in a menu beside the box, so they take no row of their own.
+    private var quickMenu: some View {
+        Menu {
+            ForEach(Self.quickAmounts, id: \.self) { amount in
+                Button("+\(ReportFormat.money(amount))") { extraText = OutlookSettings.text(Decimal(amount)) }
+            }
+            Divider()
+            Button("Clear All Amounts") { extraText = ""; lumpText = ""; goalText = "" }.disabled(extra == 0 && lump == 0 && goal == nil)
+        } label: {
+            Label("Quick", systemImage: "bolt.fill")
+        }
+        .menuStyle(.borderlessButton).fixedSize()
+        .padding(.leading, 8)
+        .help("Quick amounts for the extra each month, and Clear")
     }
 
     private func field(_ title: String, text: Binding<String>) -> some View {

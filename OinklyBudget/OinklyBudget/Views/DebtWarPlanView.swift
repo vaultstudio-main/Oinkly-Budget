@@ -74,9 +74,14 @@ struct DebtWarPlanView: View {
 
     private func controls(debts: [DebtWarPlan.Debt]) -> some View {
         ReportPanel(title: "Pay It Down Faster", summary: "Add extra money and choose where it goes first. Everything below follows as you type.") {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
-                VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
+            VStack(alignment: .leading, spacing: 14) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
+                    VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
+                }
+                Divider()
+                Text("This is a what-if. It assumes you keep paying what you pay now, add no new charges, and that interest is added each month at the account's rate. When a debt is paid off, its payment goes on to the next one. It never changes any account.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -253,8 +258,6 @@ struct DebtWarPlanView: View {
                 Text("\(missing.map(\.name).joined(separator: ", ")) \(missing.count == 1 ? "has" : "have") no monthly payment set, so only the extra money pays \(missing.count == 1 ? "it" : "them") off. Set a payment on the account for a truer picture.")
                     .foregroundStyle(.orange)
             }
-            Text("This is a what-if. It assumes you keep paying what you pay now, add no new charges, and that interest is added each month at the account's rate. When a debt is paid off, its payment goes on to the next one. It never changes any account.")
-                .foregroundStyle(.secondary)
         }
         .font(.caption)
         .frame(maxWidth: .infinity, alignment: .leading)
