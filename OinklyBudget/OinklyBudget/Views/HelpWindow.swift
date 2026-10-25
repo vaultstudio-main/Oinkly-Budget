@@ -238,7 +238,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Exporting & Printing", symbol: "square.and.arrow.up", lines: [
-                "Every account page has Print PDF and Export CSV. The Transactions page has them for all accounts.",
+                "Every account page has Export CSV, Print PDF and Print. Print PDF saves a statement as a PDF file; Print sends the statement to your printer. Both ask for the period (month, year, dates or all) and the paper first, and Print then opens the Mac's own print window, where you pick the printer, copies and pages and see a preview.",
                 "## The Export sheet",
                 "Choose the account (or all accounts), the period (a month, a year, or from a date) and the paper size, then a save panel asks where to put the file.",
                 "• A PDF can have a letterhead across the top of its first page: a picture, a name and a thin line. It is off by default. In Settings ▸ General ▸ Letterhead you can choose the Oinkly Budget pig and name, or your own logo, name and a line of details, such as an address or phone number, which suits a small business. A logo is fitted into the standard letterhead size, about 2 inches wide and 0.65 inch tall, so a bigger picture is reduced to fit, and the name is limited to 40 characters and the details to 90. The logo is kept on this Mac only and is not part of backups.",

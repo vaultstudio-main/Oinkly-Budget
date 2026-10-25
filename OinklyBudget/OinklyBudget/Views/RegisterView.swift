@@ -104,7 +104,9 @@ private struct RegisterContent: View {
                 Button("Export CSV", systemImage: "square.and.arrow.up") { savingAs = .csv }
                     .help("Save this account's transactions as a CSV spreadsheet")
                 Button("Print PDF", systemImage: "printer") { savingAs = .pdf }
-                    .help("Save this account's transactions as a PDF statement to read or print")
+                    .help("Save this account's transactions as a PDF statement to read or keep")
+                Button("Print", systemImage: "printer.fill") { savingAs = .print }
+                    .help("Print this account's transactions on your printer")
             }
         }
     }
@@ -346,6 +348,7 @@ private struct RegisterContent: View {
             case "details": if let chosen = selectedTransaction { openWindow(id: "transaction-detail", value: TransactionDetailRequest(id: chosen.persistentModelID)) }
             case "makeRecurring": if let chosen = selectedTransaction { makingRecurring = chosen }
             case "export:pdf": savingAs = .pdf
+            case "export:print": savingAs = .print
             case "export:csv": savingAs = .csv
             case "import": pendingImport = PendingImport(url: ScreenshotMode.sampleStatement())
             case "editDetails": isEditingDetails = true

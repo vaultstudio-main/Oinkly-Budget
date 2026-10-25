@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import PDFKit
+import AppKit
 
 /// Save an account's transactions for a period, either as a PDF statement to read or print, or as a CSV spreadsheet
 /// (the layout the CSV import reads). They are two separate things with their own buttons: printing a statement is
@@ -8,6 +10,8 @@ import UniformTypeIdentifiers
 struct ExportSheet: View {
     enum Kind: Identifiable {
         case pdf, csv
+        /// Straight to a printer, through the macOS print window.
+        case print
         var id: Self { self }
     }
 
@@ -96,14 +100,20 @@ struct ExportSheet: View {
 
     private var title: String {
         let name = chosenAccount?.name ?? "Transactions"
-        return kind == .pdf ? "Print \(name) to PDF" : "Export \(name) as CSV"
+        switch kind {
+        case .pdf: return "Print \(name) to PDF"
+        case .csv: return "Export \(name) as CSV"
+        case .print: return "Print \(name)"
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title).font(.title2.bold()).padding(.bottom, 4)
-            Text(kind == .pdf
-                 ? "Saves a PDF statement you can read, keep or email. To print it on paper, open the PDF and print it from Preview."
+            Text(kind == .print
+                 ? "Sends a statement to your printer. Choose the period and paper here, then pick the printer in the print window."
+                 : kind == .pdf
+                 ? "Saves a PDF statement you can read, keep or email. To print it on paper, use the Print button instead."
                  : "Saves these transactions as a spreadsheet (CSV) you can open in Numbers or Excel, or import again later.")
                 .font(.callout).foregroundStyle(.secondary)
                 .padding(.bottom, 14)
@@ -138,7 +148,7 @@ struct ExportSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if kind == .pdf {
+                if kind != .csv {
                     Picker("Paper", selection: $paper) {
                         ForEach(PaperSize.allCases) { Text($0.title).tag($0) }
                     }
@@ -155,7 +165,7 @@ struct ExportSheet: View {
                 Spacer()
                 Button("Cancel", role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(kind == .pdf ? "Save PDF" : "Save CSV", action: export)
+                Button(kind == .print ? "Print…" : (kind == .pdf ? "Save PDF" : "Save CSV"), action: kind == .print ? printNow : export)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 12)
@@ -170,6 +180,30 @@ struct ExportSheet: View {
         return cleaned + (kind == .pdf ? ".pdf" : ".csv")
     }
 
+    /// Makes the statement as a PDF and hands it to the macOS print window, where the printer, copies and pages are chosen.
+    private func printNow() {
+        errorMessage = nil
+        let statement = StatementBuilder.make(account: chosenAccount, period: period, in: modelContext)
+        let data = StatementPDF.render(statement, paper: paper)
+        guard !data.isEmpty, let document = PDFDocument(data: data) else {
+            errorMessage = "Couldn't prepare the statement to print."
+            return
+        }
+        let info = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo()
+        info.paperSize = paper.size
+        info.topMargin = 0; info.bottomMargin = 0; info.leftMargin = 0; info.rightMargin = 0
+        guard let operation = document.printOperation(for: info, scalingMode: .pageScaleDownToFit, autoRotate: true) else {
+            errorMessage = "Couldn't open the print window."
+            return
+        }
+        operation.jobTitle = title
+        operation.showsPrintPanel = true
+        operation.showsProgressPanel = true
+        // The sheet closes first, so the print window isn't stacked on it.
+        dismiss()
+        DispatchQueue.main.async { operation.run() }
+    }
+
     private func export() {
         errorMessage = nil
         let chosen = chosenAccount
@@ -178,7 +212,7 @@ struct ExportSheet: View {
         func write(to url: URL) throws {
             let statement = StatementBuilder.make(account: chosen, period: period, in: modelContext)
             switch kind {
-            case .pdf:
+            case .pdf, .print:
                 let data = StatementPDF.render(statement, paper: paper)
                 guard !data.isEmpty else { throw CocoaError(.fileWriteUnknown) }
                 try data.write(to: url, options: .atomic)

@@ -44,6 +44,9 @@ enum ReleaseNotes {
             ("Speed", [
                 "The Investments reports open much faster. Their numbers are worked out a few seconds after the app starts and again after you change something, such as a price, so they are ready when you open the tab.",
             ]),
+            ("Printing", [
+                "Every account page has a new Print button beside Print PDF. It sends the statement for the period you choose to a real printer through the Mac's print window, with a preview. Print PDF still saves a PDF file.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),
