@@ -41,6 +41,9 @@ enum ReleaseNotes {
             ("Menu bar", [
                 "The menu bar pop-up shows your upcoming bills and no longer has an Open Oinkly Budget button. Click the app in the Dock to open the window.",
             ]),
+            ("Speed", [
+                "The Investments reports open much faster. Their numbers are worked out a few seconds after the app starts and again after you change something, such as a price, so they are ready when you open the tab.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),

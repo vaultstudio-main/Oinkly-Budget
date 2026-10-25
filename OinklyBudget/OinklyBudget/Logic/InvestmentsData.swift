@@ -109,49 +109,80 @@ struct InvestmentsData {
     }
 }
 
-/// The seven investment reports all ask for the same numbers, so they are worked out once and reused until something they depend on
-/// changes.
+/// The seven investment reports all ask for the same numbers, so they are worked out once and kept. Whether they are still good is told by
+/// the data's revision, which goes up on every save (a changed price, a new transaction), so nothing has to be read from the database
+/// just to check. They are also worked out shortly after the app starts and after a save, so opening the reports finds them ready.
 @MainActor
 enum InvestmentsDataCache {
     static var cached: (key: Int, data: InvestmentsData)?
+    /// Set once the investment reports have been opened, which is when keeping them warm after saves starts to be worth it.
+    private static var opened = false
+    private static var warming: Task<Void, Never>?
+    private static var isObserving = false
+
+    private static var key: Int {
+        var hasher = Hasher()
+        hasher.combine(BalanceCache.currentRevision)
+        hasher.combine(LedgerIndex.shared.latest?.revision)
+        return hasher.finalize()
+    }
+
+    /// The numbers for the current data: the kept ones when nothing has changed since, otherwise worked out again, from the last thirteen months of
+    /// transactions, and kept.
+    static func data(in context: ModelContext) -> InvestmentsData {
+        let key = key
+        if let cached, cached.key == key { return cached.data }
+        let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
+        let start = Calendar.current.date(byAdding: .month, value: -13, to: thisMonth) ?? thisMonth
+        let accounts = (try? context.fetch(FetchDescriptor<Account>())) ?? []
+        // Without an investment account there is nothing to total, so the transactions are not even read.
+        let hasInvestments = accounts.live.contains { $0.type.group == .investments && !$0.isClosed }
+        let transactions = hasInvestments ? ((try? context.fetch(FetchDescriptor<Transaction>(predicate: #Predicate<Transaction> { $0.date >= start }))) ?? []) : []
+        let data = InvestmentsData.make(accounts: accounts, transactions: transactions.live, snapshot: LedgerIndex.shared.latest)
+        cached = (key, data)
+        return data
+    }
+
+    /// Works the numbers out now if they are out of date, a few seconds after launch and again, once the reports have been opened, shortly
+    /// after each save. The start-up snapshot of the ledger is waited for so the history is complete.
+    static func install(container: ModelContainer) {
+        guard !isObserving else { return }
+        isObserving = true
+        warm(container, after: 5)
+        NotificationCenter.default.addObserver(forName: ModelContext.didSave, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { if opened { warm(container, after: 2) } }
+        }
+    }
+
+    static func noteOpened() { opened = true }
+
+    private static func warm(_ container: ModelContainer, after seconds: Double) {
+        warming?.cancel()
+        warming = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(seconds))
+            // The ledger snapshot is built in the background after each save; wait a little for it so the kept numbers include it.
+            for _ in 0..<10 where LedgerIndex.shared.latest == nil || LedgerIndex.shared.isBuilding {
+                try? await Task.sleep(for: .milliseconds(500))
+            }
+            guard !Task.isCancelled else { return }
+            _ = data(in: container.mainContext)
+        }
+    }
 }
 
 /// Builds `InvestmentsData` from the database and hands it to `content`.
 struct WithInvestmentsData<Content: View>: View {
-    @Query private var allAccounts: [Account]
-    @Query private var yearTransactions: [Transaction]
+    @Environment(\.modelContext) private var modelContext
     @ViewBuilder let content: (InvestmentsData) -> Content
 
     init(@ViewBuilder content: @escaping (InvestmentsData) -> Content) {
         self.content = content
-        let thisMonth = Calendar.current.dateInterval(of: .month, for: .now)?.start ?? .now
-        let start = Calendar.current.date(byAdding: .month, value: -13, to: thisMonth) ?? thisMonth
-        _yearTransactions = Query(filter: #Predicate<Transaction> { $0.date >= start })
-    }
-
-    private var key: Int {
-        var hasher = Hasher()
-        for account in allAccounts where account.isLive && account.type.group == .investments {
-            hasher.combine(account.persistentModelID)
-            hasher.combine(account.balance)
-            hasher.combine(account.isClosed)
-            for holding in account.holdings.live { hasher.combine(holding.marketValue); hasher.combine(holding.costBasis) }
-        }
-        hasher.combine(yearTransactions.count)
-        hasher.combine(yearTransactions.reduce(Decimal(0)) { $0 + $1.amount })
-        hasher.combine(LedgerIndex.shared.latest != nil)
-        return hasher.finalize()
     }
 
     var body: some View {
-        let key = key
-        let data: InvestmentsData
-        if let cached = InvestmentsDataCache.cached, cached.key == key {
-            data = cached.data
-        } else {
-            data = InvestmentsData.make(accounts: allAccounts, transactions: yearTransactions.live, snapshot: LedgerIndex.shared.latest)
-            InvestmentsDataCache.cached = (key, data)
-        }
-        return content(data)
+        // Reading the ledger's snapshot makes this redraw when a newer one arrives.
+        _ = LedgerIndex.shared.latest
+        InvestmentsDataCache.noteOpened()
+        return content(InvestmentsDataCache.data(in: modelContext))
     }
 }
