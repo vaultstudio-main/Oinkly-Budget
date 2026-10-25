@@ -115,25 +115,31 @@ struct DebtWarPlanView: View {
     }
 
     private func strategyPicker(debts: [DebtWarPlan.Debt]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        let strategies = Picker("Where the extra goes first", selection: $strategyRaw) {
+            ForEach(DebtWarPlan.Strategy.allCases) { Text($0.title).tag($0.rawValue) }
+        }
+        .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 620)
+        // Laser Focus Annihilation needs a target, so its menu sits right beside the buttons. Debts added later appear in it by themselves,
+        // since the list is the accounts.
+        let target = HStack(spacing: 6) {
+            Image(systemName: "scope").foregroundStyle(Theme.red)
+            Text("Target").font(.callout)
+            Picker("Target", selection: Binding(get: { targetDebt(in: debts)?.id ?? "" }, set: { targetID = $0 })) {
+                ForEach(debts) { Text("\($0.name) · \(ReportFormat.money($0.owed))").tag($0.id) }
+            }
+            .labelsHidden().frame(width: 260)
+        }
+        return VStack(alignment: .leading, spacing: 6) {
             Text("Where the extra goes first").font(.callout)
-            Picker("Where the extra goes first", selection: $strategyRaw) {
-                ForEach(DebtWarPlan.Strategy.allCases) { Text($0.title).tag($0.rawValue) }
-            }
-            .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 620)
-            Text(strategy.blurb).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            // Laser Focus Annihilation needs a target. Debts added later appear here by themselves, since the list is the accounts.
             if strategy == .laser {
-                HStack(spacing: 8) {
-                    Image(systemName: "scope").foregroundStyle(Theme.red)
-                    Text("Target").font(.callout)
-                    Picker("Target", selection: Binding(get: { targetDebt(in: debts)?.id ?? "" }, set: { targetID = $0 })) {
-                        ForEach(debts) { Text("\($0.name) · \(ReportFormat.money($0.owed))").tag($0.id) }
-                    }
-                    .labelsHidden().frame(maxWidth: 360)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 14) { strategies; target }
+                    VStack(alignment: .leading, spacing: 8) { strategies; target }
                 }
-                .padding(.top, 4)
+            } else {
+                strategies
             }
+            Text(strategy.blurb).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
