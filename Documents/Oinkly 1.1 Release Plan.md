@@ -19,7 +19,17 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [x] Scan a receipt with Apple's Vision framework while entering a transaction (new transaction, credit card charge, cash transaction and edit). PDFs with text are read directly.
 - [x] The scan checks the entered total, date and payee against the receipt and suggests corrections if they don't match. Nothing changes until the Use button is pressed.
 - [x] Receipt learning stays on the device: the app remembers which payee goes with which store, in a small file on this Mac (not in the database, so it is not in backups). Erase All Data forgets it.
-- [ ] Later (1.2): fill in a blank transaction from a receipt automatically, learn categories as well as payees, and check receipts from the register's Add Receipt link and from Pay a Bill.
+
+### Receipt Suggestions (moved into 1.1, planned for next week)
+
+The scan already suggests a total, date and payee, and nothing changes until you press Use. This extends that idea: whatever the scan finds that a transaction doesn't have yet is **offered as a suggestion**, never filled in automatically. The person always decides.
+
+- [ ] Read more from the receipt: tax, tip, a payment method clue (card brand and last four digits, or cash) and a short description, as well as the total, date and store.
+- [ ] Suggest more fields: category, payment method and memo, for a blank field ("Add this?") or one that differs ("Change this?"), each with its own Use button, a Use All button, and a way to dismiss one.
+- [ ] Learn categories and payment methods as well as payees, per store, on this Mac only (the same small file as the payee memory, which Erase Everything forgets).
+- [ ] The same suggestions in every place a receipt can be attached: new transaction, credit card charge, cash transaction and edit (already scan), plus the register's **Add Receipt** link and **Pay a Bill**.
+- [ ] Never change anything on its own: suggestions only appear, and a locked or reconciled transaction can't be changed by one.
+- [ ] Tests for the receipt parser and the suggestions (sample receipt text), Help and Release Notes updated, screenshots retaken.
 
 ## Feature 3: PDF Letterhead ✅ Done
 
@@ -63,6 +73,10 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [ ] The menu bar pop-up without the Open button.
 - [ ] A printed PDF with a letterhead and a custom logo.
 - [ ] A real Print to paper from an account page.
+
+**Receipt Suggestions**
+
+- [ ] Built next week, as described under Feature 2, then added to the checks below.
 
 **Screenshots and words, everywhere**
 
