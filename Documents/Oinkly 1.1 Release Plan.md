@@ -64,6 +64,12 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [ ] A printed PDF with a letterhead and a custom logo.
 - [ ] A real Print to paper from an account page.
 
+**Screenshots and words, everywhere**
+
+- [ ] Retake every screenshot, since the Planning War Room, account pages, Settings (Backup Copy and Save Location), reports and more have changed. That is the 71 `Help-…` pictures in the app's Help window, the website's pictures, and any picture in the README. The demo-data mode (`-screenshotMode`) makes them.
+- [ ] Update the words to match everywhere: the app's Help window, the in-app Release Notes (1.1 and 1.0.1), the README, and the website (the app page, support page and `updates.html`).
+- [ ] Read each place once more at the end for the old names (Monthly Outlook page, Link Transactions, the Quick menu, the Open Oinkly Budget button in the menu bar, the Ridiculous Speed build name) and for "Print PDF" where Print is meant.
+
 **Upgrade test**
 
 - [ ] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there.
