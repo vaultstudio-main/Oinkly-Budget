@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The window the Link Transactions button on the Monthly Outlook opens, for whichever month the page is showing.
+/// The window the Link Transactions button on the Planning War Room opens, for whichever month the page is showing.
 struct PlanMatchWindow: View {
     static let id = "plan-match"
 

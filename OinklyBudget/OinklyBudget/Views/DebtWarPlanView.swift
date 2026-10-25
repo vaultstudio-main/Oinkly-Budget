@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// The Monthly Outlook's third tab: a calculator for paying debt down faster. Put in extra money each month, or a lump sum now, pick which
+/// The Planning War Room's third tab: a calculator for paying debt down faster. Put in extra money each month, or a lump sum now, pick which
 /// debt gets it first, and see when every loan and card would be paid off and how much interest it would save, against what happens on your
 /// current payments. It only works out what would happen: it never changes an account, a payment or a bill.
 struct DebtWarPlanView: View {
@@ -26,14 +26,7 @@ struct DebtWarPlanView: View {
     private var lump: Double { max((lumpBinding.wrappedValue ?? 0).doubleValue, 0) }
 
     /// Every loan and card that still owes something.
-    private var debts: [DebtWarPlan.Debt] {
-        allAccounts.live.filter { ($0.isLoan || $0.isCreditCard) && !$0.isClosed && Goal.owed(on: $0) > 0 }
-            .sorted { Goal.owed(on: $0) > Goal.owed(on: $1) }
-            .map {
-                DebtWarPlan.Debt(id: String(describing: $0.persistentModelID), name: $0.name, kind: $0.typeTitle, symbol: $0.type.symbol,
-                                 owed: Goal.owed(on: $0).doubleValue, rate: $0.interestRate, payment: $0.monthlyPayment.doubleValue)
-            }
-    }
+    private var debts: [DebtWarPlan.Debt] { WarPlanSummary.debts(from: allAccounts.live) }
 
     /// The debt the laser is pointed at: the one picked, or the smallest when none was picked or it is gone.
     private func targetDebt(in debts: [DebtWarPlan.Debt]) -> DebtWarPlan.Debt? {

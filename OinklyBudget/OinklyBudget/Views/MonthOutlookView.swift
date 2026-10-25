@@ -2,13 +2,13 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// The Monthly Outlook: for one calendar month, the plan against what is really happening. The Outlook tab sets what you
+/// The Planning War Room: for one calendar month, the plan against what is really happening. The Outlook tab sets what you
 /// planned against what the accounts, bills, repeating entries and budgets now say, and shows when the spare money can be
 /// pulled out; the War Plan tab is the sheet you plan on. Settings, in a window of its own, holds the accounts counted, what the
 /// month starts with and the buffer.
 struct MonthOutlookView: View {
     enum OutlookTab: String, CaseIterable, Identifiable {
-        case outlook = "Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan", savingsWarPlan = "Savings War Plan"
+        case outlook = "Monthly Outlook", warPlan = "Monthly War Plan", debtWarPlan = "Debt War Plan", savingsWarPlan = "Savings War Plan"
         var id: Self { self }
     }
 
@@ -26,7 +26,7 @@ struct MonthOutlookView: View {
         let when = month.formatted(.dateTime.month(.wide).year())
         // The debt plan is not about one month, so it has no month to name.
         let text: String = switch tab {
-        case .outlook: "Outlook for \(when)"
+        case .outlook: "Monthly Outlook for \(when)"
         case .warPlan: "Monthly War Plan for \(when)"
         case .debtWarPlan: "Pay your debts off faster"
         case .savingsWarPlan: "Save up faster"
@@ -55,7 +55,7 @@ struct MonthOutlookView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            FolderTabbedHeader(title: "Monthly Outlook", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
+            FolderTabbedHeader(title: "Planning War Room", tabs: OutlookTab.allCases, selection: $tab, label: { $0.rawValue }) {
                 monthLine
             } centre: { EmptyView() } trailing: {
                 if tab == .outlook || tab == .warPlan {
@@ -66,9 +66,9 @@ struct MonthOutlookView: View {
                 }
             }
             if tab == .debtWarPlan {
-                DebtWarPlanView().statusBarText("Monthly Outlook · the debt war plan")
+                DebtWarPlanView().statusBarText("Planning War Room · the debt war plan")
             } else if tab == .savingsWarPlan {
-                SavingsWarPlanView().statusBarText("Monthly Outlook · the savings war plan")
+                SavingsWarPlanView().statusBarText("Planning War Room · the savings war plan")
             } else {
                 OutlookBody(month: month, tab: tab, plan: $plan, excluded: MonthOutlook.excluded(from: excludedStored))
             }
@@ -108,6 +108,8 @@ private struct OutlookBody: View {
     @AppStorage(OutlookSettings.startAccountKey) private var startAccount = ""
     @AppStorage(OutlookSettings.startAmountKey) private var startAmount = ""
     @AppStorage(OutlookSettings.bufferKey) private var bufferText = ""
+    /// Whether the extra money the Debt and Savings War Plans set aside is counted in this page's figures.
+    @AppStorage("outlookCountsWarPlans") private var countsWarPlans = true
     /// The room the page has, so the pull-out card can take what the rest leaves.
     @State private var viewport: CGFloat = 700
     @State private var pageWidth: CGFloat = 900
@@ -143,35 +145,41 @@ private struct OutlookBody: View {
                                          weeklyAmounts: Dictionary(periods.live.map { ($0.key, $0.weeklyAmount) }, uniquingKeysWith: { first, _ in first }),
                                          billPayerKeys: Dictionary(paySources.live.map { ($0.billKey, $0.accountKey) }, uniquingKeysWith: { first, _ in first }))
         let kept = snapshot
-        let totals = kept.map { Totals(income: $0.incomeTotal, bills: $0.billsTotal, budgets: $0.budgetsTotal, other: $0.otherSpending, left: $0.leftToSave,
+        let baseTotals = kept.map { Totals(income: $0.incomeTotal, bills: $0.billsTotal, budgets: $0.budgetsTotal, other: $0.otherSpending, left: $0.leftToSave,
                                        billDifference: $0.billDifference, overspend: $0.budgetOverspend) }
             ?? Totals(income: outlook.incomeTotal, bills: outlook.billsTotal, budgets: outlook.budgetsTotal, other: outlook.otherSpending,
                       left: outlook.leftToSave, billDifference: outlook.billDifference, overspend: outlook.budgetOverspend)
+        // What the Debt and Savings War Plans set aside is counted too, unless this month has closed or the switch is off.
+        let warPlans = WarPlanSummary.build(accounts: allAccounts.live)
+        let warExtra = warPlansExtra(warPlans)
+        let totals = warExtra == 0 ? baseTotals : Totals(income: baseTotals.income, bills: baseTotals.bills, budgets: baseTotals.budgets, other: baseTotals.other,
+                                                         left: baseTotals.left - warExtra, billDifference: baseTotals.billDifference, overspend: baseTotals.overspend)
         let title = month.formatted(.dateTime.month(.wide).year())
         let opening = OutlookSettings.opening(accounts: accounts, startAccount: startAccount, startAmount: startAmount)
         let buffer = OutlookSettings.decimal(bufferText) ?? 0
         if tab == .warPlan {
             let label = accounts.first { MonthOutlook.accountKey($0) == startAccount }.map { "Starting with \($0.name)'s balance" } ?? "Starting with"
             return AnyView(MonthWarPlanView(outlook: outlook, plan: $plan, opening: opening, kept: buffer, startLabel: label)
-                .statusBarText("Monthly Outlook · \(title) · the war plan sheet"))
+                .statusBarText("Planning War Room · \(title) · the war plan sheet"))
         }
         return AnyView(ScrollView {
             VStack(spacing: 10) {
-                versusCards(outlook, totals: totals, opening: opening, kept: buffer)
-                pullOutCard(outlook, opening: opening, kept: buffer)
-                improveCard(outlook, opening: opening, kept: buffer)
+                versusCards(outlook, totals: totals, opening: opening, kept: buffer, warExtra: warExtra)
+                warPlansCard(warPlans, warExtra: warExtra, leftBefore: totals.left + warExtra)
+                pullOutCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
+                improveCard(outlook, opening: opening, kept: buffer, warExtra: warExtra)
                 notes(outlook, totals: totals, kept: kept)
             }
             .padding(12)
         }
         .onGeometryChange(for: CGSize.self) { $0.size } action: { viewport = $0.height; pageWidth = $0.width }
-        .statusBarText("Monthly Outlook · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
+        .statusBarText("Planning War Room · \(title) · \(totals.left.formatted(.appCurrency)) left over"))
     }
 
     // MARK: Plan against outlook
 
     /// The four big cards: money in, money out, what is left over, and what is above the buffer. Each sets the plan against the outlook.
-    private func versusCards(_ outlook: MonthOutlook, totals: Totals, opening: Decimal, kept: Decimal) -> some View {
+    private func versusCards(_ outlook: MonthOutlook, totals: Totals, opening: Decimal, kept: Decimal, warExtra: Decimal) -> some View {
         let hasPlan = !plan.items.isEmpty
         let plannedIn = plan.items.filter(\.isIncome).reduce(Decimal(0)) { $0 + $1.amount }
         let plannedOut = plan.items.filter { !$0.isIncome }.reduce(Decimal(0)) { $0 + $1.amount }
@@ -179,7 +187,7 @@ private struct OutlookBody: View {
             VersusCard(title: "Money In", symbol: "arrow.down.circle.fill", planned: hasPlan ? plannedIn : nil, actual: totals.income, goodWhenMore: true,
                        note: "\(outlook.income.count) paycheque\(outlook.income.count == 1 ? "" : "s") and other income")
             VersusCard(title: "Money Out", symbol: "arrow.up.circle.fill", planned: hasPlan ? plannedOut : nil, actual: totals.out, goodWhenMore: false,
-                       note: "bills, repeating expenses and budgets")
+                       note: warExtra > 0 ? "bills, repeating expenses, budgets and \(warExtra.formatted(.appCurrency)) from your war plans" : "bills, repeating expenses and budgets")
             VersusCard(title: "Left Over", symbol: "banknote.fill", planned: hasPlan ? plannedIn - plannedOut : nil, actual: totals.left, goodWhenMore: true,
                        signed: true, note: "money in less money out")
             VersusCard(title: "Above the Buffer", symbol: "shield.lefthalf.filled", planned: hasPlan ? opening + plannedIn - plannedOut - kept : nil,
@@ -195,16 +203,155 @@ private struct OutlookBody: View {
         }
     }
 
+    // MARK: The war plans
+
+    /// What the Debt and Savings War Plans set aside in this month: their extra each month, and the one-time amounts only in the month that
+    /// is now. Nothing for a month that has closed, whose figures are kept, or when the switch is off.
+    private func warPlansExtra(_ summary: WarPlanSummary.Summary) -> Decimal {
+        guard countsWarPlans, !isPast, snapshot == nil else { return 0 }
+        let thisMonth = month == MonthFilter.start(of: .now)
+        return Decimal(summary.monthlyExtra + (thisMonth ? summary.oneTimeNow : 0))
+    }
+
+    /// The balance through the month from what the outlook knows, with the war plans' money going out on the first day.
+    private func outlookPull(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal, warExtra: Decimal) -> SafePull {
+        var events = SafePull.events(outlook: outlook)
+        if warExtra > 0 { events.append(SafePull.Event(date: month, amount: -warExtra)) }
+        return SafePull(opening: opening, buffer: kept, events: events)
+    }
+
+    /// Tells you the Debt and Savings War Plans are part of these figures, and sums up both: how much they set aside, and what it does for
+    /// your debts and savings.
+    @ViewBuilder
+    private func warPlansCard(_ summary: WarPlanSummary.Summary, warExtra: Decimal, leftBefore: Decimal) -> some View {
+        if summary.hasAnything {
+            let debt = summary.debt, savings = summary.savings
+            ReportCard(title: "Your Debt and Savings War Plans") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: warExtra > 0 ? "info.circle.fill" : "info.circle").foregroundStyle(warExtra > 0 ? Color.accentColor : .secondary)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(headline(summary, warExtra: warExtra, leftBefore: leftBefore)).font(.callout.weight(.semibold)).fixedSize(horizontal: false, vertical: true)
+                            Text(detail(summary, warExtra: warExtra)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 12)
+                        Toggle("Count in this month", isOn: $countsWarPlans).toggleStyle(.switch).controlSize(.small).fixedSize()
+                            .disabled(!summary.isActive || isPast)
+                            .help("When on, the extra money your Debt and Savings War Plans set aside is part of Money Out, Left Over, Above the Buffer and the chart below. Closed months keep their figures.")
+                    }
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: 14) { debtStats(debt); savingsStats(savings) }
+                        VStack(alignment: .leading, spacing: 14) { debtStats(debt); savingsStats(savings) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func headline(_ summary: WarPlanSummary.Summary, warExtra: Decimal, leftBefore: Decimal) -> String {
+        guard summary.isActive else { return "Your war plans have no extra money in them yet." }
+        guard warExtra > 0 else {
+            return isPast ? "This month has closed, so its figures are kept as they were."
+                          : "Your war plans would set aside \(ReportFormat.money(summary.monthlyExtra)) a month, but they are not counted here."
+        }
+        var line = "Your war plans set aside \(warExtra.formatted(.appCurrency)) this month, and it is counted in the figures above."
+        if leftBefore <= 0 {
+            line += " There was nothing left over to cover it."
+        } else if warExtra > leftBefore {
+            line += " That is more than the \(leftBefore.formatted(.appCurrency)) you had left over."
+        } else {
+            line += " That is \(ReportFormat.percent(warExtra.doubleValue / leftBefore.doubleValue * 100)) of what you had left over."
+        }
+        return line
+    }
+
+    private func detail(_ summary: WarPlanSummary.Summary, warExtra: Decimal) -> String {
+        guard summary.isActive else { return "Open the Debt War Plan or Savings War Plan tab and add some extra money to see what it does." }
+        var parts: [String] = []
+        if summary.debt.extra > 0 { parts.append("\(ReportFormat.money(summary.debt.extra)) extra on your debts") }
+        if summary.savings.extra > 0 { parts.append("\(ReportFormat.money(summary.savings.extra)) extra into savings") }
+        var text = parts.joined(separator: " and ") + " each month"
+        if summary.oneTimeNow > 0 { text += ", and \(ReportFormat.money(summary.oneTimeNow)) one time now" }
+        text += warExtra > 0 ? ". It goes out on the first of the month in the chart. These are what-ifs: no payment is made until you make it." : ". These are what-ifs."
+        return text
+    }
+
+    private func debtStats(_ debt: WarPlanSummary.Debt) -> some View {
+        statsBlock(title: "Debt War Plan", symbol: "scope", color: Theme.red, empty: debt.debts.isEmpty ? "No debt to pay off." : nil) {
+            stat("You owe", ReportFormat.money(debt.totalOwed), "across \(debt.debts.count) debt\(debt.debts.count == 1 ? "" : "s")")
+            if debt.plan.finishes {
+                stat("Debt-free", ReportFormat.month(Calendar.current.date(byAdding: .month, value: debt.plan.months, to: .now) ?? .now),
+                     debt.hasExtra && debt.base.finishes ? "\(years(max(debt.base.months - debt.plan.months, 0))) sooner" : "on your current payments")
+            } else {
+                stat("Debt-free", "Not in 50 years", "the payments don't cover the interest")
+            }
+            if debt.hasExtra, debt.plan.finishes, debt.base.finishes {
+                stat("Interest saved", ReportFormat.money(max(debt.base.interest - debt.plan.interest, 0)), "by using \(debt.strategy.title.lowercased())")
+            } else {
+                stat("Interest to pay", debt.plan.finishes ? ReportFormat.money(debt.plan.interest) : "—", "over the life of these debts")
+            }
+        }
+    }
+
+    private func savingsStats(_ savings: WarPlanSummary.Savings) -> some View {
+        statsBlock(title: "Savings War Plan", symbol: "banknote.fill", color: Theme.green, empty: savings.accounts.isEmpty ? "No savings accounts." : nil) {
+            stat("Saved now", ReportFormat.money(savings.totalSaved), "across \(savings.accounts.count) account\(savings.accounts.count == 1 ? "" : "s")")
+            if savings.hasStop {
+                if savings.plan.finishes {
+                    stat("Goals reached", ReportFormat.month(Calendar.current.date(byAdding: .month, value: savings.plan.months, to: .now) ?? .now),
+                         savings.hasExtra && savings.base.finishes ? "\(years(max(savings.base.months - savings.plan.months, 0))) sooner" : "on your own deposits")
+                } else {
+                    stat("Goals reached", "Not in 50 years", "not without saving more each month")
+                }
+            } else {
+                stat("In five years", ReportFormat.money(savings.plan.totals.last ?? savings.totalSaved), "set a target or goal to see when")
+            }
+            stat("Interest earned", ReportFormat.money(savings.plan.interest), savings.hasExtra ? "\(ReportFormat.money(max(savings.plan.interest - savings.base.interest, 0))) more with the extra" : "over the whole plan")
+        }
+    }
+
+    private func statsBlock<Content: View>(title: String, symbol: String, color: Color, empty: String?, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: symbol).font(.caption.weight(.semibold)).foregroundStyle(color)
+            if let empty {
+                Text(empty).font(.callout).foregroundStyle(.secondary)
+            } else {
+                HStack(alignment: .top, spacing: 14) { content() }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func stat(_ label: String, _ value: String, _ note: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label.uppercased()).font(.caption2).foregroundStyle(.secondary)
+            Text(value).font(.title3.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(note).font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func years(_ months: Int) -> String {
+        let y = months / 12, m = months % 12
+        switch (y, m) {
+        case (0, _): return "\(m) month\(m == 1 ? "" : "s")"
+        case (_, 0): return "\(y) year\(y == 1 ? "" : "s")"
+        default: return "\(y) yr \(m) mo"
+        }
+    }
+
     // MARK: When the spare money can come out
 
     /// The earliest safe day to pull the spare money out, from the plan and from what is really happening, with the balance
     /// through the month for each.
-    private func pullOutCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
+    private func pullOutCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal, warExtra: Decimal) -> some View {
         let hasPlan = !plan.items.isEmpty
         let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
-        let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
+        let actual = outlookPull(outlook, opening: opening, kept: kept, warExtra: warExtra)
         let calendar = Calendar.current
-        let advice = adviceItems(outlook, opening: opening, kept: kept)
+        let advice = adviceItems(outlook, opening: opening, kept: kept, warExtra: warExtra)
         let real = SafePull(opening: opening, buffer: kept, events: realEvents())
         let hasReal = !isFuture && !real.points.isEmpty
         // Real money is only known up to today, or to the end of a month that is over.
@@ -346,10 +493,10 @@ private struct OutlookBody: View {
     // MARK: What to improve
 
     /// The few things that matter most this month.
-    private func adviceItems(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> [OutlookAdvice.Item] {
+    private func adviceItems(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal, warExtra: Decimal) -> [OutlookAdvice.Item] {
         let hasPlan = !plan.items.isEmpty
         let planned = SafePull(opening: opening, buffer: kept, events: SafePull.events(plan: plan.items))
-        let actual = SafePull(opening: opening, buffer: kept, events: SafePull.events(outlook: outlook))
+        let actual = outlookPull(outlook, opening: opening, kept: kept, warExtra: warExtra)
         return OutlookAdvice.make(outlook: outlook, compare: hasPlan ? WarPlanComparison.build(items: plan.items, outlook: outlook) : nil,
                                   plannedPull: hasPlan ? planned : nil, actualPull: actual, buffer: kept,
                                   startingSet: !startAccount.isEmpty || OutlookSettings.decimal(startAmount) != nil, limit: 4)
@@ -369,8 +516,8 @@ private struct OutlookBody: View {
     }
 
     /// A list, one under another, each with its detail in full.
-    private func improveCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal) -> some View {
-        let items = adviceItems(outlook, opening: opening, kept: kept)
+    private func improveCard(_ outlook: MonthOutlook, opening: Decimal, kept: Decimal, warExtra: Decimal) -> some View {
+        let items = adviceItems(outlook, opening: opening, kept: kept, warExtra: warExtra)
         return ReportCard(title: "What to Improve") {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(items) { item in

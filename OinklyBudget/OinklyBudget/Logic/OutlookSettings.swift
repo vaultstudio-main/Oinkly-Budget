@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Monthly Outlook's own settings, kept in preferences and shared by the Outlook and War Plan tabs and the Settings window:
+/// The Planning War Room's own settings, kept in preferences and shared by the Outlook and War Plan tabs and the Settings window:
 /// what a month starts with and the buffer to keep. They are read by the outlook and the War Plan and change nothing else.
 enum OutlookSettings {
     static let bufferKey = "outlookBuffer"
@@ -13,7 +13,7 @@ enum OutlookSettings {
     /// The month the page is showing, as a time since the reference date. It is chosen in the Settings window; zero means this month.
     static let monthKey = "outlookMonth"
 
-    /// Forgets everything the Monthly Outlook keeps in preferences about your data: every month's War Plan lines, what a month starts
+    /// Forgets everything the Planning War Room keeps in preferences about your data: every month's War Plan lines, what a month starts
     /// with, the buffer, and the accounts picked or left out (they name accounts that are going). Runs whenever all data is erased, so
     /// a fresh start is really fresh. The month and tab being shown are only a view and stay.
     static func forgetData(defaults: UserDefaults = .standard) {

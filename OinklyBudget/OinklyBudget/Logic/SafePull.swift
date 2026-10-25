@@ -2,7 +2,7 @@ import Foundation
 
 /// How a month's money ebbs and flows, and the earliest day the spare money can be pulled out safely: the day from which the
 /// whole spare amount (what the month ends with, less the buffer) can come out and the balance still never drops under the buffer.
-/// It is worked out twice, once from the War Plan's lines and once from the Monthly Outlook's real information, so the two can be compared.
+/// It is worked out twice, once from the War Plan's lines and once from the Planning War Room's real information, so the two can be compared.
 struct SafePull {
     /// Money moving on a day: plus for money in, minus for money out.
     struct Event {

@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The Monthly Outlook's settings, in a window of their own so the page stays open and in view behind them. Changes apply as
+/// The Planning War Room's settings, in a window of their own so the page stays open and in view behind them. Changes apply as
 /// they are made. The window follows the tab: the Outlook tab's settings are the month and which accounts count, laid out in columns
 /// so a long list of accounts doesn't scroll; the War Plan tab's are the month, what the month starts with and the buffer, with no
 /// accounts to tick. Only checking, savings and cash accounts are listed, because nothing owed and nothing invested is part of the outlook.

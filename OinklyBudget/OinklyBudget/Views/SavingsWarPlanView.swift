@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Charts
 
-/// The Monthly Outlook's fourth tab: a calculator for saving up. Every savings account is grown month by month with its own interest rate and
+/// The Planning War Room's fourth tab: a calculator for saving up. Every savings account is grown month by month with its own interest rate and
 /// deposits; put in extra money each month or a lump sum now, pick where it goes (or point the laser at one account), and see when each account
 /// reaches its target and when everything reaches your overall goal. It only works out what would happen: it never changes an account.
 struct SavingsWarPlanView: View {
@@ -15,18 +15,13 @@ struct SavingsWarPlanView: View {
     /// Each account's own rate, monthly deposit and target, kept together as one small piece of text: `[account: Row]`.
     @AppStorage("savingsWarPlanRows") private var rowsText = ""
 
-    private struct Row: Codable, Equatable {
-        var rate: Double = 0
-        var deposit: Double = 0
-        var target: Double?
-    }
+    private typealias Row = SavingsPlanRow
 
     private static let quickAmounts: [Double] = [50, 100, 250, 500, 1000]
-    private static let savingsTypes: [AccountType] = [.savings, .moneyMarket, .certificateOfDeposit, .healthSavings]
 
     private var rows: [String: Row] {
-        get { (try? JSONDecoder().decode([String: Row].self, from: Data(rowsText.utf8))) ?? [:] }
-        nonmutating set { rowsText = (try? JSONEncoder().encode(newValue)).flatMap { String(data: $0, encoding: .utf8) } ?? "" }
+        get { WarPlanSummary.decodeRows(rowsText) }
+        nonmutating set { rowsText = WarPlanSummary.encodeRows(newValue) }
     }
 
     private func binding(_ text: Binding<String>) -> Binding<Decimal?> {
@@ -38,20 +33,8 @@ struct SavingsWarPlanView: View {
     private var strategy: SavingsWarPlan.Strategy { SavingsWarPlan.Strategy(rawValue: strategyRaw) ?? .even }
     private var hasExtra: Bool { extra > 0 || lump > 0 }
 
-    /// Every savings account that is still open, with what the plan knows about it. Its target is the one typed here, or else that of the open
-    /// saving goal that follows it.
-    private var accounts: [SavingsWarPlan.Account] {
-        let saved = rows
-        return allAccounts.live.filter { Self.savingsTypes.contains($0.type) && !$0.isClosed }
-            .sorted { $0.balance > $1.balance }
-            .map { account in
-                let id = String(describing: account.persistentModelID)
-                let row = saved[id] ?? Row()
-                let goalTarget = account.goals.first { $0.isLive && $0.kind == .save && $0.completedAt == nil && $0.targetAmount > 0 }?.targetAmount.doubleValue
-                return SavingsWarPlan.Account(id: id, name: account.name, kind: account.typeTitle, symbol: account.type.symbol,
-                                              balance: max(account.balance.doubleValue, 0), rate: row.rate, deposit: row.deposit, target: row.target ?? goalTarget)
-            }
-    }
+    /// Every savings account that is still open, with what the plan knows about it.
+    private var accounts: [SavingsWarPlan.Account] { WarPlanSummary.savings(from: allAccounts.live, rows: rows) }
 
     private func laserTarget(in accounts: [SavingsWarPlan.Account]) -> SavingsWarPlan.Account? {
         accounts.first { $0.id == targetID } ?? accounts.first { $0.hasTarget && ($0.target ?? 0) > $0.balance } ?? accounts.first

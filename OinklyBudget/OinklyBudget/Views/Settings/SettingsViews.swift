@@ -554,7 +554,7 @@ struct DataSettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, and every Monthly Outlook War Plan, then quits. Open Oinkly Budget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
+                Text("Deletes every account, transaction, bill, goal and memorized payee on this device, plus any custom categories and custom payment methods you added, and every Planning War Room War Plan, then quits. Open Oinkly Budget again afterwards to start fresh. Built-in categories and your budget amounts are kept. This can't be undone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

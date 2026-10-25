@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-/// The Monthly Outlook's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
+/// The Planning War Room's second tab: a blank sheet for the month. The person adds lines, or pulls in paycheques, bills and
 /// budgets from the outlook as ordinary lines, and sees what is left after each one and how much is extra so far.
 /// Nothing is fixed: every line can be changed or removed. What it starts with, the buffer and the accounts counted are in
 /// the page's Settings. The plan is only a what-if sheet: it never changes accounts, transactions, bills or budgets.

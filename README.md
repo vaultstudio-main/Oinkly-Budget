@@ -29,7 +29,7 @@ Version 1.0.1 is a small bug-fix release. I accidentally forgot to let the app s
 - Pages now flow with the window and scale up on large screens, such as a 27-inch 4K or 5K display.
 - Tabs shrink and then wrap onto a second row, so every tab is always on screen.
 - The editor pop-ups shrink to fit smaller screens, such as a 14-inch MacBook, and scroll so Save can always be reached.
-- The Monthly Outlook's pull-out card stacks its figures above the chart when the window is narrow.
+- The Planning War Room's pull-out card stacks its figures above the chart when the window is narrow.
 
 Nothing else changed: your data stays on your Mac, and your data is kept as it is when you update from 1.0. Download it from the [1.0.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.0.1).
 
@@ -57,7 +57,7 @@ If you would rather build it yourself, see [Building from source](#building-from
 
 **Budgets that match how you spend.** Monthly and weekly budgets by category, grouped into folders, with cash budgets and tax-related categories. Icons and colours for every category, bill and goal.
 
-**Planning.** Savings goals and loan-payoff goals tied to real accounts, so progress follows the balance by itself. A **Monthly Outlook** that sets your plan against what is really happening, with a War Plan sheet to plan a month line by line, link real transactions to it, and see when spare money can safely come out.
+**Planning.** Savings goals and loan-payoff goals tied to real accounts, so progress follows the balance by itself. A **Planning War Room** that sets your plan against what is really happening, with a War Plan sheet to plan a month line by line, link real transactions to it, and see when spare money can safely come out.
 
 **Reports and overviews.** A Summary page, Liabilities with payoff progress for loans and credit cards, Investments, and reports with projections for net worth, cash flow, debt, goals, budgets, spending, income and bills.
 

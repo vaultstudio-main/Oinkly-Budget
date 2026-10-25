@@ -62,13 +62,13 @@ struct BudgetEditView: View {
                                 .multilineTextAlignment(.trailing)
                         }
                         if isWeekly && limit > 0 {
-                            Text("The Weekly tab and the Monthly Outlook work out each month from its real days: \(limit.formatted(.appCurrency)) over 7, times 30 days is \(BudgetPeriods.monthlyMaximum(weekly: limit, inMonthOf: DateComponents(calendar: .current, year: 2026, month: 4, day: 1).date ?? .now).formatted(.appCurrency)). Reports and the Summary use an average month, about \(BudgetPeriods.monthly(fromWeekly: limit).formatted(.appCurrency)).")
+                            Text("The Weekly tab and the Planning War Room work out each month from its real days: \(limit.formatted(.appCurrency)) over 7, times 30 days is \(BudgetPeriods.monthlyMaximum(weekly: limit, inMonthOf: DateComponents(calendar: .current, year: 2026, month: 4, day: 1).date ?? .now).formatted(.appCurrency)). Reports and the Summary use an average month, about \(BudgetPeriods.monthly(fromWeekly: limit).formatted(.appCurrency)).")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                         if !category.isIncome {
                             Toggle("Counts as tax-related", isOn: $isTaxRelated)
                             Toggle("Counts as a cash budget", isOn: $isCashBudget)
-                            Text("A cash budget is paid for in cash, so the Monthly Outlook leaves it out.")
+                            Text("A cash budget is paid for in cash, so the Planning War Room leaves it out.")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                     }

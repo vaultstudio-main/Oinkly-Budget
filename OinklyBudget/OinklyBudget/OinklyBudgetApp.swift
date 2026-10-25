@@ -192,7 +192,7 @@ struct OinklyBudgetApp: App {
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
 
-        Window("Monthly Outlook Settings", id: OutlookSettings.windowID) {
+        Window("Planning War Room Settings", id: OutlookSettings.windowID) {
             OutlookSettingsView()
                 .appAppearance()
         }
