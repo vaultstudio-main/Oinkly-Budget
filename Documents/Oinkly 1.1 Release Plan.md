@@ -24,7 +24,7 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 ## Feature 3: PDF Letterhead ✅ Done
 
 - [x] Printed and exported PDFs get a letterhead generated automatically, with an image, across the top of the first page.
-- [x] Decided: both. By default it is the Oinkly Budget pig and name. Settings ▸ General ▸ Letterhead can switch to your own logo, name and a line of details (for small businesses), or turn it off. The logo is kept on the Mac only, outside backups.
+- [x] Decided: both, and it is off by default so nobody has it forced on them. Settings ▸ General ▸ Letterhead can switch it to the Oinkly Budget pig and name, or to your own logo, name and a line of details (for small businesses). The logo is kept on the Mac only, outside backups.
 
 ## ~~Maybe: Paycheck Stub Tracking~~ Cut
 

@@ -30,7 +30,7 @@ enum ReleaseNotes {
                 "It remembers which payee goes with which store, in a small file on this Mac that is not in backups. Erase All Data forgets it.",
             ]),
             ("PDF Letterhead", [
-                "Printed and exported PDFs get a letterhead across the top of the first page: by default the Oinkly Budget pig and name, or your own logo, name and a line of details, or none. It is chosen in Settings ▸ General ▸ Letterhead. Your logo stays on this Mac, outside backups.",
+                "Printed and exported PDFs can have a letterhead across the top of the first page: none by default, or the Oinkly Budget pig and name, or your own logo, name and a line of details. It is chosen in Settings ▸ General ▸ Letterhead. Your logo stays on this Mac, outside backups.",
             ]),
             ("Saving files", [
                 "Settings ▸ Data & Backup ▸ Backup Copy and Save Location has a switch, Use a default save location. Turn it on and choose a folder, and statements, reports and backups are saved straight into it with no save window, and a Backup Copy of your database starts there too. Turn it off to be asked each time. Erase Everything forgets the choice.",

@@ -80,7 +80,7 @@ final class AppSettings {
     private(set) var letterheadLogoVersion = 0
 
     private init() {
-        letterheadMode = UserDefaults.standard.string(forKey: Key.letterheadMode).flatMap(LetterheadMode.init(rawValue:)) ?? .oinkly
+        letterheadMode = UserDefaults.standard.string(forKey: Key.letterheadMode).flatMap(LetterheadMode.init(rawValue:)) ?? .off
         letterheadName = UserDefaults.standard.string(forKey: Key.letterheadName) ?? ""
         letterheadDetails = UserDefaults.standard.string(forKey: Key.letterheadDetails) ?? ""
         paperChoice = UserDefaults.standard.string(forKey: Key.paper).flatMap(PaperChoice.init(rawValue:)) ?? .automatic
