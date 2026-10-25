@@ -4,22 +4,26 @@ import AppKit
 
 // MARK: Status bar
 
-/// The one status in the bottom bar for the data's safety: this Mac's database and the backup copy together, in words and a
-/// dot. Green when everything is saved and the backup copy is up to date, yellow while something is being written,
+/// The one status in the bottom bar for the data's safety: this Mac's database, the backup copy and, while sharing is on, the shared
+/// data, all together in words and a dot. Green when everything is saved and the backup copy is up to date, yellow while something is being written,
 /// orange when the backup copy needs attention (including when it isn't set up), red when saving or copying keeps failing.
 struct ShadowDatabaseStatusLabel: View {
     private var manager: ShadowCopyManager { ShadowCopyManager.shared }
     private var database: DatabaseStatus { DatabaseStatus.shared }
+    private var sharing: SharedDataSession { SharedDataSession.shared }
     @Environment(\.openSettings) private var openSettings
 
     static let name = "Backup Copy Database"
 
     var body: some View {
         if !ScreenshotMode.isOn {
-            Button { showShadowCopySettings() } label: {
+            Button {
+                // Changes waiting to go to the shared data are saved now; otherwise this opens the settings.
+                if sharing.status == .unsaved { Task { await sharing.checkInNow(release: false) } } else { showShadowCopySettings() }
+            } label: {
                 TimelineView(.periodic(from: .now, by: 30)) { _ in
                     let look = Self.look(database: database.state, lastSaved: database.lastSaved, shadow: manager.status,
-                                         sharing: SharedDataSession.shared.status != nil)
+                                         sharing: sharing.status != nil, shared: sharing.status)
                     HStack(spacing: 5) {
                         Circle().fill(look.color).frame(width: 8, height: 8)
                         Text(look.text).foregroundStyle(.secondary)
@@ -53,7 +57,36 @@ struct ShadowDatabaseStatusLabel: View {
     /// then a backup copy that keeps failing, then a backup copy that needs attention (not set up counts), then work in
     /// progress, then all well. While sharing, the sharing dot says whether the data is saved, so only a database problem
     /// counts here.
-    static func look(database: DatabaseStatus.State, lastSaved: Date? = nil, shadow: ShadowCopyManager.Status, sharing: Bool, now: Date = .now) -> Look {
+    static func look(database: DatabaseStatus.State, lastSaved: Date? = nil, shadow: ShadowCopyManager.Status, sharing: Bool,
+                     shared: SharedDataSession.Status? = nil, now: Date = .now) -> Look {
+        var look = backupLook(database: database, lastSaved: lastSaved, shadow: shadow, sharing: sharing, now: now)
+        guard let shared else { return look }
+        switch shared {
+        case .problem(let why):
+            // A database problem is still the worst thing to say; after that, shared data that can't be saved.
+            if case .problem = database { return look }
+            return Look(color: Theme.red, text: "Shared · Problem", detail: why)
+        case .unsaved:
+            // Only a green status gives way: a problem with the copy is still the more urgent thing to read.
+            if look.color == Theme.green {
+                return Look(color: .yellow, text: "\(name) · Shared · Saving…",
+                            detail: "Changes are saved to the shared data every couple of minutes, and when you hide or quit. Click to save now.")
+            }
+            look.detail += " Changes to the shared data are saved every couple of minutes. Click to save now."
+            return look
+        case .saved:
+            if look.color == Theme.green {
+                look.text = look.text.replacingOccurrences(of: "\(name) · ", with: "Backup Copy & Shared · ")
+                look.detail += " The shared data is saved too."
+            } else {
+                look.detail += " The shared data is saved."
+            }
+            return look
+        }
+    }
+
+    /// The status of this Mac's database and the backup copy, before the shared data is taken into account.
+    private static func backupLook(database: DatabaseStatus.State, lastSaved: Date?, shadow: ShadowCopyManager.Status, sharing: Bool, now: Date) -> Look {
         if case .problem(let why) = database {
             return Look(color: Theme.red, text: "Database · Problem",
                         detail: "Your changes couldn't be saved: \(why) They are still in the app. Try again, or back up your data and restart.")

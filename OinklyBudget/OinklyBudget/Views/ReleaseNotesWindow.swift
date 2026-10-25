@@ -35,6 +35,9 @@ enum ReleaseNotes {
             ("Saving files", [
                 "Settings ▸ Data & Backup ▸ Backup Copy and Save Location has a switch, Use a default save location. Turn it on and choose a folder, and statements, reports and backups are saved straight into it with no save window, and a Backup Copy of your database starts there too. Turn it off to be asked each time. Erase Everything forgets the choice.",
             ]),
+            ("Status bar", [
+                "The two dots at the bottom of the window are now one. While you share your data it says Backup Copy & Shared when this Mac, the backup copy and the shared data are all saved, and it shows whichever needs attention first.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),

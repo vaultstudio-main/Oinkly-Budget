@@ -72,7 +72,7 @@ enum HelpContent {
                 "• Orange, Out of date, Folder not found or Other data: the backup copy needs a look. Out of date means changes have waited a while to be copied. Folder not found means its folder or drive can't be reached. Other data means the folder holds a backup copy of different data, which was left alone.",
                 "• Red, Database · Problem: saving keeps failing. Your changes are still in the app. Export your data or check your backup copy, then restart Oinkly Budget. Hover over the dot to see why.",
                 "• Red, Backup Copy · Problem: copying keeps failing. Your data is not affected.",
-                "While you share your data, a separate Shared dot says whether the shared data is saved, and this one shows the backup copy and only reports a database problem.",
+                "While you share your data, this one dot also covers the shared data: when everything is saved it says Backup Copy & Shared · Copied 5 min. ago, while changes wait for the shared data it says Shared · Saving… (click it to save now), and a problem saving the shared data shows in red as Shared · Problem.",
                 "Hover over the dot to see when everything was last saved and copied.",
             ]),
 

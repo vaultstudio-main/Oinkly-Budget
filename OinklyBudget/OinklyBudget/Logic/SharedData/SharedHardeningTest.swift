@@ -670,6 +670,16 @@ enum SharedHardeningTest {
             check("S27 while sharing, unsaved changes are the Shared dot's to report", words(.unsaved, upToDate27, sharing: true).hasPrefix("Backup Copy Database · Copied"))
             check("S27 while sharing, a database problem still shows", words(.problem("x"), upToDate27, sharing: true) == "Database · Problem")
 
+            // S27b: while sharing, the one status also says whether the shared data is saved
+            func sharedWords(_ database: DatabaseStatus.State, _ shadow: ShadowCopyManager.Status, _ shared: SharedDataSession.Status) -> String {
+                MainActor.assumeIsolated { ShadowDatabaseStatusLabel.look(database: database, shadow: shadow, sharing: true, shared: shared).text }
+            }
+            check("S27b everything saved says Backup Copy and Shared together", sharedWords(.saved, upToDate27, .saved).hasPrefix("Backup Copy & Shared · Copied"))
+            check("S27b shared data not saved yet shows as saving", sharedWords(.saved, upToDate27, .unsaved) == "Backup Copy Database · Shared · Saving…")
+            check("S27b a shared problem shows", sharedWords(.saved, upToDate27, .problem("x")) == "Shared · Problem")
+            check("S27b a database problem still comes first", sharedWords(.problem("x"), upToDate27, .problem("y")) == "Database · Problem")
+            check("S27b a backup copy that needs attention is not hidden by shared being fine", sharedWords(.saved, .notSetUp, .saved) == "Backup Copy Database · Not set up")
+
             // S28: the sealed file format, and the backup copy's receipts
             let sealedPlain = root.appendingPathComponent("sealed/plain.store")
             try manager.createDirectory(at: sealedPlain.deletingLastPathComponent(), withIntermediateDirectories: true)
