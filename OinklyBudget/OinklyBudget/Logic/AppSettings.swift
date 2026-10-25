@@ -54,6 +54,9 @@ final class AppSettings {
         static let appearance = "appearance"
         static let paper = "paperChoice"
         static let exportStyle = "exportStyle"
+        static let letterheadMode = "letterheadMode"
+        static let letterheadName = "letterheadName"
+        static let letterheadDetails = "letterheadDetails"
     }
 
     /// ISO currency code the user picked. Empty means "use this device's currency".
@@ -68,7 +71,18 @@ final class AppSettings {
     /// The look of exported PDFs.
     private(set) var exportStyle: ExportStyle
 
+    /// What goes at the top of a PDF's first page.
+    private(set) var letterheadMode: LetterheadMode
+    /// The name and the line of details beside your own logo.
+    private(set) var letterheadName: String
+    private(set) var letterheadDetails: String
+    /// Changes whenever the logo file is replaced or removed, so a screen showing it redraws.
+    private(set) var letterheadLogoVersion = 0
+
     private init() {
+        letterheadMode = UserDefaults.standard.string(forKey: Key.letterheadMode).flatMap(LetterheadMode.init(rawValue:)) ?? .oinkly
+        letterheadName = UserDefaults.standard.string(forKey: Key.letterheadName) ?? ""
+        letterheadDetails = UserDefaults.standard.string(forKey: Key.letterheadDetails) ?? ""
         paperChoice = UserDefaults.standard.string(forKey: Key.paper).flatMap(PaperChoice.init(rawValue:)) ?? .automatic
         exportStyle = UserDefaults.standard.string(forKey: Key.exportStyle).flatMap(ExportStyle.init(rawValue:)) ?? .plain
         currencyCode = UserDefaults.standard.string(forKey: Key.currency) ?? ""
@@ -79,6 +93,23 @@ final class AppSettings {
         paperChoice = value
         UserDefaults.standard.set(value.rawValue, forKey: Key.paper)
     }
+
+    func setLetterheadMode(_ value: LetterheadMode) {
+        letterheadMode = value
+        UserDefaults.standard.set(value.rawValue, forKey: Key.letterheadMode)
+    }
+
+    func setLetterheadName(_ value: String) {
+        letterheadName = value
+        UserDefaults.standard.set(value, forKey: Key.letterheadName)
+    }
+
+    func setLetterheadDetails(_ value: String) {
+        letterheadDetails = value
+        UserDefaults.standard.set(value, forKey: Key.letterheadDetails)
+    }
+
+    func logoChanged() { letterheadLogoVersion += 1 }
 
     func setExportStyle(_ value: ExportStyle) {
         exportStyle = value

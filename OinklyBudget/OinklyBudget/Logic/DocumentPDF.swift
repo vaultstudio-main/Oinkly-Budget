@@ -69,7 +69,8 @@ enum DocumentPDF {
 
     static func render(_ document: ExportDocument, paper: PaperSize) -> Data {
         // Lay everything out once to count the pages, then again to draw with the real "Page x of y".
-        var counter = Page(document: document, paper: paper, context: nil, totalPages: 0)
+        let letterhead = Letterhead.current()
+        var counter = Page(document: document, paper: paper, context: nil, totalPages: 0, letterhead: letterhead)
         counter.layout()
         let total = counter.pageCount
 
@@ -78,7 +79,7 @@ enum DocumentPDF {
         let info = [kCGPDFContextTitle: "\(document.title), \(document.subtitle)", kCGPDFContextCreator: "Oinkly Budget"] as CFDictionary
         guard let consumer = CGDataConsumer(data: data as CFMutableData),
               let context = CGContext(consumer: consumer, mediaBox: &box, info) else { return Data() }
-        var drawer = Page(document: document, paper: paper, context: context, totalPages: total)
+        var drawer = Page(document: document, paper: paper, context: context, totalPages: total, letterhead: letterhead)
         drawer.layout()
         context.closePDF()
         return data as Data
@@ -91,11 +92,13 @@ enum DocumentPDF {
         let paper: PaperSize
         let context: CGContext?
         let totalPages: Int
+        let letterhead: Letterhead.Resolved?
         var pageCount = 0
         private var y: CGFloat = 0
         private var open = false
 
-        init(document: ExportDocument, paper: PaperSize, context: CGContext?, totalPages: Int) {
+        init(document: ExportDocument, paper: PaperSize, context: CGContext?, totalPages: Int, letterhead: Letterhead.Resolved?) {
+            self.letterhead = letterhead
             self.document = document
             self.paper = paper
             self.context = context
@@ -154,7 +157,33 @@ enum DocumentPDF {
 
         // MARK: Header
 
+        /// The letterhead across the top of the first page: the picture, the name and details beside it, and a thin line under them.
+        private mutating func drawLetterhead() {
+            guard let letterhead else { return }
+            let height: CGFloat = 46
+            var textX = margin
+            if let image = letterhead.image, image.size.width > 0, image.size.height > 0 {
+                let scale = min(150 / image.size.width, height / image.size.height)
+                let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+                if context != nil {
+                    image.draw(in: CGRect(x: margin, y: y + (height - size.height) / 2, width: size.width, height: size.height),
+                               from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+                }
+                textX = margin + size.width + 12
+            }
+            let hasDetails = !letterhead.details.isEmpty
+            if !letterhead.name.isEmpty {
+                text(letterhead.name, in: CGRect(x: textX, y: y + (hasDetails ? 6 : 14), width: margin + width - textX, height: 22), size: 16, weight: .bold, color: accent)
+            }
+            if hasDetails {
+                text(letterhead.details, in: CGRect(x: textX, y: y + (letterhead.name.isEmpty ? 14 : 28), width: margin + width - textX, height: 14), size: 8.5, color: grey)
+            }
+            line(from: margin, to: margin + width, y: y + height + 8, alpha: 0.45, thickness: 0.8)
+            y += height + 20
+        }
+
         private mutating func drawHeader() {
+            drawLetterhead()
             text(document.title, in: CGRect(x: margin, y: y, width: width, height: 24), size: 19, weight: .bold, color: accent)
             y += 22
             text(document.subtitle, in: CGRect(x: margin, y: y + 2, width: width, height: 16), size: 11, color: grey)

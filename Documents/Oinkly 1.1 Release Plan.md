@@ -21,10 +21,10 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [x] Receipt learning stays on the device: the app remembers which payee goes with which store, in a small file on this Mac (not in the database, so it is not in backups). Erase All Data forgets it.
 - [ ] Later: fill in a blank transaction from a receipt automatically, learn categories as well as payees, and check receipts from the register's Add Receipt link and from Pay a Bill.
 
-## Feature 3: PDF Letterhead
+## Feature 3: PDF Letterhead ✅ Done
 
-- Printed and exported PDFs get letterhead generated automatically, with an image.
-- Open question: should the image be the Oinkly logo, or a logo the user uploads (for small businesses)?
+- [x] Printed and exported PDFs get a letterhead generated automatically, with an image, across the top of the first page.
+- [x] Decided: both. By default it is the Oinkly Budget pig and name. Settings ▸ General ▸ Letterhead can switch to your own logo, name and a line of details (for small businesses), or turn it off. The logo is kept on the Mac only, outside backups.
 
 ## Maybe: Paycheck Stub Tracking
 

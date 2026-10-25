@@ -241,6 +241,7 @@ enum HelpContent {
                 "Every account page has Print PDF and Export CSV. The Transactions page has them for all accounts.",
                 "## The Export sheet",
                 "Choose the account (or all accounts), the period (a month, a year, or from a date) and the paper size, then a save panel asks where to put the file.",
+                "• Every PDF has a letterhead across the top of its first page: a picture, a name and a thin line. By default it is the Oinkly Budget pig and name. In Settings ▸ General ▸ Letterhead you can switch to your own logo, name and a line of details, such as an address or phone number, which suits a small business, or turn it off. The logo is kept on this Mac only and is not part of backups.",
                 "• The PDF is a statement with a running balance and repeating headers. To print it, open it in Preview and print from there.",
                 "• The CSV uses the layout Import CSV reads, so a file you export can be imported again.",
                 "• One transaction can be saved as a PDF from its detail window.",
@@ -503,7 +504,7 @@ enum HelpContent {
 
             Topic(title: "Settings", symbol: "gearshape", lines: [
                 "Open Settings with Oinkly Budget ▸ Settings… (⌘,).",
-                "• General: menu bar and login options, appearance (light, dark or system), currency, and the default paper size and style for PDFs.",
+                "• General: menu bar and login options, appearance (light, dark or system), currency, the default paper size and style for PDFs, and the letterhead.",
                 "• Reminders: bill reminders and your own custom reminders.",
                 "• Accounts: add, edit and delete accounts.",
                 "• Categories: budgets, tax-related and custom categories.",

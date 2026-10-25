@@ -4,6 +4,68 @@ import UniformTypeIdentifiers
 import SwiftData
 
 // MARK: General
+/// Settings ▸ General ▸ Letterhead: what goes at the top of the first page of every printed or exported PDF.
+private struct LetterheadSettingsSection: View {
+    private let settings = AppSettings.shared
+    @State private var choosingLogo = false
+    @State private var problem: String?
+
+    private var modeBinding: Binding<LetterheadMode> {
+        Binding(get: { settings.letterheadMode }, set: { settings.setLetterheadMode($0) })
+    }
+    private var nameBinding: Binding<String> {
+        Binding(get: { settings.letterheadName }, set: { settings.setLetterheadName($0) })
+    }
+    private var detailsBinding: Binding<String> {
+        Binding(get: { settings.letterheadDetails }, set: { settings.setLetterheadDetails($0) })
+    }
+
+    var body: some View {
+        // Reading the version makes this redraw when the logo file changes.
+        let _ = settings.letterheadLogoVersion
+        Section {
+            Picker("Letterhead", selection: modeBinding) {
+                ForEach(LetterheadMode.allCases) { Text($0.title).tag($0) }
+            }
+            if settings.letterheadMode == .custom {
+                TextField("Name", text: nameBinding, prompt: Text("Your name or business"))
+                TextField("Details", text: detailsBinding, prompt: Text("Address, phone or email, on one line"))
+                HStack(spacing: 12) {
+                    if let logo = Letterhead.customLogo() {
+                        Image(nsImage: logo).resizable().scaledToFit().frame(width: 64, height: 40)
+                    } else {
+                        Image(systemName: "photo").foregroundStyle(.tertiary).frame(width: 64, height: 40)
+                    }
+                    Button(Letterhead.customLogo() == nil ? "Choose Logo…" : "Change Logo…") { choosingLogo = true }
+                    if Letterhead.customLogo() != nil {
+                        Button("Remove Logo", role: .destructive) { Letterhead.removeLogo(); settings.logoChanged() }
+                    }
+                }
+            }
+            if let problem { Text(problem).font(.footnote).foregroundStyle(.orange) }
+        } header: {
+            Text("Letterhead")
+        } footer: {
+            Text("A picture and name at the top of the first page of statements, reports and other PDFs. Your own logo and name suit a small business. The logo is kept on this Mac only.")
+        }
+        .fileImporter(isPresented: $choosingLogo, allowedContentTypes: [.image]) { result in
+            switch result {
+            case .success(let url):
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                if let data = try? Data(contentsOf: url), Letterhead.saveLogo(from: data) {
+                    problem = nil
+                    settings.logoChanged()
+                } else {
+                    problem = "That file couldn't be read as a picture."
+                }
+            case .failure(let error):
+                problem = error.localizedDescription
+            }
+        }
+    }
+}
+
 
 struct GeneralSettingsView: View {
     private let settings = AppSettings.shared
@@ -51,6 +113,8 @@ struct GeneralSettingsView: View {
             } footer: {
                 Text("Used for statements, reports and the Summary. You can still change the paper in the Export sheet. Plain prints well on any printer; color accents use blue headings.")
             }
+
+            LetterheadSettingsSection()
 
             if !ScreenshotMode.isOn {
                 Section {
