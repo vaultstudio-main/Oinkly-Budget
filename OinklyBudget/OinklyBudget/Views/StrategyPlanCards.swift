@@ -11,6 +11,11 @@ struct StrategyPlanCards: View {
     var body: some View {
         VStack(spacing: 10) {
             if !summary.debt.debts.isEmpty || !summary.savings.accounts.isEmpty { netCard }
+            if !summary.debt.debts.isEmpty {
+                ReportCard(title: "What It Would Take to Be Debt-Free") {
+                    DebtPayoffScenarios(debts: summary.debt.debts, strategy: summary.debt.strategy, target: summary.debt.target, lump: summary.debt.lump)
+                }
+            }
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 10) { debtCard; savingsCard }
                 VStack(spacing: 10) { debtCard; savingsCard }

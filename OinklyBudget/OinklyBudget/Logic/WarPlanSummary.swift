@@ -58,6 +58,8 @@ enum WarPlanSummary {
         var extra: Double
         var lump: Double
         var strategy: DebtWarPlan.Strategy
+        /// The debt Laser Focus Annihilation is aimed at, when that is the strategy.
+        var target: String?
         var base: DebtWarPlan.Result
         var plan: DebtWarPlan.Result
         var totalOwed: Double { debts.reduce(0) { $0 + $1.owed } }
@@ -95,7 +97,7 @@ enum WarPlanSummary {
         let debtTarget = debtStrategy == .laser
             ? (debts.first { $0.id == defaults.string(forKey: "debtWarPlanTarget") } ?? debts.min { $0.owed < $1.owed })?.id : nil
         let debtExtra = amount("debtWarPlanExtra", defaults), debtLump = amount("debtWarPlanLump", defaults)
-        let debt = Debt(debts: debts, extra: debtExtra, lump: debtLump, strategy: debtStrategy,
+        let debt = Debt(debts: debts, extra: debtExtra, lump: debtLump, strategy: debtStrategy, target: debtTarget,
                         base: DebtWarPlan.simulate(debts, extra: 0, strategy: debtStrategy, target: debtTarget),
                         plan: DebtWarPlan.simulate(debts, extra: debtExtra, lump: debtLump, strategy: debtStrategy, target: debtTarget))
 

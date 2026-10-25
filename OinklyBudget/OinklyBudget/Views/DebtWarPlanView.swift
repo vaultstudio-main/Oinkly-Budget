@@ -59,7 +59,7 @@ struct DebtWarPlanView: View {
                                     title: "No debt to pay off", clean: true).frame(height: 160)
                     }
                 } else {
-                    controls(debts: debts)
+                    controls(debts: debts, target: target)
                     tiles(debts: debts, base: base, plan: plan)
                     chart(base: base, plan: plan)
                     table(debts: debts, base: base, plan: plan, target: target)
@@ -72,13 +72,15 @@ struct DebtWarPlanView: View {
 
     // MARK: The calculator
 
-    private func controls(debts: [DebtWarPlan.Debt]) -> some View {
+    private func controls(debts: [DebtWarPlan.Debt], target: String?) -> some View {
         ReportPanel(title: "Pay It Down Faster", summary: "Add extra money and choose where it goes first. Everything below follows as you type.") {
             VStack(alignment: .leading, spacing: 14) {
                 ViewThatFits(in: .horizontal) {
                     HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
                     VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
                 }
+                Divider()
+                DebtPayoffScenarios(debts: debts, strategy: strategy, target: target, lump: lump) { extraBinding.wrappedValue = Decimal($0) }
                 Divider()
                 Text("This is a what-if. It assumes you keep paying what you pay now, add no new charges, and that interest is added each month at the account's rate. When a debt is paid off, its payment goes on to the next one. It never changes any account.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
