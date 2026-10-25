@@ -19,17 +19,67 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 - [x] Scan a receipt with Apple's Vision framework while entering a transaction (new transaction, credit card charge, cash transaction and edit). PDFs with text are read directly.
 - [x] The scan checks the entered total, date and payee against the receipt and suggests corrections if they don't match. Nothing changes until the Use button is pressed.
 - [x] Receipt learning stays on the device: the app remembers which payee goes with which store, in a small file on this Mac (not in the database, so it is not in backups). Erase All Data forgets it.
-- [ ] Later: fill in a blank transaction from a receipt automatically, learn categories as well as payees, and check receipts from the register's Add Receipt link and from Pay a Bill.
+- [ ] Later (1.2): fill in a blank transaction from a receipt automatically, learn categories as well as payees, and check receipts from the register's Add Receipt link and from Pay a Bill.
 
 ## Feature 3: PDF Letterhead ✅ Done
 
 - [x] Printed and exported PDFs get a letterhead generated automatically, with an image, across the top of the first page.
 - [x] Decided: both, and it is off by default so nobody has it forced on them. Settings ▸ General ▸ Letterhead can switch it to the Oinkly Budget pig and name, or to your own logo, name and a line of details (for small businesses). The logo is kept on the Mac only, outside backups.
+- [x] A custom logo is fitted into the standard letterhead size (600 × 200 pixels, about 2 × 0.65 inch), never enlarged; the name is limited to 40 characters and the details to 90.
+
+## Planning War Room ✅ Done
+
+- [x] The Monthly Outlook page is now the **Planning War Room**, with four tabs: Strategy Plan, Monthly War Plan, Debt War Plan and Savings War Plan.
+- [x] The Strategy Plan counts the extra money the Debt and Savings War Plans set aside (always on; closed months keep their figures) and pulls in their statistics, with bar and line charts only: where the month's money goes, what you owe and save over time, net position, when each debt is paid off, how each savings account grows, and what extra money does.
+- [x] The Debt and Savings War Plans show what extra money would do and what it takes to be debt-free (or reach your goals) in 1, 2, 3, 5 or 10 years, each with a Use button.
+- [x] Monthly War Plan: Add a Line takes a payee with suggestions from the register, and can count towards the Debt or Savings War Plan. Link Transactions is gone.
+- [x] No circle graphs anywhere in the app: every one is now a bar or line chart.
+
+## Backups and saving files ✅ Done
+
+- [x] Settings ▸ Data & Backup ▸ **Backup Copy and Save Location**: a switch for a default save location (statements, reports and backups save straight into the folder with no save window) and a switch for the Backup Copy, which starts in the same folder. The start-up prompt and the General reminder are worded to match. Erase Everything forgets the save location.
+- [x] The bottom status bar is one dot for this Mac, the Backup Copy and the shared data.
+
+## Other changes ✅ Done
+
+- [x] A separate **Print** button on every account page, beside Print PDF, that opens the Mac's print window for a real printer.
+- [x] Investments reports open much faster: their numbers are kept ready and refreshed after changes.
+- [x] The Xcode (Debug) build has its own bundle ID and data, so it can no longer touch the copy of the app you use. Release is unchanged.
+- [x] Notes removed from the account details and the Edit and Add Account forms. The menu bar pop-up no longer has an Open Oinkly Budget button.
+- [x] The build is named Laser Focused, You Idiot everywhere (Ridiculous Speed is gone), and the version is 1.1.
 
 ## ~~Maybe: Paycheck Stub Tracking~~ Cut
 
 - Cut from 1.1.
 - The idea was: scan stubs or enter them by hand to keep a running record of pay and withholding, tracking only, with no tax estimates or refund calculations, so it isn't a regulated tax service.
+
+## Still to do before release
+
+**Check on screen or paper** (built, but not yet seen working):
+
+- [ ] The start-up prompt's Choose Folder… (turns on the save location and the Backup Copy together).
+- [ ] Saving a PDF, a CSV and a backup straight into the save location.
+- [ ] The single status dot with Share with Other Users turned on.
+- [ ] The menu bar pop-up without the Open button.
+- [ ] A printed PDF with a letterhead and a custom logo.
+- [ ] A real Print to paper from an account page.
+
+**Upgrade test**
+
+- [ ] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there.
+- [ ] Decide the build number (1 for 1.1; 1.0.1 was 2).
+
+**Package** (see the release checklist)
+
+- [ ] Archive with the Release configuration; notarize, staple and check with `spctl`.
+- [ ] Build the .dmg with the pig background and take its SHA-256.
+
+**Publish**
+
+- [ ] GitHub release v1.1, with the banner image at the top of the notes and the .dmg attached.
+- [ ] Point the README's download links and "Latest update" section at v1.1.
+- [ ] Website: `updates.html`, the Download buttons, and the page text for the Planning War Room and Strategy Plan.
+- [ ] Push the commits; upload the new social preview in the repo's Settings.
 
 ## General
 
@@ -38,3 +88,4 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 ## Future Releases
 
 - **Ludicrous Speed:** planned as the 2.0 release name, but might move up to 1.2 depending on features.
+- Ideas for 1.2: live investment prices (opt-in, with your own free API key), optional account sync through SimpleFIN Bridge (paid by the user, read-only), and a watched folder for brokerage CSV imports.
