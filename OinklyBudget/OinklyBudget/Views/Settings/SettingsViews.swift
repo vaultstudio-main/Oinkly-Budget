@@ -118,13 +118,13 @@ struct GeneralSettingsView: View {
 
             if !ScreenshotMode.isOn {
                 Section {
-                    Toggle("Remind me to set up a Backup Copy", isOn: Binding(
+                    Toggle("Remind me to set up a Backup Copy and Save Location", isOn: Binding(
                         get: { ShadowCopyManager.shared.remindsToSetUp },
                         set: { ShadowCopyManager.shared.setReminder($0) }))
                 } header: {
-                    Text("Backup Copy")
+                    Text("Backup Copy and Save Location")
                 } footer: {
-                    Text("A backup copy is the best way to make sure your data is safe. Every time Oinkly Budget starts, it reminds you to set one up until you have one. Turning the backup copy off turns this reminder back on.")
+                    Text("A backup copy is the best way to make sure your data is safe, and a save location puts your statements, reports and backups in a folder you choose. Every time Oinkly Budget starts, it reminds you to choose one until the Backup Copy is set up. Turning the backup copy off turns this reminder back on.")
                 }
             }
 
