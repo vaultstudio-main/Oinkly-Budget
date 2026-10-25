@@ -10,8 +10,8 @@ struct DebtPayoffScenarios: View {
     /// Called with an amount when the person taps Use. Nil where the amounts can only be read.
     var use: ((Double) -> Void)?
 
-    private static let amounts: [Double] = [100, 250, 500, 1000]
-    private static let years = [1, 2, 3, 5, 10]
+    private static let amounts: [Double] = [100, 250, 500, 1000, 1500]
+    private static let years = [1, 2, 3, 5]
 
     private func run(_ extra: Double) -> DebtWarPlan.Result {
         DebtWarPlan.simulate(debts, extra: extra, lump: lump, strategy: strategy, target: target)
