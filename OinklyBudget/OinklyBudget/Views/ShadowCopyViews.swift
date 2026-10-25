@@ -98,16 +98,18 @@ extension RelativeDateTimeFormatter {
 
 // MARK: First time
 
-/// Offered once the person has put some data in: what a backup copy is, and that it is not encrypted.
+/// Offered once the person has put some data in: choose a default save location, which is also where a backup copy of the data is kept,
+/// and that the copy is not encrypted.
 struct ShadowSetupSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Label("Protect your data with a backup copy", systemImage: "shield.lefthalf.filled")
+            Label("Choose where your files are saved", systemImage: "folder.badge.gearshape")
                 .font(.title3.weight(.semibold))
-            Text("A backup copy is the best thing you can do to make sure your data is safe. It is a second copy of your data in a folder you choose, such as Documents. Oinkly Budget keeps it up to date on its own and keeps a few older versions. If your data ever goes missing or can't be opened, you can restore from it.")
-            Text("It is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with.")
+            Text("Pick a default save location, such as a folder in Documents. Statements, reports and backups are then saved straight into it, with no save window to go through each time.")
+            Text("A backup copy of your data keeps itself up to date in the same folder, with a few older versions. It is the best thing you can do to make sure your data is safe: if your data ever goes missing or can't be opened, you can restore from it.")
+            Text("The backup copy is kept in Oinkly Budget's own file format, so other apps can't read it, but it is not encrypted: that keeps out casual readers, not someone determined. A folder in iCloud Drive is also on Apple's servers. Choose somewhere you are comfortable with. You can change or turn off either one later in Settings ▸ Data & Backup.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             HStack {
@@ -116,7 +118,7 @@ struct ShadowSetupSheet: View {
                 Button("Not Now") { dismiss() }
                 Button("Choose Folder…") {
                     dismiss()
-                    ShadowCopyManager.shared.chooseFolder()
+                    if DefaultSaveFolder.choose(), let folder = DefaultSaveFolder.url { ShadowCopyManager.shared.setUp(in: folder) }
                 }
                 .keyboardShortcut(.defaultAction)
             }
