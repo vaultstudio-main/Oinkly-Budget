@@ -11,7 +11,7 @@ struct DebtPayoffScenarios: View {
     var use: ((Double) -> Void)?
 
     private static let amounts: [Double] = [100, 250, 500, 1000, 1500]
-    private static let years = [1, 2, 3, 5]
+    private static let years = [1, 2, 3, 5, 10]
 
     private func run(_ extra: Double) -> DebtWarPlan.Result {
         DebtWarPlan.simulate(debts, extra: extra, lump: lump, strategy: strategy, target: target)
