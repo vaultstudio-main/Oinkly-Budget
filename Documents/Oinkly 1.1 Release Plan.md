@@ -4,7 +4,7 @@
 
 ## Overview
 
-Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF letterhead, and general polish. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
+Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF letterhead, automatic updates (Sparkle), live holding prices, and general polish. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
 
 ## Feature 1: Laser Focus Annihilation ✅ Done
 
@@ -58,6 +58,22 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] Notes removed from the account details and the Edit and Add Account forms. The menu bar pop-up no longer has an Open Oinkly Budget button.
 - [x] The build is named Laser Focused, You Idiot everywhere (Ridiculous Speed is gone), and the version is 1.1.
 
+## Feature 4: Sparkle automatic updates (flagged for 1.1)
+
+- [ ] The direct-download app (the .dmg from GitHub) checks for new versions by itself and offers to install them, using Sparkle 2, so people don't have to find the release page. The update feed (`appcast.xml`) is built from the GitHub releases folder.
+- [ ] Updates are signed with a Sparkle (EdDSA) key kept by the author, on top of the normal Developer ID signing and notarization, so a changed download is refused.
+- [ ] Switchable in Settings, with Check for Updates… in the app menu. Only the app version is sent, no personal data.
+- [ ] Needs: the Sparkle package added to the project, the network permission and Sparkle's helper permissions in the sandbox, a place to host the feed (a file in the repo or on the website), and a new step in the release checklist that signs the .dmg and adds it to the feed.
+- [ ] Only the direct-download build gets Sparkle. A version sent through the App Store must not contain a self-updater, so it needs its own build setting that leaves Sparkle out.
+- [ ] Note: 1.0.1 has no Sparkle, so people on 1.0.1 still download 1.1 by hand once. The first real test of an automatic update is the release after 1.1.
+
+## Feature 5: Live prices for holdings (flagged for 1.1)
+
+- [ ] A **Refresh Prices** button (and an optional once-a-day refresh while the app is open) that looks up the current price of each holding by its **ticker symbol only**. The amount held (shares and cost) stays on the Mac and is never sent, so prices update without the holdings having to be re-entered.
+- [ ] Source: the author's idea is Yahoo Finance (yfinance). yfinance is a Python library over Yahoo's unofficial pages, which have no official API, can change without warning and are against Yahoo's terms, and a Python library can't go inside a Mac app, so the app would read Yahoo's pages itself and could break at any time. Safer sources with real free tiers are Stooq (no key), Finnhub, Alpha Vantage and Twelve Data (a free key each), and CoinGecko for crypto. Decide at the start; keep the source swappable so a break means changing one file.
+- [ ] Opt-in and off by default, with the privacy wording in the README, Help, website and store text changed to say exactly what is sent (ticker symbols only, nothing about amounts or accounts).
+- [ ] Needs the network permission (shared with Sparkle).
+
 ## ~~Maybe: Paycheck Stub Tracking~~ Cut
 
 - Cut from 1.1.
@@ -73,6 +89,12 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [ ] The menu bar pop-up without the Open button.
 - [ ] A printed PDF with a letterhead and a custom logo.
 - [ ] A real Print to paper from an account page.
+
+**Sparkle and live prices** (Features 4 and 5)
+
+- [ ] Built and tried: Sparkle (including a test update from a pretend newer version) and Refresh Prices.
+- [ ] The network permission added, and the README, Help, website and store text changed to say what the app now sends.
+- [ ] The release checklist gains the Sparkle signing and feed step.
 
 **Receipt Suggestions**
 
@@ -108,18 +130,4 @@ The scan already suggests a total, date and payee, and nothing changes until you
 ## Future Releases
 
 - **Ludicrous Speed:** planned as the 2.0 release name, but might move up to 1.2 depending on features.
-
-### Sparkle: automatic updates from the GitHub releases (candidate for 1.2)
-
-- The direct-download app (the .dmg from GitHub) checks for new versions by itself and offers to install them, using Sparkle 2, so people don't have to find the release page. The app's own update feed (an `appcast.xml`) is built from the GitHub releases folder.
-- Updates are signed with a Sparkle (EdDSA) key kept by the author, on top of the normal Developer ID signing and notarization, so a changed download is refused.
-- Opt-in or clearly switchable in Settings, with Check for Updates… in the app menu, and no personal data sent (only the app version).
-- Needs: the network permission and Sparkle's helper permissions in the sandbox, the Sparkle package added to the project, a place to host the feed (a file in the repo or on the website), and a step in the release checklist that signs the .dmg and adds it to the feed.
-- Only the direct-download build gets Sparkle. A version sent through the App Store must not contain a self-updater, so it needs its own build setting that leaves Sparkle out.
-
-### Live prices for holdings (candidate for 1.2)
-
-- A **Refresh Prices** button (and an optional once-a-day refresh while the app is open) that looks up the current price of each holding by its **ticker symbol only**. The amount held (shares and cost) stays on the Mac and is never sent, so the prices update without the holdings having to be re-entered.
-- Idea from the author: use Yahoo Finance (yfinance). Notes: yfinance is a Python library over Yahoo's unofficial pages, which have no official API, can change without warning and are against Yahoo's terms, and a Python library can't go inside a Mac app. The app would have to read Yahoo's pages itself, which could break at any time. Safer sources with real free tiers are Stooq (no key), Finnhub, Alpha Vantage and Twelve Data (a free key each), and CoinGecko for crypto. Decide when this is started; the code should keep the source swappable so a break means changing one file.
-- Opt-in and off by default, with the privacy wording in the README, Help and store text changed to say exactly what is sent (ticker symbols only, nothing about amounts or accounts).
-- Also considered: optional account sync through SimpleFIN Bridge (paid by the user, read-only), and a watched folder for brokerage CSV imports.
+- Ideas for later: optional account sync through SimpleFIN Bridge (paid by the user, read-only), and a watched folder for brokerage CSV imports.
