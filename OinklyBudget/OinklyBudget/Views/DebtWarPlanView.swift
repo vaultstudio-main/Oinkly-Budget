@@ -10,6 +10,8 @@ struct DebtWarPlanView: View {
     @AppStorage("debtWarPlanExtra") private var extraText = ""
     @AppStorage("debtWarPlanLump") private var lumpText = ""
     @AppStorage("debtWarPlanStrategy") private var strategyRaw = DebtWarPlan.Strategy.avalanche.rawValue
+    /// The debt Laser Focus Annihilation goes after. When it is not one of the debts any more (paid off, deleted), the smallest takes its place.
+    @AppStorage("debtWarPlanTarget") private var targetID = ""
 
     private static let quickAmounts: [Double] = [50, 100, 250, 500, 1000]
 
@@ -33,6 +35,11 @@ struct DebtWarPlanView: View {
             }
     }
 
+    /// The debt the laser is pointed at: the one picked, or the smallest when none was picked or it is gone.
+    private func targetDebt(in debts: [DebtWarPlan.Debt]) -> DebtWarPlan.Debt? {
+        debts.first { $0.id == targetID } ?? debts.min { $0.owed < $1.owed }
+    }
+
     private func date(afterMonths months: Int) -> Date {
         Calendar.current.date(byAdding: .month, value: months, to: .now) ?? .now
     }
@@ -48,8 +55,9 @@ struct DebtWarPlanView: View {
 
     var body: some View {
         let debts = self.debts
-        let base = DebtWarPlan.simulate(debts, extra: 0, strategy: strategy)
-        let plan = DebtWarPlan.simulate(debts, extra: extra, lump: lump, strategy: strategy)
+        let target = strategy == .laser ? targetDebt(in: debts)?.id : nil
+        let base = DebtWarPlan.simulate(debts, extra: 0, strategy: strategy, target: target)
+        let plan = DebtWarPlan.simulate(debts, extra: extra, lump: lump, strategy: strategy, target: target)
         ScrollView {
             VStack(spacing: 14) {
                 if debts.isEmpty {
@@ -58,10 +66,10 @@ struct DebtWarPlanView: View {
                                     title: "No debt to pay off", clean: true).frame(height: 160)
                     }
                 } else {
-                    controls
+                    controls(debts: debts)
                     tiles(debts: debts, base: base, plan: plan)
                     chart(base: base, plan: plan)
-                    table(debts: debts, base: base, plan: plan)
+                    table(debts: debts, base: base, plan: plan, target: target)
                     notes(debts: debts)
                 }
             }
@@ -71,12 +79,12 @@ struct DebtWarPlanView: View {
 
     // MARK: The calculator
 
-    private var controls: some View {
+    private func controls(debts: [DebtWarPlan.Debt]) -> some View {
         ReportPanel(title: "Pay It Down Faster", summary: "Add extra money and choose where it goes first. Everything below follows as you type.") {
             VStack(alignment: .leading, spacing: 14) {
                 ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker }
-                    VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker }
+                    HStack(alignment: .top, spacing: 28) { amountFields; strategyPicker(debts: debts) }
+                    VStack(alignment: .leading, spacing: 14) { amountFields; strategyPicker(debts: debts) }
                 }
                 HStack(spacing: 8) {
                     Text("Quick amounts").font(.caption).foregroundStyle(.secondary)
@@ -106,14 +114,26 @@ struct DebtWarPlanView: View {
         .help("The extra each month is paid on top of your payments every month. The one-time amount is paid once, today, such as a bonus or a tax refund.")
     }
 
-    private var strategyPicker: some View {
+    private func strategyPicker(debts: [DebtWarPlan.Debt]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Where the extra goes first").font(.callout)
             Picker("Where the extra goes first", selection: $strategyRaw) {
                 ForEach(DebtWarPlan.Strategy.allCases) { Text($0.title).tag($0.rawValue) }
             }
-            .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
+            .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 620)
             Text(strategy.blurb).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            // Laser Focus Annihilation needs a target. Debts added later appear here by themselves, since the list is the accounts.
+            if strategy == .laser {
+                HStack(spacing: 8) {
+                    Image(systemName: "scope").foregroundStyle(Theme.red)
+                    Text("Target").font(.callout)
+                    Picker("Target", selection: Binding(get: { targetDebt(in: debts)?.id ?? "" }, set: { targetID = $0 })) {
+                        ForEach(debts) { Text("\($0.name) · \(ReportFormat.money($0.owed))").tag($0.id) }
+                    }
+                    .labelsHidden().frame(maxWidth: 360)
+                }
+                .padding(.top, 4)
+            }
         }
     }
 
@@ -178,7 +198,7 @@ struct DebtWarPlanView: View {
     }
 
     /// Each debt: what it is, and when it is paid off now and with the extra.
-    private func table(debts: [DebtWarPlan.Debt], base: DebtWarPlan.Result, plan: DebtWarPlan.Result) -> some View {
+    private func table(debts: [DebtWarPlan.Debt], base: DebtWarPlan.Result, plan: DebtWarPlan.Result, target: String?) -> some View {
         let hasExtra = extra > 0 || lump > 0
         let order = debts.sorted { (plan.byDebt[$0.id]?.payoffMonth ?? .max) < (plan.byDebt[$1.id]?.payoffMonth ?? .max) }
         func when(_ result: DebtWarPlan.DebtResult?) -> String {
@@ -202,7 +222,7 @@ struct DebtWarPlanView: View {
                     let now = base.byDebt[debt.id], with = plan.byDebt[debt.id]
                     GridRow {
                         HStack(spacing: 8) {
-                            Image(systemName: debt.symbol).foregroundStyle(Theme.red).frame(width: 20)
+                            Image(systemName: debt.id == target ? "scope" : debt.symbol).foregroundStyle(Theme.red).frame(width: 20)
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(debt.name).fontWeight(.medium).lineLimit(1)
                                 Text(debt.kind).font(.caption).foregroundStyle(.secondary).lineLimit(1)

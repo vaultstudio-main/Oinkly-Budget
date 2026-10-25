@@ -21,12 +21,23 @@ enum DebtWarPlan {
         case avalanche
         /// The smallest balance first: debts are cleared sooner, which many people find easier to stick with.
         case snowball
+        /// One debt you pick gets every spare dollar until it is gone, then everything rolls onto the rest, highest rate first.
+        case laser
 
         var id: String { rawValue }
-        var title: String { self == .avalanche ? "Highest interest first" : "Smallest balance first" }
+        var title: String {
+            switch self {
+            case .avalanche: "Highest interest first"
+            case .snowball: "Smallest balance first"
+            case .laser: "Laser Focus Annihilation"
+            }
+        }
         var blurb: String {
-            self == .avalanche ? "The extra goes to the debt with the highest rate, which costs the least interest in all."
-                               : "The extra goes to the smallest balance, so debts are cleared sooner, one by one."
+            switch self {
+            case .avalanche: "The extra goes to the debt with the highest rate, which costs the least interest in all."
+            case .snowball: "The extra goes to the smallest balance, so debts are cleared sooner, one by one."
+            case .laser: "Target locked. Every extra dollar goes to the one debt you pick, until it is gone. Then its payment rolls onto the next one."
+            }
         }
     }
 
@@ -49,7 +60,8 @@ enum DebtWarPlan {
 
     /// Pays every debt its own monthly payment each month, and adds `extra` each month plus a one-time `lump` now. The extra, and every payment
     /// freed up by a debt that is finished, goes to one debt at a time in the order of the `strategy`.
-    static func simulate(_ debts: [Debt], extra: Double, lump: Double = 0, strategy: Strategy = .avalanche, limit: Int = 600) -> Result {
+    /// `target` is the debt Laser Focus Annihilation goes after first; it is ignored by the other strategies.
+    static func simulate(_ debts: [Debt], extra: Double, lump: Double = 0, strategy: Strategy = .avalanche, target: String? = nil, limit: Int = 600) -> Result {
         var owed = debts.map(\.owed)
         let rates = debts.map(\.rate)
         let payments = debts.map(\.payment)
@@ -60,8 +72,14 @@ enum DebtWarPlan {
         func order() -> [Int] {
             owed.indices.filter { owed[$0] > 0.005 }.sorted {
                 switch strategy {
-                case .avalanche: rates[$0] != rates[$1] ? rates[$0] > rates[$1] : owed[$0] < owed[$1]
-                case .snowball: owed[$0] != owed[$1] ? owed[$0] < owed[$1] : rates[$0] > rates[$1]
+                case .avalanche, .laser:
+                    // Laser Focus puts its target first, and the rest go in the order that costs the least interest.
+                    if strategy == .laser, let target {
+                        let first = debts[$0].id == target, second = debts[$1].id == target
+                        if first != second { return first }
+                    }
+                    return rates[$0] != rates[$1] ? rates[$0] > rates[$1] : owed[$0] < owed[$1]
+                case .snowball: return owed[$0] != owed[$1] ? owed[$0] < owed[$1] : rates[$0] > rates[$1]
                 }
             }
         }
