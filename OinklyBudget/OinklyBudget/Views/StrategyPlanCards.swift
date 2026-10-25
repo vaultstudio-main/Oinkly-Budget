@@ -11,17 +11,7 @@ struct StrategyPlanCards: View {
     var body: some View {
         VStack(spacing: 10) {
             if !summary.debt.debts.isEmpty || !summary.savings.accounts.isEmpty { netCard }
-            if !summary.debt.debts.isEmpty {
-                ReportCard(title: "What It Would Take to Be Debt-Free") {
-                    DebtPayoffScenarios(debts: summary.debt.debts, strategy: summary.debt.strategy, target: summary.debt.target, lump: summary.debt.lump)
-                }
-            }
-            if !summary.savings.accounts.isEmpty {
-                ReportCard(title: "What It Would Take to Save More") {
-                    SavingsPayoffScenarios(accounts: summary.savings.accounts, goal: summary.savings.goal, strategy: summary.savings.strategy,
-                                           laserTarget: summary.savings.target, lump: summary.savings.lump)
-                }
-            }
+            if !summary.debt.debts.isEmpty || !summary.savings.accounts.isEmpty { impactCard }
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 10) { debtCard; savingsCard }
                 VStack(spacing: 10) { debtCard; savingsCard }
@@ -78,6 +68,111 @@ struct StrategyPlanCards: View {
                 .chartLegend(position: .bottom)
                 .frame(height: 220)
             }
+        }
+    }
+
+    // MARK: What extra money does
+
+    private struct Curve: Identifiable {
+        let extra: Double
+        let value: Double
+        var id: Double { extra }
+    }
+
+    private static let extras: [Double] = Array(stride(from: 0.0, through: 2000.0, by: 50.0))
+
+    /// Years until the debts are gone for each extra amount, so you can see where more money stops paying off so fast.
+    private var debtCurve: [Curve] {
+        let debt = summary.debt
+        return Self.extras.map { extra in
+            let result = DebtWarPlan.simulate(debt.debts, extra: extra, lump: debt.lump, strategy: debt.strategy, target: debt.target)
+            return Curve(extra: extra, value: result.finishes ? Double(result.months) / 12 : 50)
+        }
+    }
+
+    /// Everything saved after five years for each extra amount, ignoring targets so the plan runs the whole time.
+    private var savingsCurve: [Curve] {
+        let savings = summary.savings
+        let open = savings.accounts.map { account -> SavingsWarPlan.Account in var copy = account; copy.target = nil; return copy }
+        return Self.extras.map { extra in
+            let totals = SavingsWarPlan.simulate(open, extra: extra, lump: savings.lump, goal: nil, strategy: savings.strategy, laserTarget: savings.target).totals
+            return Curve(extra: extra, value: totals[min(60, max(totals.count - 1, 0))])
+        }
+    }
+
+    private func years(_ value: Double) -> String {
+        let months = Int((value * 12).rounded())
+        let y = months / 12, m = months % 12
+        if y == 0 { return "\(m) month\(m == 1 ? "" : "s")" }
+        return m == 0 ? "\(y) year\(y == 1 ? "" : "s")" : "\(y) yr \(m) mo"
+    }
+
+    private func curveChart(_ curve: [Curve], color: Color, now: Double, valueLabel: @escaping (Double) -> String, axis: @escaping (Double) -> String) -> some View {
+        let nowValue = curve.min { abs($0.extra - now) < abs($1.extra - now) }?.value ?? curve.first?.value ?? 0
+        return Chart {
+            ForEach(curve) { point in
+                AreaMark(x: .value("Extra", point.extra), y: .value("Value", point.value)).foregroundStyle(color.opacity(0.12)).interpolationMethod(.monotone)
+                LineMark(x: .value("Extra", point.extra), y: .value("Value", point.value)).foregroundStyle(color).interpolationMethod(.monotone)
+            }
+            PointMark(x: .value("Extra", min(now, 2000)), y: .value("Value", nowValue))
+                .foregroundStyle(Color.orange).symbolSize(90)
+                .annotation(position: .top, alignment: now > 1000 ? .trailing : .leading, spacing: 4) {
+                    Text(now > 0 ? "Your plan: \(valueLabel(nowValue))" : "No extra: \(valueLabel(nowValue))")
+                        .font(.caption2.weight(.semibold)).padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.2), in: Capsule())
+                }
+        }
+        .chartXScale(domain: 0...2000)
+        .chartXAxis { AxisMarks(values: [0, 500, 1000, 1500, 2000]) { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(n == 0 ? "$0" : "+" + ReportFormat.compact(n).replacingOccurrences(of: "$", with: "")) } } } }
+        .chartYAxis { AxisMarks { v in AxisGridLine(); AxisValueLabel { if let n = v.as(Double.self) { Text(axis(n)) } } } }
+        .frame(height: 200)
+    }
+
+    /// How the time to be debt-free and the savings in five years change as the extra each month grows, with where your plan sits on each.
+    @ViewBuilder
+    private var impactCard: some View {
+        let debt = summary.debt, savings = summary.savings
+        let showDebt = !debt.debts.isEmpty, showSavings = !savings.accounts.isEmpty
+        let dCurve = showDebt ? debtCurve : [], sCurve = showSavings ? savingsCurve : []
+        ReportCard(title: "What Extra Money Does") {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Each line shows what happens as the extra you put in each month grows from $0 to $2,000. The dot is where your plan is now.")
+                    .font(.callout).foregroundStyle(.secondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: 16) { debtPart(dCurve, debt); savingsPart(sCurve, savings) }
+                    VStack(alignment: .leading, spacing: 16) { debtPart(dCurve, debt); savingsPart(sCurve, savings) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func debtPart(_ curve: [Curve], _ debt: WarPlanSummary.Debt) -> some View {
+        if !curve.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Time to Be Debt-Free", systemImage: "scope").font(.caption.weight(.semibold)).foregroundStyle(Theme.red)
+                if let first = curve.first, let last = curve.last, let half = curve.first(where: { $0.extra == 500 }) {
+                    Text("\(years(first.value)) now, \(years(half.value)) with $500 extra, \(years(last.value)) with $2,000 extra.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                curveChart(curve, color: Theme.red, now: debt.extra, valueLabel: { years($0) }, axis: { "\(Int($0))y" })
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func savingsPart(_ curve: [Curve], _ savings: WarPlanSummary.Savings) -> some View {
+        if !curve.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("Saved in Five Years", systemImage: "banknote.fill").font(.caption.weight(.semibold)).foregroundStyle(Theme.green)
+                if let first = curve.first, let last = curve.last, let half = curve.first(where: { $0.extra == 500 }) {
+                    Text("\(ReportFormat.money(first.value)) now, \(ReportFormat.money(half.value)) with $500 extra, \(ReportFormat.money(last.value)) with $2,000 extra.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                curveChart(curve, color: Theme.green, now: savings.extra, valueLabel: { ReportFormat.money($0) }, axis: { ReportFormat.compact($0) })
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

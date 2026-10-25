@@ -14,7 +14,7 @@ enum ReleaseNotes {
             ("Planning War Room", [
                 "The Monthly Outlook page is now the Planning War Room, with four tabs: Strategy Plan, Monthly War Plan, Debt War Plan and Savings War Plan.",
                 "The Strategy Plan counts the extra money your Debt and Savings War Plans set aside in Money Out, Left Over and Above the Buffer, and in the chart. A card says so. Closed months keep the figures they had.",
-                "The Strategy Plan pulls in more from both plans: where the month's money goes, what you owe and what you save over time, a net position over time, when each debt is paid off, how each savings account grows, and what it would take to be debt-free.",
+                "The Strategy Plan pulls in more from both plans: where the month's money goes, what you owe and what you save over time, a net position over time, when each debt is paid off, how each savings account grows, and what extra money does to your debt-free date and your savings.",
                 "On the Monthly War Plan, Add a Line takes a payee, with suggestions from your register and the category each last had. A line can count towards your Debt or Savings War Plan, and the sheet adds those up. Link Transactions is gone.",
             ]),
             ("Debt War Plan", [
