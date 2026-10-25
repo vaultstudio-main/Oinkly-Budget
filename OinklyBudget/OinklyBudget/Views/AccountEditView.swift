@@ -35,7 +35,6 @@ struct AccountEditView: View {
     @State private var artworkTheme = 0
     @State private var pickedPhoto: PhotosPickerItem?
     @State private var openingBalance: Decimal
-    @State private var notes: String
     @State private var isPrimary: Bool
 
     init(account: Account?, initialType: AccountType = .checking) {
@@ -66,7 +65,6 @@ struct AccountEditView: View {
         _artworkTheme = State(initialValue: account.map { ArtworkChoices.theme(for: $0) } ?? 0)
         // An account whose money began as a deposit shows that amount here.
         _openingBalance = State(initialValue: account.flatMap { OpeningDeposit.existing(in: $0)?.amount } ?? account?.openingBalance ?? 0)
-        _notes = State(initialValue: account?.notes ?? "")
         _isPrimary = State(initialValue: account.map { PrimaryChecking.isPrimary($0) } ?? false)
     }
 
@@ -74,7 +72,7 @@ struct AccountEditView: View {
     /// An auto account chosen as a lease instead of a loan.
     private var leased: Bool { type == .autoLoan && isLease }
 
-    /// One wide window with everything on it, so nothing scrolls: the account and its notes, the money, then the bank and the picture.
+    /// One wide window with everything on it, so nothing scrolls: the account, the money, then the bank and the picture.
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -91,7 +89,6 @@ struct AccountEditView: View {
             HStack(alignment: .top, spacing: 0) {
                 Form {
                     accountSection
-                    notesSection
                 }
                 .formStyle(.grouped)
                 .scrollDisabled(true)
@@ -183,14 +180,6 @@ struct AccountEditView: View {
                         .foregroundStyle(.orange)
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var notesSection: some View {
-        Section("Notes") {
-            FormTextField("Notes", text: $notes, hint: "Add a note", axis: .vertical, showsLabel: false)
-                .lineLimit(3...5)
         }
     }
 
@@ -349,7 +338,7 @@ struct AccountEditView: View {
     /// A card can't owe more than its credit limit, from the starting balance or once the limit is lowered.
     private var limitProblem: String? {
         guard type.group == .creditCards, creditLimit > 0 else { return nil }
-        // A card already over its limit can still have its notes or name changed.
+        // A card already over its limit can still have its name changed.
         if let account, account.creditLimit == abs(creditLimit), account.openingBalance == -abs(cardBalance) { return nil }
         let limit = abs(creditLimit)
         if abs(cardBalance) > limit { return "The balance can't be more than the credit limit." }
@@ -404,7 +393,6 @@ struct AccountEditView: View {
         }
         target.creditLimit = type.group == .creditCards ? abs(creditLimit) : 0
         target.isLease = type == .autoLoan && isLease
-        target.notes = notes
         if account == nil { modelContext.insert(target) }
         // Money you own starts as a real deposit: payee Deposit, category Deposit, method Bank Deposit.
         if type.group != .loans && type.group != .creditCards && OpeningDeposit.applies(to: type) {

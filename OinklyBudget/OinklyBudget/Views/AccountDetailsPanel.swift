@@ -200,9 +200,6 @@ struct AccountDetailsPanel: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 14) {
                     detailGrid(items, columns: goal == nil ? 4 : 3)
-                    if !account.notes.isEmpty {
-                        item("Notes") { Text(account.notes) }
-                    }
 
                     if loan.hasOriginal {
                         VStack(alignment: .leading, spacing: 4) {
@@ -381,9 +378,6 @@ struct AccountDetailsPanel: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 14) {
                     detailGrid(items, columns: goal == nil ? 4 : 3)
-                    if !account.notes.isEmpty {
-                        item("Notes") { Text(account.notes) }
-                    }
                 }
                 if let goal {
                     goalSection(goal)
