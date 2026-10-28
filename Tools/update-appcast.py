@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Adds a release to appcast.xml, the list Sparkle reads to find new versions of Oinkly Budget.
+"""Adds a release to the website's oinklybudget-appcast.xml, the list Sparkle reads to find new versions of Oinkly Budget.
 
 Run it after the .dmg is built and notarized, before publishing the release:
 
     python3 Tools/update-appcast.py ~/Desktop/Oinkly-Budget-1.1.dmg --version 1.1 --build 10 --notes ~/Desktop/notes-1.1.md
 
 It signs the .dmg with the private Sparkle key in your login Keychain (using ~/sparkle-tools/sign_update), then puts a new entry at the top of
-appcast.xml with the download link on the GitHub release, the signature, the size and the release notes (a Markdown file you write, shown inside Sparkle's update window, ending with a link to
+oinklybudget-appcast.xml with the download link on the GitHub release, the signature, the size and the release notes (a Markdown file you write, shown inside Sparkle's update window, ending with a link to
 the release page). Without --notes the window only links to the release page. Run it again
-for the same version to replace that entry. Then commit and push appcast.xml, and upload the .dmg to the release.
+for the same version to replace that entry. Then publish the website, and upload the .dmg to the release.
 """
 import argparse, datetime, email.utils, os, re, subprocess, sys
 
@@ -24,7 +24,7 @@ def main():
     ap.add_argument("--notes", help="a Markdown file with the release notes to show in the update window")
     ap.add_argument("--min-os", default="15.0", help="the oldest macOS that can run it (default 15.0)")
     ap.add_argument("--download-url", help="a different download address, for testing with a local server")
-    ap.add_argument("--appcast", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "appcast.xml"))
+    ap.add_argument("--appcast", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "website-vaultstudio", "website", "oinklybudget-appcast.xml"))
     args = ap.parse_args()
 
     if not os.path.exists(args.dmg):
@@ -69,7 +69,7 @@ def main():
     open(path, "w", encoding="utf-8").write(text)
     print(f"Added version {args.version} (build {args.build}) to {path}")
     print(f"Download link: {download}")
-    print("Now commit and push appcast.xml, and upload the .dmg to the release.")
+    print("Now publish the website (the appcast is read from https://vaultstudio.dev/oinklybudget-appcast.xml), and upload the .dmg to the release.")
 
 
 main()

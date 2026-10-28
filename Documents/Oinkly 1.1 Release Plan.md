@@ -64,7 +64,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 ## Feature 4: Sparkle automatic updates (flagged for 1.1)
 
-**Decisions (Oct 28):** GitHub download only (no App Store build, so Sparkle is in every release build); the update list `appcast.xml` lives in this repo and is read from its raw GitHub address; Sparkle asks once ("Check for updates automatically?") on the second launch and only checks if you say yes; the update window shows the release notes (a Markdown file given to `Tools/update-appcast.py --notes`) with a link to the GitHub release page.
+**Decisions (Oct 28):** GitHub download only (no App Store build, so Sparkle is in every release build); the update list lives on the website at `https://vaultstudio.dev/oinklybudget-appcast.xml` (moved from the repo on Oct 28, so it stays put if the repo moves) and is published with the website; Sparkle asks once ("Check for updates automatically?") on the second launch and only checks if you say yes; the update window shows the release notes (a Markdown file given to `Tools/update-appcast.py --notes`) with a link to the GitHub release page.
 
 **Pieces to build:**
 
@@ -72,8 +72,8 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] The updater starts at launch in every build, so it also shows in the Xcode build (a Debug build can use a local test feed). **Check for Updates…** in the app menu, and a switch in Settings for automatic checks.
 - [x] Project settings: the feed address (`SUFeedURL`), the public signing key (`SUPublicEDKey`), the installer helper switch for the sandbox (`SUEnableInstallerLauncherService`), the network permission, and the two mach-lookup permissions Sparkle's helpers need (`<bundle ID>-spks` and `-spki`).
 - [x] The signing key (back up the private key: still to do by you): made with Sparkle's `generate_keys`; the private half stays in your login Keychain and **must be backed up** (if it is lost, existing installs can't be updated). The public half goes in the app.
-- [x] `appcast.xml` in the repo (with `Tools/update-appcast.py` to add each release) root, one entry per release: version, build, download link (the .dmg on the GitHub release), signature, size and the release page for what's new.
-- [x] The release checklist gains the step: sign the notarized .dmg with `sign_update`, add its entry to `appcast.xml`, push it.
+- [x] `oinklybudget-appcast.xml` in the website folder (`Tools/update-appcast.py` adds each release), one entry per release: version, build, download link (the .dmg on the GitHub release), signature, size and the release page for what's new.
+- [x] The release checklist gains the step: sign the notarized .dmg with `sign_update`, add its entry to `oinklybudget-appcast.xml`, publish the website.
 - [x] Tested with a local feed and a pretend newer version. The first real automatic update is the release after 1.1, because 1.0.1 has no Sparkle.
 - [ ] Wording: README, Help, the website and the store text say exactly what an update check sends (the app and system version only, no personal data), and that it asks first.
 
