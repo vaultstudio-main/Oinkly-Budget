@@ -80,8 +80,9 @@ struct ReleaseNotesWindow: View {
                     Text("You are running \(currentVersion)").foregroundStyle(.secondary)
                 }
 
-                // A look at the app, from the same screenshot the Help uses.
-                if let image = NSImage(named: "Help-welcome") {
+                // The release's banner: the social preview with the version and the build name on it. Made with Tools/make-release-banner.swift
+                // and kept in the Release-banner image set, so replace it when you ship the next version.
+                if let image = NSImage(named: "Release-banner") {
                     Image(nsImage: image)
                         .resizable()
                         .scaledToFit()
