@@ -2,8 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Shown when a lease has been paid down to nothing: what happened to the car? Bought out and financed turns the lease into a regular auto loan,
-/// bought out and paid for adds the car as an asset, and returned archives the lease. Nothing happens until a button is pressed, and an archived
-/// lease can be brought back from Manage Accounts ▸ Archived.
+/// bought out and paid for adds the car as an asset, and returned archives the lease. Nothing happens until a button is pressed.
 struct LeaseEndedSheet: View {
     let lease: Account
 
@@ -69,7 +68,7 @@ struct LeaseEndedSheet: View {
                     TextField("Name", text: $name)
                     CurrencyField("What is it worth?", value: $worth)
                 case .returned:
-                    Text("The lease goes to Manage Accounts ▸ Archived with all of its transactions.")
+                    Text("The lease is archived: it leaves the side panel, but its payments are kept so your history stays right.")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -94,9 +93,9 @@ struct LeaseEndedSheet: View {
         case .financed:
             "The lease becomes a regular auto loan that owes this amount from today, with its history kept. Its bill keeps its due date and takes the new payment. You can change any of it by editing the loan."
         case .outright:
-            "The car is added as a Vehicle asset worth what you say, and the lease is archived. Nothing is deleted, and you can bring the lease back."
+            "The car is added as a Vehicle asset worth what you say, and the lease is archived, with its payments kept so your history stays right."
         case .returned:
-            "Nothing is deleted, and you can bring the lease back from the Archived tab."
+            "At year end you are asked whether to keep archived accounts or delete them."
         }
     }
 

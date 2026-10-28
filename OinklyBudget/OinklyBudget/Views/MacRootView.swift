@@ -26,6 +26,8 @@ struct MacRootView: View {
     @State private var askingForShadowCopy = false
     /// A paid-off auto loan or mortgage the app is asking about.
     @State private var paidOffLoan: Account?
+    /// The year-end question about what is archived.
+    @State private var reviewingArchive = false
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
 
@@ -117,9 +119,7 @@ struct MacRootView: View {
         .toolbarBackground(.visible, for: .windowToolbar)
         .toolbar { AppNameToolbarItem() }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
-            if let name = note.userInfo?["account"] as? String,
-               let account = allAccounts.live.first(where: { $0.name == name && $0.isClosed == (note.userInfo?["archived"] as? Bool ?? false) })
-                ?? allAccounts.live.first(where: { $0.name == name }) {
+            if let name = note.userInfo?["account"] as? String, let account = accounts.first(where: { $0.name == name }) {
                 selection = .account(account.id)
                 return
             }
@@ -156,6 +156,7 @@ struct MacRootView: View {
         .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
         .sheet(isPresented: $askingForShadowCopy) { ShadowSetupSheet() }
+        .sheet(isPresented: $reviewingArchive) { ArchiveReviewSheet() }
         .sheet(item: $paidOffLoan) { account in
             if PaidOffLoans.outcome(for: account.type, isLease: account.isLease) == .leaseEnded {
                 LeaseEndedSheet(lease: account)
@@ -195,13 +196,18 @@ struct MacRootView: View {
         guard !StartupState.isHoldingPlace else { return }
         let found = PaidOffLoans.scan(in: modelContext)
         if paidOffLoan == nil, let first = found.first { paidOffLoan = first }
+        // At year end, ask once whether to keep or delete what has been archived. A paid-off loan is asked about first.
+        if paidOffLoan == nil, !reviewingArchive,
+           ArchiveReview.shouldAsk(archivedCount: ArchiveReview.archivedAccounts(in: modelContext).count, lastReviewed: ArchiveReview.lastReviewed) {
+            reviewingArchive = true
+        }
     }
 
     @ViewBuilder
     private var detailPage: some View {
         switch selection {
         case .account(let id):
-            if let account = allAccounts.live.first(where: { $0.id == id }) {
+            if let account = accounts.first(where: { $0.id == id }) {
                 RegisterView(account: account).id(id)
             } else {
                 SummaryView()

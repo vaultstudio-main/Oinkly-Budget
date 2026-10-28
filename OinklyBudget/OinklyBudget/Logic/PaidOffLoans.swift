@@ -3,8 +3,9 @@ import SwiftData
 
 /// What happens to a loan when its balance reaches zero. An auto loan or a mortgage means you now own the car or the house, so the app offers
 /// to add it as an asset (and asks first). A lease that has run its course asks whether you bought the car out or handed it back. Any other
-/// loan, such as a student loan, simply goes to the archive. Nothing is deleted: an archived account keeps all of its transactions and can be
-/// brought back.
+/// loan, such as a student loan, simply goes to the archive. Nothing is deleted: an archived account keeps all of its transactions, so the history behind net worth, debts and interest stays
+/// right. It is out of sight and can't be opened or brought back, and once a year the app asks whether to keep or delete what is archived
+/// (see `ArchiveReview`).
 @MainActor
 enum PaidOffLoans {
     enum Outcome: Equatable {
@@ -47,7 +48,7 @@ enum PaidOffLoans {
         return skippedThisSession.contains(k) || (UserDefaults.standard.stringArray(forKey: declinedKey) ?? []).contains(k)
     }
 
-    /// Don't ask about this loan again, now or later. Also used when a loan is brought back from the archive, so it isn't archived again.
+    /// Don't ask about this loan again, now or later.
     static func decline(_ account: Account) {
         var all = UserDefaults.standard.stringArray(forKey: declinedKey) ?? []
         if !all.contains(key(account)) { all.append(key(account)) }
@@ -89,13 +90,6 @@ enum PaidOffLoans {
     static func archive(_ account: Account, in context: ModelContext) {
         LoanBill.sync(account, dueDate: nil, in: context)
         account.isClosed = true
-    }
-
-    /// Brings an archived account back to the side panel. A loan that is still paid off is not archived again.
-    static func restore(_ account: Account, in context: ModelContext) {
-        account.isClosed = false
-        decline(account)
-        context.saveNow()
     }
 
     /// The name to offer for the asset: what the loan was for, such as "2021 Honda Civic", or else the loan's own name.

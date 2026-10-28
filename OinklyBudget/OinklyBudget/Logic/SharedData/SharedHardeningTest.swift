@@ -742,13 +742,25 @@ enum SharedHardeningTest {
                     check("S46 a bought-out lease is a regular auto loan owing the buyout, with its history kept",
                           !leased.isLease && leased.balance == -7_500 && leased.monthlyPayment == 310 && leased.interestRate == 5.5 && leased.transactions.count == 1
                           && !PaidOffLoans.isPaidOff(leased))
-                    PaidOffLoans.restore(student, in: context)
-                    BalanceCache.invalidate()
-                    check("S46 a restored loan is not archived again", PaidOffLoans.scan(in: context).allSatisfy { $0.name != "Student" } && !student.isClosed)
+                    // An archived account keeps its transactions, and the year-end review lists exactly the archived ones.
+                    check("S46 an archived account keeps its transactions", student.isClosed && student.transactions.count == 1)
+                    check("S46 the archive holds the archived accounts", Set(ArchiveReview.archivedAccounts(in: context).map(\.name)).isSuperset(of: ["Student", "House"]))
                     PaidOffLoans.forgetDeclined()
                 } else {
                     check("S46 the test store opens", false)
                 }
+            }
+
+            // S47: the year-end question about archived accounts
+            MainActor.assumeIsolated {
+                func date(_ y: Int, _ m: Int, _ d: Int) -> Date { Calendar.current.date(from: DateComponents(year: y, month: m, day: d, hour: 12))! }
+                check("S47 it is asked in December for that year", ArchiveReview.shouldAsk(archivedCount: 2, lastReviewed: 2025, now: date(2026, 12, 20)))
+                check("S47 it is asked in January for the year that ended", ArchiveReview.shouldAsk(archivedCount: 2, lastReviewed: 2025, now: date(2027, 1, 10)))
+                check("S47 not again once this year end was answered", !ArchiveReview.shouldAsk(archivedCount: 2, lastReviewed: 2026, now: date(2026, 12, 28))
+                      && !ArchiveReview.shouldAsk(archivedCount: 2, lastReviewed: 2026, now: date(2027, 1, 20)))
+                check("S47 not the rest of the year, and not with nothing archived", !ArchiveReview.shouldAsk(archivedCount: 2, lastReviewed: nil, now: date(2026, 6, 15))
+                      && !ArchiveReview.shouldAsk(archivedCount: 0, lastReviewed: nil, now: date(2026, 12, 20)))
+                check("S47 a year that was never answered asks the next year end", ArchiveReview.shouldAsk(archivedCount: 1, lastReviewed: nil, now: date(2027, 12, 1)))
             }
 
             // S28: the sealed file format, and the backup copy's receipts

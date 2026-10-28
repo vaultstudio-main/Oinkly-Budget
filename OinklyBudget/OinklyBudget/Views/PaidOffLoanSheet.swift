@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// Shown when an auto loan or a mortgage has been paid off: offers to add the car or house as an asset, worth what you say, and to archive the
-/// loan. Nothing happens until a button is pressed, and the loan can be brought back from Manage Accounts ▸ Archived.
+/// loan. Nothing happens until a button is pressed.
 struct PaidOffLoanSheet: View {
     let loan: Account
 
@@ -35,7 +35,7 @@ struct PaidOffLoanSheet: View {
                 Label("You already have \"\(existing.name)\" as an asset, so archiving the loan is probably all you need.", systemImage: "info.circle.fill")
                     .font(.callout).foregroundStyle(.orange)
             }
-            Text("Congratulations, it is all yours. Add it as a \(assetType.title) asset so it still counts towards what you own, and move the loan to the archive.")
+            Text("Congratulations, it is all yours. Add it as a \(assetType.title) asset so it still counts towards what you own, and archive the loan.")
             Form {
                 TextField("Name", text: $name)
                 CurrencyField("What is it worth?", value: $value)
@@ -44,7 +44,7 @@ struct PaidOffLoanSheet: View {
             .scrollDisabled(true)
             Text("The worth starts at the original loan amount. Change it to what it is worth now, which you can also do later by editing the asset.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("The loan goes to Manage Accounts ▸ Archived with all of its transactions, and its bill is taken off the Bills page. Nothing is deleted, and you can bring the loan back.")
+            Text("The loan is archived: it leaves the side panel and its bill leaves the Bills page, but its transactions are kept so your history stays right. At year end you are asked whether to keep archived accounts or delete them.")
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button("Don't Ask Again") { PaidOffLoans.decline(loan); dismiss() }

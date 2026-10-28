@@ -31,6 +31,7 @@ enum StoreReset {
         // So does the folder files were being saved to.
         DefaultSaveFolder.clear()
         PaidOffLoans.forgetDeclined()
+        ArchiveReview.forgetReviewed()
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -45,6 +46,7 @@ enum StoreReset {
         ReceiptMemory.forgetAll()
         DefaultSaveFolder.clear()
         PaidOffLoans.forgetDeclined()
+        ArchiveReview.forgetReviewed()
         let url = configuration.url
         let folder = url.deletingLastPathComponent()
         let manager = FileManager.default

@@ -48,6 +48,7 @@ struct AccountTabsView<Trailing: View>: View {
 
     /// Archived accounts, such as paid-off loans, are on their own tab, not in their group.
     @State private var showsArchived = false
+    @State private var reviewingArchive = false
 
     private var accounts: [Account] { allAccounts.live.filter { !$0.isClosed } }
     private var archivedAccounts: [Account] { allAccounts.live.filter(\.isClosed) }
@@ -124,7 +125,12 @@ struct AccountTabsView<Trailing: View>: View {
             VStack(spacing: 0) {
                 Divider()
                 HStack(spacing: 10) {
-                    if !showsArchived { Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") } }
+                    if showsArchived {
+                        Button { reviewingArchive = true } label: { Label("Review Archive…", systemImage: "archivebox") }
+                            .disabled(archivedAccounts.isEmpty)
+                    } else {
+                        Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") }
+                    }
                     Spacer()
                     trailing
                 }
@@ -136,6 +142,7 @@ struct AccountTabsView<Trailing: View>: View {
         .background(Theme.background)
         .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: kind ?? tab.accountTypes.first ?? .checking) }
         .sheet(item: $editing) { AccountEditView(account: $0) }
+        .sheet(isPresented: $reviewingArchive) { ArchiveReviewSheet() }
         .confirmationDialog(
             "Delete this account?",
             isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
@@ -151,13 +158,14 @@ struct AccountTabsView<Trailing: View>: View {
 
     // MARK: Archived
 
-    /// The archived accounts: what they were, when they stopped, and buttons to look at one, bring it back or delete it for good.
+    /// The archived accounts, for looking at only: what they were and how many transactions they keep. They can't be opened or brought back,
+    /// because they are kept so the history behind net worth, debts and interest stays right. Once a year the app asks whether to keep or delete them.
     private var archivedPage: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SettingsSection(title: "\(archivedAccounts.count) archived account\(archivedAccounts.count == 1 ? "" : "s")", note: nil) {
                     if archivedAccounts.isEmpty {
-                        Text("Nothing is archived. When a loan is paid off it is archived here, with all of its transactions, and an auto loan or mortgage can become an asset. A student loan or other loan archives itself.")
+                        Text("Nothing is archived. When a loan is paid off, or a lease ends and the car is returned, it is archived here and kept out of sight. An auto loan or mortgage can become an asset, and a student loan or other loan archives itself.")
                             .font(.callout).foregroundStyle(.secondary)
                     } else {
                         VStack(spacing: 0) {
@@ -168,7 +176,7 @@ struct AccountTabsView<Trailing: View>: View {
                         }
                     }
                 }
-                Text("An archived account keeps all of its transactions and is left out of the side panel and the reports. View opens its page. Restore puts it back in the side panel. Deleting an account also deletes all of its transactions, and can't be undone.")
+                Text("Archived accounts are kept out of the side panel and the reports' lists, but their transactions stay so the history behind your net worth, debts and interest remains right. At the end of each year you are asked whether to keep them or delete them, and Review Archive… below does the same at any time.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,21 +189,10 @@ struct AccountTabsView<Trailing: View>: View {
             Image(systemName: account.type.symbol).foregroundStyle(.secondary).frame(width: 26)
             VStack(alignment: .leading, spacing: 1) {
                 Text(account.name)
-                Text(detail(account)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text("\(detail(account)) · \(account.transactions.count) transaction\(account.transactions.count == 1 ? "" : "s")")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            Text(balanceText(account.balance, isDebt: account.isDebt)).font(.callout.weight(.medium)).foregroundStyle(.secondary)
-            Button("View") {
-                NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["account": account.name, "archived": true])
-            }
-            .help("Open this account's page in the main window")
-            Button("Restore") { PaidOffLoans.restore(account, in: modelContext) }
-                .help("Put this account back in the side panel")
-            Button(role: .destructive) { pendingDelete = account } label: { Image(systemName: "trash") }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.red)
-                .frame(width: 22)
-                .accessibilityLabel("Delete \(account.name)")
         }
         .padding(.vertical, 8)
     }
