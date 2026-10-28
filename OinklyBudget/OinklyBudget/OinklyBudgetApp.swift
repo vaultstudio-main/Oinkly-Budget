@@ -95,6 +95,7 @@ struct OinklyBudgetApp: App {
         BalanceCache.install()
         LedgerIndex.shared.start(container: container)
         InvestmentsDataCache.install(container: container)
+        AppUpdater.shared.start()
         #if DEBUG
         PermissionSpike.runFromLaunchArgumentsIfRequested()
         ScreenshotMode.startIfRequested(container: container)

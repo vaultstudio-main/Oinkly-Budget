@@ -4,6 +4,25 @@ import UniformTypeIdentifiers
 import SwiftData
 
 // MARK: General
+/// Settings ▸ General ▸ Updates: whether Oinkly Budget looks for new versions by itself, and a button to look now. Only in a build that can update.
+private struct UpdatesSettingsSection: View {
+    @State private var automatic = AppUpdater.shared.automaticChecks
+
+    var body: some View {
+        Section {
+            Toggle("Check for updates automatically", isOn: Binding(
+                get: { automatic },
+                set: { automatic = $0; AppUpdater.shared.automaticChecks = $0 }))
+            Button("Check for Updates Now") { AppUpdater.shared.checkForUpdates() }
+                .disabled(!AppUpdater.shared.canCheck)
+        } header: {
+            Text("Updates")
+        } footer: {
+            Text("Looks on GitHub for a newer version of Oinkly Budget and offers it when there is one. Only the app's version and the macOS version are sent, nothing about you or your data. An update is only installed if it is signed with Oinkly Budget's own key.")
+        }
+    }
+}
+
 /// Settings ▸ General ▸ Letterhead: what goes at the top of the first page of every printed or exported PDF.
 private struct LetterheadSettingsSection: View {
     private let settings = AppSettings.shared
@@ -89,6 +108,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             BackgroundSettingsSection()
+            if AppUpdater.shared.isAvailable { UpdatesSettingsSection() }
 
             Section {
                 Picker("Interface", selection: appearanceBinding) {

@@ -64,12 +64,18 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 ## Feature 4: Sparkle automatic updates (flagged for 1.1)
 
-- [ ] The direct-download app (the .dmg from GitHub) checks for new versions by itself and offers to install them, using Sparkle 2, so people don't have to find the release page. The update feed (`appcast.xml`) is built from the GitHub releases folder.
-- [ ] Updates are signed with a Sparkle (EdDSA) key kept by the author, on top of the normal Developer ID signing and notarization, so a changed download is refused.
-- [ ] Switchable in Settings, with Check for Updates… in the app menu. Only the app version is sent, no personal data.
-- [ ] Needs: the Sparkle package added to the project, the network permission and Sparkle's helper permissions in the sandbox, a place to host the feed (a file in the repo or on the website), and a new step in the release checklist that signs the .dmg and adds it to the feed.
-- [ ] Only the direct-download build gets Sparkle. A version sent through the App Store must not contain a self-updater, so it needs its own build setting that leaves Sparkle out.
-- [ ] Note: 1.0.1 has no Sparkle, so people on 1.0.1 still download 1.1 by hand once. The first real test of an automatic update is the release after 1.1.
+**Decisions (Oct 28):** GitHub download only (no App Store build, so Sparkle is in every release build); the update list `appcast.xml` lives in this repo and is read from its raw GitHub address; Sparkle asks once ("Check for updates automatically?") on the second launch and only checks if you say yes; the update window links to the GitHub release page for what's new.
+
+**Pieces to build:**
+
+- [x] The Sparkle 2 package added to the Xcode project.
+- [x] The updater starts at launch in a Release build only (a Debug build only with a test feed set). **Check for Updates…** in the app menu, and a switch in Settings for automatic checks.
+- [x] Project settings: the feed address (`SUFeedURL`), the public signing key (`SUPublicEDKey`), the installer helper switch for the sandbox (`SUEnableInstallerLauncherService`), the network permission, and the two mach-lookup permissions Sparkle's helpers need (`<bundle ID>-spks` and `-spki`).
+- [x] The signing key (back up the private key: still to do by you): made with Sparkle's `generate_keys`; the private half stays in your login Keychain and **must be backed up** (if it is lost, existing installs can't be updated). The public half goes in the app.
+- [x] `appcast.xml` in the repo (with `Tools/update-appcast.py` to add each release) root, one entry per release: version, build, download link (the .dmg on the GitHub release), signature, size and the release page for what's new.
+- [x] The release checklist gains the step: sign the notarized .dmg with `sign_update`, add its entry to `appcast.xml`, push it.
+- [x] Tested with a local feed and a pretend newer version. The first real automatic update is the release after 1.1, because 1.0.1 has no Sparkle.
+- [ ] Wording: README, Help, the website and the store text say exactly what an update check sends (the app and system version only, no personal data), and that it asks first.
 
 ## Feature 5: Live prices for holdings (flagged for 1.1)
 
@@ -96,9 +102,9 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 **Sparkle and live prices** (Features 4 and 5)
 
-- [ ] Built and tried: Sparkle (including a test update from a pretend newer version) and Refresh Prices.
+- [ ] Built and tried: Sparkle (done: a test update from a pretend newer version installed and relaunched) and Refresh Prices.
 - [ ] The network permission added, and the README, Help, website and store text changed to say what the app now sends.
-- [ ] The release checklist gains the Sparkle signing and feed step.
+- [x] The release checklist gains the Sparkle signing and feed step.
 
 **Receipt Suggestions**
 
@@ -113,7 +119,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 **Upgrade test**
 
 - [ ] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there.
-- [ ] Decide the build number (1 for 1.1; 1.0.1 was 2).
+- [ ] Decide the build number: Sparkle compares it, and 1.1 is build 1 while 1.0.1 was 2, so 1.1 needs a number above 2 (for example 10).
 
 **Package** (see the release checklist)
 

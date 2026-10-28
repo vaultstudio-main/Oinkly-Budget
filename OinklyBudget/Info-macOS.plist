@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/vaultstudio-main/Oinkly-Budget/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>+AYIU4vd+d0soSv0m7cuhOjCZb4nTeX5KM0R7lxDbME=</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
 	<key>OinklyBuildName</key>
 	<string>$(OINKLY_BUILD_NAME)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

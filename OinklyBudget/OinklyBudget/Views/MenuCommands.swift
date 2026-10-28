@@ -68,6 +68,11 @@ struct FileNewCommands: Commands {
             Button("About Oinkly Budget") {
                 openWindow(id: "about")
             }
+            // Only where this build can update itself (not in a Debug build).
+            if AppUpdater.shared.isAvailable {
+                Button("Check for Updates…") { AppUpdater.shared.checkForUpdates() }
+                    .disabled(!AppUpdater.shared.canCheck)
+            }
         }
 
         CommandGroup(replacing: .help) {
