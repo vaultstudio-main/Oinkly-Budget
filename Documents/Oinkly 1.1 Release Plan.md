@@ -116,7 +116,7 @@ Scratched for now: not in 1.1, to be looked at again later (the notes below stay
 **Screenshots and words, everywhere**
 
 - [x] Retake every screenshot. Done Oct 28: the screenshot tour (`-screenshotMode`) makes them and `Tools/install-help-pictures.py` installs them: the 71 `Help-…` pictures (plus six new ones for the War Plan tabs, the Archive tabs and Updates) and the website's 33 pictures (`--website`; three new War Plan pictures on the product page). The README only has the social preview. The Receipt Suggestions picture waits for the real-receipt trial after the build.
-- [x] Update the words to match everywhere: the app's Help window, the in-app Release Notes (now only 1.1), the README, and the website's app page, support page and privacy page. Still at release time: `updates.html` and the Download links (they must say v1.1 only once it is published).
+- [x] Update the words to match everywhere: the app's Help window, the in-app Release Notes (now only 1.1), the README, and the website's app page, support page and privacy page. The website's `updates.html` has a Version 1.1 entry with the banner ("Coming soon", no download button). Still at release time: set its date, add the Download button, and point the Projects card and the Download links at v1.1 (they must say v1.1 only once it is published).
 - [x] Read each place for the old names (Monthly Outlook page, Link Transactions, the Quick menu, the Open Oinkly Budget button, Ridiculous Speed) and for "Print PDF" where Print is meant. Done Oct 28; the Release Notes keep the old names only to say what was renamed.
 
 **Upgrade test**
