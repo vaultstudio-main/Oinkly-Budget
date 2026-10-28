@@ -121,13 +121,13 @@ Scratched for now: not in 1.1, to be looked at again later (the notes below stay
 
 **Upgrade test**
 
-- [ ] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there.
+- [x] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there. Done Oct 28: the author dropped 1.1 over 1.0.1 and nothing broke (the data models did not change between 1.0.1 and 1.1).
 - [x] Build number decided: 1.1 is build 10 (Sparkle compares it, and 1.0.1 was build 2). Every release after goes up.
 
 **Package** (see the release checklist)
 
-- [ ] Archive with the Release configuration; notarize, staple and check with `spctl`.
-- [ ] Build the .dmg with the pig background and take its SHA-256.
+- [x] Archive with the Release configuration; notarize, staple and check with `spctl`. Done Oct 28: version 1.1 build 10, Developer ID, notarized and stapled. (Made in the project's `release-build/1.1/` folder, which Git ignores; `Tools/build-release.sh 1.1` checks the app and builds the .dmg.)
+- [x] Build the .dmg with the pig background and take its SHA-256. Done Oct 28 with `Tools/build-release.sh 1.1` (39 MB): SHA-256 `962ff0d80cd973b3f3800afbfcb35cfd2aa0c459fac8f74ea34434e0c09cd5a0`. The app inside was checked from the mounted image: signed, notarized and stapled. Never rebuild it after it is uploaded.
 
 **Publish**
 

@@ -9,6 +9,8 @@ website-vaultstudio/
 scripts/
 dmg-assets*/
 dmg-build/
+# Where each release is built: the notarized app, the disk image, its checksum and the update notes. Never in Git.
+release-build/
 
 # Built apps and disk images go on GitHub Releases, never into the repository
 *.dmg
