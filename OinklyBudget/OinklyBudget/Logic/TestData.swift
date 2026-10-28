@@ -155,6 +155,16 @@ enum TestData {
         truck.interestRate = 4.9
         truck.loanStartDate = cal.date(byAdding: .month, value: -(monthsOfHistory + 10), to: today)
         truck.payoffDate = cal.date(byAdding: .month, value: 1, to: today)
+        // A lease with one payment left: paying it ends the lease, which shows the sheet that asks whether the car was bought out or returned.
+        let lease = account("Mini Cooper Lease", .autoLoan, -(450 * Decimal(monthsOfHistory) + 450))
+        lease.isLease = true
+        lease.institution = "Summit Auto Finance"
+        lease.loanPurpose = "2023 Mini Cooper"
+        lease.vin = "WMW53DH05P2A12345"
+        lease.originalLoanAmount = 16_200
+        lease.monthlyPayment = 450
+        lease.loanStartDate = cal.date(byAdding: .month, value: -(monthsOfHistory + 10), to: today)
+        lease.payoffDate = cal.date(byAdding: .month, value: 1, to: today)
         let mortgage = account("Home Mortgage", .mortgage, -241_000)
         mortgage.institution = "Lakeside Mortgage"
         mortgage.loanPurpose = "123 Maple Street"
@@ -402,9 +412,10 @@ enum TestData {
         LoanBill.sync(storeCard, dueDate: day(21), in: context)
         LoanBill.sync(auto, dueDate: day(6), in: context)
         LoanBill.sync(truck, dueDate: day(4), in: context)
+        LoanBill.sync(lease, dueDate: day(5), in: context)
         LoanBill.sync(mortgage, dueDate: day(-2), in: context)
         LoanBill.sync(student, dueDate: day(24), in: context)
-        for (loan, amount) in [(auto, Decimal(412)), (truck, Decimal(600)), (mortgage, Decimal(1_640)), (student, Decimal(190))] {
+        for (loan, amount) in [(auto, Decimal(412)), (truck, Decimal(600)), (lease, Decimal(450)), (mortgage, Decimal(1_640)), (student, Decimal(190))] {
             for back in 1...monthsOfHistory {
                 let date = monthDay(back, cal.component(.day, from: loan.loanBill?.dueDate ?? today))
                 let paid = BillPayment.record(from: checking, debt: loan, bill: loan.loanBill, amount: amount, date: date,

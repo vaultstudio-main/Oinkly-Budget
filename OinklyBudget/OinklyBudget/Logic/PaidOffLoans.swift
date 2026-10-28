@@ -2,8 +2,9 @@ import Foundation
 import SwiftData
 
 /// What happens to a loan when its balance reaches zero. An auto loan or a mortgage means you now own the car or the house, so the app offers
-/// to add it as an asset (and asks first). Any other loan, such as a student loan, simply goes to the archive. Nothing is deleted: an archived
-/// account keeps all of its transactions and can be brought back.
+/// to add it as an asset (and asks first). A lease that has run its course asks whether you bought the car out or handed it back. Any other
+/// loan, such as a student loan, simply goes to the archive. Nothing is deleted: an archived account keeps all of its transactions and can be
+/// brought back.
 @MainActor
 enum PaidOffLoans {
     enum Outcome: Equatable {
@@ -11,6 +12,8 @@ enum PaidOffLoans {
         case becomesAsset(AccountType)
         /// The loan is archived.
         case archives
+        /// A lease that has run its course: you can buy the car out (and finance it, or pay for it), or hand it back. Asked about first.
+        case leaseEnded
         /// Nothing happens: a line of credit can be borrowed from again, so zero owed isn't the end of it.
         case stays
     }
@@ -19,7 +22,7 @@ enum PaidOffLoans {
     static func outcome(for type: AccountType, isLease: Bool) -> Outcome {
         switch type {
         case .mortgage: return .becomesAsset(.realEstate)
-        case .autoLoan: return isLease ? .archives : .becomesAsset(.vehicle)
+        case .autoLoan: return isLease ? .leaseEnded : .becomesAsset(.vehicle)
         case .lineOfCredit, .homeEquity: return .stays
         default: return .archives
         }
@@ -70,7 +73,7 @@ enum PaidOffLoans {
             case .archives:
                 archive(account, in: context)
                 changed = true
-            case .becomesAsset:
+            case .becomesAsset, .leaseEnded:
                 toAsk.append(account)
             case .stays:
                 break
@@ -113,6 +116,22 @@ enum PaidOffLoans {
             let assetName = asset.name.lowercased().filter { $0.isLetter || $0.isNumber }
             return assetName.count >= 5 && names.contains { $0.contains(assetName) || assetName.contains($0) }
         }
+    }
+
+    /// Turns a lease you have bought out into a regular auto loan: it now owes `owed` (what the buyout left to pay), with its own monthly payment
+    /// and rate. The lease payments stay in its history, and its bill keeps its due date with the new amount. A new loan starts today.
+    static func convertLeaseToLoan(_ lease: Account, owed: Decimal, monthlyPayment: Decimal, rate: Double, in context: ModelContext) {
+        // The starting balance is set so that the account owes exactly `owed` now, whatever has been paid on the lease so far.
+        let paidSoFar = lease.balance - lease.openingBalance
+        lease.openingBalance = -abs(owed) - paidSoFar
+        lease.originalLoanAmount = abs(owed)
+        lease.monthlyPayment = abs(monthlyPayment)
+        lease.interestRate = max(rate, 0)
+        lease.isLease = false
+        lease.loanStartDate = .now
+        lease.payoffDate = nil
+        if let due = lease.loanBill?.dueDate { LoanBill.sync(lease, dueDate: due, in: context) }
+        context.saveNow()
     }
 
     /// Adds the car or house as an asset worth `value`, copying the picture and VIN over, and archives the loan. The loan's history stays in the archive.

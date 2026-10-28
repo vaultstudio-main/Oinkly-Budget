@@ -156,7 +156,13 @@ struct MacRootView: View {
         .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
         .sheet(isPresented: $askingForShadowCopy) { ShadowSetupSheet() }
-        .sheet(item: $paidOffLoan) { PaidOffLoanSheet(loan: $0) }
+        .sheet(item: $paidOffLoan) { account in
+            if PaidOffLoans.outcome(for: account.type, isLease: account.isLease) == .leaseEnded {
+                LeaseEndedSheet(lease: account)
+            } else {
+                PaidOffLoanSheet(loan: account)
+            }
+        }
         // A loan that has just been paid off: a few seconds after any save, and shortly after the app opens.
         .onReceive(NotificationCenter.default.publisher(for: ModelContext.didSave).debounce(for: .seconds(3), scheduler: DispatchQueue.main)) { _ in
             checkPaidOffLoans()

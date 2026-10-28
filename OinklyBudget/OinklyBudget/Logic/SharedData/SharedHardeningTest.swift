@@ -703,8 +703,8 @@ enum SharedHardeningTest {
             // S46: a paid-off loan becomes an asset or archives itself
             MainActor.assumeIsolated {
                 check("S46 a mortgage becomes real estate", PaidOffLoans.outcome(for: .mortgage, isLease: false) == .becomesAsset(.realEstate))
-                check("S46 an auto loan becomes a vehicle, a lease just archives", PaidOffLoans.outcome(for: .autoLoan, isLease: false) == .becomesAsset(.vehicle)
-                      && PaidOffLoans.outcome(for: .autoLoan, isLease: true) == .archives)
+                check("S46 an auto loan becomes a vehicle, a lease asks what happened to the car", PaidOffLoans.outcome(for: .autoLoan, isLease: false) == .becomesAsset(.vehicle)
+                      && PaidOffLoans.outcome(for: .autoLoan, isLease: true) == .leaseEnded)
                 check("S46 a student loan archives and a line of credit stays", PaidOffLoans.outcome(for: .studentLoan, isLease: false) == .archives
                       && PaidOffLoans.outcome(for: .lineOfCredit, isLease: false) == .stays && PaidOffLoans.outcome(for: .homeEquity, isLease: false) == .stays)
                 let schema = Schema(versionedSchema: OinklyBudgetSchemaV9.self)
@@ -730,12 +730,18 @@ enum SharedHardeningTest {
                     context.insert(brandNew)
                     BalanceCache.invalidate()
                     let asked = PaidOffLoans.scan(in: context)
-                    check("S46 a paid-off mortgage and auto loan are asked about", Set(asked.map(\.name)) == ["House", "Car"])
-                    check("S46 a paid-off student loan and a lease archive themselves", student.isClosed && leased.isClosed)
+                    check("S46 a paid-off mortgage, auto loan and lease are asked about", Set(asked.map(\.name)) == ["House", "Car", "Leased Car"])
+                    check("S46 a paid-off student loan archives itself and a lease does not", student.isClosed && !leased.isClosed)
                     check("S46 asking changes nothing yet", !house.isClosed && !car.isClosed)
                     check("S46 a line of credit, a loan still owing and a new loan are left alone", !credit.isClosed && !owing.isClosed && !brandNew.isClosed)
                     let asset = PaidOffLoans.makeAsset(from: house, type: .realEstate, name: "123 Main St", value: 250_000, in: context)
                     check("S46 the asset is worth what was said and the loan is archived", asset.type == .realEstate && asset.balance == 250_000 && house.isClosed)
+                    // A lease that was bought out and financed becomes a regular auto loan owing exactly the buyout.
+                    PaidOffLoans.convertLeaseToLoan(leased, owed: 7_500, monthlyPayment: 310, rate: 5.5, in: context)
+                    BalanceCache.invalidate()
+                    check("S46 a bought-out lease is a regular auto loan owing the buyout, with its history kept",
+                          !leased.isLease && leased.balance == -7_500 && leased.monthlyPayment == 310 && leased.interestRate == 5.5 && leased.transactions.count == 1
+                          && !PaidOffLoans.isPaidOff(leased))
                     PaidOffLoans.restore(student, in: context)
                     BalanceCache.invalidate()
                     check("S46 a restored loan is not archived again", PaidOffLoans.scan(in: context).allSatisfy { $0.name != "Student" } && !student.isClosed)

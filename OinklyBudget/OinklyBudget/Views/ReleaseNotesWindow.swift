@@ -52,7 +52,7 @@ enum ReleaseNotes {
                 "Planning has an Archive tab. A savings goal you reach is congratulated for a few days on the Goals tab and then moves to the Archive tab, with the amount it finished at.",
             ]),
             ("Paid-off loans", [
-                "A loan that reaches zero is archived, not deleted. Student loans and other loans archive themselves. For an auto loan or a mortgage, a sheet asks first and offers to add the car or house as an asset, with the worth starting at the original loan amount. Archived accounts are on a new Archived tab in Manage Accounts, with View, Restore and Delete, and are left out of the side panel.",
+                "A loan that reaches zero is archived, not deleted. Student loans and other loans archive themselves. For an auto loan or a mortgage, a sheet asks first and offers to add the car or house as an asset, with the worth starting at the original loan amount. When a lease ends, a sheet asks whether you bought the car out (the lease becomes a regular auto loan, or an asset if you paid for it) or returned it (the lease is archived). Archived accounts are on a new Archived tab in Manage Accounts, with View, Restore and Delete, and are left out of the side panel.",
             ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
