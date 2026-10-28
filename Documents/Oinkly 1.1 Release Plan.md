@@ -93,8 +93,8 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 **Check on screen or paper** (built, but not yet seen working):
 
-- [ ] The start-up prompt's Choose Folder… (turns on the save location and the Backup Copy together).
-- [ ] Saving a PDF, a CSV and a backup straight into the save location.
+- [x] The start-up prompt's Choose Folder… (turns on the save location and the Backup Copy together). Seen working Oct 28.
+- [ ] Saving a PDF, a CSV and a backup straight into the save location. PDF and CSV seen working Oct 28; the backup (Settings ▸ Data & Backup ▸ Save Backup…) still to click.
 - [ ] The single status dot with Share with Other Users turned on.
 - [ ] The menu bar pop-up without the Open button.
 - [ ] A printed PDF with a letterhead and a custom logo.
