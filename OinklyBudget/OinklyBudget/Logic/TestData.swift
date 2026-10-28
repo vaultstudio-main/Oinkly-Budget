@@ -372,8 +372,10 @@ enum TestData {
             pending.memo = "Birthday gift"
         }
         tx(checking, day(-2), "City Water Dept", "utilities", -48.60, method: .check, state: .unreconciled)?.checkNumber = "1042"
-        if let withReceipt = tx(checking, day(-4), "Hardware Depot", "home-improvement", -86.35, method: .debitCard) {
-            withReceipt.receiptData = receiptPDF(store: "Hardware Depot", lines: [("Paint, 1 gal", 38.99), ("Brushes", 14.50), ("Tape", 6.25), ("Tax", 26.61)], total: 86.35)
+        if let withReceipt = tx(checking, day(-4), "Hardware Depot", "home-improvement", -86.35, method: .debitCard, state: .unreconciled) {
+            // A full receipt, so the scan has a subtotal, tax, an item count and a card to suggest from.
+            withReceipt.receiptData = receiptPDF(store: "Hardware Depot", lines: [("Paint, 1 gal", 38.99), ("Brushes", 14.50), ("Tape", 6.25), ("Drop cloth", 20.00)],
+                                                 footer: [("Items Sold: 4", nil), ("SUBTOTAL", 79.74), ("TAX", 6.61)], total: 86.35, trailer: ["DEBIT", "VISA ****4242"])
         }
         tx(card, day(-3), "Trail Shoes Co", "clothing", -128.00, method: .creditCard)?.noReceipt = true
         // The store card is close to its limit.
@@ -584,7 +586,7 @@ enum TestData {
     // MARK: Attachments
 
     /// A one-page PDF receipt.
-    private static func receiptPDF(store: String, lines: [(String, Double)], total: Double) -> Data? {
+    private static func receiptPDF(store: String, lines: [(String, Double)], footer: [(String, Double?)] = [], total: Double, trailer: [String] = []) -> Data? {
         let page = VStack(alignment: .leading, spacing: 8) {
             Text(store.uppercased()).font(.system(size: 16, weight: .bold, design: .monospaced))
             Text("Receipt 4821").font(.system(size: 10, design: .monospaced))
@@ -598,12 +600,23 @@ enum TestData {
                 .font(.system(size: 12, design: .monospaced))
             }
             Divider()
+            ForEach(Array(footer.enumerated()), id: \.offset) { _, line in
+                HStack {
+                    Text(line.0)
+                    Spacer()
+                    if let amount = line.1 { Text(String(format: "%.2f", amount)) }
+                }
+                .font(.system(size: 12, design: .monospaced))
+            }
             HStack {
                 Text("TOTAL")
                 Spacer()
                 Text(String(format: "%.2f", total))
             }
             .font(.system(size: 13, weight: .bold, design: .monospaced))
+            ForEach(Array(trailer.enumerated()), id: \.offset) { _, line in
+                Text(line).font(.system(size: 11, design: .monospaced))
+            }
             Spacer()
             Text("Thank you!").font(.system(size: 11, design: .monospaced))
         }

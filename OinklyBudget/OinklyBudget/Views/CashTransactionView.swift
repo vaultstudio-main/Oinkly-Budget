@@ -102,7 +102,8 @@ struct CashTransactionView: View {
                         .formStyle(.grouped)
                     Divider()
                     ReceiptColumn(supported: true, data: $receipt, noReceipt: $noReceipt,
-                                  checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
+                                  checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee, category: $category, memo: $memo,
+                                                    categories: categories, isPayment: isPayment))
                 }
                 HStack {
                     Spacer()

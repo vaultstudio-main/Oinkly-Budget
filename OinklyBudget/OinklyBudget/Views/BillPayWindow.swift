@@ -32,6 +32,7 @@ struct BillPayWindow: View {
     @State private var paymentChoice: PaymentChoice?
     @State private var checkNumber = ""
     @State private var receipt: Data?
+    @State private var receiptCheck = ReceiptCheckState()
     @State private var noReceipt = false
     @State private var confirmation: String?
     /// An extra payment toward the balance of a loan or card: it does not pay the bill.
@@ -164,7 +165,9 @@ struct BillPayWindow: View {
                 Form { fields }
                     .formStyle(.grouped)
                 Divider()
-                ReceiptColumn(supported: source?.supportsReceipts == true, title: "Receipt or Bill", data: $receipt, noReceipt: $noReceipt)
+                ReceiptColumn(supported: source?.supportsReceipts == true, title: "Receipt or Bill", data: $receipt, noReceipt: $noReceipt,
+                              // The payee and category are the bill's, so only the amount, date, payment method and (for a plain bill) memo are checked.
+                              checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, memo: resolved.debt == nil ? $memo : nil, method: $paymentChoice))
             }
 
             HStack {
@@ -226,6 +229,8 @@ struct BillPayWindow: View {
                                        state: state, paymentChoice: paymentChoice, checkNumber: checkNumber,
                                        receiptData: receipt, noReceipt: noReceipt, isExtra: isExtra && debt != nil, in: modelContext) != nil else { return }
         modelContext.saveNow()
+        // This Mac learns that this store's receipts mean this bill's payee.
+        if let name = bill?.name ?? debt?.name { receiptCheck.learn(payee: name, receipt: receipt) }
         Task { await BillNotifier.refresh(in: modelContext) }
 
         confirmation = isExtra && debt != nil

@@ -195,6 +195,28 @@ private struct ReceiptSheet: View {
     let transaction: Transaction
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Category.name) private var allCategories: [Category]
+    @State private var receiptCheck = ReceiptCheckState()
+
+    /// A receipt may suggest changes to an ordinary payment or deposit that isn't reconciled, one split or a transfer. Those are left as they are.
+    private var canSuggest: Bool {
+        transaction.isLive && transaction.state != .reconciled && !transaction.isSplit && !transaction.isTransfer
+            && !transaction.isOpeningDeposit && transaction.account?.supportsHoldings != true
+    }
+
+    /// The fields the receipt is checked against, written straight to the transaction when a suggestion is taken.
+    private var checking: ReceiptChecking {
+        let sign: Decimal = transaction.amount < 0 ? -1 : 1
+        return ReceiptChecking(
+            state: receiptCheck,
+            amount: Binding(get: { abs(transaction.amount) }, set: { if let new = $0, transaction.isLive { transaction.amount = sign * abs(new); modelContext.saveNow() } }),
+            date: Binding(get: { transaction.date }, set: { if transaction.isLive { transaction.date = $0; modelContext.saveNow() } }),
+            payee: Binding(get: { transaction.payee }, set: { if transaction.isLive { transaction.payee = $0; modelContext.saveNow() } }),
+            category: Binding(get: { transaction.category }, set: { if transaction.isLive { transaction.category = $0; modelContext.saveNow() } }),
+            memo: Binding(get: { transaction.memo }, set: { if transaction.isLive { transaction.memo = $0; modelContext.saveNow() } }),
+            method: Binding(get: { transaction.paymentChoice }, set: { if transaction.isLive, let new = $0 { transaction.paymentChoice = new; modelContext.saveNow() } }),
+            categories: allCategories.live, isPayment: transaction.amount <= 0)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -221,9 +243,19 @@ private struct ReceiptSheet: View {
                     }
                 )
             )
+            if canSuggest {
+                ReceiptCheckView(data: transaction.isLive ? transaction.receiptData : nil, checking: checking)
+            } else if transaction.isLive, transaction.receiptData != nil, transaction.state == .reconciled {
+                Label("This transaction is reconciled, so the receipt won't suggest changes to it. Edit it to change it yourself.", systemImage: "lock.fill")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
             HStack {
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+                Button("Done") {
+                    if canSuggest { receiptCheck.learn(payee: transaction.payee, receipt: transaction.receiptData) }
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)

@@ -763,6 +763,150 @@ enum SharedHardeningTest {
                 check("S47 a year that was never answered asks the next year end", ArchiveReview.shouldAsk(archivedCount: 1, lastReviewed: nil, now: date(2027, 12, 1)))
             }
 
+            // S48: reading a receipt's text (the parts the scan finds besides total, date and store)
+            do {
+                let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 28, hour: 12))!
+                func read(_ text: String) -> ReceiptReading { ReceiptReader.parse(text.split(separator: "\n").map(String.init), now: now) }
+                let grocery = read("""
+                FRESH MARKET
+                123 Main St
+                Items Sold: 7
+                SUBTOTAL  41.20
+                TAX  3.09
+                TOTAL  44.29
+                DEBIT
+                VISA ****1234
+                10/27/2026
+                """)
+                check("S48 a grocery receipt: total, subtotal, tax and items", grocery.total == Decimal(string: "44.29") && grocery.subtotal == Decimal(string: "41.20")
+                      && grocery.tax == Decimal(string: "3.09") && grocery.itemCount == 7 && grocery.merchant == "Fresh Market")
+                check("S48 a debit card with its last four digits", grocery.payment?.type == .debitCard && grocery.payment?.lastFour == "1234" && grocery.payment?.label == "Visa ending 1234")
+                check("S48 the memo suggestion says what the receipt says", grocery.memoSuggestion == "7 items · tax $3.09")
+
+                let restaurant = read("""
+                Luigi's Pizza
+                Table 12  Guest 2
+                Subtotal 38.00
+                Tax 3.04
+                Total 41.04
+                Suggested Tip 18%  7.39
+                Tip  8.00
+                Total with tip  49.04
+                MASTERCARD XXXXXXXXXXXX4321
+                """)
+                check("S48 a restaurant receipt: the real tip, not the suggested one", restaurant.tip == Decimal(string: "8.00") && restaurant.tax == Decimal(string: "3.04"))
+                check("S48 the total is the one that includes the tip", restaurant.total == Decimal(string: "49.04"))
+                check("S48 a card brand alone gives its last four but not debit or credit", restaurant.payment?.type == nil && restaurant.payment?.lastFour == "4321"
+                      && restaurant.payment?.label == "Mastercard ending 4321")
+
+                let gas = read("""
+                SHELL
+                Pump 4  Regular
+                Gallons 10.532  Price/Gal 3.459
+                TOTAL  36.43
+                CASH  40.00
+                CHANGE  3.57
+                """)
+                check("S48 paying cash is noticed, and change is not read as a total", gas.payment?.type == .cash && gas.total == Decimal(string: "36.43") && gas.tax == nil)
+
+                let online = read("""
+                Apple Store Online
+                Order W123456
+                Subtotal $999.00
+                Shipping FREE
+                Tax $82.42
+                Order Total $1,081.42
+                Paid with Apple Pay
+                """)
+                check("S48 an online receipt paid with a wallet", online.payment?.type == .applePay && online.tax == Decimal(string: "82.42") && online.total == Decimal(string: "1081.42"))
+
+                let twoTaxes = read("""
+                Hardware Depot
+                State Tax  1.00
+                County Tax  0.25
+                Total  21.25
+                """)
+                check("S48 two tax lines are added up", twoTaxes.tax == Decimal(string: "1.25"))
+                let withTotalTax = read("""
+                Hardware Depot
+                State Tax  1.00
+                County Tax  0.25
+                Total Tax  1.25
+                Total  21.25
+                """)
+                check("S48 a total tax line is used on its own, not counted twice", withTotalTax.tax == Decimal(string: "1.25"))
+                let plain = read("""
+                Corner Barber
+                Haircut  28.00
+                Total  28.00
+                Thank you!
+                """)
+                check("S48 nothing is invented: no tax, tip, items or payment", plain.tax == nil && plain.tip == nil && plain.itemCount == nil && plain.payment == nil && plain.memoSuggestion == nil)
+            }
+
+            // S49: what a receipt suggests besides the total, date and payee
+            MainActor.assumeIsolated {
+                let now = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 28, hour: 12))!
+                func read(_ text: String) -> ReceiptReading { ReceiptReader.parse(text.split(separator: "\n").map(String.init), now: now) }
+                check("S49 a gas receipt looks like fuel", ReceiptCheck.categoryKey(for: read("SHELL\nGallons 10.5  Price/Gal 3.459\nTOTAL 36.43")) == "gas-fuel")
+                check("S49 a receipt with a tip looks like dining out", ReceiptCheck.categoryKey(for: read("Luigi's\nTable 4\nTotal 40.00\nTip 8.00")) == "dining-out")
+                check("S49 coffee, pharmacy, parking and groceries are told apart",
+                      ReceiptCheck.categoryKey(for: read("Bean There Cafe\nLatte 4.50\nTotal 4.50")) == "coffee-snacks"
+                      && ReceiptCheck.categoryKey(for: read("Corner Pharmacy\nRx #123456\nTotal 12.00")) == "pharmacy"
+                      && ReceiptCheck.categoryKey(for: read("City Parking\nTotal 9.00")) == "parking-tolls"
+                      && ReceiptCheck.categoryKey(for: read("Fresh Market\nProduce 3.20\nTotal 20.00")) == "groceries")
+                check("S49 a receipt with nothing to go on guesses nothing", ReceiptCheck.categoryKey(for: read("Acme\nWidget 12.00\nTotal 12.00")) == nil)
+
+                let schema = Schema(versionedSchema: OinklyBudgetSchemaV9.self)
+                if let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) {
+                    let context = container.mainContext
+                    func category(_ name: String, _ key: String, income: Bool = false) -> Category {
+                        let made = Category(name: name, colorHex: "34C759", symbol: "cart", monthlyLimit: 0, isIncome: income, systemKey: key)
+                        context.insert(made)
+                        return made
+                    }
+                    let gas = category("Gas & Fuel", "gas-fuel"), groceries = category("Groceries", "groceries"), paycheck = category("Paycheck", "paycheck", income: true)
+                    let gasReceipt = read("SHELL\nGallons 10.5\nTOTAL 36.43\nDEBIT\nVISA ****1234")
+
+                    var fields = ReceiptCheck.Fields(isPayment: true, categories: [gas, groceries, paycheck])
+                    var found = ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields)
+                    check("S49 a blank category is offered the receipt's, as an add", found.contains { $0.field == .category(gas) && $0.message.hasSuffix("Add the category?") })
+                    fields.category = groceries
+                    found = ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields)
+                    check("S49 a different category is offered as a change", found.contains { $0.field == .category(gas) && $0.message.contains("you chose Groceries") })
+                    fields.category = gas
+                    check("S49 the same category offers nothing", !ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields).contains { if case .category = $0.field { true } else { false } })
+                    fields.category = nil
+                    fields.payeeCategory = groceries
+                    fields.payeeName = "Shell"
+                    found = ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields)
+                    check("S49 what the payee was filed under before comes first", found.contains { $0.field == .category(groceries) && $0.message.contains("Your earlier Shell transactions") }
+                          && !found.contains { $0.field == .category(gas) })
+                    fields.isPayment = false
+                    fields.payeeCategory = nil
+                    check("S49 money in is never offered an expense category", !ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields).contains { if case .category = $0.field { true } else { false } })
+
+                    fields = ReceiptCheck.Fields(isPayment: true, categories: [gas], offersMethod: true)
+                    found = ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields)
+                    check("S49 a blank payment method is offered the receipt's", found.contains { $0.field == .method(.debitCard) && $0.message.contains("Visa ending 1234") })
+                    fields.method = .type(.creditCard)
+                    check("S49 a different built-in method is offered as a change", ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields).contains { $0.field == .method(.debitCard) && $0.message.contains("you chose Credit Card") })
+                    fields.method = .type(.debitCard)
+                    check("S49 the same method offers nothing", !ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields).contains { if case .method = $0.field { true } else { false } })
+                    fields.method = nil
+                    fields.offersMethod = false
+                    check("S49 where the method is fixed, none is offered", !ReceiptCheck.moreSuggestions(for: gasReceipt, fields: fields).contains { if case .method = $0.field { true } else { false } })
+
+                    let dinner = read("Luigi's Pizza\nItems Sold: 3\nSubtotal 38.00\nTax 3.04\nTip 8.00\nTotal 49.04")
+                    fields = ReceiptCheck.Fields(isPayment: true, categories: [])
+                    check("S49 an empty memo is offered a note from the receipt", ReceiptCheck.moreSuggestions(for: dinner, fields: fields).contains { $0.field == .memo("3 items · tax $3.04 · tip $8.00") })
+                    fields.memo = "Birthday dinner"
+                    check("S49 a memo that already says something is never replaced", !ReceiptCheck.moreSuggestions(for: dinner, fields: fields).contains { if case .memo = $0.field { true } else { false } })
+                } else {
+                    check("S49 the test store opens", false)
+                }
+            }
+
             // S28: the sealed file format, and the backup copy's receipts
             let sealedPlain = root.appendingPathComponent("sealed/plain.store")
             try manager.createDirectory(at: sealedPlain.deletingLastPathComponent(), withIntermediateDirectories: true)

@@ -2,16 +2,44 @@ import Foundation
 import AppKit
 import PDFKit
 import Vision
+import SwiftData
 
-/// What a scan of a receipt found: the total, the date and the store's name, any of which may be missing.
+/// How the receipt says it was paid, as far as it can be told: the kind of payment when it is clear, and a short label such as "Visa ending 1234".
+struct ReceiptPaymentClue: Equatable {
+    /// The payment method this points to, or nil when the receipt only gives a card brand and not whether it was debit or credit.
+    var type: PaymentType?
+    /// What to show: "Cash", "Visa ending 1234", "Apple Pay".
+    var label: String
+    /// The last four digits of a card, when printed.
+    var lastFour: String?
+}
+
+/// What a scan of a receipt found: the total, the date and the store's name, plus the subtotal, tax, tip and how it was paid when the receipt says,
+/// any of which may be missing.
 struct ReceiptReading: Equatable {
     var total: Decimal?
     var date: Date?
     var merchant: String?
+    var subtotal: Decimal?
+    var tax: Decimal?
+    var tip: Decimal?
+    /// How many items the receipt says there were, when it says.
+    var itemCount: Int?
+    var payment: ReceiptPaymentClue?
     /// The text as read, one line to a row, for showing what the scan saw.
     var lines: [String] = []
 
-    var isEmpty: Bool { total == nil && date == nil && merchant == nil }
+    var isEmpty: Bool { total == nil && date == nil && merchant == nil && tax == nil && tip == nil && payment == nil }
+
+    /// A short note to offer as the transaction's memo from what the receipt says about itself, such as "3 items · tax $2.10 · tip $5.00". Nil when
+    /// there is nothing to say.
+    var memoSuggestion: String? {
+        var parts: [String] = []
+        if let itemCount { parts.append("\(itemCount) item\(itemCount == 1 ? "" : "s")") }
+        if let tax, tax > 0 { parts.append("tax \(tax.formatted(.appCurrency))") }
+        if let tip, tip > 0 { parts.append("tip \(tip.formatted(.appCurrency))") }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 }
 
 /// Reads a receipt's photo or PDF on this Mac, with Apple's Vision framework, and works out the total, date and store from the text. Nothing
@@ -73,7 +101,12 @@ enum ReceiptReader {
 
     /// Finds the total, date and store in rows of receipt text. Pure, so it can be tested without a picture.
     static func parse(_ rows: [String], now: Date = .now, calendar: Calendar = .current) -> ReceiptReading {
-        ReceiptReading(total: total(in: rows), date: date(in: rows, now: now, calendar: calendar), merchant: merchant(in: rows), lines: rows)
+        var total = total(in: rows)
+        let tip = tip(in: rows)
+        // A receipt that prints the bill and then a line with the tip added: what was charged is the one that includes the tip.
+        if let bill = total, let tip, rows.flatMap(amounts(in:)).contains(bill + tip) { total = bill + tip }
+        return ReceiptReading(total: total, date: date(in: rows, now: now, calendar: calendar), merchant: merchant(in: rows),
+                              subtotal: subtotal(in: rows), tax: tax(in: rows), tip: tip, itemCount: itemCount(in: rows), payment: payment(in: rows), lines: rows)
     }
 
     private static let amountPattern = try! NSRegularExpression(pattern: #"(?<![\d.,])\$?\s?(\d{1,3}(?:,\d{3})+|\d+)[.,](\d{2})(?![\d])"#)
@@ -106,6 +139,104 @@ enum ReceiptReader {
         }
         // No total line was read: the biggest amount is the best guess.
         return rows.flatMap(amounts(in:)).filter { $0 < 1_000_000 }.max()
+    }
+
+    // MARK: Subtotal, tax, tip, items and payment
+
+    private static func regex(_ pattern: String) -> NSRegularExpression { try! NSRegularExpression(pattern: pattern, options: .caseInsensitive) }
+    private static func matches(_ expression: NSRegularExpression, _ line: String) -> Bool { expression.firstMatch(in: line, range: NSRange(line.startIndex..., in: line)) != nil }
+
+    /// The amount on a line, or on the line under it when the label sits alone: the last amount on the line.
+    private static func figure(at index: Int, in rows: [String]) -> Decimal? {
+        if let amount = amounts(in: rows[index]).last { return amount }
+        return index + 1 < rows.count ? amounts(in: rows[index + 1]).first : nil
+    }
+
+    private static func subtotal(in rows: [String]) -> Decimal? {
+        let label = regex(#"sub\s*-?\s*total"#)
+        for index in rows.indices where matches(label, rows[index]) {
+            if let amount = figure(at: index, in: rows) { return amount }
+        }
+        return nil
+    }
+
+    /// Tax: a "total tax" line when there is one, otherwise every tax line added up (a state and a county tax are two lines).
+    private static func tax(in rows: [String]) -> Decimal? {
+        let total = regex(#"total\s+(sales\s+)?tax"#)
+        for index in rows.indices where matches(total, rows[index]) {
+            if let amount = figure(at: index, in: rows), amount > 0 { return amount }
+        }
+        let label = regex(#"(\bsales\s+tax\b|\btax\b|\bvat\b|\bgst\b|\bhst\b|\bpst\b)"#)
+        let notIt = regex(#"(before\s+tax|tax\s*id|tax\s*exempt|tax\s*free|incl|includes|included|pre-?\s*tax|taxable|total|sub\s*-?\s*total)"#)
+        var sum: Decimal = 0
+        var found = false
+        for index in rows.indices where matches(label, rows[index]) && !matches(notIt, rows[index]) {
+            if let amount = amounts(in: rows[index]).last, amount > 0 { sum += amount; found = true }
+        }
+        return found ? sum : nil
+    }
+
+    /// The tip or gratuity actually added: not the suggested percentages some receipts print.
+    private static func tip(in rows: [String]) -> Decimal? {
+        let label = regex(#"\b(tip|gratuity)\b"#)
+        let notIt = regex(#"(suggest|guide|%|calculat|recommend|total\s+with|if\s+you|add\s+a)"#)
+        for index in rows.indices.reversed() where matches(label, rows[index]) && !matches(notIt, rows[index]) {
+            if let amount = amounts(in: rows[index]).last, amount > 0 { return amount }
+        }
+        return nil
+    }
+
+    /// "3 items", "Items: 3", "# of items 3": how many things were bought.
+    private static func itemCount(in rows: [String]) -> Int? {
+        let after = regex(#"(?:items?\s*(?:sold|purchased|count)?\s*[:=]?\s*|#\s*of\s*items\s*[:=]?\s*)(\d{1,3})\b"#)
+        let before = regex(#"\b(\d{1,3})\s+items?\b"#)
+        for row in rows {
+            let range = NSRange(row.startIndex..., in: row)
+            for expression in [before, after] {
+                if let match = expression.firstMatch(in: row, range: range), let found = Range(match.range(at: 1), in: row), let count = Int(row[found]), count > 0 {
+                    return count
+                }
+            }
+        }
+        return nil
+    }
+
+    /// How it was paid, from a card line ("VISA ****1234", "Mastercard ending in 4321", "DEBIT"), a wallet ("Apple Pay"), or cash.
+    private static func payment(in rows: [String]) -> ReceiptPaymentClue? {
+        let brand = regex(#"\b(visa|master\s*card|mastercard|amex|american\s+express|discover|diners|jcb|unionpay)\b"#)
+        let lastFour = regex(#"(?:\*{2,}|x{2,}|•{2,}|\.{2,}|ending\s+(?:in\s+)?|acct\.?\s*#?\s*|card\s*#?\s*)[\s*x•.]*(\d{4})\b"#)
+        let wallets: [(NSRegularExpression, PaymentType, String)] = [
+            (regex(#"apple\s*pay"#), .applePay, "Apple Pay"), (regex(#"google\s*pay|g\s*pay"#), .googlePay, "Google Pay"),
+            (regex(#"samsung\s*pay"#), .samsungPay, "Samsung Pay"), (regex(#"paypal"#), .paypal, "PayPal"), (regex(#"venmo"#), .venmo, "Venmo")]
+        let cashLine = regex(#"(^|\s)cash(\s+(tender(ed)?|payment|paid|given))?(\s|:|$)"#)
+        let notCash = regex(#"(cashier|cash\s*back|cashback|cash\s+reward|cash\s+advance|cash\s+register)"#)
+
+        for row in rows {
+            for (expression, type, label) in wallets where matches(expression, row) { return ReceiptPaymentClue(type: type, label: label, lastFour: nil) }
+        }
+        for (index, row) in rows.enumerated() {
+            guard let match = brand.firstMatch(in: row, range: NSRange(row.startIndex..., in: row)), let range = Range(match.range, in: row) else { continue }
+            var name = String(row[range]).lowercased().replacingOccurrences(of: " ", with: "")
+            switch name {
+            case "mastercard": name = "Mastercard"
+            case "americanexpress", "amex": name = "Amex"
+            default: name = name.capitalized
+            }
+            // The last four digits are on this line or the next.
+            var digits: String?
+            for candidate in [row] + (index + 1 < rows.count ? [rows[index + 1]] : []) {
+                if let m = lastFour.firstMatch(in: candidate, range: NSRange(candidate.startIndex..., in: candidate)), let r = Range(m.range(at: 1), in: candidate) {
+                    digits = String(candidate[r]); break
+                }
+            }
+            let window = (index > 0 ? rows[index - 1] : "") + " " + row + " " + (index + 1 < rows.count ? rows[index + 1] : "")
+            let type: PaymentType? = matches(regex(#"\bdebit\b"#), window) ? .debitCard : (matches(regex(#"\bcredit\b"#), window) ? .creditCard : nil)
+            return ReceiptPaymentClue(type: type, label: digits.map { "\(name) ending \($0)" } ?? name, lastFour: digits)
+        }
+        for row in rows where matches(cashLine, row) && !matches(notCash, row) && (!amounts(in: row).isEmpty || row.lowercased().contains("tender")) {
+            return ReceiptPaymentClue(type: .cash, label: "Cash", lastFour: nil)
+        }
+        return nil
     }
 
     private static func date(in rows: [String], now: Date, calendar: Calendar) -> Date? {
@@ -146,10 +277,40 @@ enum ReceiptReader {
 /// What a receipt says that differs from what was typed, as suggestions. Nothing is changed until one is taken.
 enum ReceiptCheck {
     struct Suggestion: Identifiable, Equatable {
-        enum Field: Equatable { case amount(Decimal), date(Date), payee(String) }
+        enum Field: Equatable {
+            case amount(Decimal), date(Date), payee(String), category(Category), method(PaymentType), memo(String)
+
+            static func == (lhs: Field, rhs: Field) -> Bool {
+                switch (lhs, rhs) {
+                case (.amount(let a), .amount(let b)): a == b
+                case (.date(let a), .date(let b)): a == b
+                case (.payee(let a), .payee(let b)): a == b
+                case (.category(let a), .category(let b)): a.persistentModelID == b.persistentModelID
+                case (.method(let a), .method(let b)): a == b
+                case (.memo(let a), .memo(let b)): a == b
+                default: false
+                }
+            }
+        }
         let field: Field
         let message: String
         var id: String { message }
+    }
+
+    /// What the receipt can be set against besides the total, date and payee: the transaction's category, payment method and memo, as they stand.
+    struct Fields {
+        /// Whether the transaction is money out. Only categories of the right kind are suggested.
+        var isPayment = true
+        /// The categories this transaction can have.
+        var categories: [Category] = []
+        var category: Category?
+        /// What the payee's earlier transactions were filed under, when this payee has been used before.
+        var payeeCategory: Category?
+        var payeeName = ""
+        var method: PaymentChoice?
+        /// False where the payment method is fixed, such as a credit card charge.
+        var offersMethod = false
+        var memo = ""
     }
 
     /// `remembered` is a payee this Mac has learned for the store on the receipt.
@@ -171,6 +332,63 @@ enum ReceiptCheck {
             list.append(Suggestion(field: .payee(name), message: "The receipt looks like \(name)\(remembered != nil ? " (remembered)" : ""), \(said)."))
         }
         return list
+    }
+
+    /// The category, payment method and memo the receipt points to, for a blank field ("add") or one that differs ("change"). A suggestion changes
+    /// nothing until it is taken, and a memo that already says something is never offered a replacement.
+    static func moreSuggestions(for reading: ReceiptReading, fields: Fields) -> [Suggestion] {
+        var list: [Suggestion] = []
+        let usable = fields.categories.filter { $0.isLive && $0.isIncome == !fields.isPayment }
+
+        // Category: what this payee was filed under before, else what the receipt looks like.
+        var candidate: Category?
+        var reason = ""
+        if let before = fields.payeeCategory, usable.contains(where: { $0.persistentModelID == before.persistentModelID }) {
+            candidate = before
+            reason = "Your earlier \(fields.payeeName) transactions are filed under \(before.name)"
+        } else if let key = categoryKey(for: reading), let guess = usable.first(where: { $0.systemKey == key }) {
+            candidate = guess
+            reason = "The receipt looks like \(guess.name)"
+        }
+        if let candidate, candidate.persistentModelID != fields.category?.persistentModelID {
+            if let chosen = fields.category {
+                list.append(Suggestion(field: .category(candidate), message: "\(reason), you chose \(chosen.name)."))
+            } else {
+                list.append(Suggestion(field: .category(candidate), message: "\(reason). Add the category?"))
+            }
+        }
+
+        // Payment method: only when the receipt is clear about it, and never over one of your own methods.
+        if fields.offersMethod, let clue = reading.payment, let type = clue.type {
+            switch fields.method {
+            case nil:
+                list.append(Suggestion(field: .method(type), message: "The receipt says it was paid with \(clue.label). Add the payment method?"))
+            case .type(let chosen) where chosen != type:
+                list.append(Suggestion(field: .method(type), message: "The receipt says \(clue.label), you chose \(chosen.title)."))
+            default:
+                break
+            }
+        }
+
+        // Memo: a note from what the receipt says about itself, only into an empty memo.
+        if fields.memo.trimmingCharacters(in: .whitespaces).isEmpty, let note = reading.memoSuggestion {
+            list.append(Suggestion(field: .memo(note), message: "The receipt has \(note). Add it as the memo?"))
+        }
+        return list
+    }
+
+    /// A guess at the built-in category a receipt belongs to, from words on it: fuel on a gas receipt, a tip and a table on a restaurant one.
+    /// Nil when nothing says. It is only ever offered as a suggestion.
+    static func categoryKey(for reading: ReceiptReading) -> String? {
+        let text = ([reading.merchant ?? ""] + reading.lines).joined(separator: "\n").lowercased()
+        func has(_ pattern: String) -> Bool { text.range(of: pattern, options: .regularExpression) != nil }
+        if has(#"\b(gallons?|unleaded|diesel|price/?\s*gal|fuel\s+total|pump\s*#?\s*\d)"#) { return "gas-fuel" }
+        if reading.tip != nil || has(#"\b(gratuity|server:?|table\s*#?\s*\d|guest\s*(count|#)?\s*\d)"#) { return "dining-out" }
+        if has(#"\b(pharmacy|prescription|rx\s*#?\s*\d)"#) { return "pharmacy" }
+        if has(#"\b(coffee|espresso|latte|cappuccino|cafe|café)\b"#) { return "coffee-snacks" }
+        if has(#"\b(parking|toll)\b"#) { return "parking-tolls" }
+        if has(#"\b(grocery|groceries|supermarket|produce|dairy|deli)\b"#) { return "groceries" }
+        return nil
     }
 
     /// Whether two names are close enough to be the same place: one holds the other, or they start the same.

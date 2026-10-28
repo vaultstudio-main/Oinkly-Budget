@@ -27,6 +27,7 @@ enum ReleaseNotes {
             ]),
             ("Receipt Verification", [
                 "Scan a receipt while entering a transaction, or attach a PDF with text. The app reads it on this Mac and suggests corrections to the total, date and payee. Nothing changes until you press Use.",
+                "The scan also finds the tax, the tip, the item count and how it was paid, and suggests a category, a payment method and a memo from them, each with its own Use button, a Use All and a way to turn one away. A blank field is offered the receipt's value and a different one is offered as a change; nothing is ever filled in on its own. It works in new transactions, credit card charges, cash transactions, edits, Pay a Bill and from the register's receipt link.",
                 "It remembers which payee goes with which store, in a small file on this Mac that is not in backups. Erase All Data forgets it.",
             ]),
             ("PDF Letterhead", [

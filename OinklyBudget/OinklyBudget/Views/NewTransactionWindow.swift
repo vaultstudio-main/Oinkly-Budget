@@ -198,7 +198,8 @@ struct NewTransactionWindow: View {
             .formStyle(.grouped)
             Divider()
             ReceiptColumn(supported: account?.supportsReceipts == true, data: $receipt, noReceipt: $noReceipt,
-                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
+                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee, category: $category, memo: $memo, method: $paymentChoice,
+                                            categories: categories, isPayment: isPayment))
             }
 
             HStack {

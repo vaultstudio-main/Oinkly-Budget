@@ -24,12 +24,13 @@ Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF le
 
 The scan already suggests a total, date and payee, and nothing changes until you press Use. This extends that idea: whatever the scan finds that a transaction doesn't have yet is **offered as a suggestion**, never filled in automatically. The person always decides.
 
-- [ ] Read more from the receipt: tax, tip, a payment method clue (card brand and last four digits, or cash) and a short description, as well as the total, date and store.
-- [ ] Suggest more fields: category, payment method and memo, for a blank field ("Add this?") or one that differs ("Change this?"), each with its own Use button, a Use All button, and a way to dismiss one.
-- [ ] Learn categories and payment methods as well as payees, per store, on this Mac only (the same small file as the payee memory, which Erase Everything forgets).
-- [ ] The same suggestions in every place a receipt can be attached: new transaction, credit card charge, cash transaction and edit (already scan), plus the register's **Add Receipt** link and **Pay a Bill**.
-- [ ] Never change anything on its own: suggestions only appear, and a locked or reconciled transaction can't be changed by one.
-- [ ] Tests for the receipt parser and the suggestions (sample receipt text), Help and Release Notes updated, screenshots retaken.
+- [x] Read more from the receipt: tax, tip, a payment method clue (card brand and last four digits, or cash) and a short description, as well as the total, date and store.
+- [x] Suggest more fields: category, payment method and memo, for a blank field ("Add this?") or one that differs ("Change this?"), each with its own Use button, a Use All button, and a way to dismiss one.
+- [x] Learn categories and payment methods as well as payees, per store, on this Mac only. A store is learned as a payee, and the payee already remembers its category, payment method and memo, so no new file was needed.
+- [x] The same suggestions in every place a receipt can be attached: new transaction, credit card charge, cash transaction and edit (already scan), plus the register's **Add Receipt** link and **Pay a Bill**.
+- [x] Never change anything on its own: suggestions only appear. A locked transaction has no receipt, and the register's receipt link leaves a reconciled one alone.
+- [x] Tests for the receipt parser and the suggestions (sample receipt text) and Help and Release Notes updated.
+- [ ] Tried on real receipts (groceries, a restaurant with a tip, gas, an online PDF), and the screenshots retaken.
 
 ## Feature 3: PDF Letterhead ✅ Done
 
@@ -101,7 +102,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 **Receipt Suggestions**
 
-- [ ] Built next week, as described under Feature 2, then added to the checks below.
+- [x] Built, as described under Feature 2. Still to do: try it on real receipts and retake the screenshots.
 
 **Screenshots and words, everywhere**
 

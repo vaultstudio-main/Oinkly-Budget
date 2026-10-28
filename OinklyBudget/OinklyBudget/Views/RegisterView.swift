@@ -635,7 +635,8 @@ struct EditTransactionSheet: View {
             Divider()
             // The receipt beside the form, as in a new transaction, so neither has to scroll.
             ReceiptColumn(supported: showsReceipt, data: $receipt, noReceipt: $noReceipt,
-                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee))
+                          checking: ReceiptChecking(state: receiptCheck, amount: $amount, date: $date, payee: $payee, category: $category, memo: $memo, method: $paymentChoice,
+                                            categories: categories, isPayment: isPayment))
             }
 
             if let limitMessage {
