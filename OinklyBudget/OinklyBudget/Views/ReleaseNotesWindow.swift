@@ -48,7 +48,11 @@ enum ReleaseNotes {
                 "Every account page has a new Print button beside Print PDF. It sends the statement for the period you choose to a real printer through the Mac's print window, with a preview. Print PDF still saves a PDF file.",
             ]),
             ("Planning", [
-                "The Loan Payoff Goals tab is gone, so Planning is one page of savings goals. Paying a debt down faster is the Debt War Plan in the Planning War Room. Loan payoff goals you made before are kept in your data but are no longer shown.",
+                "The Loan Payoff Goals tab is gone, so Planning is only savings goals. Paying a debt down faster is the Debt War Plan in the Planning War Room. Loan payoff goals you made before are kept in your data but are no longer shown.",
+                "Planning has an Archive tab. A savings goal you reach is congratulated for a few days on the Goals tab and then moves to the Archive tab, with the amount it finished at.",
+            ]),
+            ("Paid-off loans", [
+                "A loan that reaches zero is archived, not deleted. Student loans and other loans archive themselves. For an auto loan or a mortgage, a sheet asks first and offers to add the car or house as an asset, with the worth starting at the original loan amount. Archived accounts are on a new Archived tab in Manage Accounts, with View, Restore and Delete, and are left out of the side panel.",
             ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",

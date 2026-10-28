@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 private enum SidebarItem: Hashable {
     case summary
@@ -16,12 +17,15 @@ private enum SidebarItem: Hashable {
 
 struct MacRootView: View {
     @Query(sort: \Account.name) private var allAccounts: [Account]
-    private var accounts: [Account] { allAccounts.live }
+    /// The accounts in the side panel: archived ones (paid-off loans) are not listed, but can still be opened from Manage Accounts.
+    private var accounts: [Account] { allAccounts.live.filter { !$0.isClosed } }
 
     @State private var selection: SidebarItem? = .summary
     @State private var collapsed = Set<AccountGroup>()
     @State private var editingAccount: Account?
     @State private var askingForShadowCopy = false
+    /// A paid-off auto loan or mortgage the app is asking about.
+    @State private var paidOffLoan: Account?
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
 
@@ -113,7 +117,9 @@ struct MacRootView: View {
         .toolbarBackground(.visible, for: .windowToolbar)
         .toolbar { AppNameToolbarItem() }
         .onReceive(NotificationCenter.default.publisher(for: .piggybankOpenPage)) { note in
-            if let name = note.userInfo?["account"] as? String, let account = accounts.first(where: { $0.name == name }) {
+            if let name = note.userInfo?["account"] as? String,
+               let account = allAccounts.live.first(where: { $0.name == name && $0.isClosed == (note.userInfo?["archived"] as? Bool ?? false) })
+                ?? allAccounts.live.first(where: { $0.name == name }) {
                 selection = .account(account.id)
                 return
             }
@@ -150,6 +156,15 @@ struct MacRootView: View {
         .appAppearance()
         .sheet(item: $editingAccount) { AccountEditView(account: $0) }
         .sheet(isPresented: $askingForShadowCopy) { ShadowSetupSheet() }
+        .sheet(item: $paidOffLoan) { PaidOffLoanSheet(loan: $0) }
+        // A loan that has just been paid off: a few seconds after any save, and shortly after the app opens.
+        .onReceive(NotificationCenter.default.publisher(for: ModelContext.didSave).debounce(for: .seconds(3), scheduler: DispatchQueue.main)) { _ in
+            checkPaidOffLoans()
+        }
+        .task {
+            try? await Task.sleep(for: .seconds(6))
+            checkPaidOffLoans()
+        }
         .task {
             // Once there is some data in, offer a backup copy. Waits so it doesn't land on top of the start-up, then keeps
             // looking for a while, so a new person who adds their first account in this session is asked too.
@@ -169,11 +184,18 @@ struct MacRootView: View {
         }
     }
 
+    /// Archives paid-off loans that just go to the archive, and asks about a paid-off auto loan or mortgage, one at a time.
+    private func checkPaidOffLoans() {
+        guard !StartupState.isHoldingPlace else { return }
+        let found = PaidOffLoans.scan(in: modelContext)
+        if paidOffLoan == nil, let first = found.first { paidOffLoan = first }
+    }
+
     @ViewBuilder
     private var detailPage: some View {
         switch selection {
         case .account(let id):
-            if let account = accounts.first(where: { $0.id == id }) {
+            if let account = allAccounts.live.first(where: { $0.id == id }) {
                 RegisterView(account: account).id(id)
             } else {
                 SummaryView()

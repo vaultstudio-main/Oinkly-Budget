@@ -25,10 +25,13 @@ struct GoalsView: View {
     /// Savings goals, or the goals that pay a debt down.
     var kind: GoalKind = .save
 
+    /// The goals being worked on, or the old ones that were reached.
+    enum Page { case goals, archive }
+    var page: Page = .goals
+
     @State private var sheet: GoalSheet?
     @State private var detail: Goal?
     @State private var deleting: Goal?
-    @State private var showsArchive = false
 
     /// Goals still being worked on: nearest date first, then ones with no date.
     private var activeGoals: [Goal] {
@@ -63,7 +66,25 @@ struct GoalsView: View {
 
         ScrollView {
             VStack(spacing: 14) {
-                if goals.isEmpty && kind == .save {
+                if page == .archive {
+                    if archived.isEmpty {
+                        ReportCard(title: "No Archived Goals Yet") {
+                            Text("When a savings goal reaches its target, it is congratulated for a few days on the Goals tab and then moves here, with the amount it finished at.")
+                                .font(.callout).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        StatGrid(fillsRow: true) {
+                            StatTile(title: "Goals Reached") {
+                                Text("\(archived.count)").foregroundStyle(Theme.green)
+                            } note: {
+                                Text("saved \(archived.reduce(Decimal(0)) { $0 + $1.saved }.formatted(.appCurrency)) in all")
+                            }
+                        }
+                        ForEach(archived) { goal in
+                            if goal.isLive { card(goal) }
+                        }
+                    }
+                } else if goals.isEmpty && kind == .save {
                     empty
                 } else {
                     if goals.isEmpty {
@@ -94,19 +115,6 @@ struct GoalsView: View {
                             if goal.isLive { card(goal) }
                         }
 
-                        if !archived.isEmpty {
-                            DisclosureGroup(isExpanded: $showsArchive) {
-                                VStack(spacing: 14) {
-                                    ForEach(archived) { goal in
-                                        if goal.isLive { card(goal) }
-                                    }
-                                }
-                                .padding(.top, 8)
-                            } label: {
-                                Text("Archived Goals (\(archived.count))").font(.subheadline.weight(.semibold))
-                            }
-                            .padding(.top, 6)
-                        }
                     }
                 }
             }

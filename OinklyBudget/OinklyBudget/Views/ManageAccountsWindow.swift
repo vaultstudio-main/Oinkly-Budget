@@ -39,7 +39,35 @@ struct AccountTabsView<Trailing: View>: View {
         var id: Self { self }
     }
 
-    private var accounts: [Account] { allAccounts.live }
+    /// The tabs along the top: one for each group, and Archived at the end.
+    private enum TopTab: Hashable, Identifiable {
+        case group(AccountGroup)
+        case archived
+        var id: Self { self }
+    }
+
+    /// Archived accounts, such as paid-off loans, are on their own tab, not in their group.
+    @State private var showsArchived = false
+
+    private var accounts: [Account] { allAccounts.live.filter { !$0.isClosed } }
+    private var archivedAccounts: [Account] { allAccounts.live.filter(\.isClosed) }
+
+    private var topTabs: [TopTab] { AccountGroup.setupOrder.map { TopTab.group($0) } + [.archived] }
+    private var topSelection: Binding<TopTab> {
+        Binding(get: { showsArchived ? .archived : .group(tab) },
+                set: { new in
+                    switch new {
+                    case .group(let group): showsArchived = false; tab = group
+                    case .archived: showsArchived = true
+                    }
+                })
+    }
+    private func topTitle(_ item: TopTab) -> String {
+        switch item {
+        case .group(let group): "\(group.title) (\(members(of: group).count))"
+        case .archived: "Archived (\(archivedAccounts.count))"
+        }
+    }
 
     /// The one type picked under the tab, or nil on All.
     private var kind: AccountType? {
@@ -57,9 +85,12 @@ struct AccountTabsView<Trailing: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            FolderTabs(tabs: AccountGroup.setupOrder, selection: $tab, title: { "\($0.title) (\(members(of: $0).count))" }, leading: 20)
+            FolderTabs(tabs: topTabs, selection: topSelection, title: topTitle, leading: 20)
                 .padding(.top, 12)
                 .onChange(of: tab) { _, _ in sub = .all }
+            if showsArchived {
+                archivedPage
+            } else {
             // The group's name, as a title for the folder tabs under it.
             Text(tab.title)
                 .font(.headline)
@@ -89,10 +120,11 @@ struct AccountTabsView<Trailing: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
             }
+            }
             VStack(spacing: 0) {
                 Divider()
                 HStack(spacing: 10) {
-                    Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") }
+                    if !showsArchived { Button { isAdding = true } label: { Label("Add Account", systemImage: "plus.circle.fill") } }
                     Spacer()
                     trailing
                 }
@@ -115,6 +147,57 @@ struct AccountTabsView<Trailing: View>: View {
         } message: { account in
             Text("This also deletes its \(account.transactions.count) transaction\(account.transactions.count == 1 ? "" : "s"). This can't be undone.")
         }
+    }
+
+    // MARK: Archived
+
+    /// The archived accounts: what they were, when they stopped, and buttons to look at one, bring it back or delete it for good.
+    private var archivedPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                SettingsSection(title: "\(archivedAccounts.count) archived account\(archivedAccounts.count == 1 ? "" : "s")", note: nil) {
+                    if archivedAccounts.isEmpty {
+                        Text("Nothing is archived. When a loan is paid off it is archived here, with all of its transactions, and an auto loan or mortgage can become an asset. A student loan or other loan archives itself.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(archivedAccounts.enumerated()), id: \.element.persistentModelID) { index, account in
+                                if index > 0 { Divider() }
+                                archivedRow(account)
+                            }
+                        }
+                    }
+                }
+                Text("An archived account keeps all of its transactions and is left out of the side panel and the reports. View opens its page. Restore puts it back in the side panel. Deleting an account also deletes all of its transactions, and can't be undone.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
+        }
+    }
+
+    private func archivedRow(_ account: Account) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: account.type.symbol).foregroundStyle(.secondary).frame(width: 26)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(account.name)
+                Text(detail(account)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer()
+            Text(balanceText(account.balance, isDebt: account.isDebt)).font(.callout.weight(.medium)).foregroundStyle(.secondary)
+            Button("View") {
+                NotificationCenter.default.post(name: .piggybankOpenPage, object: nil, userInfo: ["account": account.name, "archived": true])
+            }
+            .help("Open this account's page in the main window")
+            Button("Restore") { PaidOffLoans.restore(account, in: modelContext) }
+                .help("Put this account back in the side panel")
+            Button(role: .destructive) { pendingDelete = account } label: { Image(systemName: "trash") }
+                .buttonStyle(.borderless)
+                .foregroundStyle(.red)
+                .frame(width: 22)
+                .accessibilityLabel("Delete \(account.name)")
+        }
+        .padding(.vertical, 8)
     }
 
     /// What one account of a tab is called, for the Add button.

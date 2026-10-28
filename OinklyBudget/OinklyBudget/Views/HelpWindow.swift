@@ -102,6 +102,10 @@ enum HelpContent {
                 "• Account names can be up to 30 characters.",
                 "• Account and card numbers show masked (•••• 1234) until you press Show.",
                 "• Deleting an account also deletes its transactions and can't be undone. Cash on Hand can't be deleted.",
+                "## Paid-off loans and the Archived tab",
+                "• When a loan is paid off, nothing is deleted. A student loan, personal loan or any other loan that reaches zero archives itself: it leaves the side panel and its bill leaves the Bills page, and it goes to the Archived tab in Manage Accounts with all of its transactions.",
+                "• When an auto loan or a mortgage is paid off, a sheet asks first. It offers to add the car or house as a Vehicle or Real Estate asset, so it still counts towards what you own. The name and the picture come from the loan, and the worth starts at the original loan amount for you to change. Add as Asset makes the asset and archives the loan, Just Archive the Loan only archives it, Not Now asks again next time you open the app, and Don't Ask Again leaves the loan alone. If you already have a matching asset, the sheet says so. A lease just archives, and a line of credit or HELOC is left alone, since you can borrow from it again.",
+                "• The Archived tab lists every archived account. View opens its page, Restore puts it back in the side panel (a restored loan is not archived again, and you can set its due date again by editing it), and the trash button deletes it for good.",
                 "• You can edit a single account from its page with Edit Details, or right-click it in the side panel.",
             ]),
 
@@ -394,7 +398,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Goals & Planning", symbol: "target", lines: [
-                "Planning holds your savings goals. Your loans are not here: they live in Bills & Recurring, which is why every loan needs a monthly payment and a due date, and in Liabilities, and paying a debt down faster is the Debt War Plan in the Planning War Room. The New Savings Goal button at the top right opens a window of its own. A goal you reach shows a congratulations for a few days, then moves to Archived Goals at the bottom of the page. On the Summary, the Goals · Progress card opens Planning when you click it, and the Loans · Progress card opens Liabilities.",
+                "Planning holds your savings goals. Your loans are not here: they live in Bills & Recurring, which is why every loan needs a monthly payment and a due date, and in Liabilities, and paying a debt down faster is the Debt War Plan in the Planning War Room. The New Savings Goal button at the top right opens a window of its own. A goal you reach shows a congratulations for a few days, then moves to the Archive tab, which keeps every savings goal you have reached with the amount it finished at. On the Summary, the Goals · Progress card opens Planning when you click it, and the Loans · Progress card opens Liabilities.",
                 "## Making a goal",
                 "• Choose what the goal is for, give it a name, and set a target amount and date.",
                 "• Link the goal to an account. A savings goal follows a checking or savings balance, and progress then updates by itself: it counts the balance above where it started.",

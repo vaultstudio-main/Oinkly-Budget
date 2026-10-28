@@ -56,7 +56,9 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] Investments reports open much faster: their numbers are kept ready and refreshed after changes.
 - [x] The Xcode (Debug) build has its own bundle ID and data, so it can no longer touch the copy of the app you use. Release is unchanged.
 - [x] Notes removed from the account details and the Edit and Add Account forms. The menu bar pop-up no longer has an Open Oinkly Budget button.
-- [x] The **Loan Payoff Goals** tab is removed from Planning, so Planning is one page of savings goals. Payoff goals made earlier stay in the data (and in backups) but are no longer shown anywhere.
+- [x] Planning has an **Archive** tab for reached savings goals.
+- [x] **Paid-off loans:** a loan that reaches zero is archived (not deleted) to a new **Archived** tab in Manage Accounts, with View, Restore and Delete. Student and other loans archive themselves. An auto loan or a mortgage asks first, and offers to add the car or house as a Vehicle or Real Estate asset (worth starting at the original loan amount, with the name and picture copied). A lease just archives, and a line of credit or HELOC is left alone.
+- [x] The **Loan Payoff Goals** tab is removed from Planning, so Planning is only savings goals. Payoff goals made earlier stay in the data (and in backups) but are no longer shown anywhere.
 - [x] The build is named Laser Focused, You Idiot everywhere (Ridiculous Speed is gone), and the version is 1.1.
 
 ## Feature 4: Sparkle automatic updates (flagged for 1.1)

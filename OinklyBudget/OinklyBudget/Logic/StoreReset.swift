@@ -30,6 +30,7 @@ enum StoreReset {
         ReceiptMemory.forgetAll()
         // So does the folder files were being saved to.
         DefaultSaveFolder.clear()
+        PaidOffLoans.forgetDeclined()
         UserDefaults.standard.set(true, forKey: key)
         UserDefaults.standard.synchronize()
         NSApp.terminate(nil)
@@ -43,6 +44,7 @@ enum StoreReset {
         OutlookSettings.forgetData()
         ReceiptMemory.forgetAll()
         DefaultSaveFolder.clear()
+        PaidOffLoans.forgetDeclined()
         let url = configuration.url
         let folder = url.deletingLastPathComponent()
         let manager = FileManager.default

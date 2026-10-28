@@ -700,6 +700,51 @@ enum SharedHardeningTest {
                 check("S27c a file that isn't a picture is refused", !Letterhead.saveLogo(from: Data("hello".utf8)))
             }
 
+            // S46: a paid-off loan becomes an asset or archives itself
+            MainActor.assumeIsolated {
+                check("S46 a mortgage becomes real estate", PaidOffLoans.outcome(for: .mortgage, isLease: false) == .becomesAsset(.realEstate))
+                check("S46 an auto loan becomes a vehicle, a lease just archives", PaidOffLoans.outcome(for: .autoLoan, isLease: false) == .becomesAsset(.vehicle)
+                      && PaidOffLoans.outcome(for: .autoLoan, isLease: true) == .archives)
+                check("S46 a student loan archives and a line of credit stays", PaidOffLoans.outcome(for: .studentLoan, isLease: false) == .archives
+                      && PaidOffLoans.outcome(for: .lineOfCredit, isLease: false) == .stays && PaidOffLoans.outcome(for: .homeEquity, isLease: false) == .stays)
+                let schema = Schema(versionedSchema: OinklyBudgetSchemaV9.self)
+                if let container = try? ModelContainer(for: schema, configurations: ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)) {
+                    let context = container.mainContext
+                    func loan(_ name: String, _ type: AccountType, owed: Decimal, paid: Decimal, lease: Bool = false) -> Account {
+                        let account = Account(name: name, type: type, openingBalance: -owed)
+                        account.originalLoanAmount = owed
+                        account.isLease = lease
+                        context.insert(account)
+                        if paid > 0 {
+                            context.insert(Transaction(account: account, date: .now.addingTimeInterval(-86_400), payee: "Payment", category: nil, memo: "", amount: paid, paymentType: .bankDeposit))
+                        }
+                        return account
+                    }
+                    let house = loan("House", .mortgage, owed: 100_000, paid: 100_000)
+                    let car = loan("Car", .autoLoan, owed: 20_000, paid: 20_000)
+                    let student = loan("Student", .studentLoan, owed: 5_000, paid: 5_000)
+                    let leased = loan("Leased Car", .autoLoan, owed: 9_000, paid: 9_000, lease: true)
+                    let credit = loan("Credit Line", .lineOfCredit, owed: 3_000, paid: 3_000)
+                    let owing = loan("Still Owing", .mortgage, owed: 80_000, paid: 1_000)
+                    let brandNew = Account(name: "New Loan", type: .personalLoan)
+                    context.insert(brandNew)
+                    BalanceCache.invalidate()
+                    let asked = PaidOffLoans.scan(in: context)
+                    check("S46 a paid-off mortgage and auto loan are asked about", Set(asked.map(\.name)) == ["House", "Car"])
+                    check("S46 a paid-off student loan and a lease archive themselves", student.isClosed && leased.isClosed)
+                    check("S46 asking changes nothing yet", !house.isClosed && !car.isClosed)
+                    check("S46 a line of credit, a loan still owing and a new loan are left alone", !credit.isClosed && !owing.isClosed && !brandNew.isClosed)
+                    let asset = PaidOffLoans.makeAsset(from: house, type: .realEstate, name: "123 Main St", value: 250_000, in: context)
+                    check("S46 the asset is worth what was said and the loan is archived", asset.type == .realEstate && asset.balance == 250_000 && house.isClosed)
+                    PaidOffLoans.restore(student, in: context)
+                    BalanceCache.invalidate()
+                    check("S46 a restored loan is not archived again", PaidOffLoans.scan(in: context).allSatisfy { $0.name != "Student" } && !student.isClosed)
+                    PaidOffLoans.forgetDeclined()
+                } else {
+                    check("S46 the test store opens", false)
+                }
+            }
+
             // S28: the sealed file format, and the backup copy's receipts
             let sealedPlain = root.appendingPathComponent("sealed/plain.store")
             try manager.createDirectory(at: sealedPlain.deletingLastPathComponent(), withIntermediateDirectories: true)
