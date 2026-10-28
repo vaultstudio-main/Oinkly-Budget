@@ -394,10 +394,10 @@ enum HelpContent {
             ]),
 
             Topic(title: "Goals & Planning", symbol: "target", lines: [
-                "Planning has two tabs. Goals holds your savings goals. Loan Payoff Goals holds the goals that pay a loan or card down. Your loans themselves are not here: they live in Bills & Recurring, which is why every loan needs a monthly payment and a due date, and in Liabilities. Each tab has a button at the top right, New Savings Goal or New Loan Payoff Goal, that opens a window of its own with that kind of goal already chosen. A goal you reach shows a congratulations for a few days, then moves to Archived Goals at the bottom of its tab. On the Summary, the Goals · Progress card opens the Goals tab when you click it, and the Loans · Progress card opens Liabilities.",
+                "Planning holds your savings goals. Your loans are not here: they live in Bills & Recurring, which is why every loan needs a monthly payment and a due date, and in Liabilities, and paying a debt down faster is the Debt War Plan in the Planning War Room. The New Savings Goal button at the top right opens a window of its own. A goal you reach shows a congratulations for a few days, then moves to Archived Goals at the bottom of the page. On the Summary, the Goals · Progress card opens Planning when you click it, and the Loans · Progress card opens Liabilities.",
                 "## Making a goal",
-                "• The window already knows the kind: a savings goal from the Goals tab, a loan payoff goal from the Loan Payoff Goals tab. Choose what it is for, give it a name, and set a target amount and date.",
-                "• Link the goal to an account. A savings goal follows a checking or savings balance, and a payoff goal follows a loan or card. Progress then updates by itself: a savings goal counts the balance above where it started, a payoff goal counts how far the balance has come down.",
+                "• Choose what the goal is for, give it a name, and set a target amount and date.",
+                "• Link the goal to an account. A savings goal follows a checking or savings balance, and progress then updates by itself: it counts the balance above where it started.",
                 "• A goal that isn't linked keeps its own progress. Press Make Progress on its card to add what you set aside or paid.",
                 "• Create an account from a savings goal: give it an account number, institution and the amount saved so far, which becomes the account's opening Deposit.",
                 "## The Goal section",

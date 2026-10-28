@@ -18,9 +18,9 @@ struct GoalProgressReport: View {
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
 
     var body: some View {
-        let goals = allGoals.live.filter { !$0.isArchived }
-        let saved = goals.filter { !$0.isPayoff }.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
-        let target = goals.filter { !$0.isPayoff }.reduce(Decimal(0)) { $0 + $1.targetAmount }
+        let goals = allGoals.live.filter { !$0.isArchived && !$0.isPayoff }
+        let saved = goals.reduce(Decimal(0)) { $0 + min($1.saved, $1.targetAmount) }
+        let target = goals.reduce(Decimal(0)) { $0 + $1.targetAmount }
 
         ReportPanel(title: "Goal Progress", summary: "Every open goal against its target, with the estimated finish and whether it will make its date.",
                     headline: goals.isEmpty ? nil : saved.formatted(.appCurrency), headlineNote: goals.isEmpty ? nil : "saved of \(target.formatted(.appCurrency))") {
@@ -73,8 +73,8 @@ struct GoalStatusReport: View {
     }
 
     var body: some View {
-        let goals = allGoals.live.filter { !$0.isArchived }
-        let reached = allGoals.live.filter(\.isArchived).count
+        let goals = allGoals.live.filter { !$0.isArchived && !$0.isPayoff }
+        let reached = allGoals.live.filter { $0.isArchived && !$0.isPayoff }.count
         let groups = Dictionary(grouping: goals) { statusLabel($0.progress()).text }
         let slices = [("On track", Theme.green), ("Behind", Color.orange), ("Past date", Theme.red), ("No date", Color.secondary)]
             .compactMap { name, color in groups[name].map { Slice(name: name, count: $0.count, color: color) } }
@@ -121,7 +121,7 @@ struct GoalNeededReport: View {
     }
 
     var body: some View {
-        let goals = allGoals.live.filter { !$0.isArchived && $0.progress().neededPerMonth != nil }
+        let goals = allGoals.live.filter { !$0.isArchived && !$0.isPayoff && $0.progress().neededPerMonth != nil }
         let rows = goals.flatMap { goal -> [Row] in
             let progress = goal.progress()
             return [Row(name: goal.name, kind: "Needed", amount: (progress.neededPerMonth ?? 0).doubleValue),

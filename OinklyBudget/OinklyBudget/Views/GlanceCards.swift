@@ -333,7 +333,7 @@ struct GoalsProgressCard: View {
 
     private var goals: [Goal] {
         // A debt goal that follows a loan or card is already shown with the loans, so it is left out here.
-        let open = allGoals.live.filter { !$0.isArchived && !($0.isPayoff && $0.isLinked) }
+        let open = allGoals.live.filter { !$0.isArchived && !$0.isPayoff }
         let dated = open.filter { $0.targetDate != nil }.sorted { $0.targetDate! < $1.targetDate! }
         return dated + open.filter { $0.targetDate == nil }.sorted { $0.name < $1.name }
     }
@@ -355,7 +355,7 @@ struct GoalsProgressCard: View {
         }
         // Clicking the card opens Planning on its Goals tab, from the top.
         .contentShape(Rectangle())
-        .onTapGesture { PlanningView.open(.goals) }
+        .onTapGesture { PlanningView.open() }
         .help("Open Goals in Planning")
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Opens Goals in Planning")

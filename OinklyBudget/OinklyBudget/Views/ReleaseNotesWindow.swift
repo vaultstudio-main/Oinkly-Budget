@@ -47,6 +47,9 @@ enum ReleaseNotes {
             ("Printing", [
                 "Every account page has a new Print button beside Print PDF. It sends the statement for the period you choose to a real printer through the Mac's print window, with a preview. Print PDF still saves a PDF file.",
             ]),
+            ("Planning", [
+                "The Loan Payoff Goals tab is gone, so Planning is one page of savings goals. Paying a debt down faster is the Debt War Plan in the Planning War Room. Loan payoff goals you made before are kept in your data but are no longer shown.",
+            ]),
             ("Charts", [
                 "Every circle graph is now a bar or line chart, so amounts and shares are easy to compare.",
             ]),

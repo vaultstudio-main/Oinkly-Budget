@@ -68,7 +68,7 @@ struct AccountDetailsPanel: View {
 
     /// The open goal that follows this account, if any.
     private var followingGoal: Goal? {
-        allGoals.live.first { $0.followedAccount?.persistentModelID == account.persistentModelID }
+        allGoals.live.first { !$0.isPayoff && $0.followedAccount?.persistentModelID == account.persistentModelID }
     }
 
     /// The goal that follows this account, laid out the same way on every kind of account: a divider, then its own grid

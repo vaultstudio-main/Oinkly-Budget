@@ -180,7 +180,7 @@ struct GoalFinishDatesReport: View {
     @Query(sort: \Goal.createdAt) private var allGoals: [Goal]
 
     var body: some View {
-        let goals = allGoals.live.filter { !$0.isArchived }
+        let goals = allGoals.live.filter { !$0.isArchived && !$0.isPayoff }
         let calendar = Calendar.current
 
         ReportPanel(title: "Goal Finish Dates", summary: "When each goal lands at your current pace, against the date you set.") {

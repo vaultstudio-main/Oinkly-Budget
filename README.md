@@ -61,7 +61,7 @@ If you would rather build it yourself, see [Building from source](#building-from
 
 **Budgets that match how you spend.** Monthly and weekly budgets by category, grouped into folders, with cash budgets and tax-related categories. Icons and colours for every category, bill and goal.
 
-**Planning.** Savings goals and loan-payoff goals tied to real accounts, so progress follows the balance by itself. A **Planning War Room** that sets your plan against what is really happening, with a War Plan sheet to plan a month line by line, mark the lines that go to your Debt or Savings War Plan, and see when spare money can safely come out.
+**Planning.** Savings goals tied to real accounts, so progress follows the balance by itself. A **Planning War Room** that sets your plan against what is really happening, with a War Plan sheet to plan a month line by line, mark the lines that go to your Debt or Savings War Plan, and see when spare money can safely come out.
 
 **Reports and overviews.** A Summary page, Liabilities with payoff progress for loans and credit cards, Investments, and reports with projections for net worth, cash flow, debt, goals, budgets, spending, income and bills.
 

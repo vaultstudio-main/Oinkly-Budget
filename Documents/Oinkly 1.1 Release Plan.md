@@ -56,6 +56,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] Investments reports open much faster: their numbers are kept ready and refreshed after changes.
 - [x] The Xcode (Debug) build has its own bundle ID and data, so it can no longer touch the copy of the app you use. Release is unchanged.
 - [x] Notes removed from the account details and the Edit and Add Account forms. The menu bar pop-up no longer has an Open Oinkly Budget button.
+- [x] The **Loan Payoff Goals** tab is removed from Planning, so Planning is one page of savings goals. Payoff goals made earlier stay in the data (and in backups) but are no longer shown anywhere.
 - [x] The build is named Laser Focused, You Idiot everywhere (Ridiculous Speed is gone), and the version is 1.1.
 
 ## Feature 4: Sparkle automatic updates (flagged for 1.1)

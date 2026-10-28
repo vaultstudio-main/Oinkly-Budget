@@ -164,7 +164,7 @@ struct OinklyBudgetApp: App {
         .restorationBehavior(.disabled)
 
         WindowGroup("New Goal", id: "new-goal", for: NewGoalRequest.self) { $request in
-            NewGoalWindow(payoff: request?.payoff ?? false)
+            NewGoalWindow()
                 .savesChangesImmediately()
                 .appAppearance()
         }
