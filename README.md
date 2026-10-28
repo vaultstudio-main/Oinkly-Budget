@@ -39,7 +39,7 @@ Nothing else changed: your data stays on your Mac, and your data is kept as it i
 
 ### Updates
 
-Oinkly Budget is a small, independent project. The aim is to keep improving it with regular, careful updates, and builds will keep coming as time allows. There is no fixed schedule, so please don't expect a release every week, but the project is active and will keep moving. Each release is listed in the app under **Help ▸ Release Notes**.
+Oinkly Budget is a small, independent project. The aim is to keep improving it with regular, careful updates, and builds will keep coming as time allows. There is no fixed schedule, so please don't expect a release every week, but the project is active and will keep moving. What is new in the version you have is in the app under **Help ▸ Release Notes**; every release is listed on the website's Updates page.
 
 ---
 
@@ -69,7 +69,7 @@ If you would rather build it yourself, see [Building from source](#building-from
 
 **Menu bar and widget.** An Upcoming Transactions list (bills, repeating transactions, reminders) in the menu bar and as a widget, without amounts.
 
-The full list, release by release, is in **Help ▸ Release Notes** inside the app.
+What is new in 1.1 is in **Help ▸ Release Notes** inside the app.
 
 ---
 
