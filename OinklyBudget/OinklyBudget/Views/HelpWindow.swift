@@ -32,7 +32,7 @@ enum HelpContent {
     static let groups: [Group] = [
         Group(title: "Start Here", topics: [
             Topic(title: "Welcome", symbol: "hand.wave", lines: [
-                "Oinkly Budget keeps your accounts, bills, budgets, goals and investments on your own Mac. There is no account to create and nothing is sent anywhere.",
+                "Oinkly Budget keeps your accounts, bills, budgets, goals and investments on your own Mac. There is no account to create, and nothing about you or your money is sent anywhere.",
                 "## Your first few minutes",
                 "• Add your accounts. The setup screen has the same tabs as Manage Accounts: a tab for each kind of account, smaller tabs for each type under it, and an Add Account button that starts on the tab you are on. Then it asks for your budgets: a monthly amount for each category, or zero for none. Suggested Amounts and Clear All give you a start, and Add Your Own makes a category of your own. Manage Accounts at the bottom of the side panel lets you add more accounts any time.",
                 "• Record what happens: File ▸ New Transaction for everyday money in and out, New Credit Card Charge for cards, ATM Withdrawal for cash.",
@@ -495,6 +495,15 @@ enum HelpContent {
                 "• Settings ▸ General ▸ Background turns the menu bar item on or off and starts the app when you log in. At login it starts quietly in the menu bar with no window; click the app in the Dock when you want the window. If something needs your attention at start-up, the window opens by itself. With the menu bar item off, the window opens at login instead.",
             ]),
 
+            Topic(title: "Updates", symbol: "arrow.triangle.2.circlepath.circle", lines: [
+                "Oinkly Budget can tell you when a newer version is out. It never does this without your say-so.",
+                "• The second time you open the app it asks once: Check for updates automatically? Choose Check Automatically and it looks a little after it starts, then about once a day while it is open. Choose Don't Check and it never looks by itself.",
+                "• To look right now, choose Oinkly Budget ▸ Check for Updates… or press Check for Updates Now in Settings ▸ General ▸ Updates. The switch there turns automatic checking on or off any time.",
+                "• When a newer version is found, a window shows what is new, with a link to the full release notes. Install Update downloads it, installs it and reopens the app. Remind Me Later asks again another day, and Skip This Version leaves that one alone.",
+                "• Only an update signed with Oinkly Budget's own key is installed. A file that was changed on the way, or that came from somewhere else, is refused.",
+                "• A check reads one small list on vaultstudio.dev. It sends the version of Oinkly Budget and the version of macOS, nothing about you, your data or your money. As with any web address, the site can see your internet address. The download itself comes from the project's page on GitHub.",
+                "• An update replaces the app, not your data, which stays where it is. It is still a good idea to save a .pig backup before you update.",
+            ]),
             Topic(title: "Reminders", symbol: "bell", lines: [
                 "Reminders are notifications from macOS, so they arrive even when Oinkly Budget isn't open. The first time one is planned, macOS asks if it may show notifications.",
                 "## Bill reminders",
@@ -520,7 +529,7 @@ enum HelpContent {
 
             Topic(title: "Settings", symbol: "gearshape", lines: [
                 "Open Settings with Oinkly Budget ▸ Settings… (⌘,).",
-                "• General: menu bar and login options, appearance (light, dark or system), currency, the default paper size and style for PDFs, and the letterhead.",
+                "• General: menu bar and login options, updates, appearance (light, dark or system), currency, the default paper size and style for PDFs, and the letterhead.",
                 "• Reminders: bill reminders and your own custom reminders.",
                 "• Accounts: add, edit and delete accounts.",
                 "• Categories: budgets, tax-related and custom categories.",
@@ -584,7 +593,7 @@ enum HelpContent {
             ]),
 
             Topic(title: "Your Data & Privacy", symbol: "lock.shield", lines: [
-                "Everything stays on your Mac. Oinkly Budget has no account, no sign-in and no online sync.",
+                "Everything stays on your Mac. Oinkly Budget has no account, no sign-in and no online sync. The only thing it ever does online is look for a newer version of itself, and only if you say yes (see Updates). That check sends the app and macOS version, nothing about you or your money.",
                 "• Account and card numbers show masked until you press Show.",
                 "• The side panel never shows balances. They appear once you open an account.",
                 "• Reminders and the widget never show amounts. The widget reads a small file with names and dates only.",

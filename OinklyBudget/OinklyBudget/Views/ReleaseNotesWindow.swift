@@ -48,6 +48,11 @@ enum ReleaseNotes {
             ("Printing", [
                 "Every account page has a new Print button beside Print PDF. It sends the statement for the period you choose to a real printer through the Mac's print window, with a preview. Print PDF still saves a PDF file.",
             ]),
+            ("Updates", [
+                "Oinkly Budget can now tell you when a new version is out. The second time you open it, it asks once whether to check for updates automatically. Say no and it never looks by itself. Oinkly Budget ▸ Check for Updates… and Settings ▸ General ▸ Updates look on request.",
+                "When there is one, a window shows what is new and a link to the full release notes, and Install Update downloads it, installs it and reopens the app. Only an update signed with Oinkly Budget's own key is installed.",
+                "A check reads one small list on vaultstudio.dev and sends only the app version and the macOS version, nothing about you or your money. It is the only thing the app does online. The download comes from the project's page on GitHub. Updates start with the release after 1.1, because 1.0.1 has no update check.",
+            ]),
             ("Planning", [
                 "The Loan Payoff Goals tab is gone, so Planning is only savings goals. Paying a debt down faster is the Debt War Plan in the Planning War Room. Loan payoff goals you made before are kept in your data but are no longer shown.",
                 "Planning has an Archive tab. A savings goal you reach is congratulated for a few days on the Goals tab and then moves to the Archive tab, with the amount it finished at.",

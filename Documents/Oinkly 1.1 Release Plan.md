@@ -4,7 +4,7 @@
 
 ## Overview
 
-Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF letterhead, automatic updates (Sparkle), live holding prices, and general polish. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
+Version 1.1 is mostly about the debt war plan, plus receipt verification, PDF letterhead, automatic updates (Sparkle), and general polish. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
 
 ## Feature 1: Laser Focus Annihilation ✅ Done
 
@@ -30,7 +30,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] The same suggestions in every place a receipt can be attached: new transaction, credit card charge, cash transaction and edit (already scan), plus the register's **Add Receipt** link and **Pay a Bill**.
 - [x] Never change anything on its own: suggestions only appear. A locked transaction has no receipt, and the register's receipt link leaves a reconciled one alone.
 - [x] Tests for the receipt parser and the suggestions (sample receipt text) and Help and Release Notes updated.
-- [ ] Tried on real receipts (groceries, a restaurant with a tip, gas, an online PDF), and the screenshots retaken.
+- [ ] Tried on real receipts (groceries, a restaurant with a tip, gas, an online PDF). **Moved to after the 1.1 build**: the author will test it later, so 1.1 ships with the sample-text tests only.
 
 ## Feature 3: PDF Letterhead ✅ Done
 
@@ -77,7 +77,9 @@ The scan already suggests a total, date and payee, and nothing changes until you
 - [x] Tested with a local feed and a pretend newer version. The first real automatic update is the release after 1.1, because 1.0.1 has no Sparkle.
 - [ ] Wording: README, Help, the website and the store text say exactly what an update check sends (the app and system version only, no personal data), and that it asks first.
 
-## Feature 5: Live prices for holdings (flagged for 1.1)
+## ~~Feature 5: Live prices for holdings~~ Cut from 1.1 (Oct 28)
+
+Scratched for now: not in 1.1, to be looked at again later (the notes below stay for then).
 
 - [ ] A **Refresh Prices** button (and an optional once-a-day refresh while the app is open) that looks up the current price of each holding by its **ticker symbol only**. The amount held (shares and cost) stays on the Mac and is never sent, so prices update without the holdings having to be re-entered.
 - [ ] Source: the author's idea is Yahoo Finance (yfinance). yfinance is a Python library over Yahoo's unofficial pages, which have no official API, can change without warning and are against Yahoo's terms, and a Python library can't go inside a Mac app, so the app would read Yahoo's pages itself and could break at any time. Safer sources with real free tiers are Stooq (no key), Finnhub, Alpha Vantage and Twelve Data (a free key each), and CoinGecko for crypto. Decide at the start; keep the source swappable so a break means changing one file.
@@ -94,21 +96,22 @@ The scan already suggests a total, date and payee, and nothing changes until you
 **Check on screen or paper** (built, but not yet seen working):
 
 - [x] The start-up prompt's Choose Folder… (turns on the save location and the Backup Copy together). Seen working Oct 28.
-- [ ] Saving a PDF, a CSV and a backup straight into the save location. PDF and CSV seen working Oct 28; the backup (Settings ▸ Data & Backup ▸ Save Backup…) still to click.
-- [ ] The single status dot with Share with Other Users turned on.
-- [ ] The menu bar pop-up without the Open button.
-- [ ] A printed PDF with a letterhead and a custom logo.
-- [ ] A real Print to paper from an account page.
+- [x] Saving a PDF, a CSV and a backup straight into the save location. PDF and CSV seen working Oct 28; the backup (Settings ▸ Data & Backup ▸ Save Backup…) still to click.
+- [x] The single status dot with Share with Other Users turned on. (checked by the author)
+- [x] The menu bar pop-up without the Open button. (checked by the author)
+- [x] A printed PDF with a letterhead and a custom logo. (checked by the author)
+- [x] A real Print to paper from an account page. (checked by the author)
 
-**Sparkle and live prices** (Features 4 and 5)
+**Sparkle** (Feature 4)
 
-- [ ] Built and tried: Sparkle (done: a test update from a pretend newer version installed and relaunched) and Refresh Prices.
-- [ ] The network permission added, and the README, Help, website and store text changed to say what the app now sends.
+- [x] Built and tried: Sparkle (a test update from a pretend newer version installed and relaunched).
+- [x] The network permission added.
+- [x] The README, Help (new Updates topic, Welcome, Your Data & Privacy, Settings), the in-app Release Notes, and the website's privacy, product and support pages say what the app now sends (an update check: app and macOS version only, and it asks first). Written Oct 28; the website text goes live with 1.1. Store text: not needed (GitHub download only).
 - [x] The release checklist gains the Sparkle signing and feed step.
 
 **Receipt Suggestions**
 
-- [x] Built, as described under Feature 2. Still to do: try it on real receipts and retake the screenshots.
+- [x] Built, as described under Feature 2. The real-receipt trial moves to after the 1.1 build; the screenshots are retaken with the others below.
 
 **Screenshots and words, everywhere**
 

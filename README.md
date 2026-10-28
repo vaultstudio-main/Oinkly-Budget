@@ -4,7 +4,7 @@
 
 **Your money, kept personal.** A free, open-source personal finance app for the Mac.
 
-Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create, no sign-in and no network use: your data never leaves your computer unless you export it yourself.
+Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create and no sign-in, and your data never leaves your computer unless you export it yourself. The one thing the app can do online is look for a newer version of itself, and only if you say yes.
 
 > **Current version: 1.1, "Laser Focused, You Idiot"** in the source here. The newest download is still 1.0.1 until a 1.1 build is published. Free and open source under the GNU General Public License v3.
 
@@ -24,7 +24,7 @@ The roadmap, the plans for future releases and the other planning notes are kept
 
 ### Coming in 1.1: Laser Focused, You Idiot
 
-The source is already at 1.1. It adds a Savings War Plan, Laser Focus Annihilation for debts and savings, a reworked Planning War Room with a Strategy Plan tab and many new charts (and no circle graphs), Receipt Verification, and a PDF Letterhead. The full list is in **Help ▸ Release Notes**. Builds are published in stages, so the download below stays at 1.0.1 until then.
+The source is already at 1.1. It adds a Savings War Plan, Laser Focus Annihilation for debts and savings, a reworked Planning War Room with a Strategy Plan tab and many new charts (and no circle graphs), Receipt Verification, a PDF Letterhead, a Print button for a real printer, paid-off loans that archive themselves, a Planning Archive, a default save location, and automatic update checks that ask first. The full list is in **Help ▸ Release Notes**. Builds are published in stages, so the download below stays at 1.0.1 until then.
 
 ### Latest download: 1.0.1
 
@@ -75,7 +75,8 @@ The full list, release by release, is in **Help ▸ Release Notes** inside the a
 
 ## Privacy
 
-- No network access, no analytics, no accounts, nothing sent anywhere.
+- No analytics, no accounts, and nothing about you or your money is sent anywhere.
+- The only network use is the optional **update check**. The app asks once, the second time it opens, and never checks without a yes (or when you press **Check for Updates…**). A check reads one small file on vaultstudio.dev and sends only the app version and the macOS version; like any web request, the site can see your internet address. Updates download from this project's GitHub release and are installed only if they are signed with Oinkly Budget's own key.
 - Your data is stored in a local database on your Mac.
 - The app does no encryption of its own: the data file is plain, so rely on your Mac's own protection (FileVault and your login) for that.
 - Reminders, saved import formats and picture colours are stored with your data, so a backup carries them.
