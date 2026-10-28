@@ -68,6 +68,17 @@ struct MonthOutlookView: View {
             UserDefaults.standard.set(tab == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey)
         }
         .onChange(of: tab) { _, new in UserDefaults.standard.set(new == .warPlan ? "warPlan" : "outlook", forKey: OutlookSettings.tabKey) }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            guard let action = note.userInfo?["action"] as? String, action.hasPrefix("outlookTab:") else { return }
+            switch action.dropFirst("outlookTab:".count) {
+            case "warPlan": tab = .warPlan
+            case "debt": tab = .debtWarPlan
+            case "savings": tab = .savingsWarPlan
+            default: tab = .outlook
+            }
+        }
+        #endif
         .onChange(of: month) { _, new in plan = WarPlanData.load(for: new) }
         .onChange(of: plan) { _, new in new.save(for: month) }
         // Tagging a transaction in the settings window changes the saved plan, so the page picks it up.

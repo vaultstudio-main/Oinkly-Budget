@@ -104,11 +104,10 @@ private struct ScreenshotRun {
     /// Brings the app forward. A window of an app that isn't in front is drawn in its inactive colors (a black sidebar
     /// selection, gray buttons), so this is done before every picture.
     func bringForward(_ window: NSWindow? = nil) async {
-        if !NSApp.isActive || window?.isKeyWindow == false {
-            NSApp.activate(ignoringOtherApps: true)
-            (window ?? Self.mainWindowRef)?.makeKeyAndOrderFront(nil)
-            await wait(0.6)
-        }
+        // Every time, not only when the app looks inactive: the selected row of the side panel is drawn gray in a window that isn't the key one.
+        NSApp.activate(ignoringOtherApps: true)
+        (window ?? Self.mainWindowRef)?.makeKeyAndOrderFront(nil)
+        await wait(0.6)
     }
 
     func mainWindow() -> NSWindow? {
@@ -145,17 +144,78 @@ private struct ScreenshotRun {
         return CommandLine.arguments[flag + 1]
     }
 
+    /// A picture of the window from the window server, as a PNG, or nil if it can't be had. `CGWindowListCreateImage` is looked up by
+    /// name because the newer SDKs mark it unavailable.
+    static func compose(_ window: NSWindow) -> Data? {
+        typealias Create = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
+        guard window.windowNumber > 0, let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImage") else { return nil }
+        let create = unsafeBitCast(symbol, to: Create.self)
+        // Hide what a person would not expect in a picture of the app: the three window buttons, the title of the main window and the scroll
+        // bars. The window redraws on the next turn of the run loop, so give it a moment.
+        let buttons = [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].compactMap { window.standardWindowButton($0) }
+        buttons.forEach { $0.isHidden = true }
+        let titleWas = window.title
+        if window === Self.mainWindowRef { window.title = "" }
+        window.makeKeyAndOrderFront(nil)
+        // The title is a label in the window's frame, and the app puts it back when the title is set, so the label itself is hidden.
+        var titleLabels: [NSView] = []
+        func findTitle(_ view: NSView) {
+            if let label = view as? NSTextField, label.stringValue == titleWas, !titleWas.isEmpty, window === Self.mainWindowRef, !label.isHidden { titleLabels.append(label) }
+            view.subviews.forEach(findTitle)
+        }
+        if let frame = window.contentView?.superview { findTitle(frame) }
+        titleLabels.forEach { $0.isHidden = true }
+        // The selected row of the side panel is blue only while the side panel has the keyboard focus, so give it the focus.
+        if window === Self.mainWindowRef {
+            var sidebar: NSTableView?
+            func findSidebar(_ view: NSView) {
+                if sidebar == nil, let table = view as? NSTableView, table.frame.width < 450, table.frame.height > 300 { sidebar = table }
+                view.subviews.forEach(findSidebar)
+            }
+            if let root = window.contentView { findSidebar(root) }
+            if let sidebar { window.makeFirstResponder(sidebar) }
+        }
+        var scrollers: [(NSScrollView, Bool, Bool)] = []
+        func walk(_ view: NSView) {
+            if let scroll = view as? NSScrollView { scrollers.append((scroll, scroll.hasVerticalScroller, scroll.hasHorizontalScroller)); scroll.hasVerticalScroller = false; scroll.hasHorizontalScroller = false }
+            view.subviews.forEach(walk)
+        }
+        if let root = window.contentView?.superview { walk(root) }
+        window.displayIfNeeded()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.4))
+        defer {
+            buttons.forEach { $0.isHidden = false }
+            window.title = titleWas
+            titleLabels.forEach { $0.isHidden = false }
+            scrollers.forEach { $0.0.hasVerticalScroller = $0.1; $0.0.hasHorizontalScroller = $0.2 }
+        }
+        // 8 = only this window, 1 | 8 = without its shadow and at the screen's full resolution.
+        guard let image = create(.null, 8, UInt32(window.windowNumber), 1 | 8)?.takeRetainedValue() else { return nil }
+        return NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:])
+    }
+
     func capture(_ window: NSWindow, as name: String) {
         if let only, !name.hasPrefix(only) { return }
         // The frame view includes the title bar and toolbar, such as the tabs of the Settings window.
         // The main window is its own content. Others are taken with their frame, so the title bar and tabs show.
-        let source = window === Self.mainWindowRef ? window.contentView : (window.contentView?.superview ?? window.contentView)
-        guard let view = source, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
-            NSLog("SHOT: could not capture \(name)")
-            return
+        // The window as the window server draws it, because drawing the views offscreen leaves the selected row of the side panel as a
+        // black bar with no name. The three window buttons are hidden for the moment so they don't sit on top of the side panel.
+        // Falls back to drawing the views if the window server won't give the picture.
+        let png: Data
+        if let composed = Self.compose(window) {
+            png = composed
+        } else {
+            let source = window === Self.mainWindowRef ? window.contentView : (window.contentView?.superview ?? window.contentView)
+            guard let view = source, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+                NSLog("SHOT: could not capture \(name)")
+                return
+            }
+            view.cacheDisplay(in: view.bounds, to: rep)
+            guard let data = rep.representation(using: .png, properties: [:]) else { return }
+            png = data
+            NSLog("SHOT: \(name) drawn offscreen")
         }
-        view.cacheDisplay(in: view.bounds, to: rep)
-        guard let png = rep.representation(using: .png, properties: [:]) else { return }
+        let rep = NSBitmapImageRep(data: png)!
         try? png.write(to: folder.appendingPathComponent(name + ".png"))
         NSLog("SHOT: \(name) \(rep.pixelsWide)x\(rep.pixelsHigh)")
     }
@@ -291,6 +351,12 @@ private struct ScreenshotRun {
         await pageShot("liabilities", as: "page-liabilities")
         await pageShot("investments", as: "page-investments")
         await pageShot("planning", as: "page-planning")
+        post("planningTab:archive")
+        await wait(1.5)
+        await bringForward(window)
+        capture(window, as: "page-planning-archive")
+        post("planningTab:goals")
+        await wait(0.8)
         await sheetShot(open: "goalDetail", as: "sheet-goal-detail")
         await sheetShot(open: "addGoal", as: "sheet-add-goal")
         await pageShot("budgets", as: "page-budgets")
@@ -299,8 +365,53 @@ private struct ScreenshotRun {
         await bringForward(window)
         capture(window, as: "page-budgets-weekly")
         post("budgetsTab:monthly")
+        // A believable War Plan for this month, so the Strategy Plan and the Monthly War Plan have something to show. It is written to the
+        // debug app's own settings and cleared again after the pictures.
+        let calendar = Calendar.current
+        let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: .now)) ?? .now
+        func dayOfMonth(_ day: Int) -> Date { calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth) ?? firstOfMonth }
+        let demoPlan = WarPlanData(items: [
+            WarPlanItem(title: "Paycheck", date: dayOfMonth(1), amount: 4500, isIncome: true, origin: "income", payee: "Acme Corp"),
+            WarPlanItem(title: "Home Mortgage", date: dayOfMonth(1), amount: 1850, isIncome: false, origin: "bill"),
+            WarPlanItem(title: "Groceries", date: dayOfMonth(5), amount: 600, isIncome: false, origin: "budget"),
+            WarPlanItem(title: "Auto Insurance", date: dayOfMonth(6), amount: 142, isIncome: false, origin: "bill"),
+            WarPlanItem(title: "Paycheck", date: dayOfMonth(15), amount: 4500, isIncome: true, origin: "income", payee: "Acme Corp"),
+            WarPlanItem(title: "Extra on the student loan", date: dayOfMonth(15), amount: 300, isIncome: false, warPlan: "debt"),
+            WarPlanItem(title: "House Down Payment", date: dayOfMonth(15), amount: 334, isIncome: false, warPlan: "savings"),
+            WarPlanItem(title: "Cell Phone", date: dayOfMonth(28), amount: 85, isIncome: false, origin: "bill"),
+        ])
+        demoPlan.save(for: OutlookSettings.month(from: 0))
         await pageShot("outlook", as: "page-month-outlook")
-        await pageShot("manageAccounts", as: "page-manage-accounts")
+        for (tab, name) in [("warPlan", "page-war-plan"), ("debt", "page-debt-war-plan"), ("savings", "page-savings-war-plan")] {
+            post("outlookTab:\(tab)")
+            await wait(2)
+            await bringForward(window)
+            capture(window, as: name)
+        }
+        post("outlookTab:strategy")
+        await wait(0.8)
+        WarPlanData().save(for: OutlookSettings.month(from: 0))
+        // Manage Accounts is a window of its own.
+        go("manageAccounts")
+        if let manage = await waitForWindow(titled: "Manage Accounts") {
+            manage.setFrameOrigin(NSPoint(x: 120, y: 120))
+            await wait(1.5)
+            await bringForward(manage)
+            capture(manage, as: "page-manage-accounts")
+            // The demo data has no paid-off loan yet, so the truck loan is archived for this one picture.
+            let truck = try? context.fetch(FetchDescriptor<Account>(predicate: #Predicate { $0.name == "Tacoma Truck Loan" })).first
+            truck?.isClosed = true
+            context.saveNow()
+            post("accountsTab:archived")
+            await wait(1.5)
+            await bringForward(manage)
+            capture(manage, as: "page-manage-accounts-archived")
+            post("accountsTab:group")
+            truck?.isClosed = false
+            context.saveNow()
+            manage.close()
+            await wait(0.8)
+        }
 
         // Bills & Recurring
         await pageShot("bills", as: "page-bills")

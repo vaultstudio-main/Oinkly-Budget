@@ -18,7 +18,7 @@ private struct UpdatesSettingsSection: View {
         } header: {
             Text("Updates")
         } footer: {
-            Text("Looks on GitHub for a newer version of Oinkly Budget and offers it when there is one. Only the app's version and the macOS version are sent, nothing about you or your data. An update is only installed if it is signed with Oinkly Budget's own key.")
+            Text("Looks at vaultstudio.dev for a newer version of Oinkly Budget and offers it when there is one. Only the app's version and the macOS version are sent, nothing about you or your data. An update is only installed if it is signed with Oinkly Budget's own key.")
         }
     }
 }

@@ -40,6 +40,13 @@ struct PlanningView: View {
             GoalsView(kind: .save, page: tab == .goals ? .goals : .archive)
         }
         .background(Theme.background)
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            if let action = note.userInfo?["action"] as? String, action.hasPrefix("planningTab:") {
+                tab = action.hasSuffix("archive") ? .archive : .goals
+            }
+        }
+        #endif
     }
 }
 

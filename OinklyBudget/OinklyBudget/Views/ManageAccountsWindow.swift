@@ -140,6 +140,11 @@ struct AccountTabsView<Trailing: View>: View {
             .background(.bar)
         }
         .background(Theme.background)
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .piggybankScreenshotAction)) { note in
+            if let action = note.userInfo?["action"] as? String, action.hasPrefix("accountsTab:") { showsArchived = action.hasSuffix("archived") }
+        }
+        #endif
         .sheet(isPresented: $isAdding) { AccountEditView(account: nil, initialType: kind ?? tab.accountTypes.first ?? .checking) }
         .sheet(item: $editing) { AccountEditView(account: $0) }
         .sheet(isPresented: $reviewingArchive) { ArchiveReviewSheet() }
