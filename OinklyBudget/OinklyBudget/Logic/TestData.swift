@@ -144,6 +144,17 @@ enum TestData {
         auto.interestRate = 5.9
         auto.loanStartDate = cal.date(byAdding: .year, value: -3, to: today)
         auto.payoffDate = cal.date(byAdding: .year, value: 2, to: today)
+        // A truck with one payment left: paying that last $600 (Pay a Bill on its due date) pays the loan off, which shows the sheet that
+        // offers to add the truck as an asset. It has no matching asset yet, so that sheet has nothing to warn about.
+        let truck = account("Tacoma Truck Loan", .autoLoan, -(600 * Decimal(monthsOfHistory) + 600))
+        truck.institution = "Summit Auto Finance"
+        truck.loanPurpose = "2022 Toyota Tacoma"
+        truck.vin = "3TMCZ5AN5NM123456"
+        truck.originalLoanAmount = 22_000
+        truck.monthlyPayment = 600
+        truck.interestRate = 4.9
+        truck.loanStartDate = cal.date(byAdding: .month, value: -(monthsOfHistory + 10), to: today)
+        truck.payoffDate = cal.date(byAdding: .month, value: 1, to: today)
         let mortgage = account("Home Mortgage", .mortgage, -241_000)
         mortgage.institution = "Lakeside Mortgage"
         mortgage.loanPurpose = "123 Maple Street"
@@ -390,9 +401,10 @@ enum TestData {
         LoanBill.sync(card, dueDate: day(11), in: context)
         LoanBill.sync(storeCard, dueDate: day(21), in: context)
         LoanBill.sync(auto, dueDate: day(6), in: context)
+        LoanBill.sync(truck, dueDate: day(4), in: context)
         LoanBill.sync(mortgage, dueDate: day(-2), in: context)
         LoanBill.sync(student, dueDate: day(24), in: context)
-        for (loan, amount) in [(auto, Decimal(412)), (mortgage, Decimal(1_640)), (student, Decimal(190))] {
+        for (loan, amount) in [(auto, Decimal(412)), (truck, Decimal(600)), (mortgage, Decimal(1_640)), (student, Decimal(190))] {
             for back in 1...monthsOfHistory {
                 let date = monthDay(back, cal.component(.day, from: loan.loanBill?.dueDate ?? today))
                 let paid = BillPayment.record(from: checking, debt: loan, bill: loan.loanBill, amount: amount, date: date,
@@ -418,7 +430,6 @@ enum TestData {
 
         // Goals. Most follow an account, so their progress moves on its own as you add transactions. Two don't, and
         // one is already reached.
-        func owed(_ account: Account) -> Decimal { max(-account.balance, 0) }
         let emergency = Goal(name: "Emergency Fund", targetAmount: 30_000, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: 14, to: today),
                              symbol: "shield.lefthalf.filled", colorHex: "34C759", notes: "Six months of spending.", account: savings,
                              categoryName: "Emergency Fund")
@@ -429,19 +440,14 @@ enum TestData {
         let downPayment = Goal(name: "House Down Payment", targetAmount: 40_000, startingAmount: max(downFund.balance(asOf: day(-90)), 0),
                          targetDate: cal.date(byAdding: .year, value: 3, to: today), symbol: "house", colorHex: "AF52DE",
                          account: downFund, categoryName: "Home Down Payment")
-        let cardStart = owed(card) + 900
-        let payoffCard = Goal(name: "Pay Off Sapphire Card", targetAmount: cardStart, startingAmount: cardStart,
-                              targetDate: cal.date(byAdding: .month, value: 8, to: today), symbol: "creditcard", colorHex: "FF2D55",
-                              account: card, kind: .payoff, goalBalance: 0, categoryName: "Credit Card")
-        let studentStart = owed(student) + 2_200
-        let payoffStudent = Goal(name: "Student Loan Gone", targetAmount: studentStart, startingAmount: studentStart,
-                                 targetDate: cal.date(byAdding: .year, value: 4, to: today), symbol: "graduationcap", colorHex: "5AC8FA",
-                                 account: student, kind: .payoff, goalBalance: 0, categoryName: "Student Loan")
         let wedding = Goal(name: "Anniversary Gift", targetAmount: 1_200, startingAmount: 150, targetDate: cal.date(byAdding: .month, value: 5, to: today),
                            symbol: "heart", colorHex: "FF2D55", notes: "Added by hand, no account.", categoryName: "Holidays & Gifts")
         let laptop = Goal(name: "New Laptop", targetAmount: 1_500, startingAmount: 0, targetDate: cal.date(byAdding: .month, value: -1, to: today),
                           symbol: "laptopcomputer", colorHex: "007AFF", categoryName: "Gadgets & Tech")
-        for goal in [emergency, trip, downPayment, payoffCard, payoffStudent, wedding, laptop] { context.insert(goal) }
+        for goal in [emergency, trip, downPayment, wedding, laptop] { context.insert(goal) }
+        // The laptop goal was reached ten days ago, so it is already in Planning's Archive tab.
+        laptop.completedAt = cal.date(byAdding: .day, value: -10, to: today)
+        laptop.finalAmount = 1_500
 
         // Repeating transactions: one that has come due (so it makes a pending entry), one coming up, a deposit and a reminder.
         let calendar = Calendar.current
