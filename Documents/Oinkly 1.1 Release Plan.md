@@ -69,7 +69,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 **Pieces to build:**
 
 - [x] The Sparkle 2 package added to the Xcode project.
-- [x] The updater starts at launch in a Release build only (a Debug build only with a test feed set). **Check for Updates…** in the app menu, and a switch in Settings for automatic checks.
+- [x] The updater starts at launch in every build, so it also shows in the Xcode build (a Debug build can use a local test feed). **Check for Updates…** in the app menu, and a switch in Settings for automatic checks.
 - [x] Project settings: the feed address (`SUFeedURL`), the public signing key (`SUPublicEDKey`), the installer helper switch for the sandbox (`SUEnableInstallerLauncherService`), the network permission, and the two mach-lookup permissions Sparkle's helpers need (`<bundle ID>-spks` and `-spki`).
 - [x] The signing key (back up the private key: still to do by you): made with Sparkle's `generate_keys`; the private half stays in your login Keychain and **must be backed up** (if it is lost, existing installs can't be updated). The public half goes in the app.
 - [x] `appcast.xml` in the repo (with `Tools/update-appcast.py` to add each release) root, one entry per release: version, build, download link (the .dmg on the GitHub release), signature, size and the release page for what's new.

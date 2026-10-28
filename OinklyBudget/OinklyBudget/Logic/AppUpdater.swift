@@ -23,13 +23,9 @@ final class AppUpdater: NSObject {
     @ObservationIgnored private var observation: NSKeyValueObservation?
     #endif
 
-    /// Starts looking after launch. In a Debug build this does nothing unless `-sparkleTestFeed <address>` is given, which points the checks at a
-    /// local test feed.
+    /// Starts looking after launch. A Debug build can be given `-sparkleTestFeed <address>` to point the checks at a local test feed.
     func start() {
         #if canImport(Sparkle)
-        #if DEBUG
-        guard UserDefaults.standard.string(forKey: "sparkleTestFeed") != nil else { return }
-        #endif
         guard controller == nil else { return }
         let made = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: self, userDriverDelegate: nil)
         controller = made
@@ -68,7 +64,7 @@ final class AppUpdater: NSObject {
 #if canImport(Sparkle)
 extension AppUpdater: SPUUpdaterDelegate {
     #if DEBUG
-    /// A Debug build checks a local test feed instead of GitHub. A Release build never does: it always uses the address in its Info.plist.
+    /// A Debug build can check a local test feed (the sparkleTestFeed setting) instead of GitHub. A Release build never does: it always uses the address in its Info.plist.
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
         UserDefaults.standard.string(forKey: "sparkleTestFeed")
     }
