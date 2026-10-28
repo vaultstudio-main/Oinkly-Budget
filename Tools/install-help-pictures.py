@@ -9,6 +9,10 @@ Then run this, which resizes each picture the way the Help window expects and re
 
     python3 Tools/install-help-pictures.py /Users/Shared/OinklyBudget/shots
 
+With --website it makes the website's pictures instead (the website folder is not in Git, so this is the only record of how they are made):
+
+    python3 Tools/install-help-pictures.py /Users/Shared/OinklyBudget/shots --website
+
 Whole pages are 1800 pixels wide. Windows, sheets and Settings tabs are scaled down so their longest side is at most 1000 pixels (a few, listed
 below, are different). A few pictures are crops of a page. Uses only sips, which comes with macOS.
 """
@@ -70,6 +74,23 @@ CROPS = {
 }
 
 
+# The website's pictures: file name (in website-vaultstudio/website/images) <- picture from the tour. Pages are 1600 wide, windows at most 900.
+WEBSITE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "website-vaultstudio", "website", "images")
+WEBSITE_PAGES = {
+    "summary": "page-summary", "transactions": "page-transactions", "reports": "page-reports", "register": "account-checking",
+    "planning": "page-planning", "liabilities": "page-liabilities", "investments": "page-investments", "bills": "page-bills",
+    "recurring": "page-recurring", "month-outlook": "page-month-outlook", "savings": "account-savings", "mortgage": "account-mortgage",
+    "cash": "account-cash", "card": "account-card", "budgets": "page-budgets", "brokerage": "account-brokerage",
+    "war-plan": "page-war-plan", "debt-war-plan": "page-debt-war-plan", "savings-war-plan": "page-savings-war-plan",
+}
+WEBSITE_WINDOWS = {
+    "add-bill": "sheet-add-bill", "add-recurring": "sheet-add-rule", "edit-transaction": "sheet-edit-tags", "export": "sheet-export-pdf",
+    "goal": "sheet-add-goal", "import": "sheet-import", "menu-bar": "menubar-popup", "pay-bill": "win-pay-bill",
+    "settings-reminders": "set-reminders", "split": "win-new-transaction-split", "tags": "sheet-edit-tags",
+    "widget-large": "widget-large", "widget-medium": "widget-medium", "widget-small": "widget-small",
+}
+
+
 def sips(*args):
     result = subprocess.run(["sips", *args], capture_output=True, text=True)
     if result.returncode != 0:
@@ -93,7 +114,33 @@ def install(asset, source):
             json.dump({"images": [{"filename": asset + ".png", "idiom": "universal"}], "info": {"author": "xcode", "version": 1}}, f, indent=2)
 
 
+def website(shots):
+    work = tempfile.mkdtemp()
+    done, missing = 0, []
+    for name, shot in {**WEBSITE_PAGES, **WEBSITE_WINDOWS}.items():
+        path = os.path.join(shots, shot + ".png")
+        if not os.path.exists(path):
+            missing.append((name, shot)); continue
+        out = os.path.join(WEBSITE, name + ".png")
+        width, height = size_of(path)
+        if name in WEBSITE_PAGES:
+            trimmed = os.path.join(work, name + "-trim.png")
+            sips("-c", str(height - TITLE_BAR - 6), str(width), "--cropOffset", str(TITLE_BAR), "0", path, "--out", trimmed)
+            sips("--resampleWidth", "1600", trimmed, "--out", out)
+        elif max(width, height) > 900:
+            sips("-Z", "900", path, "--out", out)
+        else:
+            shutil.copyfile(path, out)
+        done += 1
+    shutil.rmtree(work, ignore_errors=True)
+    print(f"Made {done} website pictures.")
+    for name, shot in missing:
+        print(f"Missing the tour picture {shot}.png for {name}")
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[2] == "--website":
+        return website(sys.argv[1])
     if len(sys.argv) != 2:
         sys.exit(__doc__)
     shots = sys.argv[1]

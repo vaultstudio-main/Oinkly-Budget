@@ -255,7 +255,7 @@ enum HelpContent {
                 "• One transaction can be saved as a PDF from its detail window.",
                 "## Settings",
                 "• Settings, top right, opens a window of its own, so the page stays open behind it. It shows the settings for the tab you are on, and both start with Month: step through months with the arrows there and the page follows. Each start of the app begins on this month.",
-                "• On the Outlook tab it is only which accounts count: pick from your checking, savings and cash accounts, with Select All and Select None. Credit cards, loans, investments and property never count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
+                "• On the Strategy Plan tab it is only which accounts count: pick from your checking, savings and cash accounts, with Select All and Select None. Credit cards, loans, investments and property never count. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account.",
                 "• On the War Plan tab it has the month, Starting with (the money already there when the month begins, from an account's balance now or a number you type) and Buffer (money to keep untouched). They apply to every month. There are no accounts to tick there, because the starting balance already says where the money starts. Reset Settings clears the starting amount and buffer.",
             ]),
 
@@ -291,8 +291,8 @@ enum HelpContent {
             ]),
 
             Topic(title: "Planning War Room", symbol: "calendar.badge.checkmark", lines: [
-                "The Planning War Room sets what you planned for one calendar month against what is really happening. The top of the page shows which month it is showing, for the Outlook and for the War Plan. You choose the month in Settings. It has two tabs: Outlook and War Plan.",
-                "## Outlook",
+                "The Planning War Room sets what you planned for one calendar month against what is really happening. The top of the page shows which month it is showing, for the Strategy Plan and for the Monthly War Plan. You choose the month in Settings. It has four tabs: Strategy Plan, Monthly War Plan, Debt War Plan and Savings War Plan.",
+                "## Strategy Plan",
                 "• Four cards show Money In, Money Out, Left Over and Above the Buffer. Each shows what the outlook says now, what you planned, a bar for how much of the plan is reached, and how far apart they are. The whole page fits the window without scrolling.",
                 "• When You Can Pull Money Out shows the earliest day the spare money can come out safely: the whole spare amount, which is what the month ends with less your buffer, and the balance still never drops under the buffer. It is worked out twice, once from your War Plan and once from what is really happening (paycheques, bills and repeating entries on their dates, with budget spending spread through the month a week at a time), and the chart shows both balances through the month with the buffer as a dashed line. When the outlook's day moves later than planned, it says by how many days. The tightest point of the month, how close it comes to the buffer, is beside it.",
                 "• What to Improve sits right under it: the four things that matter most this month, two across, such as bills that are overdue or a budget past its limit.",
@@ -323,7 +323,7 @@ enum HelpContent {
                 "• It is a what-if. It never changes an account. The amounts, rates and targets are remembered on this Mac.",
                 "## Settings",
                 "• Settings, top right, opens a window of its own, so the page stays open behind it. On the Strategy Plan tab it has the month and Accounts to count, with a tab for All, Checking, Savings and Cash. The starting amount and buffer are in the War Plan tab's settings.",
-                "• Accounts to count picks which accounts the Outlook uses. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account. The accounts are listed three to a row, so a long list stays short. Select All counts every account again.",
+                "• Accounts to count picks which accounts the Strategy Plan uses. Untick one, such as a business account, and its income, spending and repeating transactions are left out. A bill is left out when the payment linked to it came from an unticked account. The accounts are listed three to a row, so a long list stays short. Select All counts every account again.",
             ]),
 
             Topic(title: "Recurring Transactions", symbol: "arrow.triangle.2.circlepath", lines: [
@@ -638,7 +638,7 @@ enum HelpContent {
         "Transfers": [Shot(asset: "Help-transfer", caption: "The Transfer window.")],
         "Importing a Bank File": [Shot(asset: "Help-import", caption: "The import preview with its counts and options."),
                                   Shot(asset: "Help-import-mapping", caption: "How this file is read.")],
-        "Exporting & Printing": [Shot(asset: "Help-account-toolbar", caption: "An account page's buttons: Import CSV, Export CSV and Print PDF."),
+        "Exporting & Printing": [Shot(asset: "Help-account-toolbar", caption: "An account page's buttons: Settings, Import CSV, Export CSV, Print PDF and Print."),
                                  Shot(asset: "Help-export", caption: "The Export sheet for a PDF statement."),
                                  Shot(asset: "Help-export-csv", caption: "The Export sheet for a CSV file.")],
         "Autofill & Clean Up": [Shot(asset: "Help-autofill", caption: "Typing a payee you've used before suggests it."),
