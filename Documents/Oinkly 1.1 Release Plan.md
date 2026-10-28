@@ -64,7 +64,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 
 ## Feature 4: Sparkle automatic updates (flagged for 1.1)
 
-**Decisions (Oct 28):** GitHub download only (no App Store build, so Sparkle is in every release build); the update list `appcast.xml` lives in this repo and is read from its raw GitHub address; Sparkle asks once ("Check for updates automatically?") on the second launch and only checks if you say yes; the update window links to the GitHub release page for what's new.
+**Decisions (Oct 28):** GitHub download only (no App Store build, so Sparkle is in every release build); the update list `appcast.xml` lives in this repo and is read from its raw GitHub address; Sparkle asks once ("Check for updates automatically?") on the second launch and only checks if you say yes; the update window shows the release notes (a Markdown file given to `Tools/update-appcast.py --notes`) with a link to the GitHub release page.
 
 **Pieces to build:**
 
@@ -119,7 +119,7 @@ The scan already suggests a total, date and payee, and nothing changes until you
 **Upgrade test**
 
 - [ ] Install the real 1.0.1 build, add data, then drop the archived 1.1 over it and confirm the data is still there.
-- [ ] Decide the build number: Sparkle compares it, and 1.1 is build 1 while 1.0.1 was 2, so 1.1 needs a number above 2 (for example 10).
+- [x] Build number decided: 1.1 is build 10 (Sparkle compares it, and 1.0.1 was build 2). Every release after goes up.
 
 **Package** (see the release checklist)
 
