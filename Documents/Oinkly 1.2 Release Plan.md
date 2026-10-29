@@ -57,7 +57,7 @@ Drop a brokerage CSV into a folder and Oinkly Budget picks it up, with a preview
 
 Everything for a release lives in `release-build/<version>/`: copy `release-build/1.1/` to `release-build/1.2/` and change the wording, the version, the build number and the SHA-256.
 
-- [ ] Version 1.2 and the new build number in the Xcode project.
+- [ ] Version 1.2 and the new build number in the Xcode project, **for the app and for the widget extension** (the widget's `CURRENT_PROJECT_VERSION` and `MARKETING_VERSION` must match the app's, or Xcode warns that the extension's CFBundleVersion doesn't match its parent app).
 - [ ] Release Notes in the app: only 1.2's new things (the window lists one release).
 - [ ] Retake the screenshots with the tour (`-screenshotMode`), and install them with `Tools/install-help-pictures.py` (Help) and `--website` (website). Add shots for what is new first.
 - [ ] Words: Help, the in-app Release Notes, the README, the website's app, support and privacy pages, and `updates.html`.
