@@ -194,6 +194,7 @@ struct DuplicatePayeesReport: View {
                     }
                     Button("Clean Up Payees") {
                         UserDefaults.standard.set("cleanup", forKey: MacSettingsView.tabKey)
+                        UserDefaults.standard.set("Payees", forKey: CleanUpSettingsView.modeKey)
                         openSettings()
                     }
                     .controlSize(.small)

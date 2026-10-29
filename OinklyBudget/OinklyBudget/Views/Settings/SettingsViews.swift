@@ -697,9 +697,6 @@ struct MacSettingsView: View {
             CategoriesSettingsView()
                 .tag("categories")
                 .tabItem { Label("Categories", systemImage: "tag") }
-            TagsSettingsView()
-                .tag("tags")
-                .tabItem { Label("Tags", systemImage: "tag.fill") }
             CleanUpSettingsView()
                 .tag("cleanup")
                 .tabItem { Label("Clean Up", systemImage: "wand.and.sparkles") }
@@ -711,6 +708,13 @@ struct MacSettingsView: View {
                 .tabItem { Label("Data & Backup", systemImage: "externaldrive") }
         }
         .frame(width: 640, height: 560)
+        .onAppear {
+            // Tags used to be a tab of its own and is now inside Clean Up, so a window last left on it opens there.
+            if tab == "tags" {
+                UserDefaults.standard.set("Tags", forKey: CleanUpSettingsView.modeKey)
+                tab = "cleanup"
+            }
+        }
     }
 }
 

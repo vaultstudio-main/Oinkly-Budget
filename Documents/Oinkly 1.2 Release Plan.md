@@ -40,6 +40,10 @@ Drop a brokerage CSV into a folder and Oinkly Budget picks it up, with a preview
 - [ ] Saved formats, like the bank import has.
 - [ ] Tests with sample files of each brokerage's layout (made-up data).
 
+## Other changes in 1.2 (so far)
+
+- [x] **Settings: Tags is merged into Clean Up** (Oct 29). Clean Up has a choice at the top, Payees, Categories or Tags, so Settings has one tab fewer. Someone whose Settings window was last left on the old Tags tab opens on Clean Up ▸ Tags. Help, the Settings tour and the Help picture caption are updated. **At release:** change the website's support answer ("Settings ▸ Tags" becomes "Settings ▸ Clean Up ▸ Tags"), retake the `Help-tags-settings` and `Help-cleanup` pictures, and add the change to the 1.2 Release Notes.
+
 ## Testing the first real update
 
 1.1 is the first version with Sparkle, so **1.2 is the first real automatic update**.

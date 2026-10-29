@@ -128,7 +128,7 @@ struct TagField: View {
     }
 }
 
-/// Settings ▸ Tags: rename, recolor, merge and delete.
+/// Settings ▸ Clean Up ▸ Tags: rename, recolor, merge and delete. It sits inside Clean Up, which gives it its padding and size.
 struct TagsSettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var allTags: [Tag]
@@ -162,7 +162,6 @@ struct TagsSettingsView: View {
             }
             if let message { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green).font(.callout) }
         }
-        .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .confirmationDialog(deleting.map { "Delete the tag “\($0.name)”?" } ?? "", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {

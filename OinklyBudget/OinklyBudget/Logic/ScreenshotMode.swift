@@ -502,8 +502,10 @@ private struct ScreenshotRun {
         let key = MacSettingsView.tabKey
         let before = UserDefaults.standard.string(forKey: key)
         for (tab, name) in [("general", "set-general"), ("reminders", "set-reminders"), ("accounts", "set-accounts"), ("categories", "set-categories"),
-                            ("tags", "set-tags"), ("cleanup", "set-cleanup"), ("payments", "set-payment-methods"), ("data", "set-data")] {
-            UserDefaults.standard.set(tab, forKey: key)
+                            ("cleanup", "set-cleanup"), ("cleanupTags", "set-tags"), ("payments", "set-payment-methods"), ("data", "set-data")] {
+            // Tags is a choice inside Clean Up, so its picture is Clean Up with Tags picked.
+            UserDefaults.standard.set(tab == "cleanupTags" ? "cleanup" : tab, forKey: key)
+            UserDefaults.standard.set(tab == "cleanupTags" ? "Tags" : "Payees", forKey: CleanUpSettingsView.modeKey)
             menu("Settings…")
             await wait(2)
             if let settings = NSApp.windows.first(where: { $0.isVisible && abs($0.frame.width - 640) < 80 && $0.contentView != nil }) {
@@ -516,6 +518,7 @@ private struct ScreenshotRun {
             }
             await wait(0.8)
         }
+        UserDefaults.standard.removeObject(forKey: CleanUpSettingsView.modeKey)
         if let before { UserDefaults.standard.set(before, forKey: key) } else { UserDefaults.standard.removeObject(forKey: key) }
 
         // Things drawn on their own

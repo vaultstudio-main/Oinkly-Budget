@@ -1,18 +1,22 @@
 import SwiftUI
 import SwiftData
 
-/// Settings ▸ Clean Up: find and replace in payee names, merge look-alike payees, and move a category's transactions
-/// to another category. Every change can be undone straight afterwards.
+/// Settings ▸ Clean Up: find and replace in payee names, merge look-alike payees, move a category's transactions to another
+/// category, and look after tags (rename, recolor, merge and delete). Every change to payees and categories can be undone straight
+/// afterwards.
 struct CleanUpSettingsView: View {
     private enum Mode: String, CaseIterable, Identifiable {
-        case payees = "Payees", categories = "Categories"
+        case payees = "Payees", categories = "Categories", tags = "Tags"
         var id: Self { self }
     }
+
+    /// Which choice is showing, remembered so other places (the Books report, the Settings tour) can open Clean Up on one.
+    static let modeKey = "cleanUpMode"
 
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Category.name) private var allCategories: [Category]
 
-    @State private var mode = Mode.payees
+    @AppStorage(CleanUpSettingsView.modeKey) private var modeName = Mode.payees.rawValue
     @State private var rows: [CleanUp.PayeeRow] = []
     @State private var search = ""
     @State private var selection = Set<String>()
@@ -26,23 +30,31 @@ struct CleanUpSettingsView: View {
     @State private var message: String?
 
     private var categories: [Category] { allCategories.live }
+    private var mode: Binding<Mode> { Binding(get: { Mode(rawValue: modeName) ?? .payees }, set: { modeName = $0.rawValue }) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("", selection: $mode) {
+            Picker("", selection: mode) {
                 ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(maxWidth: 260)
+            .frame(maxWidth: 320)
 
-            if mode == .payees { payees } else { categoryPane }
+            switch mode.wrappedValue {
+            case .payees: payees
+            case .categories: categoryPane
+            case .tags: TagsSettingsView()
+            }
 
-            HStack {
-                if let message { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green).font(.callout) }
-                Spacer()
-                if lastChange != nil {
-                    Button("Undo Last Change") { undo() }
+            // Tags keeps its own messages, and Undo is for payees and categories.
+            if mode.wrappedValue != .tags {
+                HStack {
+                    if let message { Label(message, systemImage: "checkmark.circle.fill").foregroundStyle(Theme.green).font(.callout) }
+                    Spacer()
+                    if lastChange != nil {
+                        Button("Undo Last Change") { undo() }
+                    }
                 }
             }
         }
