@@ -221,7 +221,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "App-Debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LVKJ422Q3M;
 				ENABLE_APP_SANDBOX = YES;
@@ -235,7 +235,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				OINKLY_BUILD_NAME = "Laser Focused, You Idiot";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget.debug;
 				PRODUCT_NAME = OinklyBudget;
@@ -258,7 +258,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LVKJ422Q3M;
 				ENABLE_APP_SANDBOX = YES;
@@ -272,7 +272,7 @@
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Vault Studio. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				OINKLY_BUILD_NAME = "Laser Focused, You Idiot";
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget;
 				PRODUCT_NAME = OinklyBudget;
@@ -413,7 +413,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "Widgets-Debug.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LVKJ422Q3M;
 				ENABLE_APP_SANDBOX = YES;
@@ -428,7 +428,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget.debug.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -446,7 +446,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = Widgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = LVKJ422Q3M;
 				ENABLE_APP_SANDBOX = YES;
@@ -461,7 +461,7 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vaultstudio.oinklybudget.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
