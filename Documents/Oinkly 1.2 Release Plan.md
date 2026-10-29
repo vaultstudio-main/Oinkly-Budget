@@ -18,15 +18,53 @@ Small things the 1.1 release left open:
 - [ ] Look at the 1.1 disk image window on a clean Mac or account, in case the icon positions need a nudge (the numbers are at the top of `Tools/build-release.sh`).
 - [ ] Settings ▸ Data & Backup ▸ Save Backup… straight into the save location, seen working on screen. (The PDF and CSV saves were.)
 
-## Feature 1: Live prices for holdings
+## Feature 1: Live prices for holdings (bring your own key)
 
-Cut from 1.1. A **Refresh Prices** button (and an optional once-a-day refresh while the app is open) that looks up the current price of each holding by its **ticker symbol only**. The amount held (shares and cost) stays on the Mac and is never sent, so prices update without the holdings having to be re-entered.
+A **Refresh Prices** button that looks up the current price of each holding by its **ticker symbol only**. The amount held (shares and cost) never leaves the Mac. Cut from 1.1; designed in the open on October 29, 2026. Nothing is built yet.
 
-- [ ] **Decide the source first.** Yahoo Finance (yfinance) is a Python library over Yahoo's unofficial pages, which have no official API, can change without warning and are against Yahoo's terms, and a Python library can't go inside a Mac app anyway. Safer sources: **Finnhub** (official, free key; each user would paste their own free key in Settings, because a key shipped in open-source code can be pulled out and shares one limit), **Stooq** (no key, end-of-day prices, fewer holdings), Alpha Vantage or Twelve Data (free key, low daily limits), and CoinGecko for crypto.
-- [ ] Keep the source swappable, so a break means changing one file.
-- [ ] Opt-in and **off by default**. The privacy wording changes everywhere to say exactly what is sent (ticker symbols only, nothing about amounts or accounts): README, Help, website privacy page, the Settings text.
-- [ ] The network permission is already in the app (added for Sparkle).
-- [ ] Tests: price parsing from sample answers, a symbol that isn't found, no network, and a source that changes its format.
+### The design, as decided
+
+- **Bring your own key.** The app ships with no key and no price data. Each person signs up for their own free key (Finnhub first) and pastes it into Settings. Finnhub's plans are for **personal use**, and personal and family finances are exactly that. The app says so next to the key field, and that a business can't use a personal key.
+- **The key stays on the person.** It is kept in the Mac's Keychain, outside the database, outside backups and outside the shared data, like the letterhead logo and the receipt memory. Erase All Data forgets it. Someone who restores a backup on another Mac keeps the prices in it but has to paste their own key to refresh.
+- **The prices belong to the data.** A price, its date and the history it makes are saved with everything else and carry over into backups and across Macs, so the price fluctuation is part of the person's own records.
+- **Off by default, and nothing changes on its own.** An opt-in switch in Settings. Refresh Prices shows what was found, with each holding's old and new price and the as-of time, and nothing is applied until Use (Use All or Use Selected), the same promise as receipts.
+- **One file per source.** A small "give me prices for these tickers" interface, with Finnhub as the first implementation, so a provider that turns out wrong is replaced by changing one file.
+
+### What the code already gives us
+
+- A holding already has a free-text ticker (`symbol`), a price and a price date, so **no new data fields and no migration**.
+- `HoldingsLedger.updatePrice` also posts a **growth transaction** to the account ("Price update: VTSAX"). Applying 20 prices that way would add 20 transactions per refresh, so Refresh Prices needs a **batch update**: each holding's history is recorded as now, but **one growth transaction per account** per refresh.
+- A found price is only offered if its as-of time is newer than the stored price date, so it never overwrites a newer hand-entered price.
+
+### What is known about Finnhub
+
+Confirmed on October 29 from their spec and terms: the key goes in a header (`X-Finnhub-Token`); going over the limit returns HTTP 429, and there is a cap of 30 calls a second; a symbol search exists; the mutual fund endpoints in the spec are profile and holdings only, **with no price**; the plans are for personal use only, and redistributing "data or derived results" or sharing access needs written approval; the data must be deleted when the subscription ends; Finnhub logs queries; the terms say nothing about third-party apps.
+
+Not confirmed (the docs pages would not load): the exact quote fields (current price, previous close, timestamp are recalled), the free limit (about 60 calls a minute is recalled), US stocks and ETFs only, and zeros for an unknown symbol. The spike settles these.
+
+### Build order
+
+- [ ] **M0, before any code:** email Finnhub support to ask whether an open-source desktop app where each person uses their own personal key is allowed (a draft will be written for the author to send). Sign up for a free key and run **six real tickers** (a stock, an ETF, a mutual fund, a crypto coin, a foreign ticker, and one that doesn't exist) from a local test script, with the key kept out of Git. Decide go or no-go, and whether another provider is needed.
+- [ ] **M1:** the price source interface, the Finnhub implementation, and tests with canned answers (success, unknown symbol, wrong key, over the limit, no network, a changed format). No screens yet.
+- [ ] **M2:** Settings: the opt-in switch, the key field (Keychain), Test Key, a link to sign up, and the text saying exactly what is sent and that it is for personal use.
+- [ ] **M3:** Refresh Prices on the Investments page and in the File menu: the review sheet, the skipped list with reasons (no ticker, mutual fund, not found), and the batch apply with one growth transaction per account.
+- [ ] **M4:** optional: a symbol search in the Add Holding sheet, using Finnhub's search.
+- [ ] **M5:** a fake price source for the screenshot tour, the Help topic, the privacy wording (Settings, Help, the website privacy page, the README, the support page) and the Release Notes.
+- [ ] **M6:** on-screen checks with a real key, and the upgrade path from 1.1.
+
+### Risks and what they mean for the wording
+
+- **The terms don't mention third-party apps.** The email in M0 is the answer. Until then, the app doesn't ship a key or any data, and all use is the person's own.
+- **Business use isn't allowed on a personal key.** The wording says "personal use" next to the key field.
+- **Coverage.** Free Finnhub is probably US stocks and ETFs. Crypto symbols use another format (an exchange prefix such as `BINANCE:BTCUSDT`) and mutual funds look unavailable. In 1.2, only what is covered gets priced, and the sheet says what was skipped and why; the rest stays by hand or comes from the brokerage import (Feature 3).
+- **What leaves the Mac:** the tickers you hold and your key, and Finnhub can see your internet address and logs queries. Said plainly in the app, Help, the website and the README.
+- **Family use:** the prices are saved data and can be shared by the family; each person who refreshes needs their own key, because sharing a key is restricted.
+
+### Decisions still open
+
+1. Refresh by hand only in 1.2, or also once a day while the app is open? (Recommended: by hand only, since a daily refresh changes data without being asked.)
+2. One growth transaction per account per refresh, or one per holding as today? (Recommended: one per account.)
+3. The exact wording for business users beside the key field.
 
 ## Feature 2: Receipts, proven on real ones
 
@@ -82,7 +120,7 @@ Everything for a release lives in `release-build/<version>/`: copy `release-buil
 ## Open decisions
 
 1. **The 1.2 build name.** To be decided.
-2. **Live prices: which source,** and whether people paste in their own key.
+2. **Live prices:** the three decisions at the end of Feature 1, and Finnhub's answer to the email (M0).
 3. **Brokerage files: which brokerages first.**
 4. **Bank sync: in the app or not.**
 
