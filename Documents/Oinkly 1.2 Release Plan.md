@@ -4,16 +4,16 @@
 
 ## Overview
 
-Version 1.1 shipped on October 28, 2026. Version 1.2 is about getting real data in: prices for your holdings, receipts proven on real receipts, brokerage files that import themselves, and a look at optional bank sync. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
+Version 1.1 shipped on October 28, 2026. Version 1.2 is about getting real data in: prices for your holdings, receipts proven on real receipts, and brokerage files that import themselves. In-app humor stays Mel Brooks inspired, mainly Spaceballs.
 
-Four features are planned. They are ordered from the most settled to the least: each of the last two starts with a decision, and the last one may well move to 2.0.
+Three features are planned. Live prices comes first and starts with a decision and a test before any code. Bank sync through SimpleFIN was looked at and **dropped** (see Dropped, below).
 
 ## Carry-over from 1.1
 
 Small things the 1.1 release left open:
 
-- [ ] README: the three edits in `release-build/1.1/readme-latest-update.md` (the version line, "Latest download", the Download link). It still says the newest download is 1.0.1.
-- [ ] The update list (`oinklybudget-appcast.xml`) has no entry for 1.1 yet. Add it with `Tools/update-appcast.py` (see `release-build/1.1/RELEASE-STEPS.md`, step 4) so 1.1 is on record, and publish the website.
+- [x] README: the three edits from `release-build/1.1/readme-latest-update.md` (the version line, "Latest download", the Download link). Done Oct 29. It needs pushing.
+- [ ] The update list (`oinklybudget-appcast.xml`): the 1.1 entry is added and its signature verified against the DMG (Oct 29; the GitHub download was checked as byte-for-byte the same file). **Still to do: publish the website**, because the live list at vaultstudio.dev/oinklybudget-appcast.xml is still the empty one. The rest of the site (Updates page, download links) is already live.
 - [ ] Back up the Sparkle private key (`~/sparkle-tools/generate_keys -x <file>`, kept in a password manager). If it is lost, installed copies can't be updated.
 - [ ] Look at the 1.1 disk image window on a clean Mac or account, in case the icon positions need a nudge (the numbers are at the top of `Tools/build-release.sh`).
 - [ ] Settings ▸ Data & Backup ▸ Save Backup… straight into the save location, seen working on screen. (The PDF and CSV saves were.)
@@ -86,15 +86,6 @@ Drop a brokerage CSV into a folder and Oinkly Budget picks it up, with a preview
 - [ ] Saved formats, like the bank import has.
 - [ ] Tests with sample files of each brokerage's layout (made-up data).
 
-## Feature 4: Bank sync through SimpleFIN Bridge (look first; may move to 2.0)
-
-An optional, read-only way to bring in transactions: SimpleFIN Bridge is paid for by the user, to SimpleFIN and not to this project, and gives the app a token that can read balances and transactions only. It changes what the app says about itself ("no bank linking"), so it needs a decision before any code.
-
-- [ ] **Decide whether it belongs in the app at all.** The website says "Old school on purpose": nothing connects to your bank. If it goes in, it must be opt-in, off by default, and say so everywhere.
-- [ ] If yes: the token kept in the Keychain; what is sent and received written down plainly; transactions arrive as **suggestions to review** (like receipts), never added on their own; a clear way to disconnect and forget the token.
-- [ ] If it goes in: the privacy page, README, Help and the in-app text change together, and a test with a made-up server answer.
-- [ ] If not for 1.2: write the decision and the reason down in `Documents/`, and move it to the 2.0 ideas.
-
 ## Testing the first real update
 
 1.1 is the first version with Sparkle, so **1.2 is the first real automatic update**.
@@ -122,7 +113,10 @@ Everything for a release lives in `release-build/<version>/`: copy `release-buil
 1. **The 1.2 build name.** To be decided.
 2. **Live prices:** the three decisions at the end of Feature 1, and Finnhub's answer to the email (M0).
 3. **Brokerage files: which brokerages first.**
-4. **Bank sync: in the app or not.**
+
+## Dropped
+
+- **Bank sync through SimpleFIN Bridge** (dropped October 29, 2026). It would have let the app read balances and transactions from the bank through a service the user pays for ($15 a year). Dropped because none of the author's banks are supported, so it couldn't be tested on real data, and because it cuts against "old school on purpose": the app stays free of any bank connection. If it is ever revisited, the findings are: the user pays SimpleFIN, not the project; a one-time setup token is traded for an access address that has to be kept like a password (the Keychain); balances and raw-text transactions come back, with no categories or merchant names; at most 90 days per request and about 24 requests a day; and the hard part is matching what the bank reports against what the person has already entered.
 
 ## Future releases
 

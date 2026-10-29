@@ -6,7 +6,7 @@
 
 Oinkly Budget keeps your accounts, bills, budgets, goals, investments and debts in one place, on your own Mac. There is no bank linking, no account to create and no sign-in, and your data never leaves your computer unless you export it yourself. The one thing the app can do online is look for a newer version of itself, and only if you say yes.
 
-> **Current version: 1.1, "Laser Focused, You Idiot"** in the source here. The newest download is still 1.0.1 until a 1.1 build is published. Free and open source under the GNU General Public License v3.
+> **Current version: 1.1, "Laser Focused, You Idiot".** Download it from the [1.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.1). Free and open source under the GNU General Public License v3.
 
 ---
 
@@ -22,20 +22,15 @@ Oinkly Budget is released as free software under the **[GNU General Public Licen
 
 The roadmap, the plans for future releases and the other planning notes are kept in the open, in [Documents/](Documents/). If you want to know what is coming and why, start there.
 
-### Coming in 1.1: Laser Focused, You Idiot
+### Latest download: 1.1, Laser Focused, You Idiot
 
-The source is already at 1.1. It adds a Savings War Plan, Laser Focus Annihilation for debts and savings, a reworked Planning War Room with a Strategy Plan tab and many new charts (and no circle graphs), Receipt Verification, a PDF Letterhead, a Print button for a real printer, paid-off loans that archive themselves, a Planning Archive, a default save location, and automatic update checks that ask first. The full list is in **Help ▸ Release Notes**. Builds are published in stages, so the download below stays at 1.0.1 until then.
+Version 1.1 adds a reworked **Planning War Room** with a Strategy Plan, a Monthly War Plan, a Debt War Plan and a Savings War Plan, and **Laser Focus Annihilation**, which sends every extra dollar to one debt or one savings account. It also adds **receipt checking** (suggestions you accept one by one, read on your Mac), a **PDF letterhead** and a **Print** button, paid-off loans that **archive themselves**, one **save location** with a backup copy beside it, faster Investments reports, and **update checks that ask first**.
 
-### Latest download: 1.0.1
+- Updating from 1.0.1: drag 1.1 over the old copy in Applications. Your data stays on your Mac, and it opens as it was.
+- 1.0.1 has no update check, so in-app updates start with the release after 1.1.
+- What is new in the version you have is in the app under **Help ▸ Release Notes**.
 
-Version 1.0.1 is a small bug-fix release. I accidentally forgot to let the app scale properly to different screen sizes, so it looked cramped or lost in empty space on some Macs, with some tabs running off the edge of the window. This update fixes that:
-
-- Pages now flow with the window and scale up on large screens, such as a 27-inch 4K or 5K display.
-- Tabs shrink and then wrap onto a second row, so every tab is always on screen.
-- The editor pop-ups shrink to fit smaller screens, such as a 14-inch MacBook, and scroll so Save can always be reached.
-- The Planning War Room's pull-out card stacks its figures above the chart when the window is narrow.
-
-Nothing else changed: your data stays on your Mac, and your data is kept as it is when you update from 1.0. Download it from the [1.0.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.0.1).
+Download it from the [1.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.1).
 
 ### Updates
 
@@ -45,7 +40,7 @@ Oinkly Budget is a small, independent project. The aim is to keep improving it w
 
 ## Download
 
-Ready-to-run builds are published as `.dmg` files on the project's **[1.0.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.0.1)**. Download the `.dmg`, open it and drag Oinkly Budget to your Applications folder.
+Ready-to-run builds are published as `.dmg` files on the project's **[1.1 release](https://github.com/vaultstudio-main/Oinkly-Budget/releases/tag/v1.1)**. Download the `.dmg`, open it and drag Oinkly Budget to your Applications folder.
 
 If you would rather build it yourself, see [Building from source](#building-from-source).
 
